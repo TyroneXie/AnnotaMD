@@ -23,7 +23,9 @@ final class SettingsModel {
         static let appearanceMode       = "com.markdownreader.appearanceMode"
         static let sourceFontSize       = "com.markdownreader.sourceFontSize"
         static let contentPadding       = "com.markdownreader.contentPadding"
-        static let languagePref       = "com.markdownreader.languagePref"
+        static let languagePref         = "com.markdownreader.languagePref"
+        static let themeId              = "com.markdownreader.themeId"
+        static let themeCustomOverrides = "com.markdownreader.themeCustomOverrides"
         static let lastOpenedDirectory  = "com.markdownreader.lastOpenedDirectory"
         static let lastOpenedFilePath   = "com.markdownreader.lastOpenedFilePath"
     }
@@ -64,6 +66,20 @@ final class SettingsModel {
         didSet { defaults.set(appearanceMode.rawValue, forKey: Keys.appearanceMode) }
     }
 
+    /// 当前主题 ID（参照 buddy-macos 的 themeId）
+    var themeId: String {
+        didSet { defaults.set(themeId, forKey: Keys.themeId) }
+    }
+
+    /// 主题自定义颜色覆盖（参照 buddy-macos 的 custom）
+    var themeCustomOverrides: ThemeCustomOverrides {
+        didSet {
+            if let data = try? JSONEncoder().encode(themeCustomOverrides) {
+                defaults.set(data, forKey: Keys.themeCustomOverrides)
+            }
+        }
+    }
+
     /// 源码视图字号（pt）
     var sourceFontSize: Int {
         didSet { defaults.set(sourceFontSize, forKey: Keys.sourceFontSize) }
@@ -92,6 +108,28 @@ final class SettingsModel {
 
     // MARK: - 计算属性
 
+    /// 解析后的主题类型（考虑跟随系统）
+    var resolvedThemeType: ThemeType {
+        switch appearanceMode {
+        case .light: .light
+        case .dark: .dark
+        case .system: NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
+        }
+    }
+
+    /// 当前基础主题（根据 themeId 查找，类型不匹配时回退到默认）
+    var currentBaseTheme: ThemeDefinition {
+        if let theme = PresetThemes.themeById(themeId), theme.type == resolvedThemeType {
+            return theme
+        }
+        return PresetThemes.defaultTheme(for: resolvedThemeType)
+    }
+
+    /// 合并自定义覆盖后的完整主题
+    var resolvedTheme: ThemeDefinition {
+        resolveTheme(base: currentBaseTheme, custom: themeCustomOverrides)
+    }
+
     /// 源码视图字号（安全范围 10~24）
     var sourceFontPointSize: CGFloat {
         CGFloat(min(max(sourceFontSize, 10), 24))
@@ -113,6 +151,13 @@ final class SettingsModel {
         self.showHiddenFiles = defaults.object(forKey: Keys.showHiddenFiles) as? Bool ?? false
         self.showNonMarkdownFiles = defaults.object(forKey: Keys.showNonMarkdownFiles) as? Bool ?? true
         self.appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearanceMode) ?? "") ?? .system
+        self.themeId = defaults.string(forKey: Keys.themeId) ?? "buddy-dark"
+        if let data = defaults.data(forKey: Keys.themeCustomOverrides),
+           let overrides = try? JSONDecoder().decode(ThemeCustomOverrides.self, from: data) {
+            self.themeCustomOverrides = overrides
+        } else {
+            self.themeCustomOverrides = .empty
+        }
         self.sourceFontSize = defaults.object(forKey: Keys.sourceFontSize) as? Int ?? 13
         self.contentPadding = defaults.object(forKey: Keys.contentPadding) as? Int ?? 20
 

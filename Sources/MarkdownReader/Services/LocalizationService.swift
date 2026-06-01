@@ -32,12 +32,36 @@ enum L10n {
         case settingsGeneralShowHiddenFiles
         case settingsGeneralShowNonMarkdownFiles
 
-        // 设置 - 外观
+        // 设置 - 外观 - 主题模式
         case settingsAppearanceThemeTitle
-        case settingsAppearanceMode
+        case settingsAppearanceThemeDesc
         case settingsAppearanceModeLight
+        case settingsAppearanceModeLightDesc
         case settingsAppearanceModeDark
+        case settingsAppearanceModeDarkDesc
         case settingsAppearanceModeSystem
+        case settingsAppearanceModeSystemDesc
+
+        // 设置 - 外观 - 配色方案
+        case settingsAppearanceSchemeTitle
+        case settingsAppearanceSchemeDesc
+
+        // 设置 - 外观 - 自定义颜色
+        case settingsAppearanceCustomTitle
+        case settingsAppearanceCustomDesc
+        case settingsAppearanceCustomSurface
+        case settingsAppearanceCustomInk
+        case settingsAppearanceCustomAccent
+        case settingsAppearanceCustomSuccess
+        case settingsAppearanceCustomDanger
+
+        // 设置 - 外观 - 对比度
+        case settingsAppearanceContrastTitle
+        case settingsAppearanceContrastDesc
+        case settingsAppearanceContrastLow
+        case settingsAppearanceContrastHigh
+
+        // 设置 - 外观 - 字体排版（保留）
         case settingsAppearanceTypographyTitle
         case settingsAppearanceSourceFontSize
         case settingsAppearanceContentPadding
@@ -54,6 +78,7 @@ enum L10n {
 
         // 通用操作
         case open
+        case reset
 
         // 标题栏
         case titleBarToggleSidebar
@@ -96,10 +121,26 @@ enum L10n {
         .settingsGeneralShowHiddenFiles: "Show hidden files",
         .settingsGeneralShowNonMarkdownFiles: "Show non-Markdown files",
         .settingsAppearanceThemeTitle: "Theme",
-        .settingsAppearanceMode: "Appearance mode",
+        .settingsAppearanceThemeDesc: "Choose the application appearance mode.",
         .settingsAppearanceModeLight: "Light",
+        .settingsAppearanceModeLightDesc: "Always use light appearance",
         .settingsAppearanceModeDark: "Dark",
-        .settingsAppearanceModeSystem: "Follow System",
+        .settingsAppearanceModeDarkDesc: "Always use dark appearance",
+        .settingsAppearanceModeSystem: "System",
+        .settingsAppearanceModeSystemDesc: "Follow system setting",
+        .settingsAppearanceSchemeTitle: "Color Scheme",
+        .settingsAppearanceSchemeDesc: "Choose a preset color scheme for the current mode.",
+        .settingsAppearanceCustomTitle: "Custom Colors",
+        .settingsAppearanceCustomDesc: "Customize individual color tokens. Changes override the current scheme.",
+        .settingsAppearanceCustomSurface: "Surface",
+        .settingsAppearanceCustomInk: "Ink",
+        .settingsAppearanceCustomAccent: "Accent",
+        .settingsAppearanceCustomSuccess: "Success",
+        .settingsAppearanceCustomDanger: "Danger",
+        .settingsAppearanceContrastTitle: "Contrast",
+        .settingsAppearanceContrastDesc: "Adjust the contrast between background and foreground layers.",
+        .settingsAppearanceContrastLow: "Low",
+        .settingsAppearanceContrastHigh: "High",
         .settingsAppearanceTypographyTitle: "Typography",
         .settingsAppearanceSourceFontSize: "Source font size",
         .settingsAppearanceContentPadding: "Content padding",
@@ -110,6 +151,7 @@ enum L10n {
         .displayModeRendered: "Rendered",
         .displayModeSource: "Source",
         .open: "Open",
+        .reset: "Reset",
         .titleBarToggleSidebar: "Toggle Sidebar (⌘\\)",
         .titleBarDisplayMode: "Display Mode",
         .titleBarOpen: "Open (⌘O)",
@@ -142,10 +184,26 @@ enum L10n {
         .settingsGeneralShowHiddenFiles: "显示隐藏文件",
         .settingsGeneralShowNonMarkdownFiles: "显示非 Markdown 文件",
         .settingsAppearanceThemeTitle: "主题",
-        .settingsAppearanceMode: "外观模式",
+        .settingsAppearanceThemeDesc: "选择应用的外观模式。",
         .settingsAppearanceModeLight: "浅色",
+        .settingsAppearanceModeLightDesc: "始终使用浅色外观",
         .settingsAppearanceModeDark: "深色",
+        .settingsAppearanceModeDarkDesc: "始终使用深色外观",
         .settingsAppearanceModeSystem: "跟随系统",
+        .settingsAppearanceModeSystemDesc: "跟随系统设置",
+        .settingsAppearanceSchemeTitle: "配色方案",
+        .settingsAppearanceSchemeDesc: "为当前模式选择预设配色方案。",
+        .settingsAppearanceCustomTitle: "自定义颜色",
+        .settingsAppearanceCustomDesc: "自定义各颜色令牌。修改将覆盖当前方案的对应颜色。",
+        .settingsAppearanceCustomSurface: "背景色",
+        .settingsAppearanceCustomInk: "文字色",
+        .settingsAppearanceCustomAccent: "强调色",
+        .settingsAppearanceCustomSuccess: "成功色",
+        .settingsAppearanceCustomDanger: "危险色",
+        .settingsAppearanceContrastTitle: "对比度",
+        .settingsAppearanceContrastDesc: "调整背景与前景层之间的对比度。",
+        .settingsAppearanceContrastLow: "低",
+        .settingsAppearanceContrastHigh: "高",
         .settingsAppearanceTypographyTitle: "字体与排版",
         .settingsAppearanceSourceFontSize: "源码字号",
         .settingsAppearanceContentPadding: "内容边距",
@@ -156,6 +214,7 @@ enum L10n {
         .displayModeRendered: "渲染",
         .displayModeSource: "源码",
         .open: "打开",
+        .reset: "重置",
         .titleBarToggleSidebar: "切换侧边栏 (⌘\\)",
         .titleBarDisplayMode: "显示模式",
         .titleBarOpen: "打开 (⌘O)",
@@ -188,10 +247,26 @@ enum L10n {
         .settingsGeneralShowHiddenFiles: "顯示隱藏檔案",
         .settingsGeneralShowNonMarkdownFiles: "顯示非 Markdown 檔案",
         .settingsAppearanceThemeTitle: "主題",
-        .settingsAppearanceMode: "外觀模式",
+        .settingsAppearanceThemeDesc: "選擇應用的外觀模式。",
         .settingsAppearanceModeLight: "淺色",
+        .settingsAppearanceModeLightDesc: "始終使用淺色外觀",
         .settingsAppearanceModeDark: "深色",
+        .settingsAppearanceModeDarkDesc: "始終使用深色外觀",
         .settingsAppearanceModeSystem: "跟隨系統",
+        .settingsAppearanceModeSystemDesc: "跟隨系統設定",
+        .settingsAppearanceSchemeTitle: "配色方案",
+        .settingsAppearanceSchemeDesc: "為目前模式選擇預設配色方案。",
+        .settingsAppearanceCustomTitle: "自訂顏色",
+        .settingsAppearanceCustomDesc: "自訂各顏色令牌。修改將覆蓋目前方案的對應顏色。",
+        .settingsAppearanceCustomSurface: "背景色",
+        .settingsAppearanceCustomInk: "文字色",
+        .settingsAppearanceCustomAccent: "強調色",
+        .settingsAppearanceCustomSuccess: "成功色",
+        .settingsAppearanceCustomDanger: "危險色",
+        .settingsAppearanceContrastTitle: "對比度",
+        .settingsAppearanceContrastDesc: "調整背景與前景層之間的對比度。",
+        .settingsAppearanceContrastLow: "低",
+        .settingsAppearanceContrastHigh: "高",
         .settingsAppearanceTypographyTitle: "字體與排版",
         .settingsAppearanceSourceFontSize: "原始碼字號",
         .settingsAppearanceContentPadding: "內容邊距",
@@ -202,6 +277,7 @@ enum L10n {
         .displayModeRendered: "渲染",
         .displayModeSource: "原始碼",
         .open: "開啟",
+        .reset: "重設",
         .titleBarToggleSidebar: "切換側邊欄 (⌘\\)",
         .titleBarDisplayMode: "顯示模式",
         .titleBarOpen: "開啟 (⌘O)",
@@ -222,7 +298,6 @@ enum L10n {
 
     // MARK: - 查找
 
-    /// 根据语言获取翻译字典
     private static func dictionary(for language: Language) -> [Key: String] {
         switch language {
         case .zhCN: zhCN
@@ -231,21 +306,10 @@ enum L10n {
         }
     }
 
-    /// 翻译指定键
-    /// - Parameters:
-    ///   - key: 本地化键
-    ///   - language: 目标语言
-    /// - Returns: 翻译后的字符串，找不到则返回 key 的 rawValue
     static func tr(_ key: Key, language: Language) -> String {
         dictionary(for: language)[key] ?? key.rawValue
     }
 
-    /// 翻译指定键，支持插值 {n}
-    /// - Parameters:
-    ///   - key: 本地化键
-    ///   - language: 目标语言
-    ///   - args: 插值参数，如 ["n": "5"]
-    /// - Returns: 翻译后的字符串
     static func tr(_ key: Key, language: Language, args: [String: String]) -> String {
         var result = tr(key, language: language)
         for (k, v) in args {
@@ -257,23 +321,18 @@ enum L10n {
 
 // MARK: - SwiftUI Environment 支持
 
-/// 语言环境键，用于在视图层次中传递当前语言
 private struct LanguageEnvironmentKey: EnvironmentKey {
     static let defaultValue: Language = .en
 }
 
 extension EnvironmentValues {
-    /// 当前界面语言，从 SettingsModel.languagePref.resolvedLanguage 注入
     var language: Language {
         get { self[LanguageEnvironmentKey.self] }
         set { self[LanguageEnvironmentKey.self] = newValue }
     }
 }
 
-// MARK: - View 扩展：便捷本地化
-
 extension View {
-    /// 注入当前语言到视图环境
     func withLanguage(_ language: Language) -> some View {
         environment(\.language, language)
     }
