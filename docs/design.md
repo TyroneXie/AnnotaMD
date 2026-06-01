@@ -2,14 +2,15 @@
 
 ## 1. 设计参考
 
-主界面布局参考 [Buddy macOS](/Users/david/project/github/buddy/buddy-macos) 的设计风格：
+主界面布局参考 Buddy macOS 的设计风格：
 - 左侧 Sidebar 通顶通底，可拖拽调整宽度，可隐藏
 - 右侧主内容区有圆角（左上、左下），视觉上与 Sidebar 分离
 - 自定义 TitleBar（50px），内嵌功能按钮，不使用系统 NSToolbar
 - 主题系统基于少量基础色派生语义 token，支持深色/浅色模式
 
 与 Buddy 的差异：
-- Markdown Reader 是 SwiftUI 原生应用（非 Electron），使用 NavigationSplitView
+- Markdown Reader 是 SwiftUI 原生应用（非 Electron），使用自定义 HStack + DragGesture 两列布局
+- 窗口样式使用 `.hiddenTitleBar`，实现自定义 TitleBar 和圆角 Detail 区域
 - 无右侧状态栏，仅两列布局
 - 目录树替代任务列表
 
@@ -46,18 +47,19 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ◉ ◉ ◉    Markdown Reader                                  │
-├──────────────┬──────────────────────────────────────────────┤
-│              │                                              │
-│   (隐藏)     │              📂                              │
-│              │                                              │
-│              │      Open a folder to get started            │
-│              │                                              │
-│              │      Press Cmd+O or click Open in toolbar    │
-│              │                                              │
-│              │                                              │
-│              │                                              │
-│              │                                              │
-└──────────────┴──────────────────────────────────────────────┘
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                                                             │
+│                           📂                                │
+│                                                             │
+│                Open a folder to get started                 │
+│                                                             │
+│             Press Cmd+O or click Open in toolbar            │
+│                                                             │
+│                                                             │
+│                                                             │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.3 窗口尺寸
@@ -69,6 +71,18 @@
 - Sidebar 最大宽度：400pt
 - 主体区最小宽度：400pt
 - TitleBar 高度：50pt
+
+### 2.4 窗口配置
+
+窗口修饰符配置：
+```
+WindowGroup
+  .windowStyle(.hiddenTitleBar)
+  .defaultSize(width: 900, height: 600)
+  .windowResizability(.contentMinSize)
+```
+- 最小窗口尺寸：650pt × 450pt（Sidebar 150pt + 主体 400pt + 100pt 标题栏余量）
+- 红绿灯（traffic lights）偏移：使用 `safeAreaInsets` 配合 `.toolbar` 仅用于红绿灯定位，非功能按钮
 
 ## 3. 组件设计
 
@@ -91,6 +105,14 @@
 - 拖过 140px 阈值 → 自动隐藏 Sidebar
 - 隐藏后恢复宽度为 240pt 默认值
 
+**实现说明：**
+- 使用 `DragGesture` 绑定到分隔线区域，实时更新 `sidebarWidth` 状态
+- 拖拽结束时判断 `sidebarWidth < 140` → 设置 `isSidebarVisible = false` 并重置宽度
+- 拖拽热区：分隔线两侧各 4px（共 8px 宽的响应区域）
+- 光标：hover 时显示 `Cursor.resizeLeftRight`
+- 分隔线视觉：1px 宽竖线，颜色使用 `border` token（6% ink alpha），hover 时加深至 12% ink alpha
+- 动画：宽度变化使用 `.animation(.easeInOut(duration: 0.25), value: sidebarWidth)`
+
 **交互：**
 - 单击文件 → 右侧显示内容
 - 单击目录 → 展开/折叠
@@ -100,7 +122,7 @@
 
 ### 3.2 TitleBar（参考 Buddy TitleBar）
 
-自定义 TitleBar（50px），不使用系统 NSToolbar。使用 SwiftUI `.toolbar` modifier 配合 `ToolbarItem` 实现。
+自定义 TitleBar（50px），使用 `.windowStyle(.hiddenTitleBar)` 隐藏系统标题栏，在 Detail 区域顶部手动布局 TitleBar view。不使用系统 NSToolbar 或 SwiftUI `.toolbar` modifier。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -125,13 +147,15 @@
 
 ### 3.3 渲染视图
 
-- 使用 MarkdownUI 的 `Markdown` 视图渲染内容
+- 使用 Textual 的 `StructuredText` 视图渲染 Markdown 内容
 - 支持标准 Markdown + GFM 扩展（表格、任务列表、删除线等）
+- 使用 `.textual.structuredTextStyle(.gitHub)` 预设 GitHub 风格
 - 自适应深色/浅色模式
-- 代码块语法高亮（MarkdownUI 内置支持）
+- 代码块语法高亮（Textual 内置 Prism.js 主题）
 - 链接点击 → 在系统默认浏览器中打开（通过 `OpenURLAction`）
 - 使用 `.id(fileURL)` 确保文件切换时视图正确重建
 - 内容区有适当的 padding（参考 Buddy 的 message-body 样式）
+- 原生文本选择：`.textual.textSelection(.enabled)`
 
 **Markdown 内容排版规范（参考 Buddy globals.css）：**
 - 行高：1.6
@@ -253,6 +277,7 @@ FileTreeState
 
 ## 8. 动效
 
-- Sidebar 显隐：系统默认动画（与 NavigationSplitView 一致）
+- Sidebar 显隐：自定义 `.spring` 动画，时长 0.25s
 - 文件切换：无特殊动画，直接替换内容
 - 选中行高亮：系统默认过渡
+- Sidebar 宽度拖拽：使用 `.animation(.easeInOut(duration: 0.25), value: sidebarWidth)` 实时同步宽度变化
