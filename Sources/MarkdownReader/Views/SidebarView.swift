@@ -27,6 +27,11 @@ struct SidebarView: View {
             } else {
                 directoryTreeView
             }
+
+            Divider()
+
+            // 底部固定区域：Settings 按钮（参考 Buddy 底部固定设置入口）
+            settingsButton
         }
         .background(Color(nsColor: .underPageBackgroundColor))
     }
@@ -94,6 +99,29 @@ struct SidebarView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - 底部设置按钮
+
+    private var settingsButton: some View {
+        Button {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                Text("Settings")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("设置 (⌘,)")
     }
 
     // MARK: - 辅助方法

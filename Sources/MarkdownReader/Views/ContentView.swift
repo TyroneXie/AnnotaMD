@@ -5,10 +5,50 @@ struct ContentView: View {
     @State private var appViewModel = AppViewModel()
     @State private var fileTreeViewModel = FileTreeViewModel()
     @State private var documentViewModel = DocumentViewModel()
+    @State private var settings = SettingsModel()
 
     var body: some View {
+        mainLayout
+            .frame(minWidth: 650, minHeight: 450)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .navigationTitle(appViewModel.windowTitle)
+            .modifier(FullScreenStateModifier(appViewModel: appViewModel))
+            .modifier(KeyboardShortcutModifier(
+                appViewModel: appViewModel,
+                documentViewModel: documentViewModel
+            ))
+            .modifier(FileOpenModifier(
+                appViewModel: appViewModel,
+                documentViewModel: documentViewModel,
+                settings: settings
+            ))
+            .modifier(DirectoryChangeModifier(
+                appViewModel: appViewModel,
+                documentViewModel: documentViewModel,
+                fileTreeViewModel: fileTreeViewModel
+            ))
+            .modifier(SelectionChangeModifier(
+                appViewModel: appViewModel,
+                documentViewModel: documentViewModel,
+                fileTreeViewModel: fileTreeViewModel
+            ))
+            .modifier(SettingsChangeModifier(
+                appViewModel: appViewModel,
+                fileTreeViewModel: fileTreeViewModel,
+                settings: settings
+            ))
+            .task {
+                applyAppearance(settings.appearanceMode)
+                if settings.reopenLastLocation {
+                    restoreLastLocation()
+                }
+            }
+    }
+
+    // MARK: - 布局
+
+    private var mainLayout: some View {
         HStack(spacing: 0) {
-            // 左侧 Sidebar（单文件模式下不显示）
             if appViewModel.isSidebarVisible && !appViewModel.isSingleFileMode {
                 SidebarView(
                     fileTreeViewModel: fileTreeViewModel,
@@ -16,89 +56,172 @@ struct ContentView: View {
                 )
                 .frame(width: appViewModel.sidebarWidth)
 
-                // 拖拽分隔线
                 ResizeHandle(appViewModel: appViewModel)
             }
 
-            // 右侧 Detail 区域
             DetailView(
                 appViewModel: appViewModel,
                 documentViewModel: documentViewModel,
-                fileTreeViewModel: fileTreeViewModel
+                fileTreeViewModel: fileTreeViewModel,
+                settings: settings
             )
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle(appViewModel.windowTitle)
-        // 全屏状态监听
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
-            appViewModel.isFullScreen = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
-            appViewModel.isFullScreen = false
-        }
-        // 快捷键通知
-        .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
-            if !appViewModel.isSingleFileMode {
-                appViewModel.toggleSidebar()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
-            documentViewModel.switchDisplayMode(.rendered)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .switchToSource)) { _ in
-            documentViewModel.switchDisplayMode(.source)
-        }
-        // 打开目录通知
-        .onReceive(NotificationCenter.default.publisher(for: .openDirectory)) { notification in
-            if let url = notification.object as? URL {
-                appViewModel.openDirectory(url)
-            }
-        }
-        // 打开单文件通知
-        .onReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
-            if let url = notification.object as? URL {
-                appViewModel.openSingleFile(url)
-                Task {
-                    await documentViewModel.loadFile(at: url)
-                }
-            }
-        }
-        // 目录变化时加载文件树
-        .onChange(of: appViewModel.rootDirectory) { _, newDirectory in
-            if let dir = newDirectory {
-                documentViewModel.clearDocument()
-                Task {
-                    await fileTreeViewModel.loadDirectory(dir)
-                }
-            }
-        }
-        // 选中文件变化时加载文档
-        .onChange(of: fileTreeViewModel.selectedFileURL) { _, newURL in
-            if let url = newURL {
-                Task {
-                    await documentViewModel.loadFile(at: url)
-                }
-                updateSelectedFile(url: url)
-            }
         }
     }
 
-    private func updateSelectedFile(url: URL) {
-        let node = findFileNode(in: fileTreeViewModel.nodes, url: url)
-        appViewModel.selectedFile = node
+    // MARK: - 方法
+
+    private func applyAppearance(_ mode: AppearanceMode) {
+        NSApp.appearance = mode.nsAppearance
+    }
+
+    private func restoreLastLocation() {
+        if let dir = settings.lastOpenedDirectory {
+            appViewModel.openDirectory(dir)
+        } else if let file = settings.lastOpenedFile {
+            appViewModel.openSingleFile(file)
+            Task {
+                await documentViewModel.loadFile(at: file)
+            }
+        }
+    }
+}
+
+// MARK: - 全屏状态监听
+
+private struct FullScreenStateModifier: ViewModifier {
+    let appViewModel: AppViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didEnterFullScreenNotification)) { _ in
+                appViewModel.isFullScreen = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
+                appViewModel.isFullScreen = false
+            }
+    }
+}
+
+// MARK: - 快捷键监听
+
+private struct KeyboardShortcutModifier: ViewModifier {
+    let appViewModel: AppViewModel
+    let documentViewModel: DocumentViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
+                if !appViewModel.isSingleFileMode {
+                    appViewModel.toggleSidebar()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
+                documentViewModel.switchDisplayMode(.rendered)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .switchToSource)) { _ in
+                documentViewModel.switchDisplayMode(.source)
+            }
+    }
+}
+
+// MARK: - 文件打开通知
+
+private struct FileOpenModifier: ViewModifier {
+    let appViewModel: AppViewModel
+    let documentViewModel: DocumentViewModel
+    let settings: SettingsModel
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .openDirectory)) { notification in
+                if let url = notification.object as? URL {
+                    appViewModel.openDirectory(url)
+                    settings.lastOpenedDirectory = url
+                    settings.lastOpenedFile = nil
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
+                if let url = notification.object as? URL {
+                    appViewModel.openSingleFile(url)
+                    settings.lastOpenedDirectory = nil
+                    settings.lastOpenedFile = url
+                    Task {
+                        await documentViewModel.loadFile(at: url)
+                    }
+                }
+            }
+    }
+}
+
+// MARK: - 目录变化
+
+private struct DirectoryChangeModifier: ViewModifier {
+    let appViewModel: AppViewModel
+    let documentViewModel: DocumentViewModel
+    let fileTreeViewModel: FileTreeViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: appViewModel.rootDirectory) { _, newDirectory in
+                if let dir = newDirectory {
+                    documentViewModel.clearDocument()
+                    Task {
+                        await fileTreeViewModel.loadDirectory(dir)
+                    }
+                }
+            }
+    }
+}
+
+// MARK: - 文件选中变化
+
+private struct SelectionChangeModifier: ViewModifier {
+    let appViewModel: AppViewModel
+    let documentViewModel: DocumentViewModel
+    let fileTreeViewModel: FileTreeViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: fileTreeViewModel.selectedFileURL) { _, newURL in
+                if let url = newURL {
+                    Task {
+                        await documentViewModel.loadFile(at: url)
+                    }
+                    let node = findFileNode(in: fileTreeViewModel.nodes, url: url)
+                    appViewModel.selectedFile = node
+                }
+            }
     }
 
     private func findFileNode(in nodes: [FileNode], url: URL) -> FileNode? {
         for node in nodes {
-            if node.path == url {
-                return node
-            }
+            if node.path == url { return node }
             if node.isDirectory, let children = node.children {
-                if let found = findFileNode(in: children, url: url) {
-                    return found
-                }
+                if let found = findFileNode(in: children, url: url) { return found }
             }
         }
         return nil
+    }
+}
+
+// MARK: - 设置变化
+
+private struct SettingsChangeModifier: ViewModifier {
+    let appViewModel: AppViewModel
+    let fileTreeViewModel: FileTreeViewModel
+    let settings: SettingsModel
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: settings.showHiddenFiles) { _, _ in reloadFileTree() }
+            .onChange(of: settings.showNonMarkdownFiles) { _, _ in reloadFileTree() }
+    }
+
+    private func reloadFileTree() {
+        guard let dir = appViewModel.rootDirectory else { return }
+        fileTreeViewModel.selectedFileURL = nil
+        Task {
+            await fileTreeViewModel.loadDirectory(dir)
+        }
     }
 }

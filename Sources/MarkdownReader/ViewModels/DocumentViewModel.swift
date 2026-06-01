@@ -19,6 +19,9 @@ final class DocumentViewModel {
     /// 显示模式
     var displayMode: DisplayMode = .rendered
 
+    /// 是否是首次设置显示模式（用于在加载新文件时应用默认显示模式）
+    private var isFirstFile: Bool = true
+
     /// 是否正在加载
     var isLoading: Bool = false
 
@@ -34,10 +37,15 @@ final class DocumentViewModel {
 
     private let fileService: FileService
 
+    /// 设置模型（用于读取默认显示模式等设置）
+    var settings: SettingsModel
+
     // MARK: - 初始化
 
-    init(fileService: FileService = FileService()) {
+    init(fileService: FileService = FileService(), settings: SettingsModel = SettingsModel()) {
         self.fileService = fileService
+        self.settings = settings
+        self.displayMode = settings.defaultDisplayMode
     }
 
     // MARK: - 方法
@@ -45,6 +53,12 @@ final class DocumentViewModel {
     /// 加载文件内容
     /// - Parameter url: 文件 URL
     func loadFile(at url: URL) async {
+        // 首次加载文件时应用默认显示模式
+        if isFirstFile {
+            displayMode = settings.defaultDisplayMode
+            isFirstFile = false
+        }
+
         // 检查是否为 Markdown 文件
         guard url.pathExtension == "md" else {
             fileError = .unsupportedFileType(url.pathExtension)
@@ -101,5 +115,7 @@ final class DocumentViewModel {
         fileName = ""
         fileError = nil
         isLoading = false
+        isFirstFile = true
+        displayMode = settings.defaultDisplayMode
     }
 }

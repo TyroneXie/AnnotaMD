@@ -29,10 +29,14 @@ final class FileTreeViewModel {
 
     private let fileService: FileService
 
+    /// 设置模型（用于读取文件树过滤设置）
+    var settings: SettingsModel
+
     // MARK: - 初始化
 
-    init(fileService: FileService = FileService()) {
+    init(fileService: FileService = FileService(), settings: SettingsModel = SettingsModel()) {
         self.fileService = fileService
+        self.settings = settings
     }
 
     // MARK: - 方法
@@ -45,8 +49,15 @@ final class FileTreeViewModel {
         isEmptyDirectory = false
 
         do {
-            nodes = try await fileService.scanDirectory(directory)
-            isEmptyDirectory = !fileService.directoryContainsMarkdown(directory)
+            nodes = try await fileService.scanDirectory(
+                directory,
+                showHiddenFiles: settings.showHiddenFiles,
+                showNonMarkdownFiles: settings.showNonMarkdownFiles
+            )
+            isEmptyDirectory = !fileService.directoryContainsMarkdown(
+                directory,
+                showHiddenFiles: settings.showHiddenFiles
+            )
 
             // 默认展开根目录
             expandedDirs.insert(directory)

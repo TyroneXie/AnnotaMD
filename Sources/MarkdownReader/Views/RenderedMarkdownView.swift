@@ -5,6 +5,7 @@ import Textual
 struct RenderedMarkdownView: View {
     let content: String
     let fileURL: URL?
+    var contentPadding: CGFloat = 20
 
     var body: some View {
         ScrollView {
@@ -12,7 +13,7 @@ struct RenderedMarkdownView: View {
                 StructuredText(markdown: content)
                     .textual.structuredTextStyle(.gitHub)
                     .textual.textSelection(.enabled)
-                    .padding(20)
+                    .padding(contentPadding)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

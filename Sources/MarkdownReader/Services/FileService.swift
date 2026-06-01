@@ -4,13 +4,25 @@ import Foundation
 struct FileService: Sendable {
 
     /// 扫描指定目录，返回文件树结构
-    /// - Parameter directory: 要扫描的目录 URL
+    /// - Parameters:
+    ///   - directory: 要扫描的目录 URL
+    ///   - showHiddenFiles: 是否显示隐藏文件
+    ///   - showNonMarkdownFiles: 是否显示非 Markdown 文件
     /// - Returns: 排序后的 FileNode 数组
-    func scanDirectory(_ directory: URL) async throws -> [FileNode] {
+    func scanDirectory(
+        _ directory: URL,
+        showHiddenFiles: Bool = false,
+        showNonMarkdownFiles: Bool = true
+    ) async throws -> [FileNode] {
+        var options: FileManager.DirectoryEnumerationOptions = [.skipsSubdirectoryDescendants]
+        if !showHiddenFiles {
+            options.insert(.skipsHiddenFiles)
+        }
+
         let contents = try FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: [.isDirectoryKey, .nameKey],
-            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            options: options
         )
 
         var nodes: [FileNode] = []
@@ -22,7 +34,13 @@ struct FileService: Sendable {
             let isMarkdown = url.pathExtension == "md"
 
             if isDirectory {
-                let children = try await scanDirectory(url)
+                let children = try await scanDirectory(
+                    url,
+                    showHiddenFiles: showHiddenFiles,
+                    showNonMarkdownFiles: showNonMarkdownFiles
+                )
+                // 如果目录内没有可见文件，跳过空目录
+                guard !children.isEmpty else { continue }
                 let node = FileNode(
                     name: name,
                     path: url,
@@ -31,6 +49,8 @@ struct FileService: Sendable {
                 )
                 nodes.append(node)
             } else {
+                // 如果不显示非 Markdown 文件，则跳过
+                if !showNonMarkdownFiles && !isMarkdown { continue }
                 let node = FileNode(
                     name: name,
                     path: url,
@@ -76,13 +96,20 @@ struct FileService: Sendable {
     }
 
     /// 检查目录是否包含 Markdown 文件
-    /// - Parameter directory: 要检查的目录
+    /// - Parameters:
+    ///   - directory: 要检查的目录
+    ///   - showHiddenFiles: 是否检查隐藏文件
     /// - Returns: 是否包含 .md 文件
-    func directoryContainsMarkdown(_ directory: URL) -> Bool {
+    func directoryContainsMarkdown(_ directory: URL, showHiddenFiles: Bool = false) -> Bool {
+        var options: FileManager.DirectoryEnumerationOptions = []
+        if !showHiddenFiles {
+            options.insert(.skipsHiddenFiles)
+        }
+
         guard let enumerator = FileManager.default.enumerator(
             at: directory,
             includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
+            options: options
         ) else {
             return false
         }

@@ -5,6 +5,7 @@ struct DetailView: View {
     let appViewModel: AppViewModel
     let documentViewModel: DocumentViewModel
     let fileTreeViewModel: FileTreeViewModel
+    let settings: SettingsModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -69,10 +70,15 @@ struct DetailView: View {
         case .rendered:
             RenderedMarkdownView(
                 content: documentViewModel.content,
-                fileURL: documentViewModel.currentFileURL
+                fileURL: documentViewModel.currentFileURL,
+                contentPadding: settings.contentPaddingPoints
             )
         case .source:
-            SourceMarkdownView(content: documentViewModel.content)
+            SourceMarkdownView(
+                content: documentViewModel.content,
+                fontSize: settings.sourceFontPointSize,
+                contentPadding: settings.contentPaddingPoints
+            )
         }
     }
 }

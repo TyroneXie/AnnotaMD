@@ -1,0 +1,151 @@
+import SwiftUI
+
+/// 设置模型，使用 @Observable + 手动 UserDefaults 同步
+/// @Observable 和 @AppStorage 不兼容，因此使用 didSet 手动同步到 UserDefaults
+/// 参照 buddy-macos 的设置结构，适配 SwiftUI 原生方案
+@MainActor
+@Observable
+final class SettingsModel {
+
+    // MARK: - UserDefaults Keys
+
+    private enum Keys {
+        static let defaultDisplayMode   = "com.markdownreader.defaultDisplayMode"
+        static let reopenLastLocation   = "com.markdownreader.reopenLastLocation"
+        static let showHiddenFiles      = "com.markdownreader.showHiddenFiles"
+        static let showNonMarkdownFiles = "com.markdownreader.showNonMarkdownFiles"
+        static let appearanceMode       = "com.markdownreader.appearanceMode"
+        static let sourceFontSize       = "com.markdownreader.sourceFontSize"
+        static let contentPadding       = "com.markdownreader.contentPadding"
+        static let lastOpenedDirectory  = "com.markdownreader.lastOpenedDirectory"
+        static let lastOpenedFilePath   = "com.markdownreader.lastOpenedFilePath"
+    }
+
+    private let defaults = UserDefaults.standard
+
+    // MARK: - 通用设置
+
+    /// 默认显示模式（渲染 / 原文）
+    var defaultDisplayMode: DisplayMode {
+        didSet { defaults.set(defaultDisplayMode.rawValue, forKey: Keys.defaultDisplayMode) }
+    }
+
+    /// 启动时重新打开上次位置
+    var reopenLastLocation: Bool {
+        didSet { defaults.set(reopenLastLocation, forKey: Keys.reopenLastLocation) }
+    }
+
+    /// 在侧边栏显示隐藏文件
+    var showHiddenFiles: Bool {
+        didSet { defaults.set(showHiddenFiles, forKey: Keys.showHiddenFiles) }
+    }
+
+    /// 在侧边栏显示非 Markdown 文件
+    var showNonMarkdownFiles: Bool {
+        didSet { defaults.set(showNonMarkdownFiles, forKey: Keys.showNonMarkdownFiles) }
+    }
+
+    // MARK: - 外观设置
+
+    /// 外观模式（浅色 / 深色 / 跟随系统）
+    var appearanceMode: AppearanceMode {
+        didSet { defaults.set(appearanceMode.rawValue, forKey: Keys.appearanceMode) }
+    }
+
+    /// 源码视图字号（pt）
+    var sourceFontSize: Int {
+        didSet { defaults.set(sourceFontSize, forKey: Keys.sourceFontSize) }
+    }
+
+    /// 渲染视图内容边距（pt）
+    var contentPadding: Int {
+        didSet { defaults.set(contentPadding, forKey: Keys.contentPadding) }
+    }
+
+    // MARK: - 上次位置记忆
+
+    /// 上次打开的目录 URL
+    var lastOpenedDirectory: URL? {
+        didSet {
+            defaults.set(lastOpenedDirectory?.path, forKey: Keys.lastOpenedDirectory)
+        }
+    }
+
+    /// 上次打开的单文件 URL
+    var lastOpenedFile: URL? {
+        didSet {
+            defaults.set(lastOpenedFile?.path, forKey: Keys.lastOpenedFilePath)
+        }
+    }
+
+    // MARK: - 计算属性
+
+    /// 源码视图字号（安全范围 10~24）
+    var sourceFontPointSize: CGFloat {
+        CGFloat(min(max(sourceFontSize, 10), 24))
+    }
+
+    /// 内容边距（安全范围 8~40）
+    var contentPaddingPoints: CGFloat {
+        CGFloat(min(max(contentPadding, 8), 40))
+    }
+
+    // MARK: - 初始化（从 UserDefaults 恢复）
+
+    init() {
+        let defaults = UserDefaults.standard
+
+        self.defaultDisplayMode = DisplayMode(rawValue: defaults.string(forKey: Keys.defaultDisplayMode) ?? "") ?? .rendered
+        self.reopenLastLocation = defaults.object(forKey: Keys.reopenLastLocation) as? Bool ?? false
+        self.showHiddenFiles = defaults.object(forKey: Keys.showHiddenFiles) as? Bool ?? false
+        self.showNonMarkdownFiles = defaults.object(forKey: Keys.showNonMarkdownFiles) as? Bool ?? true
+        self.appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearanceMode) ?? "") ?? .system
+        self.sourceFontSize = defaults.object(forKey: Keys.sourceFontSize) as? Int ?? 13
+        self.contentPadding = defaults.object(forKey: Keys.contentPadding) as? Int ?? 20
+
+        // 恢复上次位置（验证路径是否仍存在）
+        if let dirPath = defaults.string(forKey: Keys.lastOpenedDirectory) {
+            let url = URL(fileURLWithPath: dirPath)
+            var isDir: ObjCBool = false
+            self.lastOpenedDirectory = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
+                ? url : nil
+        } else {
+            self.lastOpenedDirectory = nil
+        }
+
+        if let filePath = defaults.string(forKey: Keys.lastOpenedFilePath) {
+            let url = URL(fileURLWithPath: filePath)
+            self.lastOpenedFile = FileManager.default.fileExists(atPath: url.path) ? url : nil
+        } else {
+            self.lastOpenedFile = nil
+        }
+    }
+}
+
+// MARK: - 外观模式枚举
+
+/// 外观模式：浅色、深色、跟随系统
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case light
+    case dark
+    case system
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .light:  return "浅色"
+        case .dark:   return "深色"
+        case .system: return "跟随系统"
+        }
+    }
+
+    /// 转换为 NSAppearance
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .light:  return NSAppearance(named: .aqua)
+        case .dark:   return NSAppearance(named: .darkAqua)
+        case .system: return nil
+        }
+    }
+}

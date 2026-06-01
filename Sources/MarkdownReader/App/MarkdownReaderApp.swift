@@ -10,8 +10,16 @@ struct MarkdownReaderApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 900, height: 600)
-        .windowResizability(.contentMinSize)
+        .windowResizability(.automatic)
         .commands {
+            // 设置菜单：Cmd+,
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings...") {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             // 文件菜单：打开
             CommandGroup(replacing: .newItem) {
                 Button("Open...") {
@@ -39,6 +47,11 @@ struct MarkdownReaderApp: App {
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             }
+        }
+
+        // 设置窗口
+        Settings {
+            SettingsView()
         }
     }
 
