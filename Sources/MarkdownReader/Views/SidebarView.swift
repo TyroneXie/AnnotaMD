@@ -17,7 +17,6 @@ struct SidebarView: View {
 
                 Spacer()
 
-                // Sidebar 隐藏按钮（紧贴右边缘，与红绿灯垂直对齐）
                 Button {
                     appViewModel.toggleSidebar()
                 } label: {
@@ -27,16 +26,15 @@ struct SidebarView: View {
                 }
                 .buttonStyle(.plain)
                 .help(L10n.tr(.titleBarToggleSidebar, language: language))
-                .disabled(appViewModel.isSingleFileMode)
-                .opacity(appViewModel.isSingleFileMode ? 0.3 : 1)
                 .padding(.trailing, 8)
             }
             .frame(height: 50)
 
             Rectangle().fill(themeColors.border).frame(height: 1)
 
-            // 目录树列表
-            if fileTreeViewModel.isLoading {
+            if appViewModel.isSingleFileMode {
+                singleFileView
+            } else if fileTreeViewModel.isLoading {
                 ProgressView(L10n.tr(.loading, language: language))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = fileTreeViewModel.errorMessage {
@@ -53,6 +51,38 @@ struct SidebarView: View {
             settingsButton
         }
         .background(themeColors.bgSubtle)
+    }
+
+    // MARK: - 单文件列表
+
+    private var singleFileView: some View {
+        List {
+            if let url = appViewModel.singleFileURL {
+                Button {
+                    fileTreeViewModel.selectedFileURL = url
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 14))
+                            .foregroundStyle(themeColors.fgSecondary)
+                        Text(url.lastPathComponent)
+                            .font(.system(size: 13))
+                            .foregroundStyle(themeColors.ink)
+                            .lineLimit(1)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(
+                    fileTreeViewModel.selectedFileURL == url ? themeColors.accentSoft : Color.clear
+                )
+            }
+        }
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.never)
+        .modifier(LightScrollbarModifier())
     }
 
     // MARK: - 目录树（使用递归 DisclosureGroup 渲染嵌套结构）

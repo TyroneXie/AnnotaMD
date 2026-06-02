@@ -31,8 +31,8 @@ final class AppViewModel {
 
     // MARK: - Sidebar 状态
 
-    /// Sidebar 是否可见
-    var isSidebarVisible: Bool = true
+    /// Sidebar 是否可见（首次启动默认隐藏）
+    var isSidebarVisible: Bool = false
 
     /// Sidebar 当前宽度
     var sidebarWidth: CGFloat = 240
@@ -173,13 +173,12 @@ final class AppViewModel {
         }
     }
 
-    /// 打开单个文件（单文件模式，无 Sidebar）
+    /// 打开单个文件（单文件模式，Sidebar 默认隐藏但可手动打开）
     func openSingleFile(_ url: URL) {
         rootDirectory = nil
         isSingleFileMode = true
         singleFileURL = url
         selectedFile = nil
-        // 单文件模式隐藏 Sidebar
         if isSidebarVisible {
             withAnimation(.spring(duration: 0.25)) {
                 isSidebarVisible = false

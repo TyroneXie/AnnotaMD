@@ -103,6 +103,7 @@ enum L10n {
         // 欢迎页
         case welcomeOpenFolder
         case welcomePressCmdO
+        case selectFileHint
 
         // Git 状态
         case gitChangesCount
@@ -176,6 +177,7 @@ enum L10n {
         .sidebarSettingsButton: "Settings",
         .welcomeOpenFolder: "Open a folder to get started",
         .welcomePressCmdO: "Press Cmd+O or click Open in toolbar",
+        .selectFileHint: "Select a file to preview",
         .gitChangesCount: "{n} changes",
         .gitNoChanges: "No changes",
         .gitCommitMessage: "Commit message",
@@ -245,6 +247,7 @@ enum L10n {
         .sidebarSettingsButton: "设置",
         .welcomeOpenFolder: "打开文件夹开始阅读",
         .welcomePressCmdO: "按 Cmd+O 或点击工具栏中的打开按钮",
+        .selectFileHint: "选择文件以预览",
         .gitChangesCount: "{n} 个变更",
         .gitNoChanges: "无变更",
         .gitCommitMessage: "提交消息",
@@ -314,6 +317,7 @@ enum L10n {
         .sidebarSettingsButton: "設定",
         .welcomeOpenFolder: "開啟資料夾開始閱讀",
         .welcomePressCmdO: "按 Cmd+O 或點擊工具列中的開啟按鈕",
+        .selectFileHint: "選擇檔案以預覽",
         .gitChangesCount: "{n} 個變更",
         .gitNoChanges: "無變更",
         .gitCommitMessage: "提交訊息",

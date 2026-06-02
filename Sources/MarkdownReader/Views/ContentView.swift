@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var gitViewModel = GitViewModel()
     @State private var settings = SettingsModel.shared
     @Environment(\.language) private var language
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         mainLayout
@@ -27,6 +28,7 @@ struct ContentView: View {
             .modifier(FileOpenModifier(
                 appViewModel: appViewModel,
                 documentViewModel: documentViewModel,
+                fileTreeViewModel: fileTreeViewModel,
                 settings: settings
             ))
             .modifier(DirectoryChangeModifier(
@@ -56,6 +58,20 @@ struct ContentView: View {
                     restoreLastLocation()
                 }
             }
+            .onChange(of: colorScheme) { _, newScheme in
+                // 仅在「跟随系统」模式下更新 systemIsDark
+                // 避免手动选择浅色/深色时，colorScheme 变化污染 systemIsDark
+                if settings.appearanceMode == .system {
+                    settings.systemIsDark = (newScheme == .dark)
+                }
+            }
+            .onChange(of: settings.appearanceMode) { _, newMode in
+                // 切换到「跟随系统」时，立即刷新 systemIsDark 为当前系统外观
+                if newMode == .system {
+                    settings.systemIsDark = NSApp.effectiveAppearance
+                        .bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                }
+            }
     }
 
     // MARK: - 布局
@@ -79,7 +95,7 @@ struct ContentView: View {
                 SettingsContentView(appViewModel: appViewModel, settings: settings)
             } else {
                 // 正常模式：文件树 + 文档
-                if appViewModel.isSidebarVisible && !appViewModel.isSingleFileMode {
+                if appViewModel.isSidebarVisible {
                     SidebarView(
                         fileTreeViewModel: fileTreeViewModel,
                         appViewModel: appViewModel
@@ -113,11 +129,11 @@ struct ContentView: View {
             appViewModel.openDirectory(dir)
         } else if let file = settings.lastOpenedFile {
             appViewModel.openSingleFile(file)
+            fileTreeViewModel.selectedFileURL = file
             Task {
                 await documentViewModel.loadFile(at: file)
             }
         } else {
-            // 兜底目录：用户主目录 ~
             let homeDir = URL(fileURLWithPath: NSHomeDirectory())
             appViewModel.openDirectory(homeDir)
         }
@@ -282,9 +298,7 @@ private struct KeyboardShortcutModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
-                if !appViewModel.isSingleFileMode {
-                    appViewModel.toggleSidebar()
-                }
+                appViewModel.toggleSidebar()
             }
             .onReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
                 documentViewModel.switchDisplayMode(.rendered)
@@ -300,6 +314,7 @@ private struct KeyboardShortcutModifier: ViewModifier {
 private struct FileOpenModifier: ViewModifier {
     let appViewModel: AppViewModel
     let documentViewModel: DocumentViewModel
+    let fileTreeViewModel: FileTreeViewModel
     let settings: SettingsModel
 
     func body(content: Content) -> some View {
@@ -314,6 +329,7 @@ private struct FileOpenModifier: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
                 if let url = notification.object as? URL {
                     appViewModel.openSingleFile(url)
+                    fileTreeViewModel.selectedFileURL = url
                     settings.lastOpenedDirectory = nil
                     settings.lastOpenedFile = url
                     Task {

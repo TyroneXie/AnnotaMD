@@ -70,22 +70,20 @@ struct DetailView: View {
     @ViewBuilder
     private var titleBar: some View {
         HStack(spacing: 0) {
-            if !appViewModel.isSidebarVisible || appViewModel.isSingleFileMode {
+            if !appViewModel.isSidebarVisible {
                 TrafficLightButtons()
                     .padding(.leading, 12)
 
-                if !appViewModel.isSingleFileMode {
-                    Button {
-                        appViewModel.toggleSidebar()
-                    } label: {
-                        Image(systemName: "sidebar.leading")
-                            .font(.system(size: 14))
-                            .foregroundStyle(themeColors.fgSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr(.titleBarToggleSidebar, language: language))
-                    .padding(.leading, 8)
+                Button {
+                    appViewModel.toggleSidebar()
+                } label: {
+                    Image(systemName: "sidebar.leading")
+                        .font(.system(size: 14))
+                        .foregroundStyle(themeColors.fgSecondary)
                 }
+                .buttonStyle(.plain)
+                .help(L10n.tr(.titleBarToggleSidebar, language: language))
+                .padding(.leading, 8)
             }
 
             // 文件绝对路径（左对齐，仅在有文档时显示）
@@ -135,10 +133,8 @@ struct DetailView: View {
     @ViewBuilder
     private var contentArea: some View {
         if appViewModel.rootDirectory == nil && !appViewModel.isSingleFileMode {
-            // 首次启动空状态（无目录也无单文件）
             WelcomeView(appViewModel: appViewModel)
         } else if let error = documentViewModel.fileError {
-            // 错误状态
             ErrorView(
                 icon: "exclamationmark.triangle",
                 message: error.localizedDescription
@@ -148,17 +144,14 @@ struct DetailView: View {
                 .tint(themeColors.fgSecondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if documentViewModel.hasDocument {
-            // 文档内容（带大纲分栏）
             documentContentWithOutline
         } else if !appViewModel.isSingleFileMode && fileTreeViewModel.isEmptyDirectory {
-            // 空目录状态
             ErrorView(
                 icon: "folder",
                 message: L10n.tr(.emptyDirectoryMessage, language: language)
             )
         } else {
-            // 选中目录但未选中文件
-            WelcomeView(appViewModel: appViewModel)
+            selectFilePlaceholder
         }
     }
 
@@ -202,6 +195,21 @@ struct DetailView: View {
                 print("Outline selected: \(item.title) at line \(item.lineNumber)")
             }
         )
+    }
+
+    // MARK: - 文档内容视图
+
+    @ViewBuilder
+    private var selectFilePlaceholder: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "doc.text")
+                .font(.system(size: 36))
+                .foregroundStyle(themeColors.fgMuted)
+            Text(L10n.tr(.selectFileHint, language: language))
+                .font(.subheadline)
+                .foregroundStyle(themeColors.fgSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - 文档内容视图
