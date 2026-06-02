@@ -21,7 +21,9 @@
 - **文件树过滤**：支持隐藏文件、非 Markdown 文件过滤
 - **键盘快捷键**：Cmd+, 设置、Cmd+O 打开、Cmd+\ 切换侧边栏、Cmd+Shift+E/R 切换渲染/原始模式
 - **窗口状态恢复**：启动时恢复上次打开的位置
+- **默认 Markdown 打开程序**：可通过设置将应用注册为 .md/.markdown 文件的默认打开程序
 - **应用图标**：全套 macOS AppIcon 尺寸
+- **构建与发布**：build-app.sh 支持代码签名与 DMG 打包，GitHub Actions 自动化发布流程
 
 ### 变更
 

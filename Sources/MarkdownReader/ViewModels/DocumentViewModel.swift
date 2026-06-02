@@ -36,6 +36,9 @@ final class DocumentViewModel {
     /// 当前文档的大纲项
     var outlineItems: [OutlineItem] = []
 
+    /// 大纲导航滚动请求（非 nil 时触发滚动，滚动后应清空）
+    var scrollToLineRequest: Int?
+
     // MARK: - 依赖
 
     private let fileService: FileService
@@ -114,6 +117,16 @@ final class DocumentViewModel {
     /// 切换显示模式
     func switchDisplayMode(_ mode: DisplayMode) {
         displayMode = mode
+    }
+
+    /// 请求滚动到指定行号（大纲导航使用）
+    func requestScrollToLine(_ lineNumber: Int) {
+        scrollToLineRequest = lineNumber
+    }
+
+    /// 清除滚动请求（滚动完成后调用）
+    func clearScrollRequest() {
+        scrollToLineRequest = nil
     }
 
     /// 清除当前文档

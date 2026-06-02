@@ -31,7 +31,7 @@ enum PresetThemes {
     // 来源: buddy-macos docs/theme-scheme.md 5.1 节
 
     static let darkThemes: [ThemeDefinition] = [
-        ThemeDefinition(id: "buddy-dark", name: "Buddy Dark", type: .dark,
+        ThemeDefinition(id: "buddy-dark", name: "Default Dark", type: .dark,
                         surface: "#18181a", ink: "#e8e8e3", accent: "#339cff",
                         success: "#40c977", danger: "#fa423e", contrast: 60),
         ThemeDefinition(id: "codex-dark", name: "Codex Dark", type: .dark,
@@ -82,8 +82,8 @@ enum PresetThemes {
     // 来源: buddy-macos docs/theme-scheme.md 5.2 节
 
     static let lightThemes: [ThemeDefinition] = [
-        ThemeDefinition(id: "buddy-light", name: "Buddy Light", type: .light,
-                        surface: "#f3f3f1", ink: "#1c1c1a", accent: "#339cff",
+        ThemeDefinition(id: "buddy-light", name: "Default Light", type: .light,
+                        surface: "#ffffff", ink: "#1c1c1a", accent: "#339cff",
                         success: "#00a240", danger: "#ba2623", contrast: 45),
         ThemeDefinition(id: "codex-light", name: "Codex Light", type: .light,
                         surface: "#ffffff", ink: "#1a1c1f", accent: "#0169cc",
@@ -127,8 +127,8 @@ enum PresetThemes {
 
     static func defaultTheme(for type: ThemeType) -> ThemeDefinition {
         switch type {
-        case .dark: darkThemes[0]   // buddy-dark
-        case .light: lightThemes[0] // buddy-light
+        case .dark: darkThemes[0]   // Default Dark
+        case .light: lightThemes[0] // Default Light
         }
     }
 }

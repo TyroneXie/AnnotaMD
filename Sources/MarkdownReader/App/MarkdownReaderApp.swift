@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 @main
 struct MarkdownReaderApp: App {
@@ -16,9 +15,73 @@ struct MarkdownReaderApp: App {
         SettingsModel.shared.languagePref.resolvedLanguage
     }
 
+    /// 最近打开记录（从 SettingsModel 读取，用于菜单动态生成）
+    private var recentItems: [RecentItem] {
+        SettingsModel.shared.recentItems
+    }
+
+    /// 打开最近的子菜单（文件在上、目录在下，不显示分区标题）
+    @ViewBuilder
+    private var openRecentMenu: some View {
+        if recentItems.isEmpty {
+            Text(L10n.tr(.openRecentEmpty, language: language))
+                .disabled(true)
+        } else {
+            Menu(L10n.tr(.openRecent, language: language)) {
+                let files = recentItems.filter { !$0.isDirectory }
+                let folders = recentItems.filter { $0.isDirectory }
+
+                // 文件列表
+                ForEach(files) { item in
+                    Button {
+                        NotificationCenter.default.post(name: .openFile, object: item.url)
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.text")
+                            Text(item.displayName)
+                        }
+                    }
+                }
+
+                // 分隔线（文件和目录都有时显示）
+                if !files.isEmpty && !folders.isEmpty {
+                    Divider()
+                }
+
+                // 目录列表
+                ForEach(folders) { item in
+                    Button {
+                        NotificationCenter.default.post(name: .openDirectory, object: item.url)
+                    } label: {
+                        HStack {
+                            Image(systemName: "folder")
+                            Text(item.displayName)
+                        }
+                    }
+                }
+
+                Divider()
+
+                Button(L10n.tr(.clearRecentItems, language: language)) {
+                    SettingsModel.shared.clearRecentItems()
+                }
+            }
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // 安装主题化滚动条（延迟等视图层级稳定）
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        let tc = ThemeColors.from(SettingsModel.shared.resolvedTheme)
+                        ThemedScrollbarHelper.installAll(
+                            knobColor: NSColor(tc.scrollbarKnob),
+                            trackColor: NSColor(tc.scrollbarTrack)
+                        )
+                    }
+                }
                 // 处理从 Finder 双击或右键「用 Markdown Reader 打开」的文件
                 .onOpenURL { url in
                     var isDir: ObjCBool = false
@@ -43,12 +106,15 @@ struct MarkdownReaderApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
 
-            // 文件菜单：打开
+            // 文件菜单：打开 + 打开最近
             CommandGroup(replacing: .newItem) {
                 Button(L10n.tr(.open, language: language) + "...") {
-                    openPanel()
+                    OpenPanelHelper.show(language: language)
                 }
                 .keyboardShortcut("o", modifiers: .command)
+
+                // 打开最近子菜单
+                openRecentMenu
             }
 
             // 视图菜单：Sidebar 切换
@@ -72,27 +138,6 @@ struct MarkdownReaderApp: App {
             }
         }
     }
-
-    /// 统一的打开面板，支持选择目录和 .md 文件
-    private func openPanel() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.prompt = L10n.tr(.open, language: language)
-        panel.allowedContentTypes = [.folder, UTType(filenameExtension: "md")].compactMap { $0 }
-
-        if panel.runModal() == .OK, let url = panel.url {
-            var isDir: ObjCBool = false
-            FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-
-            if isDir.boolValue {
-                NotificationCenter.default.post(name: .openDirectory, object: url)
-            } else {
-                NotificationCenter.default.post(name: .openFile, object: url)
-            }
-        }
-    }
 }
 
 // MARK: - Notification Names
@@ -104,4 +149,6 @@ extension Notification.Name {
     static let openDirectory = Notification.Name("com.markdownreader.openDirectory")
     static let openFile = Notification.Name("com.markdownreader.openFile")
     static let toggleSettings = Notification.Name("com.markdownreader.toggleSettings")
+    static let openPanel = Notification.Name("com.markdownreader.openPanel")
+    static let clearRecentItems = Notification.Name("com.markdownreader.clearRecentItems")
 }

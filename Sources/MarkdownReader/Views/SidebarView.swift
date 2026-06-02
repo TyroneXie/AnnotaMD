@@ -9,7 +9,7 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部区域：自定义红绿灯 + Sidebar 隐藏按钮（50px）
+            // 顶部区域：自定义红绿灯 + 打开按钮 + Sidebar 隐藏按钮（50px）
             HStack(spacing: 0) {
                 // 自定义红绿灯按钮
                 TrafficLightButtons()
@@ -17,6 +17,19 @@ struct SidebarView: View {
 
                 Spacer()
 
+                // 打开按钮（与菜单 Cmd+O 功能一致）
+                Button {
+                    NotificationCenter.default.post(name: .openPanel, object: nil)
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 14))
+                        .foregroundStyle(themeColors.fgSecondary)
+                }
+                .buttonStyle(.plain)
+                .help(L10n.tr(.titleBarOpen, language: language))
+                .padding(.trailing, 4)
+
+                // Sidebar 隐藏按钮
                 Button {
                     appViewModel.toggleSidebar()
                 } label: {
@@ -81,8 +94,7 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .scrollIndicators(.never)
-        .modifier(LightScrollbarModifier())
+        .modifier(ThemedScrollbarModifier())
     }
 
     // MARK: - 目录树（使用递归 DisclosureGroup 渲染嵌套结构）
@@ -95,8 +107,7 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
-        .scrollIndicators(.never)
-        .modifier(LightScrollbarModifier())
+        .modifier(ThemedScrollbarModifier())
         .focusable()
         .onMoveCommand { direction in
             switch direction {
@@ -230,36 +241,6 @@ struct FileNodeRow: View {
             }
             .buttonStyle(.plain)
             .listRowBackground(selectionBackground)
-        }
-    }
-}
-
-// MARK: - 轻量化滚动条修饰器
-
-/// 通过 NSViewRepresentable 找到父级 NSScrollView 并强制使用 overlay 样式滚动条
-/// overlay 样式滚动条半透明、仅在滚动时显示，视觉上更轻量
-struct LightScrollbarModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content.background(OverlayScrollerEnforcer())
-    }
-}
-
-/// 查找父级 NSScrollView 并强制设置 overlay 滚动条样式
-private struct OverlayScrollerEnforcer: NSViewRepresentable {
-    func makeNSView(context: Context) -> OverlayScrollerView {
-        OverlayScrollerView()
-    }
-
-    func updateNSView(_ nsView: OverlayScrollerView, context: Context) {}
-}
-
-private final class OverlayScrollerView: NSView {
-    override func viewDidMoveToSuperview() {
-        super.viewDidMoveToSuperview()
-        DispatchQueue.main.async {
-            if let scrollView = self.enclosingScrollView {
-                scrollView.scrollerStyle = .overlay
-            }
         }
     }
 }

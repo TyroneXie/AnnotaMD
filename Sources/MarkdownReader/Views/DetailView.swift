@@ -30,10 +30,12 @@ struct DetailView: View {
     let appViewModel: AppViewModel
     let documentViewModel: DocumentViewModel
     let fileTreeViewModel: FileTreeViewModel
-    let gitViewModel: GitViewModel
     let settings: SettingsModel
     @Environment(\.language) private var language
     @Environment(\.themeColors) private var themeColors
+
+    /// Markdown 内容区 NSScrollView 引用，用于大纲导航滚动
+    @State private var markdownScrollViewRef = MarkdownScrollViewRef()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,14 +45,6 @@ struct DetailView: View {
 
             // 内容区域
             contentArea
-
-            // 底部项目状态栏（仅 Git 仓库时显示）
-            if gitViewModel.isGitRepository {
-                ProjectStatusView(
-                    gitViewModel: gitViewModel,
-                    appViewModel: appViewModel
-                )
-            }
         }
         .background(themeColors.surface, in: .rect(
             topLeadingRadius: 10,
@@ -83,6 +77,17 @@ struct DetailView: View {
                 }
                 .buttonStyle(.plain)
                 .help(L10n.tr(.titleBarToggleSidebar, language: language))
+                .padding(.leading, 8)
+
+                Button {
+                    NotificationCenter.default.post(name: .openPanel, object: nil)
+                } label: {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 14))
+                        .foregroundStyle(themeColors.fgSecondary)
+                }
+                .buttonStyle(.plain)
+                .help(L10n.tr(.titleBarOpen, language: language))
                 .padding(.leading, 8)
             }
 
@@ -191,8 +196,7 @@ struct DetailView: View {
         OutlineView(
             items: documentViewModel.outlineItems,
             onSelect: { item in
-                // TODO: 后续实现滚动到对应行号的功能
-                print("Outline selected: \(item.title) at line \(item.lineNumber)")
+                documentViewModel.requestScrollToLine(item.lineNumber)
             }
         )
     }
@@ -218,11 +222,20 @@ struct DetailView: View {
     private var documentContentView: some View {
         switch documentViewModel.displayMode {
         case .rendered:
-            RenderedMarkdownView(
+            EquatableRenderedMarkdownView(
                 content: documentViewModel.content,
                 fileURL: documentViewModel.currentFileURL,
-                contentPadding: settings.contentPaddingPoints
+                contentPadding: settings.contentPaddingPoints,
+                scrollToLine: documentViewModel.scrollToLineRequest,
+                scrollViewRef: markdownScrollViewRef
             )
+            .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
+                if newValue != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        documentViewModel.clearScrollRequest()
+                    }
+                }
+            }
         case .raw:
             RawMarkdownView(
                 content: Binding(
@@ -230,8 +243,16 @@ struct DetailView: View {
                     set: { documentViewModel.content = $0 }
                 ),
                 fontSize: settings.sourceFontPointSize,
-                contentPadding: settings.contentPaddingPoints
+                contentPadding: settings.contentPaddingPoints,
+                scrollToLine: documentViewModel.scrollToLineRequest
             )
+            .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
+                if newValue != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        documentViewModel.clearScrollRequest()
+                    }
+                }
+            }
         }
     }
 }

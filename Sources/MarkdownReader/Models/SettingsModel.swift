@@ -1,6 +1,32 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// 最近打开的文件/目录记录
+struct RecentItem: Codable, Identifiable, Equatable {
+    let id: UUID
+    let url: URL
+    /// 是否为目录
+    let isDirectory: Bool
+    /// 记录时间戳
+    let timestamp: Date
+
+    init(url: URL, isDirectory: Bool, timestamp: Date = Date()) {
+        self.id = UUID()
+        self.url = url
+        self.isDirectory = isDirectory
+        self.timestamp = timestamp
+    }
+
+    /// 显示名称：使用绝对路径
+    var displayName: String {
+        url.path
+    }
+
+    static func == (lhs: RecentItem, rhs: RecentItem) -> Bool {
+        lhs.url == rhs.url
+    }
+}
+
 /// 设置模型，使用 @Observable + 手动 UserDefaults 同步
 /// @Observable 和 @AppStorage 不兼容，因此使用 didSet 手动同步到 UserDefaults
 /// 参照 buddy-macos 的设置结构，适配 SwiftUI 原生方案
@@ -30,6 +56,7 @@ final class SettingsModel {
         static let lastOpenedDirectory  = "com.markdownreader.lastOpenedDirectory"
         static let lastOpenedFilePath   = "com.markdownreader.lastOpenedFilePath"
         static let isDefaultMdOpener    = "com.markdownreader.isDefaultMdOpener"
+        static let recentItems          = "com.markdownreader.recentItems"
     }
 
     private let defaults = UserDefaults.standard
@@ -112,6 +139,40 @@ final class SettingsModel {
         didSet {
             defaults.set(lastOpenedFile?.path, forKey: Keys.lastOpenedFilePath)
         }
+    }
+
+    // MARK: - 最近打开记录
+
+    /// 最近打开的文件/目录列表（最多 10 条，按时间倒序）
+    var recentItems: [RecentItem] {
+        didSet {
+            if let data = try? JSONEncoder().encode(recentItems) {
+                defaults.set(data, forKey: Keys.recentItems)
+            }
+        }
+    }
+
+    /// 添加一条最近打开记录，自动去重、按时间倒序排列、限制最多 10 条
+    func addRecentItem(url: URL, isDirectory: Bool) {
+        // 验证路径是否仍然存在
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        guard exists else { return }
+
+        let item = RecentItem(url: url, isDirectory: isDirectory)
+        // 去重：移除相同 URL 的旧记录
+        recentItems.removeAll { $0.url == url }
+        // 插入到最前面
+        recentItems.insert(item, at: 0)
+        // 限制最多 10 条
+        if recentItems.count > 10 {
+            recentItems = Array(recentItems.prefix(10))
+        }
+    }
+
+    /// 清除所有最近打开记录
+    func clearRecentItems() {
+        recentItems = []
     }
 
     // MARK: - 计算属性
@@ -237,6 +298,16 @@ final class SettingsModel {
             self.lastOpenedFile = FileManager.default.fileExists(atPath: url.path) ? url : nil
         } else {
             self.lastOpenedFile = nil
+        }
+
+        // 恢复最近打开记录（过滤掉已不存在的路径）
+        if let data = defaults.data(forKey: Keys.recentItems),
+           let items = try? JSONDecoder().decode([RecentItem].self, from: data) {
+            self.recentItems = items.filter { item in
+                FileManager.default.fileExists(atPath: item.url.path)
+            }
+        } else {
+            self.recentItems = []
         }
     }
 }

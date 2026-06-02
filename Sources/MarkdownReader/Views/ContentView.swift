@@ -6,10 +6,15 @@ struct ContentView: View {
     @State private var appViewModel = AppViewModel()
     @State private var fileTreeViewModel = FileTreeViewModel()
     @State private var documentViewModel = DocumentViewModel()
-    @State private var gitViewModel = GitViewModel()
     @State private var settings = SettingsModel.shared
     @Environment(\.language) private var language
     @Environment(\.colorScheme) private var colorScheme
+
+    /// 缓存的主题颜色，避免每次 body 求值时重复执行 NSColor 色彩空间转换和混合运算
+    /// 通过 .onChange(of: settings.resolvedTheme) 响应式更新
+    @State private var themeColors: ThemeColors = ThemeColors.from(
+        SettingsModel.shared.resolvedTheme
+    )
 
     var body: some View {
         mainLayout
@@ -46,10 +51,6 @@ struct ContentView: View {
                 fileTreeViewModel: fileTreeViewModel,
                 settings: settings
             ))
-            .modifier(GitStatusModifier(
-                appViewModel: appViewModel,
-                gitViewModel: gitViewModel
-            ))
             .modifier(ToggleSettingsModifier(appViewModel: appViewModel))
             .background(TrafficLightHider())
             .task {
@@ -72,14 +73,14 @@ struct ContentView: View {
                         .bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
                 }
             }
+            // 主题变化时重新计算缓存的主题颜色
+            // resolvedTheme 是 Equatable，仅在主题实际变更时触发
+            .onChange(of: settings.resolvedTheme) { _, newTheme in
+                themeColors = ThemeColors.from(newTheme)
+            }
     }
 
     // MARK: - 布局
-
-    /// 当前主题颜色
-    private var themeColors: ThemeColors {
-        ThemeColors.from(settings.resolvedTheme)
-    }
 
     private var mainLayout: some View {
         HStack(spacing: 0) {
@@ -110,7 +111,6 @@ struct ContentView: View {
                     appViewModel: appViewModel,
                     documentViewModel: documentViewModel,
                     fileTreeViewModel: fileTreeViewModel,
-                    gitViewModel: gitViewModel,
                     settings: settings
                 )
             }
@@ -258,6 +258,7 @@ struct SettingsContentView: View {
             .padding(.horizontal, 40)
             .padding(.vertical, 40)
         }
+        .modifier(ThemedScrollbarModifier())
         .scrollContentBackground(.hidden)
         .background(themeColors.surface, in: .rect(
             topLeadingRadius: 10,
@@ -324,6 +325,7 @@ private struct FileOpenModifier: ViewModifier {
                     appViewModel.openDirectory(url)
                     settings.lastOpenedDirectory = url
                     settings.lastOpenedFile = nil
+                    settings.addRecentItem(url: url, isDirectory: true)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
@@ -332,10 +334,14 @@ private struct FileOpenModifier: ViewModifier {
                     fileTreeViewModel.selectedFileURL = url
                     settings.lastOpenedDirectory = nil
                     settings.lastOpenedFile = url
+                    settings.addRecentItem(url: url, isDirectory: false)
                     Task {
                         await documentViewModel.loadFile(at: url)
                     }
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openPanel)) { _ in
+                OpenPanelHelper.show(language: settings.languagePref.resolvedLanguage)
             }
     }
 }
@@ -410,23 +416,6 @@ private struct SettingsChangeModifier: ViewModifier {
         Task {
             await fileTreeViewModel.loadDirectory(dir)
         }
-    }
-}
-
-// MARK: - Git 状态刷新
-
-private struct GitStatusModifier: ViewModifier {
-    let appViewModel: AppViewModel
-    let gitViewModel: GitViewModel
-
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: appViewModel.rootDirectory) { _, _ in
-                gitViewModel.refreshStatus(directory: appViewModel.rootDirectory)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .openDirectory)) { _ in
-                gitViewModel.refreshStatus(directory: appViewModel.rootDirectory)
-            }
     }
 }
 

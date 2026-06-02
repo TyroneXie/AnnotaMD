@@ -1,15 +1,23 @@
 import SwiftUI
 
-/// Markdown 原始文本视图，使用 TextEditor 实现可编辑模式
+/// Markdown 原始文本视图，使用 NSTextView 实现语法高亮着色
+/// 像 VS Code / Sublime Text 一样对 Markdown 语法元素进行着色渲染
 struct RawMarkdownView: View {
     @Binding var content: String
     var fontSize: CGFloat = 13
     var contentPadding: CGFloat = 20
+    var scrollToLine: Int?
+    @Environment(\.themeColors) private var themeColors
 
     var body: some View {
-        TextEditor(text: $content)
-            .font(.system(size: fontSize, design: .monospaced))
-            .scrollContentBackground(.hidden)
-            .padding(contentPadding)
+        SyntaxHighlightedEditor(
+            content: $content,
+            fontSize: fontSize,
+            contentPadding: contentPadding,
+            scrollToLine: scrollToLine,
+            themeColors: themeColors
+        )
+        .modifier(ThemedScrollbarModifier())
+        .background(themeColors.surface)
     }
 }

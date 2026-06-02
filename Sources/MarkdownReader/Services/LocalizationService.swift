@@ -91,6 +91,13 @@ enum L10n {
         case open
         case reset
 
+        // 打开最近
+        case openRecent
+        case openRecentEmpty
+        case openRecentFiles
+        case openRecentFolders
+        case clearRecentItems
+
         // 标题栏
         case titleBarToggleSidebar
         case titleBarDisplayMode
@@ -111,16 +118,6 @@ enum L10n {
         case welcomeOpenFolder
         case welcomePressCmdO
         case selectFileHint
-
-        // Git 状态
-        case gitChangesCount
-        case gitNoChanges
-        case gitCommitMessage
-        case gitPushing
-        case gitCommitAndPush
-        case gitStaged
-        case gitModified
-        case gitUntracked
     }
 
     // MARK: - 翻译字典
@@ -177,6 +174,11 @@ enum L10n {
         .displayModeRaw: "Raw",
         .open: "Open",
         .reset: "Reset",
+        .openRecent: "Open Recent",
+        .openRecentEmpty: "No Recent Items",
+        .openRecentFiles: "Files",
+        .openRecentFolders: "Folders",
+        .clearRecentItems: "Clear Menu",
         .titleBarToggleSidebar: "Toggle Sidebar (⌘\\)",
         .titleBarDisplayMode: "Display Mode",
         .titleBarOpen: "Open (⌘O)",
@@ -190,14 +192,6 @@ enum L10n {
         .welcomeOpenFolder: "Open a folder to get started",
         .welcomePressCmdO: "Press Cmd+O or click Open in toolbar",
         .selectFileHint: "Select a file to preview",
-        .gitChangesCount: "{n} changes",
-        .gitNoChanges: "No changes",
-        .gitCommitMessage: "Commit message",
-        .gitPushing: "Pushing...",
-        .gitCommitAndPush: "Commit & Push",
-        .gitStaged: "Staged",
-        .gitModified: "Modified",
-        .gitUntracked: "Untracked",
     ]
 
     private static let zhCN: [Key: String] = [
@@ -252,6 +246,11 @@ enum L10n {
         .displayModeRaw: "原始",
         .open: "打开",
         .reset: "重置",
+        .openRecent: "打开最近使用",
+        .openRecentEmpty: "无最近打开的项",
+        .openRecentFiles: "文件",
+        .openRecentFolders: "文件夹",
+        .clearRecentItems: "清除菜单",
         .titleBarToggleSidebar: "切换侧边栏 (⌘\\)",
         .titleBarDisplayMode: "显示模式",
         .titleBarOpen: "打开 (⌘O)",
@@ -265,14 +264,6 @@ enum L10n {
         .welcomeOpenFolder: "打开文件夹开始阅读",
         .welcomePressCmdO: "按 Cmd+O 或点击工具栏中的打开按钮",
         .selectFileHint: "选择文件以预览",
-        .gitChangesCount: "{n} 个变更",
-        .gitNoChanges: "无变更",
-        .gitCommitMessage: "提交消息",
-        .gitPushing: "推送中",
-        .gitCommitAndPush: "提交并推送",
-        .gitStaged: "已暂存",
-        .gitModified: "已修改",
-        .gitUntracked: "未跟踪",
     ]
 
     private static let zhTW: [Key: String] = [
@@ -327,6 +318,11 @@ enum L10n {
         .displayModeRaw: "原始",
         .open: "開啟",
         .reset: "重設",
+        .openRecent: "開啟最近使用",
+        .openRecentEmpty: "無最近開啟的項目",
+        .openRecentFiles: "檔案",
+        .openRecentFolders: "資料夾",
+        .clearRecentItems: "清除選單",
         .titleBarToggleSidebar: "切換側邊欄 (⌘\\)",
         .titleBarDisplayMode: "顯示模式",
         .titleBarOpen: "開啟 (⌘O)",
@@ -340,14 +336,6 @@ enum L10n {
         .welcomeOpenFolder: "開啟資料夾開始閱讀",
         .welcomePressCmdO: "按 Cmd+O 或點擊工具列中的開啟按鈕",
         .selectFileHint: "選擇檔案以預覽",
-        .gitChangesCount: "{n} 個變更",
-        .gitNoChanges: "無變更",
-        .gitCommitMessage: "提交訊息",
-        .gitPushing: "推送中",
-        .gitCommitAndPush: "提交並推送",
-        .gitStaged: "已暫存",
-        .gitModified: "已修改",
-        .gitUntracked: "未追蹤",
     ]
 
     // MARK: - 查找
