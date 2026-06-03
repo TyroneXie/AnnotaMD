@@ -91,12 +91,10 @@ jobs:
           # macOS needs the compiled Assets.car (not raw PNGs) to display app icon
           # SPM bundle only contains raw PNGs, not the compiled asset catalog
           echo "📦 Compiling Assets.xcassets with actool..."
-          SDK_PATH=$(xcrun --show-sdk-path --sdk macosx)
           actool \
             --compile "$RESOURCES_DIR" \
             --platform macosx \
             --minimum-deployment-target 15.0 \
-            --sdk "$SDK_PATH" \
             --app-icon AppIcon \
             --output-format human-readable-text \
             --output-partial-info-plist /tmp/partial.plist \
