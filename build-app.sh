@@ -8,6 +8,7 @@
 set -euo pipefail
 
 APP_NAME="MarkdownReader"
+VERSION="1.0.0"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="debug"
 SIGN_IDENTITY=""
@@ -89,7 +90,7 @@ if [ -d "$ASSETS_SRC" ]; then
 fi
 
 # 创建 Info.plist
-cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
+cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -113,9 +114,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${VERSION}</string>
     <key>LSMinimumSystemVersion</key>
     <string>15.0</string>
     <key>NSHighResolutionCapable</key>
