@@ -129,10 +129,7 @@ jobs:
             "$DMG_NAME" \
             "${{ env.PRODUCT_NAME }}.app"
 
-          # Ad-hoc sign the DMG as well
-          codesign --sign - "$DMG_NAME"
-
-          echo "✅ DMG created and signed: $DMG_NAME"
+          echo "✅ DMG created: $DMG_NAME"
           echo "dmg_name=$DMG_NAME" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
