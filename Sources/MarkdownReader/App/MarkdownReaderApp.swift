@@ -5,6 +5,9 @@ struct MarkdownReaderApp: App {
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    /// 自动更新 ViewModel
+    @State private var updateViewModel = UpdateViewModel()
+
     init() {
         DispatchQueue.main.async {
             NSApp.setActivationPolicy(.regular)
@@ -86,6 +89,19 @@ struct MarkdownReaderApp: App {
                 }
                 // 热启动时路由到现有窗口，而非创建新窗口
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+                // 自动更新弹窗
+                .sheet(isPresented: $updateViewModel.isShowingUpdateSheet) {
+                    UpdateView(viewModel: updateViewModel)
+                }
+                // 启动时自动检查更新（延迟 2 秒，避免影响启动速度）
+                .task {
+                    try? await Task.sleep(for: .seconds(2))
+                    updateViewModel.checkForUpdatesAutomatically()
+                }
+                // 监听手动检查更新通知
+                .onReceive(NotificationCenter.default.publisher(for: .checkForUpdates)) { _ in
+                    updateViewModel.checkForUpdatesManually()
+                }
         }
         // .handlesExternalEvents(matching:) scene modifier: 冷启动时告诉 SwiftUI
         // 为外部事件（如 Finder 双击打开文件）创建新窗口
@@ -100,6 +116,11 @@ struct MarkdownReaderApp: App {
                     NotificationCenter.default.post(name: .toggleSettings, object: nil)
                 }
                 .keyboardShortcut(",", modifiers: .command)
+
+                // 检查更新
+                Button(L10n.tr(.checkForUpdates, language: language)) {
+                    NotificationCenter.default.post(name: .checkForUpdates, object: nil)
+                }
             }
 
             // 文件菜单：新建 + 打开 + 保存 + 打开最近
@@ -162,4 +183,5 @@ extension Notification.Name {
     static let reloadFile = Notification.Name("com.markdownreader.reloadFile")
     static let clearRecentItems = Notification.Name("com.markdownreader.clearRecentItems")
     static let restoreLastLocation = Notification.Name("com.markdownreader.restoreLastLocation")
+    static let checkForUpdates = Notification.Name("com.markdownreader.checkForUpdates")
 }

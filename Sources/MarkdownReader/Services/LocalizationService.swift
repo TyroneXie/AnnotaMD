@@ -130,6 +130,7 @@ enum L10n {
         case titleBarSave
         case titleBarReload
         case titleBarToggleOutline
+        case titleBarCopyPath
 
         // 大纲
         case outlineTitle
@@ -153,6 +154,7 @@ enum L10n {
         case contextMenuMoveTo
         case contextMenuDelete
         case contextMenuReload
+        case contextMenuCopyPath
 
         // 右键菜单 - 对话框
         case renameTitle
@@ -163,6 +165,25 @@ enum L10n {
         case deleteMessage
         case deleteDirectoryMessage
         case moveSelectFolder
+
+        // 自动更新
+        case updateAvailableTitle
+        case updateAvailableVersion
+        case updateChecking
+        case updateUpToDate
+        case updateDownload
+        case updateDownloading
+        case updateDownloadComplete
+        case updateInstall
+        case updateInstallAndRestart
+        case updateInstalling
+        case updateLater
+        case updateSkipVersion
+        case updateCancel
+        case updateError
+        case updateModeAuto
+        case updateModeManual
+        case checkForUpdates
     }
 
     // MARK: - 翻译字典
@@ -243,6 +264,7 @@ enum L10n {
         .titleBarSave: "Save (⌘S)",
         .titleBarReload: "Reload",
         .titleBarToggleOutline: "Toggle Outline",
+        .titleBarCopyPath: "Copy Path",
         .fileModifiedExternallyTitle: "File Modified Externally",
         .fileModifiedExternallyMessage: "The file has been modified by another application. Reloading will discard your current changes.",
         .fileModifiedExternallyReload: "Reload",
@@ -262,6 +284,7 @@ enum L10n {
         .contextMenuMoveTo: "Move to\u{2026}",
         .contextMenuDelete: "Move to Trash",
         .contextMenuReload: "Reload",
+        .contextMenuCopyPath: "Copy Path",
         .renameTitle: "Rename",
         .renameMessage: "Enter a new name for \"{name}\":",
         .renameEmptyName: "Name cannot be empty.",
@@ -270,6 +293,23 @@ enum L10n {
         .deleteMessage: "Are you sure you want to move \"{name}\" to the Trash?",
         .deleteDirectoryMessage: "Are you sure you want to move \"{name}\" and all its contents to the Trash?",
         .moveSelectFolder: "Select Destination Folder",
+        .updateAvailableTitle: "Update Available",
+        .updateAvailableVersion: "Version {version}",
+        .updateChecking: "Checking for updates\u{2026}",
+        .updateUpToDate: "Markdown Reader is up to date.",
+        .updateDownload: "Download",
+        .updateDownloading: "Downloading update\u{2026}",
+        .updateDownloadComplete: "Download complete. Click Install to continue.",
+        .updateInstall: "Install",
+        .updateInstallAndRestart: "Install & Restart",
+        .updateInstalling: "Installing update\u{2026}",
+        .updateLater: "Later",
+        .updateSkipVersion: "Skip This Version",
+        .updateCancel: "Cancel",
+        .updateError: "Update check failed.",
+        .updateModeAuto: "Auto install & restart",
+        .updateModeManual: "Manual install required",
+        .checkForUpdates: "Check for Updates\u{2026}",
     ]
 
     private static let zhCN: [Key: String] = [
@@ -348,6 +388,7 @@ enum L10n {
         .titleBarSave: "保存 (⌘S)",
         .titleBarReload: "重新加载",
         .titleBarToggleOutline: "切换大纲",
+        .titleBarCopyPath: "复制路径",
         .fileModifiedExternallyTitle: "文件已被外部修改",
         .fileModifiedExternallyMessage: "文件已被其他应用修改，重新加载将丢弃当前未保存的更改。",
         .fileModifiedExternallyReload: "重新加载",
@@ -367,6 +408,7 @@ enum L10n {
         .contextMenuMoveTo: "移动到\u{2026}",
         .contextMenuDelete: "移到废纸篓",
         .contextMenuReload: "重新加载",
+        .contextMenuCopyPath: "复制路径",
         .renameTitle: "重命名",
         .renameMessage: "输入「{name}」的新名称：",
         .renameEmptyName: "名称不能为空。",
@@ -375,6 +417,23 @@ enum L10n {
         .deleteMessage: "确定要将「{name}」移到废纸篓吗？",
         .deleteDirectoryMessage: "确定要将「{name}」及其所有内容移到废纸篓吗？",
         .moveSelectFolder: "选择目标文件夹",
+        .updateAvailableTitle: "发现新版本",
+        .updateAvailableVersion: "版本 {version}",
+        .updateChecking: "正在检查更新\u{2026}",
+        .updateUpToDate: "Markdown Reader 已是最新版本。",
+        .updateDownload: "下载",
+        .updateDownloading: "正在下载更新\u{2026}",
+        .updateDownloadComplete: "下载完成，点击「安装」继续。",
+        .updateInstall: "安装",
+        .updateInstallAndRestart: "安装并重启",
+        .updateInstalling: "正在安装更新\u{2026}",
+        .updateLater: "稍后",
+        .updateSkipVersion: "跳过此版本",
+        .updateCancel: "取消",
+        .updateError: "检查更新失败。",
+        .updateModeAuto: "自动安装并重启",
+        .updateModeManual: "需手动安装",
+        .checkForUpdates: "检查更新\u{2026}",
     ]
 
     private static let zhTW: [Key: String] = [
@@ -453,6 +512,7 @@ enum L10n {
         .titleBarSave: "儲存 (⌘S)",
         .titleBarReload: "重新載入",
         .titleBarToggleOutline: "切換大綱",
+        .titleBarCopyPath: "複製路徑",
         .fileModifiedExternallyTitle: "檔案已被外部修改",
         .fileModifiedExternallyMessage: "檔案已被其他應用修改，重新載入將捨棄目前未儲存的變更。",
         .fileModifiedExternallyReload: "重新載入",
@@ -472,6 +532,7 @@ enum L10n {
         .contextMenuMoveTo: "移動到\u{2026}",
         .contextMenuDelete: "移到垃圾桶",
         .contextMenuReload: "重新載入",
+        .contextMenuCopyPath: "複製路徑",
         .renameTitle: "重新命名",
         .renameMessage: "輸入「{name}」的新名稱：",
         .renameEmptyName: "名稱不能為空。",
@@ -480,6 +541,23 @@ enum L10n {
         .deleteMessage: "確定要將「{name}」移到垃圾桶嗎？",
         .deleteDirectoryMessage: "確定要將「{name}」及其所有內容移到垃圾桶嗎？",
         .moveSelectFolder: "選擇目標資料夾",
+        .updateAvailableTitle: "發現新版本",
+        .updateAvailableVersion: "版本 {version}",
+        .updateChecking: "正在檢查更新\u{2026}",
+        .updateUpToDate: "Markdown Reader 已是最新版本。",
+        .updateDownload: "下載",
+        .updateDownloading: "正在下載更新\u{2026}",
+        .updateDownloadComplete: "下載完成，點擊「安裝」繼續。",
+        .updateInstall: "安裝",
+        .updateInstallAndRestart: "安裝並重新啟動",
+        .updateInstalling: "正在安裝更新\u{2026}",
+        .updateLater: "稍後",
+        .updateSkipVersion: "跳過此版本",
+        .updateCancel: "取消",
+        .updateError: "檢查更新失敗。",
+        .updateModeAuto: "自動安裝並重新啟動",
+        .updateModeManual: "需手動安裝",
+        .checkForUpdates: "檢查更新\u{2026}",
     ]
 
     // MARK: - 查找

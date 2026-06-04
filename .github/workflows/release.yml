@@ -140,6 +140,14 @@ jobs:
           echo "✅ DMG created: $DMG_NAME"
           echo "dmg_name=$DMG_NAME" >> "$GITHUB_ENV"
 
+      - name: Create ZIP
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_NAME="${{ env.PRODUCT_NAME }}-$VERSION.zip"
+          zip -r "$ZIP_NAME" "${{ env.PRODUCT_NAME }}.app"
+          echo "✅ ZIP created: $ZIP_NAME"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_ENV"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -147,6 +155,7 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
           DMG_NAME="${{ env.PRODUCT_NAME }}-$VERSION.dmg"
+          ZIP_NAME="${{ env.PRODUCT_NAME }}-$VERSION.zip"
 
           # Build release notes with install instructions
           cat > /tmp/release-body.md << 'BODY'
@@ -174,6 +183,7 @@ jobs:
           gh release create "$TAG" \
             --title "$TAG" \
             --notes-file /tmp/release-body.md \
-            "$DMG_NAME"
+            "$DMG_NAME" \
+            "$ZIP_NAME"
 
-          echo "✅ GitHub Release $TAG created with $DMG_NAME"
+          echo "✅ GitHub Release $TAG created with $DMG_NAME and $ZIP_NAME"

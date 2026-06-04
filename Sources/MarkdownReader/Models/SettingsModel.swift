@@ -58,6 +58,8 @@ final class SettingsModel {
         static let isDefaultMdOpener    = "com.markdownreader.isDefaultMdOpener"
         static let recentItems          = "com.markdownreader.recentItems"
         static let skipFileModifiedAlert = "com.markdownreader.skipFileModifiedAlert"
+        static let skippedVersion       = "com.markdownreader.skippedVersion"
+        static let lastUpdateCheckTime  = "com.markdownreader.lastUpdateCheckTime"
     }
 
     private let defaults = UserDefaults.standard
@@ -98,6 +100,18 @@ final class SettingsModel {
     /// 跳过「文件被外部修改」确认弹窗
     var skipFileModifiedAlert: Bool {
         didSet { defaults.set(skipFileModifiedAlert, forKey: Keys.skipFileModifiedAlert) }
+    }
+
+    // MARK: - 自动更新
+
+    /// 用户跳过的版本号（点击「跳过此版本」后记录）
+    var skippedVersion: String? {
+        didSet { defaults.set(skippedVersion, forKey: Keys.skippedVersion) }
+    }
+
+    /// 上次自动检查更新的时间
+    var lastUpdateCheckTime: Date? {
+        didSet { defaults.set(lastUpdateCheckTime, forKey: Keys.lastUpdateCheckTime) }
     }
 
     // MARK: - 外观设置
@@ -278,6 +292,8 @@ final class SettingsModel {
         self.showNonMarkdownFiles = defaults.object(forKey: Keys.showNonMarkdownFiles) as? Bool ?? true
         self.isDefaultMdOpener = Self.checkIsDefaultMdOpener()
         self.skipFileModifiedAlert = defaults.object(forKey: Keys.skipFileModifiedAlert) as? Bool ?? false
+        self.skippedVersion = defaults.string(forKey: Keys.skippedVersion)
+        self.lastUpdateCheckTime = defaults.object(forKey: Keys.lastUpdateCheckTime) as? Date
         self.appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearanceMode) ?? "") ?? .system
         self.themeId = defaults.string(forKey: Keys.themeId) ?? "buddy-dark"
         if let data = defaults.data(forKey: Keys.themeCustomOverrides),
