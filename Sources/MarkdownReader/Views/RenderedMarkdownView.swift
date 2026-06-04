@@ -92,7 +92,7 @@ struct RenderedMarkdownView: View, Equatable {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                StructuredText(markdown: content)
+                StructuredText(content, parser: SupSubMarkupParser(baseURL: fileURL?.deletingLastPathComponent()))
                     .textual.structuredTextStyle(.gitHub)
                     .textual.textSelection(.enabled)
                     .padding(contentPadding)
