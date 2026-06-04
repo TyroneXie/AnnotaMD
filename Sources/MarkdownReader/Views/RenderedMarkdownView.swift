@@ -38,7 +38,28 @@ final class CaptureNSView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        // 向上遍历 superview 找到 NSScrollView（一定在 ScrollView 内部，可靠找到）
+        captureScrollView()
+        // 首次渲染时，viewDidMoveToWindow 可能早于 NSScrollView 完全挂载
+        // 延迟再次尝试，确保在布局完成后再捕获一次
+        if window != nil {
+            DispatchQueue.main.async { [weak self] in
+                self?.captureScrollView()
+            }
+        }
+    }
+
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        // viewDidMoveToSuperview 在视图层级变化时触发，可作为额外的捕获时机
+        if superview != nil {
+            captureScrollView()
+        }
+    }
+
+    /// 向上遍历 superview 找到 NSScrollView（一定在 ScrollView 内部，可靠找到）
+    /// 注意：不做 ref.scrollView != nil 的早返回检查，因为切换文件时旧 weak ref
+    /// 可能仍指向尚未释放的旧 NSScrollView，需要重新捕获新的
+    private func captureScrollView() {
         var candidate: NSView? = superview
         while let view = candidate {
             if let scrollView = view as? NSScrollView {
@@ -130,15 +151,32 @@ final class ScrollHelperNSView: NSView {
     var content: String?
 
     /// 使用预捕获的 NSScrollView 引用滚动到指定行号
-    func scrollToLine(_ lineNumber: Int, scrollViewRef: MarkdownScrollViewRef) {
-        guard let scrollView = scrollViewRef.scrollView,
-              let content = content else { return }
+    /// 如果 NSScrollView 尚未捕获或文档尚未布局完成，延迟重试
+    func scrollToLine(_ lineNumber: Int, scrollViewRef: MarkdownScrollViewRef, retryCount: Int = 0) {
+        // 第一层：NSScrollView 尚未捕获
+        guard let scrollView = scrollViewRef.scrollView, let content = content else {
+            if retryCount < 20 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.scrollToLine(lineNumber, scrollViewRef: scrollViewRef, retryCount: retryCount + 1)
+                }
+            }
+            return
+        }
 
         let totalLines = content.components(separatedBy: "\n").count
         guard totalLines > 0 else { return }
 
         let documentHeight = scrollView.documentView?.frame.height ?? 0
         let visibleHeight = scrollView.visibleRect.height
+
+        // 第二层：StructuredText 尚未完成布局，documentHeight 为 0 或不合理
+        // 此时计算出的滚动位置不准确，需要等待布局完成后再重试
+        if documentHeight <= visibleHeight, retryCount < 20 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.scrollToLine(lineNumber, scrollViewRef: scrollViewRef, retryCount: retryCount + 1)
+            }
+            return
+        }
 
         // 估算每行平均高度
         let avgLineHeight = documentHeight / CGFloat(totalLines)

@@ -5,10 +5,10 @@ import os
 ///
 /// macOS 15+ 上 SwiftUI WindowGroup 在收到文件打开事件时可能创建不可见窗口。
 /// 修复策略：
-/// - 冷启动：SwiftUI 创建窗口（可能不可见），延迟后激活 + 发送通知打开文件
+/// - 冷启动：SwiftUI 创建窗口（可能不可见），延迟后激活；文件通过 UserDefaults 传递给 ContentView.task
 /// - 热启动有窗口：直接发送通知
 /// - 热启动无窗口：激活 SwiftUI 创建的不可见窗口，然后发送通知
-/// - Dock 点击无窗口：激活不可见窗口
+/// - Dock 点击无窗口：激活不可见窗口，重置为欢迎页
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -105,9 +105,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 应用生命周期
 
     /// 应用启动完成后，处理冷启动场景
-    /// 冷启动时不发送 openFile/openDirectory 通知，
-    /// 因为 ContentView.task 已通过 UserDefaults 读取并打开文件。
-    /// 只需激活不可见窗口 + 发送 restoreLastLocation。
+    /// 冷启动时不发送 restoreLastLocation 通知，
+    /// 点击 app 图标启动时始终显示欢迎页，不再自动恢复上次位置。
+    /// 如果有待处理文件 URL，ContentView.task 会通过 UserDefaults 读取并打开。
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
 
@@ -123,31 +123,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.activateFirstHiddenWindow()
             }
 
-            // 冷启动：pending URL 由 ContentView.task 通过 UserDefaults 处理
-            // 不发送 openFile/openDirectory 通知，避免与 UserDefaults 机制重复
+            // 清理冷启动时的待处理 URL 属性
+            // ContentView.task 已通过 UserDefaults 读取并处理，无需再发通知
             if self.pendingOpenFileURL != nil {
                 self.pendingOpenFileURL = nil
-                // 不清除 UserDefaults，让 ContentView.task 读取
                 self.logger.info("Cold start: pending file handled by ContentView.task via UserDefaults")
             } else if self.pendingOpenDirectoryURL != nil {
                 self.pendingOpenDirectoryURL = nil
                 self.logger.info("Cold start: pending directory handled by ContentView.task via UserDefaults")
-            } else {
-                // 正常启动，无待处理文件
-                self.logger.info("Posting restoreLastLocation notification")
-                NotificationCenter.default.post(name: .restoreLastLocation, object: nil)
             }
+            // 不再发送 .restoreLastLocation 通知
+            // 点击 app 图标启动时始终显示欢迎页
         }
     }
 
     // MARK: - Dock 点击处理
 
     /// 用户点击 Dock 图标时调用
-    /// 当所有窗口都关闭后点击 Dock 图标，需要激活隐藏窗口
+    /// 当所有窗口都关闭后点击 Dock 图标，激活隐藏窗口并重置为欢迎页
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
-            logger.info("applicationShouldHandleReopen — activating hidden window")
+            logger.info("applicationShouldHandleReopen — activating hidden window and resetting to welcome")
             activateFirstHiddenWindow()
+            // 重置为欢迎页，不恢复旧窗口的文档内容
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .resetToWelcome, object: nil)
+            }
         }
         return true
     }

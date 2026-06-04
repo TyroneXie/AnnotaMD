@@ -182,11 +182,19 @@ final class UpdateViewModel {
     func installAndRestart() {
         isInstalling = true
 
+        // 先关闭 sheet，避免 SwiftUI sheet 干扰进程退出
+        isShowingUpdateSheet = false
+
         Task {
             do {
                 try await performZIPInstall()
-                // 成功：退出 app，守夜人脚本会重启
-                NSApplication.shared.terminate(nil)
+                // 使用 exit(0) 而非 NSApplication.shared.terminate(nil)：
+                // terminate() 会被 NSWindowDelegate.windowShouldClose 拦截
+                // （当有未保存的临时新建文件时返回 false），
+                // 导致 app 无法退出，守夜人脚本永远等不到进程结束，
+                // UI 卡在 isInstalling = true 状态。
+                // exit(0) 直接终止进程，守夜人脚本可立即继续替换文件。
+                exit(0)
             } catch {
                 logger.error("ZIP install failed: \(error.localizedDescription)")
                 isInstalling = false
@@ -408,9 +416,19 @@ final class UpdateViewModel {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
         process.arguments = [scriptURL.path]
+
+        // 重定向 stdout/stderr 到日志文件，避免管道在父进程退出时关闭导致子进程收到 SIGPIPE
+        // 同时保留安装日志，便于排查问题
+        let logURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MarkdownReader-update-\(UUID().uuidString).log")
+        if let logHandle = FileHandle(forWritingAtPath: logURL.path) {
+            process.standardOutput = logHandle
+            process.standardError = logHandle
+        }
+
         try process.run()
 
-        logger.info("Nightwatchman script launched, app will terminate for update")
+        logger.info("Nightwatchman script launched, app will terminate for update. Log: \(logURL.path)")
     }
 
     // MARK: - DMG 下载与安装

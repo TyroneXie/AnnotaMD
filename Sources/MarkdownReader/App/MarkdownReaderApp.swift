@@ -103,9 +103,9 @@ struct MarkdownReaderApp: App {
                     updateViewModel.checkForUpdatesManually()
                 }
         }
-        // .handlesExternalEvents(matching:) scene modifier: 冷启动时告诉 SwiftUI
-        // 为外部事件（如 Finder 双击打开文件）创建新窗口
-        .handlesExternalEvents(matching: ["*"])
+        // .handlesExternalEvents(matching:) scene modifier 已移除
+        // 冷启动时 ContentView.task 通过 UserDefaults 读取 AppDelegate 写入的文件路径，
+        // 无需 SwiftUI 为外部事件创建额外窗口，避免出现双窗口问题
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 900, height: 600)
         .windowResizability(.automatic)
@@ -182,5 +182,6 @@ extension Notification.Name {
     static let reloadFile = Notification.Name("com.markdownreader.reloadFile")
     static let clearRecentItems = Notification.Name("com.markdownreader.clearRecentItems")
     static let restoreLastLocation = Notification.Name("com.markdownreader.restoreLastLocation")
+    static let resetToWelcome = Notification.Name("com.markdownreader.resetToWelcome")
     static let checkForUpdates = Notification.Name("com.markdownreader.checkForUpdates")
 }

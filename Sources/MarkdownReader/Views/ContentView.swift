@@ -83,10 +83,8 @@ struct ContentView: View {
                 // 冷启动时，applicationDidFinishLaunching 通过 .restoreLastLocation 通知处理
                 // 这样可以确保通知在视图完全挂载后才发送，避免时序问题
             }
-            .onReceive(NotificationCenter.default.publisher(for: .restoreLastLocation)) { _ in
-                if settings.reopenLastLocation {
-                    restoreLastLocation()
-                }
+            .onReceive(NotificationCenter.default.publisher(for: .resetToWelcome)) { _ in
+                resetToWelcome()
             }
             .onChange(of: colorScheme) { _, newScheme in
                 // 仅在「跟随系统」模式下更新 systemIsDark
@@ -160,19 +158,22 @@ struct ContentView: View {
         NSApp.appearance = mode.nsAppearance
     }
 
-    private func restoreLastLocation() {
-        if let dir = settings.lastOpenedDirectory {
-            appViewModel.openDirectory(dir)
-        } else if let file = settings.lastOpenedFile {
-            appViewModel.openSingleFile(file)
-            fileTreeViewModel.selectedFileURL = file
-            // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
-        } else {
-            // 默认打开 ~/Documents，避免访问 Music 等受限目录触发权限弹窗
-            let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-                ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Documents")
-            appViewModel.openDirectory(documentsDir)
+    /// 重置所有 ViewModel 状态，显示欢迎页
+    /// 用于 Dock 点击重新激活时，避免恢复旧窗口的文档内容
+    private func resetToWelcome() {
+        appViewModel.rootDirectory = nil
+        appViewModel.isSingleFileMode = false
+        appViewModel.singleFileURL = nil
+        appViewModel.selectedFile = nil
+        appViewModel.hasUnsavedUntitled = false
+        appViewModel.untitledFileName = ""
+        appViewModel.isShowingSettings = false
+        // 欢迎页无目录内容，隐藏 sidebar 避免显示空文件树
+        if appViewModel.isSidebarVisible {
+            appViewModel.isSidebarVisible = false
         }
+        fileTreeViewModel.selectedFileURL = nil
+        documentViewModel.clearDocument()
     }
 }
 

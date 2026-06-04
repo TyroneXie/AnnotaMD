@@ -335,6 +335,7 @@ struct DetailView: View {
             .allowsHitTesting(documentViewModel.displayMode == .raw)
             .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                 if newValue != nil {
+                    // Raw 模式无需等待布局，0.5 秒即可
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         documentViewModel.clearScrollRequest()
                     }
@@ -352,7 +353,8 @@ struct DetailView: View {
                 )
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                     if newValue != nil {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // 渲染模式下需要等待 StructuredText 完成布局，超时设长一些
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                             documentViewModel.clearScrollRequest()
                         }
                     }

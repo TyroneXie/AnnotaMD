@@ -5,6 +5,26 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.0.5] - 2026-06-04
+
+### 修复
+
+- **自动更新安装可靠性**：
+  - 先关闭更新弹窗再执行安装，避免 SwiftUI sheet 干扰进程退出
+  - 使用 `exit(0)` 替代 `NSApplication.terminate()`，防止 `windowShouldClose` 拦截导致应用无法退出、守夜人脚本永远等待
+  - 守夜人脚本 stdout/stderr 重定向到日志文件（`$TMPDIR/MarkdownReader-update-<UUID>.log`），避免父进程退出时管道关闭导致子进程收到 SIGPIPE
+- **滚动定位可靠性**：
+  - `CaptureNSView` 新增 `viewDidMoveToSuperview()` 捕获时机和 `viewDidMoveToWindow()` 延迟重试，确保 NSScrollView 捕获成功
+  - `ScrollHelperNSView.scrollToLine` 新增两层重试机制（最多 20 次，间隔 0.1 秒）：NSScrollView 未捕获时重试、文档布局未完成时重试
+  - 渲染模式滚动请求超时从 0.5 秒延长至 2.5 秒，等待 StructuredText 完成布局
+
+### 变更
+
+- **Dock 点击重置为欢迎页**：所有窗口关闭后点击 Dock 图标，重置为欢迎页而非恢复旧文档内容
+- **冷启动不再自动恢复位置**：点击应用图标启动时始终显示欢迎页，移除 `.restoreLastLocation` 通知机制
+- **移除 `.handlesExternalEvents(matching:)`**：冷启动时 ContentView.task 通过 UserDefaults 读取文件路径，无需 SwiftUI 为外部事件创建额外窗口，避免双窗口问题
+- **README 更新**：DMG 安装包大小描述从「不到 6MB」更新为「不到 10MB」
+
 ## [1.0.4] - 2026-06-04
 
 ### 新增
