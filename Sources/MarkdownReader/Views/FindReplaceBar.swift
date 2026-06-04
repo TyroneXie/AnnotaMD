@@ -13,6 +13,8 @@ struct FindReplaceBar: View {
     @Environment(\.themeColors) private var themeColors
     @Environment(\.language) private var language
 
+    private let textFieldWidth: CGFloat = 200
+
     var body: some View {
         VStack(spacing: 0) {
             findRow
@@ -30,6 +32,7 @@ struct FindReplaceBar: View {
         )
         .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 6)
         .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
         .onAppear { isSearchFieldFocused = true }
         .onKeyPress(.escape) {
             onClose()
@@ -40,18 +43,11 @@ struct FindReplaceBar: View {
     // MARK: - Find Row
 
     private var findRow: some View {
-        HStack(spacing: 6) {
-            Button {
-                viewModel.isReplaceExpanded.toggle()
-            } label: {
-                Image(systemName: viewModel.isReplaceExpanded ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(themeColors.fgSecondary)
-                    .frame(width: 16, height: 16)
-            }
-            .buttonStyle(.plain)
+        HStack(alignment: .center, spacing: 6) {
+            chevronIcon
 
             searchField
+                .frame(width: textFieldWidth, alignment: .leading)
 
             optionToggle(isOn: $viewModel.isCaseSensitive, label: "Aa", tooltip: L10n.tr(.findBarCaseSensitive, language: language))
             optionToggle(isOn: $viewModel.isWholeWord, label: "W*", tooltip: L10n.tr(.findBarWholeWord, language: language))
@@ -88,36 +84,49 @@ struct FindReplaceBar: View {
     // MARK: - Replace Row
 
     private var replaceRow: some View {
-        HStack(spacing: 6) {
-            Color.clear.frame(width: 16)
+        HStack(alignment: .center, spacing: 6) {
+            chevronSpacer
 
             replaceField
+                .frame(width: textFieldWidth, alignment: .leading)
 
-            Color.clear.frame(width: 24)
-            Color.clear.frame(width: 24)
-            Color.clear.frame(width: 24)
+            HStack(alignment: .center, spacing: 4) {
+                replaceButton(title: L10n.tr(.findBarReplace, language: language)) {
+                    onReplace()
+                }
+                .disabled(!isRawMode || viewModel.totalMatchCount == 0)
 
-            Button { onReplace() } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 11))
-                    .foregroundStyle(isRawMode ? themeColors.fgSecondary : themeColors.fgMuted)
+                replaceButton(title: L10n.tr(.findBarReplaceAll, language: language)) {
+                    onReplaceAll()
+                }
+                .disabled(!isRawMode || viewModel.totalMatchCount == 0)
             }
-            .buttonStyle(.plain)
-            .disabled(!isRawMode || viewModel.totalMatchCount == 0)
 
-            Button { onReplaceAll() } label: {
-                Image(systemName: "arrow.uturn.backward.circle")
-                    .font(.system(size: 11))
-                    .foregroundStyle(isRawMode ? themeColors.fgSecondary : themeColors.fgMuted)
-            }
-            .buttonStyle(.plain)
-            .disabled(!isRawMode || viewModel.totalMatchCount == 0)
-
-            Color.clear.frame(width: 16)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 8)
         .padding(.top, 1)
         .padding(.bottom, 6)
+    }
+
+    // MARK: - Chevron
+
+    private var chevronIcon: some View {
+        Image(systemName: viewModel.isReplaceExpanded ? "chevron.down" : "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(themeColors.fgSecondary)
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                viewModel.isReplaceExpanded.toggle()
+            }
+    }
+
+    private var chevronSpacer: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.clear)
+            .frame(width: 16, height: 16)
     }
 
     // MARK: - Text Fields
@@ -167,7 +176,29 @@ struct FindReplaceBar: View {
             )
     }
 
-    // MARK: - Option Toggle
+    // MARK: - Buttons
+
+    private func replaceButton(title: String, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+        } label: {
+            Text(title)
+                .font(.system(size: 11))
+                .foregroundStyle(isRawMode ? themeColors.fgSecondary : themeColors.fgMuted)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(themeColors.border, lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
 
     private func optionToggle(isOn: Binding<Bool>, label: String, tooltip: String) -> some View {
         Button {
