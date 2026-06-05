@@ -13,15 +13,14 @@ struct FindReplaceBar: View {
     @Environment(\.themeColors) private var themeColors
     @Environment(\.language) private var language
 
-    private let textFieldWidth: CGFloat = 200
-
     var body: some View {
-        VStack(spacing: 0) {
-            findRow
-            if viewModel.isReplaceExpanded {
-                replaceRow
-            }
+        HStack(alignment: .top, spacing: 6) {
+            chevronColumn
+            inputColumn
+            buttonColumn
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(themeColors.surface.opacity(0.95))
@@ -40,96 +39,37 @@ struct FindReplaceBar: View {
         }
     }
 
-    // MARK: - Find Row
+    // MARK: - Column 1: Chevron
 
-    private var findRow: some View {
-        HStack(alignment: .center, spacing: 6) {
-            chevronIcon
-
-            searchField
-                .frame(width: textFieldWidth, alignment: .leading)
-
-            optionToggle(isOn: $viewModel.isCaseSensitive, label: "Aa", tooltip: L10n.tr(.findBarCaseSensitive, language: language))
-            optionToggle(isOn: $viewModel.isWholeWord, label: "W*", tooltip: L10n.tr(.findBarWholeWord, language: language))
-            optionToggle(isOn: $viewModel.isRegularExpression, label: ".*", tooltip: L10n.tr(.findBarRegularExpression, language: language))
-
-            Button { onFindPrevious() } label: {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 11))
-                    .foregroundStyle(themeColors.fgSecondary)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.totalMatchCount == 0)
-
-            Button { onFindNext() } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11))
-                    .foregroundStyle(themeColors.fgSecondary)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.totalMatchCount == 0)
-
-            Button { onClose() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10))
-                    .foregroundStyle(themeColors.fgMuted)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 6)
-        .padding(.bottom, viewModel.isReplaceExpanded ? 1 : 6)
-    }
-
-    // MARK: - Replace Row
-
-    private var replaceRow: some View {
-        HStack(alignment: .center, spacing: 6) {
-            chevronSpacer
-
-            replaceField
-                .frame(width: textFieldWidth, alignment: .leading)
-
-            HStack(alignment: .center, spacing: 4) {
-                replaceButton(title: L10n.tr(.findBarReplace, language: language)) {
-                    onReplace()
-                }
-                .disabled(!isRawMode || viewModel.totalMatchCount == 0)
-
-                replaceButton(title: L10n.tr(.findBarReplaceAll, language: language)) {
-                    onReplaceAll()
-                }
-                .disabled(!isRawMode || viewModel.totalMatchCount == 0)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 1)
-        .padding(.bottom, 6)
-    }
-
-    // MARK: - Chevron
-
-    private var chevronIcon: some View {
-        Image(systemName: viewModel.isReplaceExpanded ? "chevron.down" : "chevron.right")
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(themeColors.fgSecondary)
-            .frame(width: 16, height: 16)
-            .contentShape(Rectangle())
-            .onTapGesture {
+    private var chevronColumn: some View {
+        VStack(alignment: .center, spacing: 0) {
+            Button {
                 viewModel.isReplaceExpanded.toggle()
+            } label: {
+                Image(systemName: viewModel.isReplaceExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(themeColors.fgSecondary)
+                    .frame(width: 16, height: 24)
             }
+            .buttonStyle(.plain)
+
+            if viewModel.isReplaceExpanded {
+                Color.clear.frame(width: 16, height: 24)
+            }
+        }
     }
 
-    private var chevronSpacer: some View {
-        Image(systemName: "chevron.right")
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.clear)
-            .frame(width: 16, height: 16)
-    }
+    // MARK: - Column 2: Input Fields
 
-    // MARK: - Text Fields
+    private var inputColumn: some View {
+        VStack(alignment: .leading, spacing: viewModel.isReplaceExpanded ? 2 : 0) {
+            searchField
+
+            if viewModel.isReplaceExpanded {
+                replaceField
+            }
+        }
+    }
 
     private var searchField: some View {
         ZStack(alignment: .trailing) {
@@ -176,7 +116,57 @@ struct FindReplaceBar: View {
             )
     }
 
-    // MARK: - Buttons
+    // MARK: - Column 3: Buttons
+
+    private var buttonColumn: some View {
+        VStack(alignment: .leading, spacing: viewModel.isReplaceExpanded ? 0 : 0) {
+            HStack(spacing: 4) {
+                optionToggle(isOn: $viewModel.isCaseSensitive, label: "Aa", tooltip: L10n.tr(.findBarCaseSensitive, language: language))
+                optionToggle(isOn: $viewModel.isWholeWord, label: "W*", tooltip: L10n.tr(.findBarWholeWord, language: language))
+                optionToggle(isOn: $viewModel.isRegularExpression, label: ".*", tooltip: L10n.tr(.findBarRegularExpression, language: language))
+
+                Button { onFindPrevious() } label: {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 11))
+                        .foregroundStyle(themeColors.fgSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.totalMatchCount == 0)
+
+                Button { onFindNext() } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11))
+                        .foregroundStyle(themeColors.fgSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.totalMatchCount == 0)
+
+                Button { onClose() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(themeColors.fgMuted)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if viewModel.isReplaceExpanded {
+                HStack(spacing: 4) {
+                    replaceButton(title: L10n.tr(.findBarReplace, language: language)) {
+                        onReplace()
+                    }
+                    .disabled(!isRawMode || viewModel.totalMatchCount == 0)
+
+                    replaceButton(title: L10n.tr(.findBarReplaceAll, language: language)) {
+                        onReplaceAll()
+                    }
+                    .disabled(!isRawMode || viewModel.totalMatchCount == 0)
+                }
+                .frame(height: 24)
+            }
+        }
+    }
+
+    // MARK: - Button Helpers
 
     private func replaceButton(title: String, action: @escaping () -> Void) -> some View {
         Button {

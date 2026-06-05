@@ -384,6 +384,9 @@ final class UpdateViewModel {
         # 清除隔离属性（关键：让 macOS 不拦截新版本启动）
         /usr/bin/xattr -cr "\(appPath)" 2>/dev/null
 
+        # 重新 ad-hoc 签名（cp -R 替换后签名断裂，macOS 可能限制 AppKit 功能）
+        /usr/bin/codesign --force --deep --sign - "\(appPath)" 2>/dev/null
+
         # 验证新 app 可执行文件存在
         if [ -x "\(appPath)/Contents/MacOS/MarkdownReader" ]; then
             # 清理备份和临时文件

@@ -87,6 +87,15 @@ jobs:
             echo "✅ Copied SPM resource bundle"
           fi
 
+          # Copy dependency resource bundles (Textual prism-bundle.js, swiftui-math fonts, etc.)
+          for bundle in .build/release/*.bundle; do
+            bundle_name=$(basename "$bundle")
+            if [[ "$bundle_name" != "${{ env.PRODUCT_NAME }}_MarkdownReader.bundle" ]]; then
+              cp -R "$bundle" "$RESOURCES_DIR/"
+              echo "📦 Copied dependency bundle: $bundle_name"
+            fi
+          done
+
           # Always compile Assets.xcassets with actool to produce Assets.car
           # macOS needs the compiled Assets.car (not raw PNGs) to display app icon
           # SPM bundle only contains raw PNGs, not the compiled asset catalog

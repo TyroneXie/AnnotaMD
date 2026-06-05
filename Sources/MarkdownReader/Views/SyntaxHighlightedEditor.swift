@@ -396,8 +396,21 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
             )
         }
 
-        // 更新插入点颜色
+        // 更新插入点颜色和文字颜色
         textView.insertionPointColor = themeColors.accent.nsColor
+        textView.textColor = themeColors.ink.nsColor
+
+        // 主题变化时重新应用语法高亮（内容/字号未变但颜色可能不同）
+        if context.coordinator.previousThemeColors != themeColors {
+            let syntaxColors = deriveSyntaxColors(from: themeColors)
+            MarkdownSyntaxHighlighter.applyHighlights(
+                to: textView,
+                text: textView.string,
+                colors: syntaxColors,
+                fontSize: fontSize
+            )
+            context.coordinator.previousThemeColors = themeColors
+        }
 
         // 更新边距（仅在值变化时更新，避免不必要的布局计算）
         let currentInset = textView.textContainerInset
@@ -491,8 +504,8 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         weak var textView: HighlightableTextView?
         weak var scrollView: NSScrollView?
         private var highlightWorkItem: DispatchWorkItem?
-        /// 当前文件 URL，用于检测文件切换
         var currentFileURL: URL?
+        var previousThemeColors: ThemeColors?
 
         init(_ parent: SyntaxHighlightedEditor) {
             self.parent = parent
