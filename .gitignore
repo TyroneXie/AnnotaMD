@@ -48,3 +48,4 @@ Carthage/Build/
 docs/plan.html
 scripts/.seticon-bin
 *.icns
+*.zip
