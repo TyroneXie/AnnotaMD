@@ -37,9 +37,9 @@ enum MarkdownHTMLService {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style id="mr-theme-style">\(themeCSS)</style>
             <link rel="stylesheet" href="mr:///css/markdown.css">
             <link rel="stylesheet" href="mr:///css/scroll.css">
+            <style id="mr-theme-style">\(themeCSS)</style>
             <style>
             :root { --content-padding: \(contentPadding)px; }
             </style>

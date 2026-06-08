@@ -136,10 +136,10 @@ struct ThemeColors: Equatable, Sendable {
                 ? surface.mixed(with: ink, fraction: 0.08 + c * 0.08)
                 : surface.mixed(with: ink, fraction: 0.16 + c * 0.12),
             bgSubtle: isDark
-                ? ink.opacity(0.02 + c * 0.02)
+                ? surface.mixed(with: ink, fraction: 0.02 + c * 0.02)
                 : surface.mixed(with: ink, fraction: 0.08 + c * 0.08),
             bgMuted: isDark
-                ? ink.opacity(0.04 + c * 0.03)
+                ? surface.mixed(with: ink, fraction: 0.04 + c * 0.03)
                 : surface.mixed(with: ink, fraction: 0.12 + c * 0.10),
             fgSecondary: ink.opacity(0.65 + c * 0.10),
             fgMuted: isDark

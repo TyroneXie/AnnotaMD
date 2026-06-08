@@ -1,19 +1,5 @@
+/* 颜色变量由动态主题注入(mr-theme-style)，此处仅保留排版默认值 */
 :root {
-  --surface: #18181a;
-  --ink: #e8e8e3;
-  --accent: #339cff;
-  --success: #40c977;
-  --danger: #fa423e;
-  --bg-elevated: #1f1f22;
-  --bg-subtle: #1a1a1c;
-  --bg-muted: #1c1c1f;
-  --fg-secondary: rgba(232, 232, 227, 0.75);
-  --fg-muted: rgba(232, 232, 227, 0.55);
-  --accent-hover: #4db0ff;
-  --accent-soft: rgba(51, 156, 255, 0.20);
-  --border: rgba(232, 232, 227, 0.06);
-  --border-subtle: rgba(232, 232, 227, 0.04);
-  --content-padding: 20px;
   --font-size-base: 16px;
   --font-size-code: 14px;
   --line-height: 1.6;

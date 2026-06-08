@@ -166,7 +166,11 @@ struct WebViewMarkdownView: View {
             .replacingOccurrences(of: "'", with: "\\'")
 
         Task { @MainActor [escaped] in
-            _ = try? await page.callJavaScript("document.getElementById('mr-theme-style').textContent = '\(escaped)'")
+            do {
+                _ = try await page.callJavaScript("document.getElementById('mr-theme-style').textContent = '\(escaped)'")
+            } catch {
+                print("[MarkdownReader] updateThemeCSS failed: \(error)")
+            }
         }
     }
 
