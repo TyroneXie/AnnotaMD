@@ -78,6 +78,10 @@ final class DocumentViewModel {
     /// 与 HTML data-line 属性和 OutlineItem.lineNumber 使用相同约定
     var cursorLineNumber: Int = 1
 
+    /// 渲染视图当前可见区域顶部的行号（1-based），Rendered 模式下由 WebView 滚动回调实时更新
+    /// 切换回 Raw 模式时用于同步滚动位置
+    var renderedVisibleLineNumber: Int = 1
+
     /// Per-file 内容缓存：保存未写入磁盘的编辑内容
     /// 切换文件时保存当前内容，切换回来时恢复缓存内容
     /// 确保 per-file UndoManager 的 undo 动作与内容一致
@@ -208,11 +212,11 @@ final class DocumentViewModel {
     func switchDisplayMode(_ mode: DisplayMode) {
         let previousMode = displayMode
         displayMode = mode
-        // 同步更新缓存，确保切换文件后能恢复正确的模式
         if let url = currentFileURL {
             displayModeCache[url] = mode
         }
-        // 从 Raw 切到 Rendered 时，同步光标位置到渲染视图
+        // Raw→Rendered：用光标行号同步渲染视图滚动位置
+        // Rendered→Raw：NSTextView 始终存活在 ZStack 中，自然保留滚动位置，无需额外操作
         if previousMode == .raw && mode == .rendered {
             requestScrollToLine(cursorLineNumber)
         }

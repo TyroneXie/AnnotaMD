@@ -56,6 +56,7 @@ final class SettingsModel {
         static let lastOpenedDirectory  = "com.markdownreader.lastOpenedDirectory"
         static let lastOpenedFilePath   = "com.markdownreader.lastOpenedFilePath"
         static let isDefaultMdOpener    = "com.markdownreader.isDefaultMdOpener"
+        static let enableCommandLine    = "com.markdownreader.enableCommandLine"
         static let recentItems          = "com.markdownreader.recentItems"
         static let skipFileModifiedAlert = "com.markdownreader.skipFileModifiedAlert"
         static let skippedVersion       = "com.markdownreader.skippedVersion"
@@ -100,6 +101,11 @@ final class SettingsModel {
     /// 跳过「文件被外部修改」确认弹窗
     var skipFileModifiedAlert: Bool {
         didSet { defaults.set(skipFileModifiedAlert, forKey: Keys.skipFileModifiedAlert) }
+    }
+
+    /// 启用命令行工具（安装 mdr 命令到 /usr/local/bin/）
+    var enableCommandLine: Bool {
+        didSet { defaults.set(enableCommandLine, forKey: Keys.enableCommandLine) }
     }
 
     // MARK: - 自动更新
@@ -292,6 +298,7 @@ final class SettingsModel {
         self.showNonMarkdownFiles = defaults.object(forKey: Keys.showNonMarkdownFiles) as? Bool ?? true
         self.isDefaultMdOpener = Self.checkIsDefaultMdOpener()
         self.skipFileModifiedAlert = defaults.object(forKey: Keys.skipFileModifiedAlert) as? Bool ?? false
+        self.enableCommandLine = FileManager.default.fileExists(atPath: "/usr/local/bin/mdr")
         self.skippedVersion = defaults.string(forKey: Keys.skippedVersion)
         self.lastUpdateCheckTime = defaults.object(forKey: Keys.lastUpdateCheckTime) as? Date
         self.appearanceMode = AppearanceMode(rawValue: defaults.string(forKey: Keys.appearanceMode) ?? "") ?? .system

@@ -40,6 +40,7 @@ struct WebViewMarkdownView: View {
     let themeCSS: String
     var isDark: Bool = true
     var onVisibleHeadingChanged: ((MarkdownHTMLService.HeadingInfo?) -> Void)?
+    var onVisibleLineChanged: ((Int) -> Void)?
 
     @State private var page = WebPage()
     @State private var scrollPosition = ScrollPosition(edge: .top)
@@ -48,6 +49,7 @@ struct WebViewMarkdownView: View {
     @State private var scrollSyncTimer: Timer?
     @State private var isConfigured = false
     @State private var currentHeadings: [MarkdownHTMLService.HeadingInfo] = []
+    @State private var pendingScrollToLine: Int?
 
     var body: some View {
         WebView(page)
@@ -79,6 +81,16 @@ struct WebViewMarkdownView: View {
             }
             .onChange(of: scrollToLine) { _, newValue in
                 if let line = newValue {
+                    if page.isLoading {
+                        pendingScrollToLine = line
+                    } else {
+                        scrollToLineNumber(line)
+                    }
+                }
+            }
+            .onChange(of: page.isLoading) { _, isLoading in
+                if !isLoading, let line = pendingScrollToLine {
+                    pendingScrollToLine = nil
                     scrollToLineNumber(line)
                 }
             }
@@ -131,10 +143,23 @@ struct WebViewMarkdownView: View {
         let renderResult = MarkdownHTMLService.render(content, baseURL: baseURL)
         currentHeadings = renderResult.headings
 
+        scrollPosition = ScrollPosition(edge: .top)
+
         let effectiveBaseURL = baseURL ?? URL(string: "about:blank")!
         _ = page.load(html: html, baseURL: effectiveBaseURL)
         lastLoadedContent = content
         lastLoadedURL = fileURL
+
+        if let line = scrollToLine {
+            pendingScrollToLine = line
+            let capturedLine = line
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [capturedLine] in
+                if pendingScrollToLine == capturedLine {
+                    pendingScrollToLine = nil
+                    scrollToLineNumber(capturedLine)
+                }
+            }
+        }
     }
 
     private func updateContent(_ content: String) {
@@ -188,7 +213,13 @@ struct WebViewMarkdownView: View {
         scrollSyncTimer?.invalidate()
         scrollSyncTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
             Task { @MainActor in
+                if let lineResult = try? await page.callJavaScript("MR.getTopVisibleLine()"),
+                   let lineNumber = lineResult as? Int {
+                    onVisibleLineChanged?(lineNumber)
+                }
+
                 guard let result = try? await page.callJavaScript("MR.getVisibleHeading()") else {
+                    onVisibleHeadingChanged?(nil)
                     return
                 }
                 let dict = result as? [String: Any]

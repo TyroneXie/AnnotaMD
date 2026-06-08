@@ -468,6 +468,9 @@ struct DetailView: View {
                     isDark: settings.resolvedThemeType == .dark,
                     onVisibleHeadingChanged: { heading in
                         activeOutlineLineNumber = heading?.lineNumber
+                    },
+                    onVisibleLineChanged: { lineNumber in
+                        documentViewModel.renderedVisibleLineNumber = lineNumber
                     }
                 )
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in

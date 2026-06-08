@@ -43,6 +43,13 @@ enum L10n {
         case settingsGeneralIsDefault
         case settingsGeneralSetDefaultFailed
 
+        // 设置 - 命令行工具
+        case settingsGeneralCommandLineTitle
+        case settingsGeneralCommandLineDesc
+        case settingsGeneralCommandLineInstalled
+        case settingsGeneralCommandLineInstallFailed
+        case settingsGeneralCommandLineUninstallFailed
+
         // 设置 - 外观 - 主题模式
         case settingsAppearanceThemeTitle
         case settingsAppearanceThemeDesc
@@ -222,6 +229,11 @@ enum L10n {
         .settingsGeneralSetAsDefault: "Set as Default",
         .settingsGeneralIsDefault: "Markdown Reader is the default Markdown opener",
         .settingsGeneralSetDefaultFailed: "Failed to set as default opener. Please try again.",
+        .settingsGeneralCommandLineTitle: "Command Line Tool",
+        .settingsGeneralCommandLineDesc: "Install the `mdr` command to open files from Terminal. Example: mdr README.md",
+        .settingsGeneralCommandLineInstalled: "mdr command is available in Terminal",
+        .settingsGeneralCommandLineInstallFailed: "Failed to install command line tool. Please try again.",
+        .settingsGeneralCommandLineUninstallFailed: "Failed to uninstall command line tool. Please try again.",
         .settingsAppearanceThemeTitle: "Theme",
         .settingsAppearanceThemeDesc: "Choose the application appearance mode.",
         .settingsAppearanceModeLight: "Light",
@@ -358,6 +370,11 @@ enum L10n {
         .settingsGeneralSetAsDefault: "设为默认",
         .settingsGeneralIsDefault: "Markdown Reader 已是默认 Markdown 打开程序",
         .settingsGeneralSetDefaultFailed: "设置默认打开程序失败，请重试。",
+        .settingsGeneralCommandLineTitle: "命令行工具",
+        .settingsGeneralCommandLineDesc: "安装 mdr 命令，可在终端中打开文件。例如：mdr README.md",
+        .settingsGeneralCommandLineInstalled: "mdr 命令已在终端中可用",
+        .settingsGeneralCommandLineInstallFailed: "安装命令行工具失败，请重试。",
+        .settingsGeneralCommandLineUninstallFailed: "卸载命令行工具失败，请重试。",
         .settingsAppearanceThemeTitle: "主题",
         .settingsAppearanceThemeDesc: "选择应用的外观模式。",
         .settingsAppearanceModeLight: "浅色",
@@ -494,6 +511,11 @@ enum L10n {
         .settingsGeneralSetAsDefault: "設為預設",
         .settingsGeneralIsDefault: "Markdown Reader 已是預設 Markdown 開啟程式",
         .settingsGeneralSetDefaultFailed: "設定預設開啟程式失敗，請重試。",
+        .settingsGeneralCommandLineTitle: "命令列工具",
+        .settingsGeneralCommandLineDesc: "安裝 mdr 命令，可在終端機中開啟檔案。例如：mdr README.md",
+        .settingsGeneralCommandLineInstalled: "mdr 命令已在終端機中可用",
+        .settingsGeneralCommandLineInstallFailed: "安裝命令列工具失敗，請重試。",
+        .settingsGeneralCommandLineUninstallFailed: "解除安裝命令列工具失敗，請重試。",
         .settingsAppearanceThemeTitle: "主題",
         .settingsAppearanceThemeDesc: "選擇應用的外觀模式。",
         .settingsAppearanceModeLight: "淺色",

@@ -308,7 +308,7 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         // 设置默认字体和颜色
         let defaultFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
         textView.font = defaultFont
-        textView.textColor = themeColors.ink.nsColor
+        textView.typingAttributes[.foregroundColor] = themeColors.ink.nsColor
 
         // 初始内容 — 使用 textStorage API + disableUndoRegistration 避免 undo 记录
         let um = UndoManagerProvider.shared.undoManager(for: fileURL)
@@ -337,6 +337,8 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
 
         context.coordinator.textView = textView
         context.coordinator.scrollView = scrollView
+        context.coordinator.wasActive = isActive
+        context.coordinator.previousThemeColors = themeColors
         searchRef?.textView = textView
 
         // 记录当前 appearance，后续 updateNSView 中检测变化
@@ -367,8 +369,6 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         // 更新内容（仅在内容确实不同时）
         let currentContent = textView.string
         if currentContent != content {
-            // 使用 textStorage API 更新内容，禁用 undo 注册
-            // 避免程序化内容更新产生 undo 记录
             textView.undoManager?.disableUndoRegistration()
             defer { textView.undoManager?.enableUndoRegistration() }
 
@@ -380,49 +380,40 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
             } else {
                 textView.string = content
             }
-
-            let syntaxColors = deriveSyntaxColors(from: themeColors)
-            MarkdownSyntaxHighlighter.applyHighlights(
-                to: textView,
-                text: content,
-                colors: syntaxColors,
-                fontSize: fontSize
-            )
         }
 
-        // 更新字体大小
-        let currentFont = textView.font ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        if abs(currentFont.pointSize - fontSize) > 0.01 {
-            let syntaxColors = deriveSyntaxColors(from: themeColors)
-            MarkdownSyntaxHighlighter.applyHighlights(
-                to: textView,
-                text: textView.string,
-                colors: syntaxColors,
-                fontSize: fontSize
-            )
-        }
-
-        // 更新插入点颜色和文字颜色
+        // 更新插入点颜色
         textView.insertionPointColor = themeColors.accent.nsColor
-        textView.textColor = themeColors.ink.nsColor
+        // typingAttributes 只影响新输入文字的颜色，不覆盖 textStorage 中已有的 per-range 语法高亮
+        // textView.textColor 在 isRichText=false 模式下会覆盖全部 foregroundColor 属性
+        textView.typingAttributes[.foregroundColor] = themeColors.ink.nsColor
         // 防御性重置：AppKit 可能在 appearance 变化时将 drawsBackground 重置为 true
         // 或将 backgroundColor 重置为不透明色，导致文字被覆盖不可见
         textView.drawsBackground = false
         textView.backgroundColor = .clear
 
-        // 检测 appearance 变化（NSApp.appearance 被设置时 AppKit 会重置 NSTextView 的 textColor）
+        // 检测 appearance 变化（NSApp.appearance 被设置时 AppKit 会重置 NSTextView 属性）
         context.coordinator.checkAppearanceChange()
 
-        // 主题变化时重新应用语法高亮（内容/字号未变但颜色可能不同）
-        if context.coordinator.previousThemeColors != themeColors {
-            let syntaxColors = deriveSyntaxColors(from: themeColors)
-            MarkdownSyntaxHighlighter.applyHighlights(
-                to: textView,
-                text: textView.string,
-                colors: syntaxColors,
-                fontSize: fontSize
+        // 始终重新应用语法高亮：isRichText=false 模式下，AppKit 可能在布局变化时
+        // （切换大纲面板、窗口缩放、渲染/编辑切换等）清除 textStorage 的 per-range 属性
+        // 不使用脏标记优化：首字符颜色检测无法覆盖中段语法元素被清除的情况
+        let syntaxColors = deriveSyntaxColors(from: themeColors)
+        MarkdownSyntaxHighlighter.applyHighlights(
+            to: textView,
+            text: textView.string,
+            colors: syntaxColors,
+            fontSize: fontSize
+        )
+        context.coordinator.previousThemeColors = themeColors
+        context.coordinator.wasActive = isActive
+
+        // 重新叠加搜索高亮（applyHighlights 的 setAttributes 会清除 backgroundColor）
+        if let searchRef = searchRef, !searchRef.allMatchRanges().isEmpty {
+            searchRef.reapplySearchHighlights(
+                matchRanges: searchRef.allMatchRanges(),
+                currentIndex: searchRef.currentMatchIndex
             )
-            context.coordinator.previousThemeColors = themeColors
         }
 
         // 更新边距（仅在值变化时更新，避免不必要的布局计算）
@@ -519,6 +510,7 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         private var highlightWorkItem: DispatchWorkItem?
         var currentFileURL: URL?
         var previousThemeColors: ThemeColors?
+        var wasActive: Bool = false
         /// 上次记录的 appearance token，用于检测 appearance 变化
         var lastAppearanceToken: String?
 
@@ -526,31 +518,19 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
             self.parent = parent
         }
 
-        /// 检查 appearance 是否变化，如果变化则重新应用颜色
-        /// 在 updateNSView 中调用，因为 SwiftUI 不会在 appearance 变化时主动调用 updateNSView
         @MainActor
         func checkAppearanceChange() {
             let currentToken = NSApp.effectiveAppearance.description
             guard currentToken != lastAppearanceToken else { return }
             lastAppearanceToken = currentToken
 
-            // appearance 变化时重新应用文字颜色和语法高亮
-            // AppKit 在 NSApp.appearance 变化时会自动重置 NSTextView 的以下属性：
-            // - textColor → 系统默认色（可能和背景色相同导致文字不可见）
-            // - drawsBackground → 可能被重置为 true
-            // - backgroundColor → 可能被重置为不透明的系统色
+            // appearance 变化时 AppKit 会重置 NSTextView 属性
             guard let textView else { return }
             textView.drawsBackground = false
             textView.backgroundColor = .clear
-            textView.textColor = parent.themeColors.ink.nsColor
+            textView.typingAttributes[.foregroundColor] = parent.themeColors.ink.nsColor
             textView.insertionPointColor = parent.themeColors.accent.nsColor
-            let syntaxColors = parent.deriveSyntaxColors(from: parent.themeColors)
-            MarkdownSyntaxHighlighter.applyHighlights(
-                to: textView,
-                text: textView.string,
-                colors: syntaxColors,
-                fontSize: parent.fontSize
-            )
+            // 语法高亮由 updateNSView 末尾统一重应用
         }
 
         /// NSTextViewDelegate — 为文本视图提供 per-file UndoManager

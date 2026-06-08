@@ -13,6 +13,10 @@ struct GeneralSettingsView: View {
     let language: Language
     @State private var showSetDefaultFailed = false
     @State private var isSettingDefault = false
+    @State private var isTogglingCommandLine = false
+    @State private var showCommandLineFailed = false
+    @State private var commandLineErrorMessage = ""
+    private let commandLineService = CommandLineService()
 
     private var detectedLanguageName: String {
         LanguageService.detectLanguage().localizedName(language)
@@ -118,10 +122,72 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
+
+            SettingsDivider()
+
+            // 命令行工具
+            SettingsSection(
+                title: L10n.tr(.settingsGeneralCommandLineTitle, language: language),
+                description: L10n.tr(.settingsGeneralCommandLineDesc, language: language)
+            ) {
+                HStack(spacing: 8) {
+                    Toggle(
+                        settings.enableCommandLine
+                            ? L10n.tr(.settingsGeneralCommandLineInstalled, language: language)
+                            : L10n.tr(.settingsGeneralCommandLineTitle, language: language),
+                        isOn: Binding(
+                            get: { settings.enableCommandLine },
+                            set: { newValue in toggleCommandLine(newValue) }
+                        )
+                    )
+                    .disabled(isTogglingCommandLine)
+
+                    if isTogglingCommandLine {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+                .alert(
+                    L10n.tr(.settingsGeneralCommandLineTitle, language: language),
+                    isPresented: $showCommandLineFailed
+                ) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(commandLineErrorMessage)
+                }
+            }
         }
         .padding(24)
         .onAppear {
             settings.refreshDefaultOpenerStatus()
+            settings.enableCommandLine = commandLineService.isInstalled
+        }
+    }
+
+    private func toggleCommandLine(_ enable: Bool) {
+        isTogglingCommandLine = true
+        if enable {
+            commandLineService.install { [weak settings] success in
+                isTogglingCommandLine = false
+                if success {
+                    settings?.enableCommandLine = true
+                } else {
+                    settings?.enableCommandLine = false
+                    commandLineErrorMessage = L10n.tr(.settingsGeneralCommandLineInstallFailed, language: language)
+                    showCommandLineFailed = true
+                }
+            }
+        } else {
+            commandLineService.uninstall { [weak settings] success in
+                isTogglingCommandLine = false
+                if success {
+                    settings?.enableCommandLine = false
+                } else {
+                    settings?.enableCommandLine = true
+                    commandLineErrorMessage = L10n.tr(.settingsGeneralCommandLineUninstallFailed, language: language)
+                    showCommandLineFailed = true
+                }
+            }
         }
     }
 }
