@@ -60,9 +60,6 @@ struct DetailView: View {
     /// 导出 / CriticMarkup 复用的 WKWebView 句柄
     @State private var webViewHandle = WebViewHandle()
 
-    /// 复制后的短暂反馈（图标切换为对勾）
-    @State private var didCopy = false
-
     /// 清除标注确认弹窗
     @State private var showClearAnnotationsAlert = false
 
@@ -273,40 +270,27 @@ struct DetailView: View {
                         .help(L10n.tr(.titleBarClearAnnotations, language: language))
                     }
 
-                    // 复制：左侧按钮直接复制 CriticMarkup 原文；右侧下拉箭头选择「复制给 AI（含说明）」
-                    HStack(spacing: 2) {
+                    // 复制：macOS 标准下拉按钮（图标 + 内联 chevron），单击即展开菜单。
+                    // 菜单首项为默认动作「复制 CriticMarkup」，次项「复制给 AI（含说明）」。
+                    Menu {
                         Button {
                             copyCritic()
                         } label: {
-                            Image(systemName: didCopy ? "checkmark.circle.fill" : "doc.on.doc")
-                                .font(.system(size: 14))
-                                .foregroundStyle(didCopy ? themeColors.accent : themeColors.fgMuted)
+                            Label(L10n.tr(.copyCriticMenu, language: language), systemImage: "doc.on.doc")
                         }
-                        .buttonStyle(.plain)
-                        .help(L10n.tr(.copyCriticMenu, language: language))
-
-                        Menu {
-                            Button {
-                                copyCritic()
-                            } label: {
-                                Label(L10n.tr(.copyCriticMenu, language: language), systemImage: "doc.on.doc")
-                            }
-                            Button {
-                                copyForAI()
-                            } label: {
-                                Label(L10n.tr(.copyForAIMenu, language: language), systemImage: "sparkles")
-                            }
+                        Button {
+                            copyForAI()
                         } label: {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(themeColors.fgMuted)
+                            Label(L10n.tr(.copyForAIMenu, language: language), systemImage: "sparkles")
                         }
-                        .menuStyle(.borderlessButton)
-                        .menuIndicator(.hidden)
-                        .fixedSize()
-                        .frame(width: 12)
-                        .help(L10n.tr(.titleBarCopyMenu, language: language))
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 14))
+                            .foregroundStyle(themeColors.fgMuted)
                     }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    .help(L10n.tr(.titleBarCopyMenu, language: language))
                 }
 
                 // 大纲切换按钮（始终显示在 titlebar 最右侧）
@@ -444,10 +428,6 @@ struct DetailView: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        didCopy = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            didCopy = false
-        }
     }
 
     /// 清除全部标注，恢复原文
