@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "MarkdownReader",
     platforms: [
-        .macOS(.v26)
+        .macOS(.v15)
     ],
     products: [
         .executable(
@@ -50,6 +50,14 @@ let package = Package(
                 "MarkdownReaderKit"
             ],
             path: "Sources/MarkdownReaderQL"
+        ),
+        // Unit tests for the shared logic library (CriticMarkup, HTML rendering)
+        .testTarget(
+            name: "MarkdownReaderKitTests",
+            dependencies: [
+                "MarkdownReaderKit"
+            ],
+            path: "Tests/MarkdownReaderKitTests"
         )
     ]
 )

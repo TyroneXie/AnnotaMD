@@ -584,12 +584,172 @@
       MR._searchHighlights = [];
     },
 
+    // ===== CriticMarkup 选词标注 =====
+
+    criticLabels: {
+      delete: 'Delete', highlight: 'Highlight', comment: 'Comment', replace: 'Replace',
+      confirm: 'Apply', cancel: 'Cancel', commentHint: 'Add a comment…', replaceHint: 'Replace with…'
+    },
+
+    setCriticLabels(labels) {
+      if (labels && typeof labels === 'object') {
+        MR.criticLabels = Object.assign({}, MR.criticLabels, labels);
+      }
+    },
+
+    _postCriticAction(op, text, line, payload) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.criticAction) {
+          window.webkit.messageHandlers.criticAction.postMessage({
+            op: op, text: text, line: line, payload: payload || null
+          });
+        }
+      } catch (e) { /* no-op */ }
+    },
+
+    _criticLineFor(node) {
+      let el = (node && node.nodeType === 3) ? node.parentElement : node;
+      while (el && el !== document.body) {
+        if (el.dataset && el.dataset.line) {
+          return parseInt(el.dataset.line) || 0;
+        }
+        el = el.parentElement;
+      }
+      return 0;
+    },
+
+    _ensureCriticToolbar() {
+      let bar = document.getElementById('mr-critic-toolbar');
+      if (bar) return bar;
+      bar = document.createElement('div');
+      bar.id = 'mr-critic-toolbar';
+      document.body.appendChild(bar);
+      // 防止点击工具条本身清除选区
+      bar.addEventListener('mousedown', function(e) { e.preventDefault(); });
+      return bar;
+    },
+
+    _hideCriticToolbar() {
+      const bar = document.getElementById('mr-critic-toolbar');
+      if (bar) bar.classList.remove('visible');
+      MR._criticPending = null;
+    },
+
+    _showCriticToolbar(rect, text, line) {
+      const bar = MR._ensureCriticToolbar();
+      MR._criticPending = { text: text, line: line };
+      const L = MR.criticLabels;
+      bar.innerHTML = '';
+
+      const mkBtn = (label, handler, primary) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        if (primary) b.className = 'critic-primary';
+        b.addEventListener('click', handler);
+        return b;
+      };
+
+      bar.appendChild(mkBtn(L.delete, () => MR._commitCritic('delete')));
+      bar.appendChild(mkBtn(L.highlight, () => MR._commitCritic('highlight')));
+      bar.appendChild(mkBtn(L.comment, () => MR._promptCritic('comment', L.commentHint)));
+      bar.appendChild(mkBtn(L.replace, () => MR._promptCritic('replace', L.replaceHint)));
+
+      bar.classList.add('visible');
+      MR._positionCriticToolbar(bar, rect);
+    },
+
+    _positionCriticToolbar(bar, rect) {
+      const barRect = bar.getBoundingClientRect();
+      let top = rect.top - barRect.height - 8;
+      if (top < 4) top = rect.bottom + 8;
+      let left = rect.left + (rect.width / 2) - (barRect.width / 2);
+      left = Math.max(4, Math.min(left, window.innerWidth - barRect.width - 4));
+      bar.style.top = top + 'px';
+      bar.style.left = left + 'px';
+    },
+
+    _promptCritic(op, hint) {
+      const bar = document.getElementById('mr-critic-toolbar');
+      if (!bar || !MR._criticPending) return;
+      const L = MR.criticLabels;
+      bar.innerHTML = '';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = hint;
+      const confirm = document.createElement('button');
+      confirm.textContent = L.confirm;
+      confirm.className = 'critic-primary';
+      const cancel = document.createElement('button');
+      cancel.textContent = L.cancel;
+
+      const submit = () => MR._commitCritic(op, input.value);
+      confirm.addEventListener('click', submit);
+      cancel.addEventListener('click', () => MR._hideCriticToolbar());
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); MR._hideCriticToolbar(); }
+      });
+
+      bar.appendChild(input);
+      bar.appendChild(cancel);
+      bar.appendChild(confirm);
+      setTimeout(() => input.focus(), 0);
+    },
+
+    _commitCritic(op, payload) {
+      const p = MR._criticPending;
+      if (!p) return;
+      MR._postCriticAction(op, p.text, p.line, payload);
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+      MR._hideCriticToolbar();
+    },
+
+    _initCriticSelection() {
+      const onSelectionChange = () => {
+        // 输入态（评论/替换）时不刷新工具条
+        const bar = document.getElementById('mr-critic-toolbar');
+        if (bar && bar.querySelector('input')) return;
+
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+          MR._hideCriticToolbar();
+          return;
+        }
+        const text = sel.toString();
+        if (!text || !text.trim()) { MR._hideCriticToolbar(); return; }
+
+        const range = sel.getRangeAt(0);
+        const content = document.getElementById('mr-content');
+        if (!content || !content.contains(range.commonAncestorContainer)) {
+          MR._hideCriticToolbar();
+          return;
+        }
+        const rect = range.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) { MR._hideCriticToolbar(); return; }
+        const line = MR._criticLineFor(range.startContainer);
+        MR._showCriticToolbar(rect, text, line);
+      };
+
+      document.addEventListener('selectionchange', () => {
+        // 节流：等鼠标/键盘松开后再定位
+        clearTimeout(MR._criticSelTimer);
+        MR._criticSelTimer = setTimeout(onSelectionChange, 120);
+      });
+      // 点击空白处隐藏
+      document.addEventListener('mousedown', (e) => {
+        const bar = document.getElementById('mr-critic-toolbar');
+        if (bar && bar.contains(e.target)) return;
+      });
+    },
+
     init() {
       MR.renderMermaid();
       MR.renderPlantUML();
       MR.renderKaTeX();
       MR.renderAdmonitions();
       MR.addCopyButtons();
+      MR._initCriticSelection();
       if (typeof Prism !== 'undefined') {
         Prism.highlightAll();
       }
@@ -597,6 +757,24 @@
   };
 
   window.MR = MR;
+
+  // ---- 滚动同步：通过 WKScriptMessageHandler 上报可见行 / 标题（替代旧 SwiftUI scrollGeometry 回调）----
+  function postScrollSync() {
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.scrollSync) {
+        window.webkit.messageHandlers.scrollSync.postMessage({
+          line: MR.getTopVisibleLine(),
+          heading: MR.getVisibleHeading()
+        });
+      }
+    } catch (e) { /* no-op */ }
+  }
+
+  let _mrScrollTimer = null;
+  window.addEventListener('scroll', function() {
+    if (_mrScrollTimer) clearTimeout(_mrScrollTimer);
+    _mrScrollTimer = setTimeout(postScrollSync, 200);
+  }, { passive: true });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', MR.init);

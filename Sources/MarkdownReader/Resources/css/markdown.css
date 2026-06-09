@@ -368,3 +368,83 @@ mark {
 .mr-search-current {
   background: rgba(255, 166, 0, 0.6);
 }
+
+/* ===== CriticMarkup 审阅标注 ===== */
+ins.critic-add {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--ink);
+  border-bottom: 2px solid var(--success);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+del.critic-del {
+  text-decoration: line-through;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--fg-muted);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+mark.critic-mark {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--ink);
+  padding: 0.1em 0.2em;
+  border-radius: calc(var(--border-radius) - 3px);
+}
+.critic-comment {
+  cursor: help;
+  font-size: 0.85em;
+  vertical-align: super;
+  margin: 0 2px;
+  user-select: none;
+  border-radius: 4px;
+  padding: 0 2px;
+  background: var(--accent-soft);
+}
+
+/* CriticMarkup 选词工具条 */
+#mr-critic-toolbar {
+  position: fixed;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  white-space: nowrap;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+#mr-critic-toolbar.visible { display: inline-flex; }
+#mr-critic-toolbar button {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.4;
+}
+#mr-critic-toolbar button:hover { background: var(--accent-soft); }
+#mr-critic-toolbar .critic-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+#mr-critic-toolbar input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+  width: 180px;
+  outline: none;
+}
+#mr-critic-toolbar input:focus { border-color: var(--accent); }
+#mr-critic-toolbar .critic-primary { color: var(--accent); font-weight: 600; }

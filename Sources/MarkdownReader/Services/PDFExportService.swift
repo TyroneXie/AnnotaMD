@@ -66,37 +66,21 @@ enum PDFExportService {
 
     // MARK: - 导出方法
 
-    /// 使用主视图中已有的 WebPage 导出 PDF（推荐方案）
-    /// WebPage 在视图层级中，内容已完整渲染
+    /// 使用主视图中已有的 WKWebView 导出 PDF（推荐方案）
+    /// 该 WebView 在视图层级中，内容已完整渲染
     @MainActor
-    static func exportFromPage(_ page: WebPage) async throws -> Data {
-        while page.isLoading {
+    static func exportFromWebView(_ webView: WKWebView) async throws -> Data {
+        while webView.isLoading {
             try await Task.sleep(for: .milliseconds(100))
         }
         // 等待 JS 渲染（KaTeX、Mermaid、PlantUML、图片加载等）完成
-        try await waitForJSRender(page: page)
+        try await waitForOffscreenJSRender(webView: webView)
 
-        _ = try? await page.callJavaScript("MR.clearSearchHighlight()")
+        _ = try? await webView.evaluateJavaScript("MR.clearSearchHighlight && MR.clearSearchHighlight()")
 
-        // 获取页面内容高度用于验证导出完整性
-        let contentHeight = try await page.callJavaScript(
-            "Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)"
-        ) as? Double ?? 0
-
-        let config = WebPage.ExportedContentConfiguration.pdf(
-            region: .contents,
-            allowTransparentBackground: false
-        )
-        let data = try await page.exported(as: config)
-
-       // 验证导出结果：如果 PDF 数据量与页面内容高度严重不匹配，
-        // 可能是 .contents region 只导出了可视区域，记录警告
-        // 使用宽松阈值：每 1000px 至少 2KB，避免纯文本页面误报
-        let expectedMinSize = max(Int(contentHeight / 1000.0) * 2_000, 5_000)
-        if contentHeight > 0 && data.count < expectedMinSize {
-            logger.warning("exportFromPage: PDF data (\(data.count) bytes) seems too small for content height \(contentHeight), .contents region may have truncated output")
-        }
-
+        let pdfConfig = WKPDFConfiguration()
+        // 不设置 rect，使用默认 null rect，让 WebKit 自动导出完整网页内容并分页
+        let data = try await webView.pdf(configuration: pdfConfig)
         return data
     }
 
@@ -158,37 +142,6 @@ enum PDFExportService {
     }
 
     // MARK: - JS 渲染等待
-
-    /// 等待页面内异步 JS 渲染完成（Mermaid、KaTeX、PlantUML、图片加载）— WebPage 版本
-    @MainActor
-    private static func waitForJSRender(page: WebPage) async throws {
-        // 等待 DOMContentLoaded 和基本渲染
-        try await Task.sleep(for: .milliseconds(300))
-
-        // 等待所有图片加载完成
-        do {
-            _ = try await page.callJavaScript(jsWaitForImages)
-        } catch {
-            logger.warning("waitForJSRender: image wait failed: \(error)")
-        }
-
-        // 等待 Mermaid 异步渲染完成
-        do {
-            _ = try await page.callJavaScript(jsWaitForMermaid)
-        } catch {
-            logger.warning("waitForJSRender: mermaid wait failed: \(error)")
-        }
-
-        // 等待 PlantUML 异步渲染完成
-        do {
-            _ = try await page.callJavaScript(jsWaitForPlantUML)
-        } catch {
-            logger.warning("waitForJSRender: plantuml wait failed: \(error)")
-        }
-
-        // 额外等待确保布局稳定
-        try await Task.sleep(for: .milliseconds(200))
-    }
 
     /// 等待离屏 WKWebView 中异步 JS 渲染完成 — WKWebView 版本
     @MainActor

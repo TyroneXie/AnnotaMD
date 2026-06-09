@@ -115,7 +115,7 @@ if [ -d "$ASSETS_SRC" ]; then
     actool \
         --compile "$APP_BUNDLE/Contents/Resources" \
         --platform macosx \
-        --minimum-deployment-target 26 \
+        --minimum-deployment-target 15 \
         --app-icon AppIcon \
         --output-format human-readable-text \
         --output-partial-info-plist /tmp/markdownreader_partial.plist \

@@ -1,70 +1,70 @@
 import Foundation
 import WebKit
 
-public struct MarkdownURLSchemeHandler: URLSchemeHandler {
+/// `mr://` 自定义 scheme 处理器（WKWebView 版本）。
+///
+/// v2.x 早期使用 SwiftUI WebKit 的 `URLSchemeHandler`（仅 macOS 26+）。
+/// 为支持 macOS 15，迁移回经典 `WKURLSchemeHandler`，逻辑保持一致：
+/// 将 `mr:///<path>` 解析为磁盘上的资源文件并返回。
+public final class MarkdownURLSchemeHandler: NSObject, WKURLSchemeHandler {
     private let baseURL: URL?
     private let resourceSearchPaths: [URL]?
 
     public init(baseURL: URL?, resourceSearchPaths: [URL]? = nil) {
         self.baseURL = baseURL
         self.resourceSearchPaths = resourceSearchPaths
+        super.init()
     }
 
-    public func reply(for request: URLRequest) -> some AsyncSequence<URLSchemeTaskResult, any Error> {
-        let capturedBaseURL = baseURL
-        let capturedResourceSearchPaths = resourceSearchPaths
-        return AsyncThrowingStream { continuation in
-            let url = request.url
-            let scheme = url?.scheme
+    public func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+        guard let url = urlSchemeTask.request.url, url.scheme == "mr" else {
+            urlSchemeTask.didFailWithError(URLError(.badURL))
+            return
+        }
 
-            guard scheme == "mr" else {
-                continuation.finish()
-                return
-            }
+        var path = url.path
+        if path.hasPrefix("/") {
+            path = String(path.dropFirst())
+        }
 
-            guard var path = url?.path else {
-                continuation.finish()
-                return
-            }
+        let resourceURL = Self.resolveResourceURL(
+            path: path,
+            baseURL: baseURL,
+            resourceSearchPaths: resourceSearchPaths
+        )
 
-            if path.hasPrefix("/") {
-                path = String(path.dropFirst())
-            }
+        guard let resourceURL, FileManager.default.fileExists(atPath: resourceURL.path) else {
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 404,
+                httpVersion: "HTTP/1.1",
+                headerFields: nil
+            )!
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didFinish()
+            return
+        }
 
-            let resourceURL = Self.resolveResourceURL(path: path, baseURL: capturedBaseURL, resourceSearchPaths: capturedResourceSearchPaths)
-
-            guard let resourceURL, FileManager.default.fileExists(atPath: resourceURL.path) else {
-                let response = HTTPURLResponse(
-                    url: url!,
-                    statusCode: 404,
-                    httpVersion: "HTTP/1.1",
-                    headerFields: nil
-                )!
-                continuation.yield(.response(response))
-                continuation.yield(.data(Data()))
-                continuation.finish()
-                return
-            }
-
-            do {
-                let data = try Data(contentsOf: resourceURL)
-                let mimeType = Self.mimeType(for: resourceURL.pathExtension)
-                let response = HTTPURLResponse(
-                    url: url!,
-                    statusCode: 200,
-                    httpVersion: "HTTP/1.1",
-                    headerFields: ["Content-Type": mimeType]
-                )!
-                continuation.yield(.response(response))
-                continuation.yield(.data(data))
-                continuation.finish()
-            } catch {
-                continuation.finish(throwing: error)
-            }
+        do {
+            let data = try Data(contentsOf: resourceURL)
+            let mimeType = Self.mimeType(for: resourceURL.pathExtension)
+            let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": mimeType]
+            )!
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didReceive(data)
+            urlSchemeTask.didFinish()
+        } catch {
+            urlSchemeTask.didFailWithError(error)
         }
     }
 
-    private static func resolveResourceURL(path: String, baseURL: URL?, resourceSearchPaths: [URL]?) -> URL? {
+    public func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+
+    static func resolveResourceURL(path: String, baseURL: URL?, resourceSearchPaths: [URL]?) -> URL? {
         let absoluteURL = URL(fileURLWithPath: "/" + path)
         if FileManager.default.fileExists(atPath: absoluteURL.path) {
             return absoluteURL
@@ -86,16 +86,14 @@ public struct MarkdownURLSchemeHandler: URLSchemeHandler {
             ].compactMap { $0 }
         }
 
-        for url in searchPaths {
-            if FileManager.default.fileExists(atPath: url.path) {
-                return url
-            }
+        for url in searchPaths where FileManager.default.fileExists(atPath: url.path) {
+            return url
         }
 
         return nil
     }
 
-    private static func mimeType(for pathExtension: String) -> String {
+    static func mimeType(for pathExtension: String) -> String {
         switch pathExtension.lowercased() {
         case "css": return "text/css"
         case "js": return "application/javascript"

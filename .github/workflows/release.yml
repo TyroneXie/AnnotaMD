@@ -195,7 +195,7 @@ jobs:
           actool \
             --compile "$RESOURCES_DIR" \
             --platform macosx \
-            --minimum-deployment-target 26 \
+            --minimum-deployment-target 15 \
             --app-icon AppIcon \
             --output-format human-readable-text \
             --output-partial-info-plist /tmp/partial.plist \

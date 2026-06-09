@@ -1,6 +1,5 @@
 import SwiftUI
 import MarkdownReaderKit
-import WebKit
 
 @main
 struct MarkdownReaderApp: App {
@@ -9,10 +8,6 @@ struct MarkdownReaderApp: App {
 
     /// 自动更新 ViewModel
     @State private var updateViewModel = UpdateViewModel()
-
-    /// WebView 预热：App 启动时创建隐藏 WebPage，预加载 HTML 模板 + JS 库
-    /// 首次打开文件时复用此 page，跳过 WKWebView 冷启动（~120ms → ~15-20ms）
-    @State private var warmupPage: WebPage?
 
     init() {
         DispatchQueue.main.async {
@@ -29,30 +24,6 @@ struct MarkdownReaderApp: App {
     /// 最近打开记录（从 SettingsModel 读取，用于菜单动态生成）
     private var recentItems: [RecentItem] {
         SettingsModel.shared.recentItems
-    }
-
-    /// 预热 WebView：创建隐藏 WebPage 并加载空白 HTML 模板
-    /// 让 WKWebView 进程和 JS 引擎提前初始化，首次打开文件时跳过冷启动
-    private func warmupWebView() {
-        let scheme = URLScheme("mr")!
-        let handler = MarkdownURLSchemeHandler(baseURL: nil)
-        var configuration = WebPage.Configuration()
-        configuration.urlSchemeHandlers[scheme] = handler
-        let page = WebPage(configuration: configuration)
-        let html = """
-        <!DOCTYPE html><html><head>
-        <link rel="stylesheet" href="mr:///css/markdown.css">
-        <link rel="stylesheet" href="mr:///css/katex.min.css">
-        <script src="mr:///js/mermaid.min.js"></script>
-        <script src="mr:///js/katex.min.js"></script>
-        <script src="mr:///js/prism-core.min.js"></script>
-        <script src="mr:///js/prism-autoloader.min.js"></script>
-        <script>Prism.plugins.autoloader.languages_path = 'mr:///js/';</script>
-        <script src="mr:///js/markdown-reader.js"></script>
-        </head><body><div class="markdown-preview"><div id="mr-content"></div></div></body></html>
-        """
-        _ = page.load(html: html, baseURL: URL(string: "about:blank")!)
-        warmupPage = page
     }
 
     /// 打开最近的子菜单（文件在上、目录在下，不显示分区标题）
@@ -125,7 +96,7 @@ struct MarkdownReaderApp: App {
                 }
                 // 启动时自动检查更新（延迟 2 秒，避免影响启动速度）
                 .task {
-                    warmupWebView()
+                    WebViewWarmer.warmUp()
                     try? await Task.sleep(for: .seconds(2))
                     updateViewModel.checkForUpdatesAutomatically()
                 }
@@ -175,6 +146,19 @@ struct MarkdownReaderApp: App {
                     NotificationCenter.default.post(name: .exportPDF, object: nil)
                 }
                 .keyboardShortcut("e", modifiers: [.command, .option])
+
+                Divider()
+
+                // CriticMarkup：复制带标注文档给 AI
+                Button(L10n.tr(.copyForAIMenu, language: language)) {
+                    NotificationCenter.default.post(name: .copyForAI, object: nil)
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+
+                // CriticMarkup：清除全部标注
+                Button(L10n.tr(.clearAnnotationsMenu, language: language)) {
+                    NotificationCenter.default.post(name: .clearAnnotations, object: nil)
+                }
 
                 // 打开最近子菜单
                 openRecentMenu
@@ -248,6 +232,8 @@ extension Notification.Name {
     static let findPrevious = Notification.Name("com.markdownreader.findPrevious")
     static let findAndReplace = Notification.Name("com.markdownreader.findAndReplace")
     static let exportPDF = Notification.Name("com.markdownreader.exportPDF")
+    static let copyForAI = Notification.Name("com.markdownreader.copyForAI")
+    static let clearAnnotations = Notification.Name("com.markdownreader.clearAnnotations")
     static let dragHoverChanged = Notification.Name("com.markdownreader.dragHoverChanged")
     static let unsupportedFileTypeDropped = Notification.Name("com.markdownreader.unsupportedFileTypeDropped")
 }

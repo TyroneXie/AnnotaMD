@@ -1,13 +1,15 @@
-# CLAUDE.md — MarkdownReader 项目指南
+# CLAUDE.md — MarkMark 项目指南
 
 > 本文件为 Claude Code 提供项目上下文，确保代码修改遵循项目规范。
 
 ## 项目简介
 
-MarkdownReader 是一个原生 macOS Markdown 阅读器应用。不是编辑器，只是一个安静的阅读器。三栏布局：左侧目录树 + 中间渲染视图 + 右侧大纲导航。
+MarkMark 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)）。在安静阅读的基础上加入 CriticMarkup 审阅标注与「一键复制给 AI」工作流。三栏布局：左侧目录树 + 中间渲染视图 + 右侧大纲导航。
+
+> 注意：SPM target / 目录 / 可执行文件 / Bundle ID 仍沿用内部名 `MarkdownReader`（`com.markdownreader.app`），仅面向用户的显示名（CFBundleName/L10n appName）改为 MarkMark，以免破坏构建脚本与 Quick Look 扩展。
 
 - **当前版本**: 2.0.5
-- **最低部署**: macOS 26.0
+- **最低部署**: macOS 15.0（自 fork 起从 macOS 26 下调；渲染层由 SwiftUI WebView/WebPage 迁移回 WKWebView）
 - **Bundle ID**: `com.markdownreader.app`
 - **许可证**: MIT
 

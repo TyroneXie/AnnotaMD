@@ -271,6 +271,29 @@ final class DocumentViewModel {
         scrollToLineRequest = lineNumber
     }
 
+    /// 应用来自渲染视图选词工具条的 CriticMarkup 标注。
+    /// 在源码中定位选中文本，包裹为对应的 CriticMarkup 语法并写回 `content`，
+    /// 触发渲染视图重绘以显示标注样式。
+    func applyCriticAction(_ action: CriticActionPayload) {
+        let op: CriticMarkup.Operation
+        switch action.op {
+        case "delete":    op = .delete
+        case "highlight": op = .highlight
+        case "comment":   op = .comment(action.payload ?? "")
+        case "replace":   op = .replace(action.payload ?? "")
+        case "insert":    op = .insert(action.payload ?? "")
+        default: return
+        }
+        if let updated = CriticMarkup.apply(
+            op,
+            to: content,
+            selectedText: action.text,
+            nearLine: action.line
+        ) {
+            content = updated
+        }
+    }
+
     /// 清除滚动请求（滚动完成后调用）
     func clearScrollRequest() {
         scrollToLineRequest = nil

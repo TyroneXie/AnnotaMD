@@ -57,8 +57,14 @@ struct DetailView: View {
     /// PDF 导出失败提示
     @State private var showExportPDFError = false
 
-    /// 导出用的 WebPage 引用
-    @State private var exportedPage: WebPage?
+    /// 导出 / CriticMarkup 复用的 WKWebView 句柄
+    @State private var webViewHandle = WebViewHandle()
+
+    /// 复制给 AI 后的短暂反馈（图标切换为对勾）
+    @State private var didCopyForAI = false
+
+    /// 清除标注确认弹窗
+    @State private var showClearAnnotationsAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,6 +104,20 @@ struct DetailView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
             exportPDF()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .copyForAI)) { _ in
+            copyForAI()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .clearAnnotations)) { _ in
+            if documentHasAnnotations { showClearAnnotationsAlert = true }
+        }
+        .alert(L10n.tr(.clearAnnotationsConfirmTitle, language: language), isPresented: $showClearAnnotationsAlert) {
+            Button(L10n.tr(.clearAnnotationsMenu, language: language), role: .destructive) {
+                clearAnnotations()
+            }
+            Button(L10n.tr(.unsavedCancel, language: language), role: .cancel) {}
+        } message: {
+            Text(L10n.tr(.clearAnnotationsConfirmMessage, language: language))
         }
         // 拖拽视觉反馈：由 AppKit FileDropOverlayView 发送
         .onReceive(NotificationCenter.default.publisher(for: .dragHoverChanged)) { notification in
@@ -249,6 +269,30 @@ struct DetailView: View {
                     }
                     .buttonStyle(.plain)
                     .help(L10n.tr(.titleBarExportPDF, language: language))
+
+                    // 清除全部 CriticMarkup 标注（仅当存在标注时显示）
+                    if documentHasAnnotations {
+                        Button {
+                            showClearAnnotationsAlert = true
+                        } label: {
+                            Image(systemName: "eraser")
+                                .font(.system(size: 14))
+                                .foregroundStyle(themeColors.fgMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .help(L10n.tr(.titleBarClearAnnotations, language: language))
+                    }
+
+                    // 一键复制带标注文档给 AI
+                    Button {
+                        copyForAI()
+                    } label: {
+                        Image(systemName: didCopyForAI ? "checkmark.circle.fill" : "sparkles")
+                            .font(.system(size: 14))
+                            .foregroundStyle(didCopyForAI ? themeColors.accent : themeColors.fgMuted)
+                    }
+                    .buttonStyle(.plain)
+                    .help(L10n.tr(.titleBarCopyForAI, language: language))
                 }
 
                 // 大纲切换按钮（始终显示在 titlebar 最右侧）
@@ -348,6 +392,47 @@ struct DetailView: View {
         }
     }
 
+    // MARK: - CriticMarkup
+
+    /// 当前文档是否包含 CriticMarkup 标注
+    private var documentHasAnnotations: Bool {
+        CriticMarkup.hasMarkup(documentViewModel.content)
+    }
+
+    /// 传给渲染视图选词工具条的本地化文案
+    private var criticLabels: [String: String] {
+        [
+            "delete": L10n.tr(.criticDelete, language: language),
+            "highlight": L10n.tr(.criticHighlight, language: language),
+            "comment": L10n.tr(.criticComment, language: language),
+            "replace": L10n.tr(.criticReplace, language: language),
+            "confirm": L10n.tr(.criticConfirm, language: language),
+            "cancel": L10n.tr(.criticCancel, language: language),
+            "commentHint": L10n.tr(.criticCommentHint, language: language),
+            "replaceHint": L10n.tr(.criticReplaceHint, language: language),
+        ]
+    }
+
+    /// 复制带标注的文档（含引导提示词）到剪贴板，供粘贴给 AI
+    private func copyForAI() {
+        guard documentViewModel.hasDocument else { return }
+        let payload = CriticMarkup.exportForAI(documentViewModel.content)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(payload, forType: .string)
+
+        didCopyForAI = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            didCopyForAI = false
+        }
+    }
+
+    /// 清除全部标注，恢复原文
+    private func clearAnnotations() {
+        guard documentViewModel.hasDocument else { return }
+        documentViewModel.content = CriticMarkup.rejecting(documentViewModel.content)
+    }
+
     private func exportPDF() {
         guard documentViewModel.hasDocument else { return }
         let language = settings.languagePref.resolvedLanguage
@@ -370,8 +455,8 @@ struct DetailView: View {
     private func exportPDF(to url: URL) async {
         do {
             let data: Data
-            if let page = exportedPage, documentViewModel.displayMode == .rendered {
-                data = try await PDFExportService.exportFromPage(page)
+            if let webView = webViewHandle.webView, documentViewModel.displayMode == .rendered {
+                data = try await PDFExportService.exportFromWebView(webView)
             } else {
                 let baseURL = documentViewModel.currentFileURL?.deletingLastPathComponent()
                 let contentWidth: CGFloat
@@ -587,7 +672,11 @@ struct DetailView: View {
                     onVisibleLineChanged: { lineNumber in
                         documentViewModel.renderedVisibleLineNumber = lineNumber
                     },
-                    exportedPage: $exportedPage
+                    onCriticAction: { action in
+                        documentViewModel.applyCriticAction(action)
+                    },
+                    criticLabels: criticLabels,
+                    handle: webViewHandle
                 )
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                     if newValue != nil {

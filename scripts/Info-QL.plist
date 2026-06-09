@@ -5,9 +5,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.markdownreader.app.QuickLook</string>
 	<key>CFBundleName</key>
-	<string>Markdown Reader Quick Look</string>
+	<string>MarkMark Quick Look</string>
 	<key>CFBundleDisplayName</key>
-	<string>Markdown Reader Quick Look</string>
+	<string>MarkMark Quick Look</string>
 	<key>CFBundleVersion</key>
 	<string>__VERSION__</string>
 	<key>CFBundleShortVersionString</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>26</string>
+	<string>15.0</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>

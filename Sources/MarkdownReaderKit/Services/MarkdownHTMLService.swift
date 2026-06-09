@@ -141,6 +141,10 @@ public enum MarkdownHTMLService {
         var codeStore: [String] = []
         result = protectCodeRegions(result, store: &codeStore)
 
+        // CriticMarkup 审阅标注 → 带样式 HTML。
+        // 必须在 `==` 高亮等行内语法之前处理，避免 `{==..==}` 被误解析。
+        result = CriticMarkup.renderToHTML(result)
+
         // 扩展语法预处理（顺序重要：先处理占多行的，再处理行内的）
         result = preprocessBlockMath(result)
         result = preprocessInlineMath(result)

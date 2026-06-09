@@ -149,6 +149,22 @@ public enum L10n {
         case titleBarToggleOutline
         case titleBarCopyPath
 
+        // CriticMarkup 审阅标注
+        case titleBarCopyForAI
+        case titleBarClearAnnotations
+        case copyForAIMenu
+        case clearAnnotationsMenu
+        case clearAnnotationsConfirmTitle
+        case clearAnnotationsConfirmMessage
+        case criticDelete
+        case criticHighlight
+        case criticComment
+        case criticReplace
+        case criticConfirm
+        case criticCancel
+        case criticCommentHint
+        case criticReplaceHint
+
         // 大纲
         case outlineTitle
         case outlineEmpty
@@ -230,7 +246,7 @@ public enum L10n {
     // MARK: - 翻译字典
 
     private static let en: [Key: String] = [
-        .appName: "Markdown Reader",
+        .appName: "MarkMark",
         .settingsMenuLabel: "Settings\u{2026}",
         .settingsBackToApp: "Back to App",
         .settingsTabGeneral: "General",
@@ -248,9 +264,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "Show hidden files",
         .settingsGeneralShowNonMarkdownFiles: "Show non-Markdown files",
         .settingsGeneralDefaultOpenerTitle: "Default Markdown Opener",
-        .settingsGeneralDefaultOpenerDesc: "Set Markdown Reader as the default application for opening .md, .markdown, .mdown, .mkd files.",
+        .settingsGeneralDefaultOpenerDesc: "Set MarkMark as the default application for opening .md, .markdown, .mdown, .mkd files.",
         .settingsGeneralSetAsDefault: "Set as Default",
-        .settingsGeneralIsDefault: "Markdown Reader is the default Markdown opener",
+        .settingsGeneralIsDefault: "MarkMark is the default Markdown opener",
         .settingsGeneralSetDefaultFailed: "Failed to set as default opener. Please try again.",
         .settingsGeneralCommandLineTitle: "Command Line Tool",
         .settingsGeneralCommandLineDesc: "Install the `mdr` command to open files from Terminal. Example: mdr README.md",
@@ -317,6 +333,20 @@ public enum L10n {
         .titleBarReload: "Reload",
         .titleBarToggleOutline: "Toggle Outline",
         .titleBarCopyPath: "Copy Path",
+        .titleBarCopyForAI: "Copy annotated doc for AI",
+        .titleBarClearAnnotations: "Clear all annotations",
+        .copyForAIMenu: "Copy for AI",
+        .clearAnnotationsMenu: "Clear Annotations",
+        .clearAnnotationsConfirmTitle: "Clear all annotations?",
+        .clearAnnotationsConfirmMessage: "This removes every CriticMarkup mark and restores the original text. This cannot be undone.",
+        .criticDelete: "Delete",
+        .criticHighlight: "Highlight",
+        .criticComment: "Comment",
+        .criticReplace: "Replace",
+        .criticConfirm: "Apply",
+        .criticCancel: "Cancel",
+        .criticCommentHint: "Add a comment…",
+        .criticReplaceHint: "Replace with…",
         .fileModifiedExternallyTitle: "File Modified Externally",
         .fileModifiedExternallyMessage: "The file has been modified by another application. Reloading will discard your current changes.",
         .fileModifiedExternallyReload: "Reload",
@@ -349,7 +379,7 @@ public enum L10n {
         .updateAvailableTitle: "Update Available",
         .updateAvailableVersion: "Version {version}",
         .updateChecking: "Checking for updates\u{2026}",
-        .updateUpToDate: "Markdown Reader is up to date.",
+        .updateUpToDate: "MarkMark is up to date.",
         .updateDownload: "Download",
         .updateDownloading: "Downloading update\u{2026}",
         .updateDownloadComplete: "Download complete. Click Install to continue.",
@@ -383,7 +413,7 @@ public enum L10n {
     ]
 
     private static let zhCN: [Key: String] = [
-        .appName: "Markdown Reader",
+        .appName: "MarkMark",
         .settingsMenuLabel: "设置\u{2026}",
         .settingsBackToApp: "返回应用",
         .settingsTabGeneral: "通用",
@@ -401,9 +431,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "显示隐藏文件",
         .settingsGeneralShowNonMarkdownFiles: "显示非 Markdown 文件",
         .settingsGeneralDefaultOpenerTitle: "默认 Markdown 打开程序",
-        .settingsGeneralDefaultOpenerDesc: "将 Markdown Reader 设置为 .md、.markdown、.mdown、.mkd 文件的默认打开程序。",
+        .settingsGeneralDefaultOpenerDesc: "将 MarkMark 设置为 .md、.markdown、.mdown、.mkd 文件的默认打开程序。",
         .settingsGeneralSetAsDefault: "设为默认",
-        .settingsGeneralIsDefault: "Markdown Reader 已是默认 Markdown 打开程序",
+        .settingsGeneralIsDefault: "MarkMark 已是默认 Markdown 打开程序",
         .settingsGeneralSetDefaultFailed: "设置默认打开程序失败，请重试。",
         .settingsGeneralCommandLineTitle: "命令行工具",
         .settingsGeneralCommandLineDesc: "安装 mdr 命令，可在终端中打开文件。例如：mdr README.md",
@@ -470,6 +500,20 @@ public enum L10n {
         .titleBarReload: "重新加载",
         .titleBarToggleOutline: "切换大纲",
         .titleBarCopyPath: "复制路径",
+        .titleBarCopyForAI: "复制标注文档给 AI",
+        .titleBarClearAnnotations: "清除全部标注",
+        .copyForAIMenu: "复制给 AI",
+        .clearAnnotationsMenu: "清除标注",
+        .clearAnnotationsConfirmTitle: "清除全部标注？",
+        .clearAnnotationsConfirmMessage: "将移除所有 CriticMarkup 标注并恢复原文，此操作无法撤销。",
+        .criticDelete: "删除",
+        .criticHighlight: "高亮",
+        .criticComment: "评论",
+        .criticReplace: "替换",
+        .criticConfirm: "应用",
+        .criticCancel: "取消",
+        .criticCommentHint: "输入评论…",
+        .criticReplaceHint: "替换为…",
         .fileModifiedExternallyTitle: "文件已被外部修改",
         .fileModifiedExternallyMessage: "文件已被其他应用修改，重新加载将丢弃当前未保存的更改。",
         .fileModifiedExternallyReload: "重新加载",
@@ -502,7 +546,7 @@ public enum L10n {
         .updateAvailableTitle: "发现新版本",
         .updateAvailableVersion: "版本 {version}",
         .updateChecking: "正在检查更新\u{2026}",
-        .updateUpToDate: "Markdown Reader 已是最新版本。",
+        .updateUpToDate: "MarkMark 已是最新版本。",
         .updateDownload: "下载",
         .updateDownloading: "正在下载更新\u{2026}",
         .updateDownloadComplete: "下载完成，点击「安装」继续。",
@@ -536,7 +580,7 @@ public enum L10n {
     ]
 
     private static let zhTW: [Key: String] = [
-        .appName: "Markdown Reader",
+        .appName: "MarkMark",
         .settingsMenuLabel: "設定\u{2026}",
         .settingsBackToApp: "返回應用",
         .settingsTabGeneral: "一般",
@@ -554,9 +598,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "顯示隱藏檔案",
         .settingsGeneralShowNonMarkdownFiles: "顯示非 Markdown 檔案",
         .settingsGeneralDefaultOpenerTitle: "預設 Markdown 開啟程式",
-        .settingsGeneralDefaultOpenerDesc: "將 Markdown Reader 設為 .md、.markdown、.mdown、.mkd 檔案的預設開啟程式。",
+        .settingsGeneralDefaultOpenerDesc: "將 MarkMark 設為 .md、.markdown、.mdown、.mkd 檔案的預設開啟程式。",
         .settingsGeneralSetAsDefault: "設為預設",
-        .settingsGeneralIsDefault: "Markdown Reader 已是預設 Markdown 開啟程式",
+        .settingsGeneralIsDefault: "MarkMark 已是預設 Markdown 開啟程式",
         .settingsGeneralSetDefaultFailed: "設定預設開啟程式失敗，請重試。",
         .settingsGeneralCommandLineTitle: "命令列工具",
         .settingsGeneralCommandLineDesc: "安裝 mdr 命令，可在終端機中開啟檔案。例如：mdr README.md",
@@ -623,6 +667,20 @@ public enum L10n {
         .titleBarReload: "重新載入",
         .titleBarToggleOutline: "切換大綱",
         .titleBarCopyPath: "複製路徑",
+        .titleBarCopyForAI: "複製標註文件給 AI",
+        .titleBarClearAnnotations: "清除全部標註",
+        .copyForAIMenu: "複製給 AI",
+        .clearAnnotationsMenu: "清除標註",
+        .clearAnnotationsConfirmTitle: "清除全部標註？",
+        .clearAnnotationsConfirmMessage: "將移除所有 CriticMarkup 標註並恢復原文，此操作無法復原。",
+        .criticDelete: "刪除",
+        .criticHighlight: "高亮",
+        .criticComment: "評論",
+        .criticReplace: "替換",
+        .criticConfirm: "套用",
+        .criticCancel: "取消",
+        .criticCommentHint: "輸入評論…",
+        .criticReplaceHint: "替換為…",
         .fileModifiedExternallyTitle: "檔案已被外部修改",
         .fileModifiedExternallyMessage: "檔案已被其他應用修改，重新載入將捨棄目前未儲存的變更。",
         .fileModifiedExternallyReload: "重新載入",
@@ -655,7 +713,7 @@ public enum L10n {
         .updateAvailableTitle: "發現新版本",
         .updateAvailableVersion: "版本 {version}",
         .updateChecking: "正在檢查更新\u{2026}",
-        .updateUpToDate: "Markdown Reader 已是最新版本。",
+        .updateUpToDate: "MarkMark 已是最新版本。",
         .updateDownload: "下載",
         .updateDownloading: "正在下載更新\u{2026}",
         .updateDownloadComplete: "下載完成，點擊「安裝」繼續。",

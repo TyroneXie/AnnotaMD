@@ -2,38 +2,55 @@ import SwiftUI
 import MarkdownReaderKit
 import WebKit
 
-class MarkdownNavigationDecider: WebPage.NavigationDeciding {
-    func decidePolicy(
-        for action: WebPage.NavigationAction,
-        preferences: inout WebPage.NavigationPreferences
-    ) async -> WKNavigationActionPolicy {
-        guard let url = action.request.url else { return .allow }
+/// 暴露底层 WKWebView 的句柄，供 PDF 导出等场景复用当前已渲染的页面。
+final class WebViewHandle {
+    weak var webView: WKWebView?
+}
 
-        if url.scheme == "mr" || url.scheme == "about" {
-            return .allow
-        }
+/// WKWebView 预热：App 启动时创建隐藏 WebView 提前拉起 Web 内容进程与 JS 引擎，
+/// 并共享 WKProcessPool，使首次打开文件时跳过冷启动（替代旧 WebPage 预热）。
+@MainActor
+enum WebViewWarmer {
+    private static var warmWebView: WKWebView?
 
-        if url.scheme == "file" {
-            if action.target?.isMainFrame == true && action.navigationType == .linkActivated {
-                return .cancel
-            }
-            return .allow
-        }
-
-        NSWorkspace.shared.open(url)
-        return .cancel
-    }
-
-    func decidePolicy(for response: WebPage.NavigationResponse) async -> WKNavigationResponsePolicy {
-        .allow
-    }
-
-    func decideAuthenticationChallengeDisposition(for challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
-        (.performDefaultHandling, nil)
+    static func warmUp() {
+        guard warmWebView == nil else { return }
+        let configuration = WKWebViewConfiguration()
+        let handler = MarkdownURLSchemeHandler(baseURL: nil)
+        configuration.setURLSchemeHandler(handler, forURLScheme: "mr")
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let html = """
+        <!DOCTYPE html><html><head>
+        <link rel="stylesheet" href="mr:///css/markdown.css">
+        <link rel="stylesheet" href="mr:///css/katex.min.css">
+        <script src="mr:///js/mermaid.min.js"></script>
+        <script src="mr:///js/katex.min.js"></script>
+        <script src="mr:///js/prism-core.min.js"></script>
+        <script src="mr:///js/prism-autoloader.min.js"></script>
+        <script>Prism.plugins.autoloader.languages_path = 'mr:///js/';</script>
+        <script src="mr:///js/markdown-reader.js"></script>
+        </head><body><div class="markdown-preview"><div id="mr-content"></div></div></body></html>
+        """
+        webView.loadHTMLString(html, baseURL: URL(string: "about:blank")!)
+        warmWebView = webView
     }
 }
 
-struct WebViewMarkdownView: View {
+/// 渲染视图中用户发起的 CriticMarkup 标注动作。
+/// 由 markdown-reader.js 选词工具条通过 `criticAction` message handler 投递。
+struct CriticActionPayload {
+    let op: String          // "delete" | "highlight" | "comment" | "replace" | "insert"
+    let text: String        // 选中的纯文本
+    let line: Int           // 选区所在块的 data-line（用于在源码中定位）
+    let payload: String?    // 评论内容 / 替换后的新文本
+}
+
+/// macOS 15 兼容的 Markdown 渲染视图：以 NSViewRepresentable 封装 WKWebView。
+///
+/// v2.x 早期使用 SwiftUI 的 `WebView`/`WebPage`（仅 macOS 26+）。本实现迁移回经典
+/// `WKWebView`，通过 `evaluateJavaScript` 调用 MR.* 接口，并用 `WKScriptMessageHandler`
+/// 接收滚动同步与 CriticMarkup 标注消息。
+struct WebViewMarkdownView: NSViewRepresentable {
     let content: String
     let fileURL: URL?
     var contentPadding: CGFloat = 20
@@ -48,256 +65,307 @@ struct WebViewMarkdownView: View {
     var isFindBarVisible: Bool = false
     var onVisibleHeadingChanged: ((MarkdownHTMLService.HeadingInfo?) -> Void)?
     var onVisibleLineChanged: ((Int) -> Void)?
+    var onCriticAction: ((CriticActionPayload) -> Void)?
+    /// CriticMarkup 选词工具条的本地化文案（键：delete/highlight/comment/replace/confirm/cancel/commentHint/replaceHint）
+    var criticLabels: [String: String] = [:]
 
-    @State private var page = WebPage()
-    @Binding var exportedPage: WebPage?
-    @State private var scrollPosition = ScrollPosition(edge: .top)
-    @State private var lastLoadedContent: String = ""
-    @State private var lastLoadedURL: URL?
-    @State private var scrollSyncTimer: Timer?
-    @State private var isConfigured = false
-    @State private var currentHeadings: [MarkdownHTMLService.HeadingInfo] = []
-    @State private var pendingScrollToLine: Int?
+    /// 由父视图持有，使 PDF 导出可拿到当前 WKWebView。
+    let handle: WebViewHandle
 
-    var body: some View {
-        WebView(page)
-            .webViewScrollPosition($scrollPosition)
-            .webViewLinkPreviews(.disabled)
-            .webViewTextSelection(.enabled)
-            .webViewBackForwardNavigationGestures(.disabled)
-            .webViewMagnificationGestures(.enabled)
-            .webViewContentBackground(.hidden)
-            .webViewOnScrollGeometryChange(for: Int.self, of: { geometry in
-                Int(geometry.contentOffset.y)
-            }, action: { _, _ in
-                scheduleScrollSync()
-            })
-            .onAppear {
-                exportedPage = page
-                configureAndLoad()
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let coordinator = context.coordinator
+
+        let configuration = WKWebViewConfiguration()
+        let handler = MarkdownURLSchemeHandler(baseURL: fileURL?.deletingLastPathComponent())
+        configuration.setURLSchemeHandler(handler, forURLScheme: "mr")
+
+        let contentController = configuration.userContentController
+        let proxy = WeakScriptMessageHandler(target: coordinator)
+        contentController.add(proxy, name: "scrollSync")
+        contentController.add(proxy, name: "criticAction")
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = coordinator
+        webView.allowsMagnification = true
+        webView.allowsLinkPreview = false
+        webView.allowsBackForwardNavigationGestures = false
+        // 透明背景，渲染前透出底层主题色（等价于旧 .webViewContentBackground(.hidden)）
+        webView.setValue(false, forKey: "drawsBackground")
+
+        handle.webView = webView
+        coordinator.webView = webView
+        coordinator.loadFullHTML()
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        coordinator.handle.webView = webView
+        coordinator.syncFromParent()
+    }
+
+    static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
+        coordinator.scrollSyncTimer?.invalidate()
+        let ucc = webView.configuration.userContentController
+        ucc.removeScriptMessageHandler(forName: "scrollSync")
+        ucc.removeScriptMessageHandler(forName: "criticAction")
+    }
+
+    // MARK: - Coordinator
+
+    @MainActor
+    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var parent: WebViewMarkdownView
+        weak var webView: WKWebView?
+        var handle: WebViewHandle { parent.handle }
+
+        private var isLoaded = false
+        private var lastLoadedContent = ""
+        private var lastLoadedURL: URL?
+        private var lastThemeCSS = ""
+        private var lastPadding: CGFloat = -1
+        private var lastMaxWidth = false
+        private var lastScrollToLine: Int?
+        private var pendingScrollToLine: Int?
+        private var lastSearchSignature = ""
+        var scrollSyncTimer: Timer?
+
+        init(parent: WebViewMarkdownView) {
+            self.parent = parent
+        }
+
+        // MARK: Loading
+
+        func loadFullHTML() {
+            guard let webView else { return }
+            let baseURL = parent.fileURL?.deletingLastPathComponent()
+            let html = MarkdownHTMLService.buildFullHTML(
+                content: parent.content,
+                themeCSS: parent.themeCSS,
+                contentPadding: parent.contentPadding,
+                maxContentWidthFollowsWindow: parent.maxContentWidthFollowsWindow,
+                baseURL: baseURL,
+                isDark: parent.isDark
+            )
+            isLoaded = false
+            pendingScrollToLine = parent.scrollToLine
+            let effectiveBaseURL = baseURL ?? URL(string: "about:blank")!
+            webView.loadHTMLString(html, baseURL: effectiveBaseURL)
+
+            lastLoadedContent = parent.content
+            lastLoadedURL = parent.fileURL
+            lastThemeCSS = parent.themeCSS
+            lastPadding = parent.contentPadding
+            lastMaxWidth = parent.maxContentWidthFollowsWindow
+            lastScrollToLine = parent.scrollToLine
+            lastSearchSignature = searchSignature()
+        }
+
+        /// 在 updateNSView 中按需将父视图的最新状态同步到页面。
+        func syncFromParent() {
+            guard webView != nil else { return }
+
+            // 文件切换：整页重载
+            if parent.fileURL != lastLoadedURL {
+                loadFullHTML()
+                return
             }
-            .onChange(of: content) { _, _ in
-                if content == lastLoadedContent { return }
-                if lastLoadedContent.isEmpty {
-                    loadContent()
-                } else {
-                    updateContent(content)
-                    lastLoadedContent = content
-                }
+
+            // 内容变化：局部替换（保留滚动与性能）
+            if parent.content != lastLoadedContent {
+                lastLoadedContent = parent.content
+                replaceContent(parent.content)
             }
-            .onChange(of: fileURL) { _, _ in
-                loadContent()
+
+            if parent.themeCSS != lastThemeCSS {
+                lastThemeCSS = parent.themeCSS
+                updateThemeCSS(parent.themeCSS)
             }
-            .onChange(of: scrollToLine) { _, newValue in
-                if let line = newValue {
-                    if page.isLoading {
-                        pendingScrollToLine = line
-                    } else {
+
+            if parent.contentPadding != lastPadding {
+                lastPadding = parent.contentPadding
+                eval("document.documentElement.style.setProperty('--content-padding', '\(parent.contentPadding)px')")
+            }
+
+            if parent.maxContentWidthFollowsWindow != lastMaxWidth {
+                lastMaxWidth = parent.maxContentWidthFollowsWindow
+                let value = parent.maxContentWidthFollowsWindow ? "none" : "980px"
+                eval("document.documentElement.style.setProperty('--content-max-width', '\(value)')")
+            }
+
+            if parent.scrollToLine != lastScrollToLine {
+                lastScrollToLine = parent.scrollToLine
+                if let line = parent.scrollToLine {
+                    if isLoaded {
                         scrollToLineNumber(line)
+                    } else {
+                        pendingScrollToLine = line
                     }
                 }
             }
-            .onChange(of: page.isLoading) { _, isLoading in
-                if !isLoading, let line = pendingScrollToLine {
-                    pendingScrollToLine = nil
-                    scrollToLineNumber(line)
-                }
-            }
-            .onChange(of: themeCSS) { _, _ in
-                updateThemeCSS(themeCSS)
-            }
-            .onChange(of: contentPadding) { _, newValue in
-                updateContentPadding(newValue)
-            }
-            .onChange(of: maxContentWidthFollowsWindow) { _, newValue in
-                updateMaxContentWidth(newValue)
-            }
-            .onChange(of: searchQuery) { _, _ in
+
+            let sig = searchSignature()
+            if sig != lastSearchSignature {
+                lastSearchSignature = sig
                 updateSearchHighlight()
             }
-            .onChange(of: searchCaseSensitive) { _, _ in
-                updateSearchHighlight()
-            }
-            .onChange(of: searchWholeWord) { _, _ in
-                updateSearchHighlight()
-            }
-            .onChange(of: searchCurrentIndex) { _, newValue in
-                setSearchCurrent(newValue)
-            }
-            .onChange(of: isFindBarVisible) { _, isVisible in
-                if !isVisible {
-                    clearSearchHighlight()
-                }
-            }
-            .onDisappear {
-                scrollSyncTimer?.invalidate()
-            }
-            .environment(\.openURL, OpenURLAction { url in
-                NSWorkspace.shared.open(url)
-                return .handled
-            })
-    }
-
-    private func configureAndLoad() {
-        guard !isConfigured else {
-            loadContent()
-            return
         }
-        isConfigured = true
 
-        let scheme = URLScheme("mr")!
-        let handler = MarkdownURLSchemeHandler(baseURL: fileURL?.deletingLastPathComponent())
-        var configuration = WebPage.Configuration()
-        configuration.urlSchemeHandlers[scheme] = handler
+        private func searchSignature() -> String {
+            "\(parent.isFindBarVisible)|\(parent.searchQuery)|\(parent.searchCaseSensitive)|\(parent.searchWholeWord)|\(parent.searchCurrentIndex)"
+        }
 
-        let navigationDecider = MarkdownNavigationDecider()
-        page = WebPage(
-            configuration: configuration,
-            navigationDecider: navigationDecider
-        )
-        exportedPage = page
+        // MARK: JS helpers
 
-        loadContent()
-    }
+        private func eval(_ js: String) {
+            webView?.evaluateJavaScript(js, completionHandler: nil)
+        }
 
-    private func loadContent() {
-        let baseURL = fileURL?.deletingLastPathComponent()
-        let html = MarkdownHTMLService.buildFullHTML(
-            content: content,
-            themeCSS: themeCSS,
-            contentPadding: contentPadding,
-            maxContentWidthFollowsWindow: maxContentWidthFollowsWindow,
-            baseURL: baseURL,
-            isDark: isDark
-        )
+        private func replaceContent(_ content: String) {
+            let baseURL = parent.fileURL?.deletingLastPathComponent()
+            let renderResult = MarkdownHTMLService.render(content, baseURL: baseURL)
+            let escaped = Self.escapeForJSString(renderResult.html)
+            eval("MR.replaceContent('\(escaped)')")
+        }
 
-        let renderResult = MarkdownHTMLService.render(content, baseURL: baseURL)
-        currentHeadings = renderResult.headings
+        private func updateThemeCSS(_ themeCSS: String) {
+            let escaped = Self.escapeForJSString(themeCSS)
+            eval("document.getElementById('mr-theme-style').textContent = '\(escaped)'; MR.rerenderMermaid && MR.rerenderMermaid(); MR.rerenderPlantUML && MR.rerenderPlantUML();")
+        }
 
-        scrollPosition = ScrollPosition(edge: .top)
+        private func scrollToLineNumber(_ line: Int) {
+            eval("MR.scrollToLine(\(line))")
+        }
 
-        let effectiveBaseURL = baseURL ?? URL(string: "about:blank")!
-        _ = page.load(html: html, baseURL: effectiveBaseURL)
-        lastLoadedContent = content
-        lastLoadedURL = fileURL
+        private func pushCriticLabels() {
+            guard !parent.criticLabels.isEmpty,
+                  let data = try? JSONSerialization.data(withJSONObject: parent.criticLabels),
+                  let json = String(data: data, encoding: .utf8) else { return }
+            eval("MR.setCriticLabels && MR.setCriticLabels(\(json))")
+        }
 
-        if let line = scrollToLine {
-            pendingScrollToLine = line
-            let capturedLine = line
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [capturedLine] in
-                if pendingScrollToLine == capturedLine {
-                    pendingScrollToLine = nil
-                    scrollToLineNumber(capturedLine)
+        private func updateSearchHighlight() {
+            guard parent.isFindBarVisible else {
+                eval("MR.clearSearchHighlight && MR.clearSearchHighlight()")
+                return
+            }
+            let escapedQuery = parent.searchQuery
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: "\\n")
+            eval("MR.highlightSearch('\(escapedQuery)', \(parent.searchCaseSensitive), \(parent.searchWholeWord), \(parent.searchCurrentIndex))")
+        }
+
+        static func escapeForJSString(_ s: String) -> String {
+            s.replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "`", with: "\\`")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\r", with: "\\r")
+                .replacingOccurrences(of: "'", with: "\\'")
+        }
+
+        // MARK: WKNavigationDelegate
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            isLoaded = true
+            pushCriticLabels()
+            if let line = pendingScrollToLine {
+                pendingScrollToLine = nil
+                // 给 JS 渲染（KaTeX/Mermaid/Prism）留出布局时间
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    self?.scrollToLineNumber(line)
                 }
             }
         }
-    }
 
-    private func updateContent(_ content: String) {
-        let baseURL = fileURL?.deletingLastPathComponent()
-        let renderResult = MarkdownHTMLService.render(content, baseURL: baseURL)
-        currentHeadings = renderResult.headings
-
-        let escapedHTML = renderResult.html
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "`", with: "\\`")
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\r", with: "\\r")
-            .replacingOccurrences(of: "'", with: "\\'")
-
-        Task { @MainActor [escapedHTML] in
-            _ = try? await page.callJavaScript("MR.replaceContent('\(escapedHTML)')")
-        }
-    }
-
-    private func scrollToLineNumber(_ lineNumber: Int) {
-        Task { @MainActor [lineNumber] in
-            _ = try? await page.callJavaScript("MR.scrollToLine(\(lineNumber))")
-        }
-    }
-
-    private func updateThemeCSS(_ themeCSS: String) {
-        let escaped = themeCSS
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "`", with: "\\`")
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\r", with: "\\r")
-            .replacingOccurrences(of: "'", with: "\\'")
-
-        Task { @MainActor [escaped] in
-            do {
-                _ = try await page.callJavaScript("document.getElementById('mr-theme-style').textContent = '\(escaped)'")
-                _ = try await page.callJavaScript("MR.rerenderMermaid()")
-                _ = try await page.callJavaScript("MR.rerenderPlantUML()")
-            } catch {
-                print("[MarkdownReader] updateThemeCSS failed: \(error)")
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
             }
-        }
-    }
 
-    private func updateContentPadding(_ padding: CGFloat) {
-        Task { @MainActor [padding] in
-            _ = try? await page.callJavaScript("document.documentElement.style.setProperty('--content-padding', '\(padding)px')")
-        }
-    }
+            if url.scheme == "mr" || url.scheme == "about" {
+                decisionHandler(.allow)
+                return
+            }
 
-    private func updateMaxContentWidth(_ followsWindow: Bool) {
-        let value = followsWindow ? "none" : "980px"
-        Task { @MainActor [value] in
-            _ = try? await page.callJavaScript("document.documentElement.style.setProperty('--content-max-width', '\(value)')")
-        }
-    }
-
-    private func updateSearchHighlight() {
-        guard isFindBarVisible else {
-            clearSearchHighlight()
-            return
-        }
-        let escapedQuery = searchQuery
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'", with: "\\'")
-            .replacingOccurrences(of: "\n", with: "\\n")
-        Task { @MainActor [escapedQuery] in
-            _ = try? await page.callJavaScript("MR.highlightSearch('\(escapedQuery)', \(searchCaseSensitive), \(searchWholeWord), \(searchCurrentIndex))")
-        }
-    }
-
-    private func setSearchCurrent(_ index: Int) {
-        guard isFindBarVisible && !searchQuery.isEmpty else { return }
-        Task { @MainActor [index] in
-            _ = try? await page.callJavaScript("MR.setSearchCurrent(\(index))")
-        }
-    }
-
-    private func clearSearchHighlight() {
-        Task { @MainActor in
-            _ = try? await page.callJavaScript("MR.clearSearchHighlight()")
-        }
-    }
-
-    private func scheduleScrollSync() {
-        scrollSyncTimer?.invalidate()
-        scrollSyncTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
-            Task { @MainActor in
-                if let lineResult = try? await page.callJavaScript("MR.getTopVisibleLine()"),
-                   let lineNumber = lineResult as? Int {
-                    onVisibleLineChanged?(lineNumber)
-                }
-
-                guard let result = try? await page.callJavaScript("MR.getVisibleHeading()") else {
-                    onVisibleHeadingChanged?(nil)
+            if url.scheme == "file" {
+                if navigationAction.targetFrame?.isMainFrame == true,
+                   navigationAction.navigationType == .linkActivated {
+                    decisionHandler(.cancel)
                     return
                 }
-                let dict = result as? [String: Any]
-                guard let id = dict?["id"] as? String,
-                      let level = dict?["level"] as? Int,
-                      let title = dict?["title"] as? String,
-                      let lineNumber = dict?["lineNumber"] as? Int else {
-                    onVisibleHeadingChanged?(nil)
-                    return
-                }
-                onVisibleHeadingChanged?(MarkdownHTMLService.HeadingInfo(id: id, level: level, title: title, lineNumber: lineNumber))
+                decisionHandler(.allow)
+                return
+            }
+
+            NSWorkspace.shared.open(url)
+            decisionHandler(.cancel)
+        }
+
+        // MARK: WKScriptMessageHandler
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            switch message.name {
+            case "scrollSync":
+                handleScrollSync(message.body)
+            case "criticAction":
+                handleCriticAction(message.body)
+            default:
+                break
             }
         }
+
+        private func handleScrollSync(_ body: Any) {
+            guard let dict = body as? [String: Any] else { return }
+            if let line = dict["line"] as? Int {
+                parent.onVisibleLineChanged?(line)
+            }
+            if let heading = dict["heading"] as? [String: Any],
+               let id = heading["id"] as? String,
+               let level = heading["level"] as? Int,
+               let title = heading["title"] as? String,
+               let lineNumber = heading["lineNumber"] as? Int {
+                parent.onVisibleHeadingChanged?(
+                    MarkdownHTMLService.HeadingInfo(id: id, level: level, title: title, lineNumber: lineNumber)
+                )
+            } else {
+                parent.onVisibleHeadingChanged?(nil)
+            }
+        }
+
+        private func handleCriticAction(_ body: Any) {
+            guard let dict = body as? [String: Any],
+                  let op = dict["op"] as? String,
+                  let text = dict["text"] as? String else { return }
+            let line = (dict["line"] as? Int) ?? 0
+            let extra = dict["payload"] as? String
+            parent.onCriticAction?(CriticActionPayload(op: op, text: text, line: line, payload: extra))
+        }
+    }
+}
+
+/// 弱引用代理，避免 WKUserContentController 强持有 Coordinator 造成循环引用。
+@MainActor
+private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var target: (any WKScriptMessageHandler)?
+    init(target: any WKScriptMessageHandler) {
+        self.target = target
+        super.init()
+    }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        target?.userContentController(userContentController, didReceive: message)
     }
 }

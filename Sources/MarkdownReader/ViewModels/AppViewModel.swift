@@ -78,7 +78,7 @@ final class AppViewModel {
     // MARK: - 窗口标题
 
     /// 窗口标题
-    var windowTitle: String = "Markdown Reader"
+    var windowTitle: String = "MarkMark"
 
     // MARK: - 全屏状态
 
@@ -224,13 +224,13 @@ final class AppViewModel {
 
     private func updateWindowTitle() {
         if hasUnsavedUntitled {
-            windowTitle = "Markdown Reader — \(untitledFileName)"
+            windowTitle = "MarkMark — \(untitledFileName)"
         } else if isSingleFileMode, let url = singleFileURL {
-            windowTitle = "Markdown Reader — \(url.lastPathComponent)"
+            windowTitle = "MarkMark — \(url.lastPathComponent)"
         } else if let dir = rootDirectory {
-            windowTitle = "Markdown Reader — \(dir.lastPathComponent)"
+            windowTitle = "MarkMark — \(dir.lastPathComponent)"
         } else {
-            windowTitle = "Markdown Reader"
+            windowTitle = "MarkMark"
         }
     }
 }
