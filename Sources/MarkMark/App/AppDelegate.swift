@@ -61,45 +61,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 冷启动时在 applicationDidFinishLaunching 之前调用
     /// 热启动时直接调用
     func application(_ application: NSApplication, open urls: [URL]) {
-        logger.info("application(_:open:) called with \(urls.count) URLs")
-        guard let url = urls.first else { return }
-
-        var isDir: ObjCBool = false
-        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-
-        // 存储到 UserDefaults，作为 ContentView.task 的后备读取路径
-        if isDir.boolValue {
-            pendingOpenDirectoryURL = url
-            UserDefaults.standard.set(url.path as String, forKey: "pendingOpenDirectoryPath")
-            UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
-        } else {
-            pendingOpenFileURL = url
-            UserDefaults.standard.set(url.path as String, forKey: "pendingOpenFilePath")
-            UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
-        }
-        // 不需要手动 synchronize()，UserDefaults 会自动定期同步到磁盘
+        logger.info("application(_:open:) called with \(urls.count) URLs, didFinish=\(self.didFinishLaunching)")
+        guard let first = urls.first else { return }
 
         if didFinishLaunching {
-            // 热启动
-            if hasVisibleWindows() {
-                logger.info("Hot start: has visible window — posting notification")
-                DispatchQueue.main.async {
-                    let name: Notification.Name = isDir.boolValue ? .openDirectory : .openFile
-                    NotificationCenter.default.post(name: name, object: url)
-                }
-            } else {
-                // 无可见窗口：SwiftUI 可能创建了不可见窗口
-                logger.info("Hot start: no visible window — activating hidden window + posting notification")
-                activateFirstHiddenWindow()
-                // 使用 async 而非 asyncAfter(0.3)，避免不必要的 300ms 延迟
-                // activateFirstHiddenWindow 同步完成窗口激活，下一个 runloop 周期即可安全发通知
-                DispatchQueue.main.async {
-                    let name: Notification.Name = isDir.boolValue ? .openDirectory : .openFile
-                    NotificationCenter.default.post(name: name, object: url)
-                }
+            // 热启动：为每个 URL 打开/聚焦一个独立窗口（多窗口）
+            logger.info("Hot start: routing \(urls.count) URL(s) to new/focused window(s)")
+            for url in urls {
+                WindowRouter.shared.openWindow(for: url)
             }
+            NSApp.activate(ignoringOtherApps: true)
         } else {
-            logger.info("Cold start: stored pending URL")
+            // 冷启动：首个 URL 存进 UserDefaults，由初始窗口的 ContentView.task 读取并打开。
+            // （初始窗口承载第一个文件；冷启动多选只开第一个，与历史行为一致。）
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: first.path, isDirectory: &isDir)
+            if isDir.boolValue {
+                pendingOpenDirectoryURL = first
+                UserDefaults.standard.set(first.path as String, forKey: "pendingOpenDirectoryPath")
+                UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
+            } else {
+                pendingOpenFileURL = first
+                UserDefaults.standard.set(first.path as String, forKey: "pendingOpenFilePath")
+                UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
+            }
+            logger.info("Cold start: stored pending URL for initial window")
         }
     }
 

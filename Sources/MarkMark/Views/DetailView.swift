@@ -96,16 +96,16 @@ struct DetailView: View {
             LeftEdgeShape(radius: 10)
                 .stroke(themeColors.border, lineWidth: 1)
         )
-        .onReceive(NotificationCenter.default.publisher(for: .reloadFile)) { _ in
+        .onActiveReceive(NotificationCenter.default.publisher(for: .reloadFile)) { _ in
             handleReloadButtonTapped()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
+        .onActiveReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
             exportPDF()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .copyForAI)) { _ in
+        .onActiveReceive(NotificationCenter.default.publisher(for: .copyForAI)) { _ in
             copyForAI()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .clearAnnotations)) { _ in
+        .onActiveReceive(NotificationCenter.default.publisher(for: .clearAnnotations)) { _ in
             if documentHasAnnotations { showClearAnnotationsAlert = true }
         }
         .alert(L10n.tr(.clearAnnotationsConfirmTitle, language: language), isPresented: $showClearAnnotationsAlert) {
@@ -710,9 +710,9 @@ struct DetailView: View {
         .onChange(of: findReplaceViewModel.isCaseSensitive) { _, _ in performSearch() }
         .onChange(of: findReplaceViewModel.isWholeWord) { _, _ in performSearch() }
         .onChange(of: findReplaceViewModel.isRegularExpression) { _, _ in performSearch() }
-        .onReceive(NotificationCenter.default.publisher(for: .findInDocument)) { _ in openFindBar() }
-        .onReceive(NotificationCenter.default.publisher(for: .findNext)) { _ in performFindNext() }
-        .onReceive(NotificationCenter.default.publisher(for: .findPrevious)) { _ in performFindPrevious() }
-        .onReceive(NotificationCenter.default.publisher(for: .findAndReplace)) { _ in openFindAndReplace() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .findInDocument)) { _ in openFindBar() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .findNext)) { _ in performFindNext() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .findPrevious)) { _ in performFindPrevious() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .findAndReplace)) { _ in openFindAndReplace() }
     }
 }

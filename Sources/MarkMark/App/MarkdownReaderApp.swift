@@ -76,20 +76,11 @@ struct MarkdownReaderApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-                // .onOpenURL 在 macOS 15+ 不触发 file-open 事件
-                // 保留作为安全网，以防未来 macOS 版本行为变化
-                .onOpenURL { url in
-                    var isDir: ObjCBool = false
-                    FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
-                    let name: Notification.Name = isDir.boolValue ? .openDirectory : .openFile
-                    DispatchQueue.main.async {
-                        NotificationCenter.default.post(name: name, object: url)
-                    }
-                }
-                // 热启动时路由到现有窗口，而非创建新窗口
-                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+        // 值型 WindowGroup：每个窗口绑定一个 URL（文件/目录），nil 即欢迎页/冷启动窗口。
+        // 双击不同文件 → AppDelegate 通过 WindowRouter 调 openWindow(value:) 开独立窗口；
+        // 双击同一文件 → 聚焦已有窗口（值型窗口去重）。
+        WindowGroup(for: URL.self) { $openedURL in
+            ContentView(openedURL: openedURL)
                 // 自动更新弹窗
                 .sheet(isPresented: $updateViewModel.isShowingUpdateSheet) {
                     UpdateView(viewModel: updateViewModel)

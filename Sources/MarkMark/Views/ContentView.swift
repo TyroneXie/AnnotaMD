@@ -4,12 +4,16 @@ import MarkdownReaderKit
 /// 主视图，管理自定义 HStack 两列布局
 /// 设置模式下左侧显示设置菜单，右侧显示设置内容
 struct ContentView: View {
+    /// 该窗口绑定的文件/目录 URL（值型 WindowGroup）。nil = 冷启动/欢迎页窗口。
+    var openedURL: URL? = nil
+
     @State private var appViewModel = AppViewModel()
     @State private var fileTreeViewModel = FileTreeViewModel()
     @State private var documentViewModel = DocumentViewModel()
     @State private var settings = SettingsModel.shared
     @Environment(\.language) private var language
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openWindow) private var openWindow
 
     /// 缓存的主题颜色，避免每次 body 求值时重复执行 NSColor 色彩空间转换和混合运算
     /// 通过 .onChange(of: settings.resolvedTheme) 响应式更新
@@ -61,6 +65,32 @@ struct ContentView: View {
                 fileTreeViewModel.documentViewModel = documentViewModel
                 applyAppearance(settings.appearanceMode)
 
+                // 注册多窗口路由：把 SwiftUI 的 openWindow(value:) 暴露给 AppDelegate。
+                // 任意窗口注册即可（openWindow 是 App 级动作），多窗口互相覆盖等价。
+                WindowRouter.shared.open = { url in openWindow(value: url) }
+
+                // 本窗口绑定了具体 URL（多窗口场景：双击文件新开的窗口）→ 直接打开它，
+                // 不读 UserDefaults pending，避免与冷启动初始窗口抢同一个 pending。
+                if let url = openedURL {
+                    var isDir: ObjCBool = false
+                    FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+                    if isDir.boolValue {
+                        appViewModel.openDirectory(url)
+                        settings.lastOpenedDirectory = url
+                        settings.lastOpenedFile = nil
+                        settings.addRecentItem(url: url, isDirectory: true)
+                        await fileTreeViewModel.loadDirectory(url)
+                    } else {
+                        appViewModel.openSingleFile(url)
+                        fileTreeViewModel.selectedFileURL = url
+                        settings.lastOpenedDirectory = nil
+                        settings.lastOpenedFile = url
+                        settings.addRecentItem(url: url, isDirectory: false)
+                        await documentViewModel.loadFile(at: url)
+                    }
+                    return
+                }
+
                 // 检查 UserDefaults 中是否有待打开的文件（从 AppDelegate 写入）
                 // 这是最可靠的后备机制：即使通知丢失（无窗口时），视图挂载后也能读取
                 if let filePath = UserDefaults.standard.string(forKey: "pendingOpenFilePath") {
@@ -88,10 +118,10 @@ struct ContentView: View {
                 // 冷启动时，applicationDidFinishLaunching 通过 .restoreLastLocation 通知处理
                 // 这样可以确保通知在视图完全挂载后才发送，避免时序问题
             }
-            .onReceive(NotificationCenter.default.publisher(for: .resetToWelcome)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .resetToWelcome)) { _ in
                 resetToWelcome()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .restoreLastLocation)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .restoreLastLocation)) { _ in
                 restoreLastLocation()
             }
             .onChange(of: colorScheme) { _, newScheme in
@@ -376,13 +406,13 @@ private struct KeyboardShortcutModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
                 appViewModel.toggleSidebar()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
                 documentViewModel.switchDisplayMode(.rendered)
             }
-            .onReceive(NotificationCenter.default.publisher(for: .switchToRaw)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRaw)) { _ in
                 documentViewModel.switchDisplayMode(.raw)
             }
     }
@@ -398,7 +428,7 @@ private struct FileOpenModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onReceive(NotificationCenter.default.publisher(for: .openDirectory)) { notification in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .openDirectory)) { notification in
                 guard let url = notification.object as? URL else { return }
                 // 幂等保护：如果已经在显示此目录，跳过
                 if appViewModel.rootDirectory == url { return }
@@ -417,7 +447,7 @@ private struct FileOpenModifier: ViewModifier {
                     settings.addRecentItem(url: url, isDirectory: true)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
                 guard let url = notification.object as? URL else { return }
                 // 幂等保护：如果已经在显示此文件，跳过（防止 application(_:open:) 和 .onOpenURL 同时触发导致重复打开）
                 if documentViewModel.currentFileURL == url { return }
@@ -440,7 +470,7 @@ private struct FileOpenModifier: ViewModifier {
                     // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .newFile)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .newFile)) { _ in
                 if documentViewModel.isUntitled && documentViewModel.isDirty {
                     handleUnsavedChangesBeforeAction { proceed in
                         guard proceed else { return }
@@ -460,12 +490,12 @@ private struct FileOpenModifier: ViewModifier {
                     appViewModel.untitledFileName = documentViewModel.fileName
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .saveFile)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .saveFile)) { _ in
                 Task {
                     await documentViewModel.save()
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .saveAsFile)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .saveAsFile)) { _ in
                 let language = settings.languagePref.resolvedLanguage
                 let defaultDir = settings.lastOpenedDirectory ?? settings.lastOpenedFile?.deletingLastPathComponent()
                 let suggestedName = documentViewModel.fileName.isEmpty ? "Untitled.md" : documentViewModel.fileName
@@ -786,7 +816,7 @@ private struct ToggleSettingsModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onReceive(NotificationCenter.default.publisher(for: .toggleSettings)) { _ in
+            .onActiveReceive(NotificationCenter.default.publisher(for: .toggleSettings)) { _ in
                 appViewModel.toggleSettings()
             }
     }
