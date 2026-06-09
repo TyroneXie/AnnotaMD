@@ -335,7 +335,7 @@ struct DetailView: View {
         if documentViewModel.hasDocument {
             documentContentWithOutline
         } else if appViewModel.rootDirectory == nil && !appViewModel.isSingleFileMode {
-            WelcomeView(appViewModel: appViewModel)
+            WelcomeView(appViewModel: appViewModel, settings: settings)
         } else if let error = documentViewModel.fileError {
             ErrorView(
                 icon: "exclamationmark.triangle",
