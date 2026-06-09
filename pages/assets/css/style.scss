@@ -610,6 +610,10 @@ img {
     color: $text-primary-light;
   }
 
+  .section-title {
+    color: $text-primary-light;
+  }
+
   .section-subtitle {
     color: $text-secondary-light;
   }
@@ -643,6 +647,10 @@ img {
 
   .macos-titlebar-text {
     color: $text-tertiary-light;
+  }
+
+  .features {
+    background: $bg-primary-light;
   }
 
   .feature-card {

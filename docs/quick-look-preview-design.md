@@ -124,15 +124,15 @@ codesign --force --entitlements scripts/MarkdownReaderQL.entitlements --sign "$I
 
 ### 4.2 `mr:///` 自定义 URL Scheme
 
-**问题**：主应用使用 `mr:///` 自定义 URL Scheme（通过 `WKURLSchemeHandler`）加载资源，Extension 运行在独立进程中无法使用。
+**问题**：主应用使用 `mr:///` 自定义 URL Scheme（通过 `WKURLSchemeHandler`）加载资源，Extension 运行在独立进程中无法直接使用主 App 的 scheme handler。
 
-**解决方案**：Extension 使用 `buildPreviewHTML()` 方法，将 CSS/JS 内联到 HTML 中，不依赖 `mr:///`。
+**解决方案**：Extension 注册自己的 `WKURLSchemeHandler`（`QLSchemeHandler`），通过 `mr:///` 异步加载 CSS/JS 资源。使用 `buildContentAwareHTML()` 方法生成包含 `<script src="mr:///...">` 标签的 HTML，根据 markdown 内容决定是否加载 mermaid/katex 等重型 JS。
 
 ### 4.3 Extension 资源搜索路径
 
 **问题**：Extension 中 `Bundle.main` 指向 `.appex` bundle，资源在 `MarkdownReader_MarkdownReader.bundle/Resources/` 下。
 
-**解决方案**：`resolveResourceURL()` 搜索多个路径：
+**解决方案**：`resolveResourceSearchPaths()` 在 `viewDidLoad` 时搜索多个路径，将找到的路径传给 `QLSchemeHandler`：
 1. `Bundle.main.resourceURL/MarkdownReader_MarkdownReader.bundle/Resources`
 2. `Bundle.main.resourceURL`
 3. 主 app 的 `Contents/Resources`（通过 `Bundle.main.bundleURL` 导航）
@@ -160,7 +160,7 @@ let isDark = NSAppearance.currentDrawing()
 | 1 | Package.swift 拆 3 target | ✅ |
 | 2 | 抽离共享代码到 MarkdownReaderKit | ✅ |
 | 3 | 创建 QL Extension 入口（view-based） | ✅ |
-| 4 | buildPreviewHTML() 内联 CSS/JS | ✅ |
+| 4 | QLSchemeHandler + buildContentAwareHTML() 异步加载 | ✅ |
 | 5 | Extension Info.plist（NSExtensionAttributes + PlugIns 目录） | ✅ |
 | 6 | SettingsModel 新增 enableQuickLookPreview | ✅ |
 | 7 | GeneralSettingsView 新增 Quick Look 区段 | ✅ |
@@ -243,9 +243,9 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
         let enabled = CFPreferencesGetAppBooleanValue(...)
         guard enabled else { handler(...); return }
 
-        // 2. 读取文件、检测主题、内联资源
-        // 3. 调用 MarkdownHTMLService.buildPreviewHTML()
-        // 4. webView.loadHTMLString(html)
+        // 2. 读取文件、检测主题、内容感知（hasMermaid/hasKaTeX）
+        // 3. 调用 MarkdownHTMLService.buildContentAwareHTML() — <script src> 异步加载
+        // 4. webView.loadHTMLString(html) — WKWebView 通过 mr:// scheme handler 按需拉取资源
         handler(nil)
     }
 }

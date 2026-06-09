@@ -23,6 +23,10 @@ struct WelcomeView: View {
                 .font(.subheadline)
                 .foregroundStyle(themeColors.fgSecondary)
 
+            Text(L10n.tr(.welcomeDropHint, language: language))
+                .font(.subheadline)
+                .foregroundStyle(themeColors.fgMuted)
+
             Button(L10n.tr(.open, language: language)) {
                 OpenPanelHelper.show(language: language)
             }

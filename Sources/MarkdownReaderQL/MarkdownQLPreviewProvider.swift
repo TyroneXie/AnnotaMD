@@ -19,6 +19,11 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
         super.viewDidLoad()
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
+
+        let resourceSearchPaths = Self.resolveResourceSearchPaths()
+        let schemeHandler = QLSchemeHandler(resourceSearchPaths: resourceSearchPaths)
+        config.setURLSchemeHandler(schemeHandler, forURLScheme: "mr")
+
         webView = WKWebView(frame: .zero, configuration: config)
         webView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(webView)
@@ -45,19 +50,23 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
             return
         }
 
+        // 对文件及其所在目录获取 security-scoped access，
+        // 确保内联图片（base64）时可以读取同目录下的图片文件
+        let fileAccessing = url.startAccessingSecurityScopedResource()
+        let directoryURL = url.deletingLastPathComponent()
+        let dirAccessing = directoryURL.startAccessingSecurityScopedResource()
+        defer {
+            if dirAccessing { directoryURL.stopAccessingSecurityScopedResource() }
+            if fileAccessing { url.stopAccessingSecurityScopedResource() }
+        }
+
         let content: String
         do {
             content = try String(contentsOf: url, encoding: .utf8)
         } catch {
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-            do {
-                content = try String(contentsOf: url, encoding: .utf8)
-            } catch {
-                logger.error("Failed to read file: \(error)")
-                handler(error)
-                return
-            }
+            logger.error("Failed to read file: \(error)")
+            handler(error)
+            return
         }
 
         logger.info("File loaded, length: \(content.count)")
@@ -65,26 +74,36 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
         let isDark = detectDarkMode()
         let theme = PresetThemes.defaultTheme(for: isDark ? .dark : .light)
         let themeColors = ThemeColors.from(theme)
-        let (inlineCSS, inlineJS) = loadInlineResources()
 
-        logger.info("Inline CSS length: \(inlineCSS.count), JS length: \(inlineJS.count)")
+        let hasMermaid = content.contains("```mermaid")
+        let hasKaTeX = content.contains("$$") || content.contains("\\(") || content.contains("\\[") || content.contains("```math")
 
-        let finalCSS = inlineCSS.isEmpty ? Self.fallbackCSS : inlineCSS
+        logger.info("Content-aware: hasMermaid=\(hasMermaid), hasKaTeX=\(hasKaTeX)")
 
-        // 注意：baseURL 传 nil 而非 url，因为 render() 会将相对路径转为 mr:/// URL，
-        // 而 QL 扩展的 WKWebView 没有注册 mr:// scheme handler，导致资源加载失败。
-        // 传 nil 后相对路径保持原样，由 WKWebView 的 baseURL（loadHTMLString 设置）解析。
-        let html = MarkdownHTMLService.buildPreviewHTML(
+        let dirURL = url.deletingLastPathComponent()
+        logger.info("Previewing file: \(url.path)")
+        logger.info("Directory URL: \(dirURL.path)")
+        logger.info("fileAccessing: \(fileAccessing), dirAccessing: \(dirAccessing)")
+
+        let html = MarkdownHTMLService.buildContentAwareHTML(
             content: content,
             themeCSS: themeColors.cssCustomProperties + themeColors.codeHighlightCSS,
-            inlineCSS: finalCSS,
-            inlineJS: inlineJS,
             contentPadding: 20,
-            baseURL: nil,
-            isDark: isDark
+            baseURL: dirURL,
+            isDark: isDark,
+            hasMermaid: hasMermaid,
+            hasKaTeX: hasKaTeX,
+            inlineImages: true
         )
 
-        logger.info("HTML generated, length: \(html.count)")
+        // 诊断日志：检查 HTML 中是否包含 data: URL（内联图片成功）
+        let hasInlineData = html.contains("data:image/")
+        let hasMrScheme = html.contains("mr:///")
+        let hasRawPath = html.contains("screenshot.png") && !html.contains("data:image/") && !html.contains("mr:///")
+        logger.info("HTML generated, length: \(html.count), hasInlineData: \(hasInlineData), hasMrScheme: \(hasMrScheme), hasRawPath: \(hasRawPath)")
+
+        // 输出 HTML 前 2000 字符用于调试
+        logger.debug("HTML preview: \(html.prefix(2000))")
 
         let baseURL = url.deletingLastPathComponent()
 
@@ -96,7 +115,6 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
                 return
             }
 
-            // 重入保护：如果上一次预览的 handler 还未被调用，先强制完成
             weakSelf.navigationDelegate?.forceCompleteIfPending()
 
             let navDelegate = QLNavigationDelegate { error in
@@ -105,43 +123,130 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
             weakSelf.navigationDelegate = navDelegate
             webView.navigationDelegate = navDelegate
 
-            // 设置背景色匹配主题，避免白屏闪烁
             if isDark {
                 webView.underPageBackgroundColor = NSColor(red: 0.094, green: 0.094, blue: 0.102, alpha: 1.0)
             }
 
             webView.loadHTMLString(html, baseURL: baseURL)
 
-            // 保障：如果 2 秒内 didFinish 未触发（例如 CSS 字体子请求阻止了完成事件），
-            // 仍然调用 handler 让 Quick Look 显示已有内容
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            let timeout: TimeInterval = hasMermaid ? 2.0 : 1.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeout) {
                 navDelegate.forceCompleteIfPending()
             }
         }
     }
 
-    nonisolated private static let fallbackCSS = """
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 20px;
-        line-height: 1.6;
-        color: #24292e;
+    private nonisolated static func resolveResourceSearchPaths() -> [URL] {
+        let searchPaths: [URL] = [
+            Bundle.main.resourceURL?.appendingPathComponent("MarkdownReader_MarkdownReader.bundle").appendingPathComponent("Resources"),
+            Bundle.main.resourceURL?.appendingPathComponent("MarkdownReader_MarkdownReader.bundle").appendingPathComponent("Contents").appendingPathComponent("Resources"),
+            Bundle.main.resourceURL,
+            Bundle.main.bundleURL
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("Resources"),
+            Bundle.main.bundleURL
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("Resources")
+                .appendingPathComponent("MarkdownReader_MarkdownReader.bundle")
+                .appendingPathComponent("Resources"),
+        ].compactMap { $0 }
+
+        for path in searchPaths {
+            let cssPath = path.appendingPathComponent("css/markdown.css")
+            if FileManager.default.fileExists(atPath: cssPath.path) {
+                logger.info("Found resources at: \(path.path)")
+                return [path]
+            }
+        }
+
+        logger.error("No resource path found")
+        return searchPaths
     }
-    h1, h2, h3, h4, h5, h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
-    h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
-    h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
-    code { background: rgba(27,31,35,.05); border-radius: 3px; font-size: 85%; padding: 0.2em 0.4em; }
-    pre { background: #f6f8fa; border-radius: 6px; padding: 16px; overflow: auto; }
-    pre code { background: none; padding: 0; font-size: 100%; }
-    blockquote { border-left: 4px solid #dfe2e5; padding: 0 1em; color: #6a737d; margin: 0; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #dfe2e5; padding: 6px 13px; }
-    img { max-width: 100%; }
-    a { color: #0366d6; text-decoration: none; }
-    """
 }
+
+// MARK: - WKURLSchemeHandler for mr://
+
+private final class QLSchemeHandler: NSObject, WKURLSchemeHandler {
+    private let resourceSearchPaths: [URL]
+
+    init(resourceSearchPaths: [URL]) {
+        self.resourceSearchPaths = resourceSearchPaths
+    }
+
+    func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+        guard let url = urlSchemeTask.request.url,
+              url.scheme == "mr" else {
+            urlSchemeTask.didFailWithError(NSError(domain: "com.markdownreader.app.QuickLook", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid scheme"]))
+            return
+        }
+
+        var path = url.path
+        if path.hasPrefix("/") {
+            path = String(path.dropFirst())
+        }
+
+        let resourceURL = resolveResource(for: path)
+
+        guard let resourceURL, FileManager.default.fileExists(atPath: resourceURL.path) else {
+            let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: "HTTP/1.1", headerFields: nil)!
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didFinish()
+            return
+        }
+
+        do {
+            let data = try Data(contentsOf: resourceURL)
+            let mimeType = Self.mimeType(for: resourceURL.pathExtension)
+            let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": mimeType])!
+            urlSchemeTask.didReceive(response)
+            urlSchemeTask.didReceive(data)
+            urlSchemeTask.didFinish()
+        } catch {
+            urlSchemeTask.didFailWithError(error)
+        }
+    }
+
+    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+
+    private func resolveResource(for path: String) -> URL? {
+        let absoluteURL = URL(fileURLWithPath: "/" + path)
+        if FileManager.default.fileExists(atPath: absoluteURL.path) {
+            return absoluteURL
+        }
+
+        for searchPath in resourceSearchPaths {
+            let url = searchPath.appendingPathComponent(path)
+            if FileManager.default.fileExists(atPath: url.path) {
+                return url
+            }
+        }
+
+        return nil
+    }
+
+    private static func mimeType(for pathExtension: String) -> String {
+        switch pathExtension.lowercased() {
+        case "css": return "text/css"
+        case "js": return "application/javascript"
+        case "html", "htm": return "text/html"
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif": return "image/gif"
+        case "svg": return "image/svg+xml"
+        case "webp": return "image/webp"
+        case "ico": return "image/x-icon"
+        case "woff": return "font/woff"
+        case "woff2": return "font/woff2"
+        case "ttf": return "font/ttf"
+        case "json": return "application/json"
+        default: return "application/octet-stream"
+        }
+    }
+}
+
+// MARK: - Navigation Delegate
 
 private final class QLNavigationDelegate: NSObject, WKNavigationDelegate, @unchecked Sendable {
     private let completionHandler: @Sendable (Error?) -> Void
@@ -186,72 +291,4 @@ private func detectDarkMode() -> Bool {
     } else {
         return UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
     }
-}
-
-private func loadInlineResources() -> (css: String, js: String) {
-    let resourceURL = resolveResourceURL()
-
-    logger.info("resolveResourceURL: \(resourceURL?.path ?? "nil")")
-    logger.info("Bundle.main.bundleURL: \(Bundle.main.bundleURL.path)")
-    logger.info("Bundle.main.resourceURL: \(Bundle.main.resourceURL?.path ?? "nil")")
-
-    var css = ""
-    var js = ""
-
-    for name in ["markdown.css", "scroll.css", "katex.min.css"] {
-        if let url = resourceURL?.appendingPathComponent("css/\(name)"),
-           let data = try? Data(contentsOf: url),
-           let content = String(data: data, encoding: .utf8) {
-            css += content + "\n"
-        } else {
-            logger.warning("Failed to load CSS: \(name)")
-        }
-    }
-
-    let jsFiles = ["mermaid.min.js", "katex.min.js", "prism-core.min.js", "prism-autoloader.min.js", "markdown-reader.js"]
-    for name in jsFiles {
-        if let url = resourceURL?.appendingPathComponent("js/\(name)"),
-           let data = try? Data(contentsOf: url),
-           let content = String(data: data, encoding: .utf8) {
-            js += (name == "markdown-reader.js") ? (content + "\n") : (content + ";\n")
-        } else {
-            logger.warning("Failed to load JS: \(name)")
-        }
-    }
-
-    return (css: css, js: js)
-}
-
-private func resolveResourceURL() -> URL? {
-    let searchPaths: [URL] = [
-        // .appex/Contents/Resources/MarkdownReader_MarkdownReader.bundle/Resources/
-        Bundle.main.resourceURL?.appendingPathComponent("MarkdownReader_MarkdownReader.bundle").appendingPathComponent("Resources"),
-        // .appex/Contents/Resources/MarkdownReader_MarkdownReader.bundle/Contents/Resources/
-        Bundle.main.resourceURL?.appendingPathComponent("MarkdownReader_MarkdownReader.bundle").appendingPathComponent("Contents").appendingPathComponent("Resources"),
-        // .appex/Contents/Resources/
-        Bundle.main.resourceURL,
-        // 主 app: MyApp.app/Contents/Resources/（从 .appex 向上导航）
-        Bundle.main.bundleURL
-            .deletingLastPathComponent()  // PlugIns/
-            .deletingLastPathComponent()  // Contents/
-            .appendingPathComponent("Resources"),
-        // 主 app: MyApp.app/Contents/Resources/MarkdownReader_MarkdownReader.bundle/Resources/
-        Bundle.main.bundleURL
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("Resources")
-            .appendingPathComponent("MarkdownReader_MarkdownReader.bundle")
-            .appendingPathComponent("Resources"),
-    ].compactMap { $0 }
-
-    for path in searchPaths {
-        let cssPath = path.appendingPathComponent("css/markdown.css")
-        if FileManager.default.fileExists(atPath: cssPath.path) {
-            logger.info("Found resources at: \(path.path)")
-            return path
-        }
-    }
-
-    logger.error("No resource path found")
-    return nil
 }

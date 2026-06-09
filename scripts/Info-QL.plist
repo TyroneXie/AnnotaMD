@@ -16,6 +16,8 @@
 	<string>XPC!</string>
 	<key>CFBundleExecutable</key>
 	<string>MarkdownReaderQL</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26</string>
 	<key>NSExtension</key>
@@ -27,6 +29,7 @@
 			<key>QLSupportedContentTypes</key>
 			<array>
 				<string>net.daringfireball.markdown</string>
+				<string>public.markdown</string>
 			</array>
 			<key>QLSupportsSearchableItems</key>
 			<false/>
@@ -36,5 +39,28 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>MarkdownReaderQL.MarkdownQLPreviewProvider</string>
 	</dict>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>net.daringfireball.markdown</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Markdown Document</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>md</string>
+					<string>markdown</string>
+					<string>mdown</string>
+					<string>mkd</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

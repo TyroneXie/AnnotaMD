@@ -6,6 +6,26 @@ import UniformTypeIdentifiers
 /// MarkdownReaderApp（菜单 Cmd+O）和各视图按钮共用
 enum OpenPanelHelper {
 
+    /// Markdown 相关的 UTType 列表，用于文件选择面板过滤
+    static let markdownContentTypes: [UTType] = {
+        var types: [UTType] = []
+        // net.daringfireball.markdown 涵盖 .md/.markdown/.mdown/.mkd
+        if let markdownType = UTType("net.daringfireball.markdown") {
+            types.append(markdownType)
+        }
+        // .txt 作为纯文本，需单独添加
+        if let txtType = UTType(filenameExtension: "txt") {
+            types.append(txtType)
+        }
+        // 回退：逐个添加扩展名（防止 UTType 注册表缺失）
+        for ext in ["md", "markdown", "mdown", "mkd"] {
+            if let ut = UTType(filenameExtension: ext), !types.contains(ut) {
+                types.append(ut)
+            }
+        }
+        return types
+    }()
+
     /// 防止重复弹窗的重入保护
     /// WindowGroup 可能创建多个 ContentView 实例同时监听通知，
     /// 即使已改为直接调用，仍保留此保护作为安全网
@@ -27,7 +47,7 @@ enum OpenPanelHelper {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = L10n.tr(.open, language: language)
-        panel.allowedContentTypes = [.folder, UTType(filenameExtension: "md")].compactMap { $0 }
+        panel.allowedContentTypes = [.folder] + Self.markdownContentTypes
 
         if panel.runModal() == .OK, let url = panel.url {
             var isDir: ObjCBool = false
@@ -41,6 +61,49 @@ enum OpenPanelHelper {
         }
 
         isPanelShowing = false
+    }
+
+    /// 显示导出 PDF 面板，让用户选择保存位置
+    /// - Parameters:
+    ///   - language: 当前界面语言
+    ///   - defaultDirectory: 默认定位的目录
+    ///   - suggestedName: 建议的文件名
+    /// - Returns: 用户选择的保存 URL，取消返回 nil
+    @MainActor
+    static func showExportPDFPanel(
+        language: Language,
+        defaultDirectory: URL? = nil,
+        suggestedName: String = "Untitled.pdf"
+    ) -> URL? {
+        guard !isPanelShowing else { return nil }
+        isPanelShowing = true
+
+        NSApp.activate(ignoringOtherApps: true)
+
+        let panel = NSSavePanel()
+        panel.prompt = L10n.tr(.exportPDF, language: language)
+        panel.allowedContentTypes = [UTType(filenameExtension: "pdf")].compactMap { $0 }
+        panel.nameFieldStringValue = suggestedName
+        panel.canCreateDirectories = true
+
+        if let dir = defaultDirectory {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue {
+                panel.directoryURL = dir
+            } else if dir.pathExtension.isEmpty == false {
+                panel.directoryURL = dir.deletingLastPathComponent()
+            }
+        }
+
+        let result: URL?
+        if panel.runModal() == .OK, let url = panel.url {
+            result = url
+        } else {
+            result = nil
+        }
+
+        isPanelShowing = false
+        return result
     }
 
     /// 显示另存为面板，让用户选择保存位置
@@ -62,7 +125,7 @@ enum OpenPanelHelper {
 
         let panel = NSSavePanel()
         panel.prompt = L10n.tr(.save, language: language)
-        panel.allowedContentTypes = [UTType(filenameExtension: "md")].compactMap { $0 }
+        panel.allowedContentTypes = Self.markdownContentTypes
         panel.nameFieldStringValue = suggestedName
         panel.canCreateDirectories = true
 

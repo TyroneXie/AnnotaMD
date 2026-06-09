@@ -171,6 +171,11 @@ struct MarkdownReaderApp: App {
                 }
                 .keyboardShortcut("s", modifiers: .command)
 
+                Button(L10n.tr(.exportPDF, language: language)) {
+                    NotificationCenter.default.post(name: .exportPDF, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .option])
+
                 // 打开最近子菜单
                 openRecentMenu
             }
@@ -242,4 +247,5 @@ extension Notification.Name {
     static let findNext = Notification.Name("com.markdownreader.findNext")
     static let findPrevious = Notification.Name("com.markdownreader.findPrevious")
     static let findAndReplace = Notification.Name("com.markdownreader.findAndReplace")
+    static let exportPDF = Notification.Name("com.markdownreader.exportPDF")
 }

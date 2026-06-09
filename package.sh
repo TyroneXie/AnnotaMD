@@ -10,7 +10,7 @@ DISTRIBUTION=false
 ARCH="arm64"
 
 build_dmg() {
-    local DMG_NAME="MarkdownReader-${ARCH}.dmg"
+    local DMG_NAME="MarkdownReader.dmg"
 
     echo ""
     echo "=========================================="
@@ -102,4 +102,4 @@ build_dmg
 
 echo ""
 echo "🎉 所有 DMG 打包完成！"
-ls -lh MarkdownReader-*.dmg 2>/dev/null
+ls -lh MarkdownReader.dmg 2>/dev/null

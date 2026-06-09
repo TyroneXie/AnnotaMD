@@ -38,13 +38,13 @@ echo "🔨 本地构建 ${APP_NAME}..."
 # 2. 创建 DMG
 echo ""
 echo "📦 创建 DMG..."
-DMG_NAME="${APP_NAME}-${VERSION}.dmg"
+DMG_NAME="${APP_NAME}.dmg"
 rm -f "$DMG_NAME"
 
 VOLICON="${APP_NAME}.app/Contents/Resources/AppIcon.icns"
 if command -v create-dmg &>/dev/null; then
     CREATE_DMG_ARGS=(
-        --volname "Markdown Reader $VERSION"
+        --volname "Markdown Reader"
         --window-pos 200 120
         --window-size 600 400
         --icon-size 100
@@ -60,7 +60,7 @@ else
     trap "rm -rf '$STAGING'" EXIT
     cp -R "${APP_NAME}.app" "$STAGING/"
     ln -s /Applications "$STAGING/Applications"
-    hdiutil create -volname "Markdown Reader $VERSION" -srcfolder "$STAGING" -ov -format UDZO "$DMG_NAME"
+    hdiutil create -volname "Markdown Reader" -srcfolder "$STAGING" -ov -format UDZO "$DMG_NAME"
     rm -rf "$STAGING"
     trap - EXIT
 fi
@@ -78,7 +78,7 @@ fi
 # 3. 创建 ZIP
 echo ""
 echo "📦 创建 ZIP..."
-ZIP_NAME="${APP_NAME}-${VERSION}.zip"
+ZIP_NAME="${APP_NAME}.zip"
 rm -f "$ZIP_NAME"
 zip -r "$ZIP_NAME" "${APP_NAME}.app"
 

@@ -136,7 +136,37 @@ final class DocumentViewModel {
         }
 
         // 检查是否为 Markdown 文件
-        guard url.pathExtension == "md" else {
+        // 对于 .md/.markdown/.mdown/.mkd 直接通过
+        // 对于 .txt 需要先读取内容进行 Markdown 特征检测
+        let ext = url.pathExtension.lowercased()
+        if FileService.markdownExtensions.contains(ext) {
+            // 已知 Markdown 扩展名，直接加载
+        } else if ext == "txt" {
+            // .txt 文件需要内容检测
+            do {
+                let text = try await fileService.readFile(at: url)
+                if !FileService.detectMarkdownContent(text) {
+                    fileError = .unsupportedFileType(url.pathExtension)
+                    content = ""
+                    currentFileURL = url
+                    fileName = url.lastPathComponent
+                    outlineItems = []
+                    isDirty = false
+                    isUntitled = false
+                    return
+                }
+                // .txt 文件内容确认为 Markdown，继续正常加载流程
+            } catch {
+                fileError = .unsupportedFileType(url.pathExtension)
+                content = ""
+                currentFileURL = url
+                fileName = url.lastPathComponent
+                outlineItems = []
+                isDirty = false
+                isUntitled = false
+                return
+            }
+        } else {
             fileError = .unsupportedFileType(url.pathExtension)
             content = ""
             currentFileURL = url

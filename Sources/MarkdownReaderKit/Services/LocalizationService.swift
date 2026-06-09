@@ -163,6 +163,7 @@ public enum L10n {
         case welcomeOpenFolder
         case welcomePressCmdO
         case selectFileHint
+        case welcomeDropHint
 
         // 右键菜单
         case contextMenuNewFile
@@ -215,6 +216,15 @@ public enum L10n {
         case findBarRegularExpression
         case findBarFind
         case findBarFindAndReplace
+
+        // 导出 PDF
+        case exportPDF
+        case titleBarExportPDF
+        case exportPDFSuccess
+        case exportPDFFailed
+
+        // 拖拽
+        case unsupportedFileTypeAlert
     }
 
     // MARK: - 翻译字典
@@ -319,6 +329,7 @@ public enum L10n {
         .sidebarSettingsButton: "Settings",
         .welcomeOpenFolder: "Open a folder to get started",
         .welcomePressCmdO: "Press Cmd+O or click Open in toolbar",
+        .welcomeDropHint: "or drag a file or folder here",
         .selectFileHint: "Select a file to preview",
         .contextMenuNewFile: "New File",
         .contextMenuNewSubdirectory: "New Subdirectory",
@@ -364,6 +375,11 @@ public enum L10n {
         .findBarRegularExpression: "Use Regular Expression",
         .findBarFind: "Find",
         .findBarFindAndReplace: "Find and Replace",
+        .exportPDF: "Export PDF\u{2026}",
+        .titleBarExportPDF: "Export PDF",
+        .exportPDFSuccess: "PDF exported successfully",
+        .exportPDFFailed: "Failed to export PDF",
+        .unsupportedFileTypeAlert: "Unsupported file type (.{ext}). Only Markdown files can be opened.",
     ]
 
     private static let zhCN: [Key: String] = [
@@ -466,6 +482,7 @@ public enum L10n {
         .sidebarSettingsButton: "设置",
         .welcomeOpenFolder: "打开文件夹开始阅读",
         .welcomePressCmdO: "按 Cmd+O 或点击工具栏中的打开按钮",
+        .welcomeDropHint: "或拖拽文件/文件夹到此处",
         .selectFileHint: "选择文件以预览",
         .contextMenuNewFile: "新建文档",
         .contextMenuNewSubdirectory: "新建子目录",
@@ -511,6 +528,11 @@ public enum L10n {
         .findBarRegularExpression: "使用正则表达式",
         .findBarFind: "查找",
         .findBarFindAndReplace: "查找和替换",
+        .exportPDF: "导出 PDF\u{2026}",
+        .titleBarExportPDF: "导出 PDF",
+        .exportPDFSuccess: "PDF 导出成功",
+        .exportPDFFailed: "PDF 导出失败",
+        .unsupportedFileTypeAlert: "不支持的文件类型（.{ext}）。仅支持打开 Markdown 文件。",
     ]
 
     private static let zhTW: [Key: String] = [
@@ -613,6 +635,7 @@ public enum L10n {
         .sidebarSettingsButton: "設定",
         .welcomeOpenFolder: "開啟資料夾開始閱讀",
         .welcomePressCmdO: "按 Cmd+O 或點擊工具列中的開啟按鈕",
+        .welcomeDropHint: "或拖拽檔案/資料夾到此處",
         .selectFileHint: "選擇檔案以預覽",
         .contextMenuNewFile: "新增檔案",
         .contextMenuNewSubdirectory: "新增子目錄",
@@ -658,6 +681,11 @@ public enum L10n {
         .findBarRegularExpression: "使用規則表達式",
         .findBarFind: "尋找",
         .findBarFindAndReplace: "尋找和取代",
+        .exportPDF: "匯出 PDF\u{2026}",
+        .titleBarExportPDF: "匯出 PDF",
+        .exportPDFSuccess: "PDF 匯出成功",
+        .exportPDFFailed: "PDF 匯出失敗",
+        .unsupportedFileTypeAlert: "不支援的檔案類型（.{ext}）。僅支援開啟 Markdown 檔案。",
     ]
 
     // MARK: - 查找

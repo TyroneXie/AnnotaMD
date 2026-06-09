@@ -3,6 +3,111 @@ import Foundation
 /// 文件系统服务，负责目录扫描和文件读取
 struct FileService: Sendable {
 
+    /// 已知的 Markdown 文件扩展名（不含 .txt，.txt 需内容检测）
+    static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
+
+    /// 需要在目录树中显示为 Markdown 类型的扩展名（含 .txt）
+    /// .txt 文件在目录树中显示 Markdown 图标，实际加载时再做内容检测
+    static let treeDisplayExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
+
+    /// 判断文件扩展名是否为已知的 Markdown 类型（不含 .txt）
+    /// - Parameter url: 文件 URL
+    /// - Returns: 是否为 Markdown 扩展名
+    static func isKnownMarkdownExtension(_ url: URL) -> Bool {
+        markdownExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// 判断文件扩展名是否应在目录树中显示为 Markdown 类型（含 .txt）
+    /// - Parameter url: 文件 URL
+    /// - Returns: 是否为 Markdown 或潜在 Markdown 扩展名
+    static func isTreeDisplayExtension(_ url: URL) -> Bool {
+        treeDisplayExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// 判断文件是否为 Markdown 文件
+    /// 对于 .md/.markdown/.mdown/.mkd 直接返回 true
+    /// 对于 .txt 需要读取内容进行语法特征检测
+    /// - Parameters:
+    ///   - url: 文件 URL
+    ///   - content: 可选的文件内容（传入则避免重复读取）
+    /// - Returns: 是否为 Markdown 文件
+    static func isMarkdownFile(_ url: URL, content: String? = nil) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        if markdownExtensions.contains(ext) {
+            return true
+        }
+        if ext == "txt" {
+            // .txt 文件需要内容检测
+            if let content = content {
+                return detectMarkdownContent(content)
+            } else if let data = try? Data(contentsOf: url),
+                      let text = String(data: data, encoding: .utf8) {
+                return detectMarkdownContent(text)
+            }
+            return false
+        }
+        return false
+    }
+
+    /// 通过内容特征检测文本是否为 Markdown
+    /// 检测常见 Markdown 语法元素，命中阈值即判定为 Markdown
+    /// - Parameter content: 文件内容
+    /// - Returns: 是否包含足够的 Markdown 特征
+    static func detectMarkdownContent(_ content: String) -> Bool {
+        // 空文件不判定为 Markdown
+        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+
+        var score = 0
+
+        // ATX 标题: # ## ### 等
+        if content.range(of: #"^#{1,6}\s+\S"#, options: .regularExpression) != nil {
+            score += 2
+        }
+
+        // Setext 标题: 下一行是 === 或 ---
+        if content.range(of: #"\n[=-]{3,}\s*\n"#, options: .regularExpression) != nil {
+            score += 2
+        }
+
+        // 代码围栏: ``` 或 ~~~
+        if content.range(of: #"(^|\n)`{3}|~{3}"#, options: .regularExpression) != nil {
+            score += 2
+        }
+
+        // 强调/加粗: **text** 或 __text__
+        if content.range(of: #"\*\*[^*]+\*\*|__[^_]+__"#, options: .regularExpression) != nil {
+            score += 1
+        }
+
+        // 链接: [text](url)
+        if content.range(of: #"\[[^\]]+\]\([^)]+\)"#, options: .regularExpression) != nil {
+            score += 1
+        }
+
+        // 图片: ![alt](url)
+        if content.range(of: #"!\[[^\]]*\]\([^)]+\)"#, options: .regularExpression) != nil {
+            score += 1
+        }
+
+        // 列表: - item 或 * item 或 1. item
+        if content.range(of: #"^\s*[-*]\s+\S"#, options: .regularExpression) != nil {
+            score += 1
+        }
+        if content.range(of: #"^\s*\d+\.\s+\S"#, options: .regularExpression) != nil {
+            score += 1
+        }
+
+        // 引用: > text
+        if content.range(of: #"^\s*>\s+\S"#, options: .regularExpression) != nil {
+            score += 1
+        }
+
+        // 阈值: 2 分以上判定为 Markdown
+        return score >= 2
+    }
+
     /// 扫描指定目录，返回文件树结构
     /// - Parameters:
     ///   - directory: 要扫描的目录 URL
@@ -31,7 +136,7 @@ struct FileService: Sendable {
             let resourceValues = try url.resourceValues(forKeys: [.isDirectoryKey, .nameKey])
             let isDirectory = resourceValues.isDirectory ?? false
             let name = resourceValues.name ?? url.lastPathComponent
-            let isMarkdown = url.pathExtension == "md"
+            let isTreeMarkdown = Self.isTreeDisplayExtension(url)
 
             if isDirectory {
                 let children = try await scanDirectory(
@@ -49,12 +154,12 @@ struct FileService: Sendable {
                 nodes.append(node)
             } else {
                 // 如果不显示非 Markdown 文件，则跳过
-                if !showNonMarkdownFiles && !isMarkdown { continue }
+                if !showNonMarkdownFiles && !isTreeMarkdown { continue }
                 let node = FileNode(
                     name: name,
                     path: url,
                     isDirectory: false,
-                    isMarkdown: isMarkdown,
+                    isMarkdown: isTreeMarkdown,
                     children: nil
                 )
                 nodes.append(node)
@@ -126,7 +231,7 @@ struct FileService: Sendable {
         }
 
         for case let url as URL in enumerator {
-            if url.pathExtension == "md" {
+            if Self.isKnownMarkdownExtension(url) {
                 return true
             }
         }

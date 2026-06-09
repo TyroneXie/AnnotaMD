@@ -1,7 +1,10 @@
 import Foundation
 import Markdown
+import os.log
 
 public enum MarkdownHTMLService {
+
+    static let logger = Logger(subsystem: "com.markdownreader.app.QuickLook", category: "MarkdownHTMLService")
 
     public struct RenderResult {
         public let html: String
@@ -25,7 +28,18 @@ public enum MarkdownHTMLService {
     public static func render(_ markdown: String, baseURL: URL? = nil) -> RenderResult {
         let preprocessed = preprocess(markdown)
         let doc = Markdown.Document(parsing: preprocessed)
-        var formatter = CustomHTMLFormatter(baseURL: baseURL)
+        var formatter = CustomHTMLFormatter(baseURL: baseURL, inlineImages: false)
+        formatter.visit(doc)
+        return RenderResult(
+            html: formatter.result,
+            headings: formatter.headings
+        )
+    }
+
+    public static func renderWithInlineImages(_ markdown: String, baseURL: URL? = nil) -> RenderResult {
+        let preprocessed = preprocess(markdown)
+        let doc = Markdown.Document(parsing: preprocessed)
+        var formatter = CustomHTMLFormatter(baseURL: baseURL, inlineImages: true)
         formatter.visit(doc)
         return RenderResult(
             html: formatter.result,
@@ -71,10 +85,28 @@ public enum MarkdownHTMLService {
         """
     }
 
-    public static func buildPreviewHTML(content: String, themeCSS: String, inlineCSS: String, inlineJS: String, contentPadding: CGFloat, baseURL: URL?, isDark: Bool) -> String {
-        let renderResult = render(content, baseURL: baseURL)
+    public static func buildContentAwareHTML(content: String, themeCSS: String, contentPadding: CGFloat, baseURL: URL?, isDark: Bool, hasMermaid: Bool, hasKaTeX: Bool, inlineImages: Bool = false) -> String {
+        let renderResult = inlineImages ? renderWithInlineImages(content, baseURL: baseURL) : render(content, baseURL: baseURL)
 
         let baseURLAttr = baseURL != nil ? " data-base-url=\"\(baseURL!.path.addingXMLAttributeEscapes)\"" : ""
+
+        var scriptTags = ""
+        if hasMermaid {
+            scriptTags += "<script src=\"mr:///js/mermaid.min.js\"></script>\n"
+        }
+        if hasKaTeX {
+            scriptTags += "<script src=\"mr:///js/katex.min.js\"></script>\n"
+        }
+        scriptTags += """
+        <script src="mr:///js/prism-core.min.js"></script>
+        <script src="mr:///js/prism-autoloader.min.js"></script>
+        <script>
+        Prism.plugins.autoloader.languages_path = 'mr:///js/';
+        </script>
+        <script src="mr:///js/markdown-reader.js" data-is-dark="\(isDark)"></script>
+        """
+
+        let katexCSS = hasKaTeX ? "<link rel=\"stylesheet\" href=\"mr:///css/katex.min.css\">\n" : ""
 
         return """
         <!DOCTYPE html>
@@ -82,9 +114,10 @@ public enum MarkdownHTMLService {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style id="mr-theme-style">\(themeCSS)</style>
+            <link rel="stylesheet" href="mr:///css/markdown.css">
+            <link rel="stylesheet" href="mr:///css/scroll.css">
+            \(katexCSS)<style id="mr-theme-style">\(themeCSS)</style>
             <style>
-            \(inlineCSS)
             :root { --content-padding: \(contentPadding)px; --content-max-width: 980px; }
             </style>
         </head>
@@ -94,9 +127,7 @@ public enum MarkdownHTMLService {
                     \(renderResult.html)
                 </div>
             </div>
-            <script data-is-dark="\(isDark)">
-            \(inlineJS)
-            </script>
+            \(scriptTags)
         </body>
         </html>
         """
@@ -346,8 +377,11 @@ private struct CustomHTMLFormatter: MarkupWalker {
     private var headingCounter = 0
     private let baseURL: URL?
 
-    init(baseURL: URL? = nil) {
+    private let inlineImages: Bool
+
+    init(baseURL: URL? = nil, inlineImages: Bool = false) {
         self.baseURL = baseURL
+        self.inlineImages = inlineImages
     }
 
     /// 将相对路径转换为 mr:// 绝对路径，使其通过 URLSchemeHandler 加载
@@ -366,6 +400,51 @@ private struct CustomHTMLFormatter: MarkupWalker {
             return "mr:///" + absoluteURL.path
         }
         return path
+    }
+
+    /// 将相对路径图片转为 base64 data URL，用于沙盒环境（如 Quick Look）下无法通过 scheme 加载本地文件的场景
+    private func inlineImageData(_ path: String) -> String {
+        guard !path.isEmpty else { return path }
+        // 已经是绝对 URL 或 data URL 的不做转换
+        if path.hasPrefix("http://") || path.hasPrefix("https://") ||
+           path.hasPrefix("data:") || path.hasPrefix("#") ||
+           path.hasPrefix("mailto:") {
+            return path
+        }
+        // 绝对路径或相对路径：尝试读取文件并转为 base64
+        var fileURL: URL?
+        if path.hasPrefix("/") {
+            fileURL = URL(fileURLWithPath: path)
+        } else if let baseURL = baseURL {
+            fileURL = baseURL.appendingPathComponent(path)
+        }
+        guard let fileURL else {
+            MarkdownHTMLService.logger.warning("inlineImageData: no fileURL for path=\(path), baseURL=\(self.baseURL?.path ?? "nil")")
+            return path
+        }
+        let fileExists = FileManager.default.fileExists(atPath: fileURL.path)
+        guard let data = try? Data(contentsOf: fileURL) else {
+            MarkdownHTMLService.logger.warning("inlineImageData: failed to read file=\(fileURL.path), exists=\(fileExists)")
+            return path
+        }
+        let mimeType = Self.mimeTypeForPathExtension(fileURL.pathExtension)
+        let base64 = data.base64EncodedString()
+        MarkdownHTMLService.logger.info("inlineImageData: success for \(path) -> data:\(mimeType);base64,... (\(data.count) bytes)")
+        return "data:\(mimeType);base64,\(base64)"
+    }
+
+    private static func mimeTypeForPathExtension(_ pathExtension: String) -> String {
+        switch pathExtension.lowercased() {
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif": return "image/gif"
+        case "svg": return "image/svg+xml"
+        case "webp": return "image/webp"
+        case "ico": return "image/x-icon"
+        case "bmp": return "image/bmp"
+        case "tiff", "tif": return "image/tiff"
+        default: return "application/octet-stream"
+        }
     }
 
     mutating func visitDocument(_ document: Markdown.Document) {
@@ -516,8 +595,14 @@ private struct CustomHTMLFormatter: MarkupWalker {
     }
 
     mutating func visitImage(_ image: Image) {
-        let rawSource = image.source?.htmlEscaped ?? ""
-        let source = resolveRelativeURL(rawSource)
+        let rawSource = image.source ?? ""
+        let source: String
+        if inlineImages {
+            // inlineImageData 用原始未转义路径做文件解析，data URL 不需要 htmlEscape
+            source = inlineImageData(rawSource)
+        } else {
+            source = resolveRelativeURL(rawSource.htmlEscaped)
+        }
         let title = image.title != nil ? " title=\"\(image.title!.htmlEscaped)\"" : ""
         let alt = image.plainText.htmlEscaped
         result += "<img src=\"\(source)\" alt=\"\(alt)\"\(title) />"

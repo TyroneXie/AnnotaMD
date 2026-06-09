@@ -264,31 +264,63 @@ final class SettingsModel {
         return false
     }
 
-    /// 将当前应用设为 .md 文件的默认打开程序
+    /// 将当前应用设为 Markdown 文件的默认打开程序
+    /// 同时注册 .md/.markdown/.mdown/.mkd 扩展名
     /// 使用 NSWorkspace 的 async completionHandler 验证设置结果
     /// - Parameter completion: 设置结果回调（主线程），true 表示成功
     func setAsDefaultMdOpener(completion: @MainActor @escaping (Bool) -> Void = { _ in }) {
         let bundleURL = Bundle.main.bundleURL
-        guard let mdType = UTType(filenameExtension: "md") else {
+        let extensions = ["md", "markdown", "mdown", "mkd"]
+        let types = extensions.compactMap { UTType(filenameExtension: $0) }
+
+        guard !types.isEmpty else {
             completion(false)
             return
         }
 
-        NSWorkspace.shared.setDefaultApplication(at: bundleURL, toOpen: mdType) { [weak self] error1 in
-            let mdOk = error1 == nil
-            // 再设置 .markdown 扩展名
-            if let markdownType = UTType(filenameExtension: "markdown") {
-                NSWorkspace.shared.setDefaultApplication(at: bundleURL, toOpen: markdownType) { error2 in
-                    let success = mdOk || (error2 == nil)
+        // 使用非隔离的计数器类来安全地跟踪并发回调
+        // NSLock 保护内部可变状态，线程安全但 Swift 类型系统无法证明
+        final class Counter: @unchecked Sendable {
+            private let lock = NSLock()
+            private var _count = 0
+            private var _results: [Bool]
+
+            init(count: Int) {
+                _results = Array(repeating: false, count: count)
+            }
+
+            func setResult(at index: Int, _ value: Bool) {
+                lock.lock()
+                defer { lock.unlock() }
+                _results[index] = value
+                _count += 1
+            }
+
+            var isComplete: Bool {
+                lock.lock()
+                defer { lock.unlock() }
+                return _count == _results.count
+            }
+
+            var hasSuccess: Bool {
+                lock.lock()
+                defer { lock.unlock() }
+                return _results.contains(true)
+            }
+        }
+
+        let counter = Counter(count: types.count)
+
+        for (index, type) in types.enumerated() {
+            NSWorkspace.shared.setDefaultApplication(at: bundleURL, toOpen: type) { [weak self] error in
+                counter.setResult(at: index, error == nil)
+
+                if counter.isComplete {
+                    let success = counter.hasSuccess
                     DispatchQueue.main.async {
                         self?.isDefaultMdOpener = success
                         completion(success)
                     }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self?.isDefaultMdOpener = mdOk
-                    completion(mdOk)
                 }
             }
         }
