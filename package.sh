@@ -25,6 +25,21 @@ build_dmg() {
     fi
     ./build-app.sh "${BUILD_ARGS[@]}"
 
+    # 1.5 分发模式：公证 .app 并 staple（这样 DMG 里装的就是已盖票的 app）
+    #     需要先用 notarytool 存一次凭据：
+    #       xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+    #           --apple-id <你的 Apple ID> --team-id HUJ6HAE4VU --password <App 专用密码>
+    if $DISTRIBUTION; then
+        local PROFILE="${NOTARY_PROFILE:-markmark}"
+        echo "🍎 公证 ${APP_BUNDLE_NAME}.app（profile: ${PROFILE}）..."
+        ditto -c -k --keepParent "${APP_BUNDLE_NAME}.app" "/tmp/${APP_BUNDLE_NAME}-notarize.zip"
+        xcrun notarytool submit "/tmp/${APP_BUNDLE_NAME}-notarize.zip" \
+            --keychain-profile "$PROFILE" --wait
+        xcrun stapler staple "${APP_BUNDLE_NAME}.app"
+        rm -f "/tmp/${APP_BUNDLE_NAME}-notarize.zip"
+        echo "   ✅ app 已公证并 staple"
+    fi
+
     # 2. 提取 App 图标作为 DMG 卷图标
     VOLICON="${APP_BUNDLE_NAME}.app/Contents/Resources/AppIcon.icns"
     if [ ! -f "$VOLICON" ]; then
@@ -78,10 +93,24 @@ build_dmg() {
         "$SETICON_BIN" "$VOLICON" "$DMG_NAME"
     fi
 
+    # 5.5 分发模式：公证 DMG 本身并 staple（用户下载 DMG 即可零警告打开）
+    if $DISTRIBUTION; then
+        local PROFILE="${NOTARY_PROFILE:-markmark}"
+        echo "🍎 公证 ${DMG_NAME}（profile: ${PROFILE}）..."
+        xcrun notarytool submit "$DMG_NAME" --keychain-profile "$PROFILE" --wait
+        xcrun stapler staple "$DMG_NAME"
+        echo "   ✅ DMG 已公证并 staple"
+    fi
+
     # 6. 验证
     echo "🔍 验证构建结果..."
     file "${APP_BUNDLE_NAME}.app/Contents/MacOS/${APP_NAME}"
     codesign --verify --deep --strict "${APP_BUNDLE_NAME}.app" 2>&1 || true
+    if $DISTRIBUTION; then
+        echo "🔍 Gatekeeper 评估（公证后应为 accepted）..."
+        spctl -a -vv "${APP_BUNDLE_NAME}.app" 2>&1 | head -3 || true
+        xcrun stapler validate "$DMG_NAME" 2>&1 | tail -1 || true
+    fi
 
     echo ""
     echo "✅ ${DMG_NAME} 已生成"
