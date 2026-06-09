@@ -254,6 +254,24 @@ struct CriticMarkupPipelineTests {
         #expect(result.html.contains("<del"))
     }
 
+    @Test("rendering preserves straight quotes (smart typography disabled)")
+    func noSmartQuotes() {
+        let html = MarkdownHTMLService.render("是为\"第五起\"这。").html
+        // 不应出现弯引号；直引号会被 HTML 转义为 &quot;（DOM 里仍显示直引号）
+        #expect(!html.contains("\u{201C}"))
+        #expect(!html.contains("\u{201D}"))
+        #expect(html.contains("&quot;") || html.contains("\""))
+    }
+
+    @Test("rendering preserves -- and ... literally")
+    func noSmartDashesEllipsis() {
+        let html = MarkdownHTMLService.render("a -- b ... c").html
+        #expect(html.contains("--"))
+        #expect(html.contains("..."))
+        #expect(!html.contains("\u{2013}"))   // en dash
+        #expect(!html.contains("\u{2026}"))   // ellipsis
+    }
+
     @Test("critic markup inside fenced code is left untouched")
     func codeUntouched() {
         let md = "```\nkeep {--literal--} here\n```"
@@ -281,41 +299,16 @@ struct CriticMarkupCombinedTests {
     }
 }
 
-// MARK: - 智能引号容错定位（渲染会把直引号转成弯引号，需归一化匹配）
+// MARK: - 选区与源码一致（渲染关闭智能排版，引号/破折号等逐字保留）
 
-@Suite("CriticMarkup smart-quote tolerant locate")
-struct CriticMarkupSmartQuoteTests {
+@Suite("CriticMarkup locate with quotes (smart typography off)")
+struct CriticMarkupQuoteLocateTests {
 
-    @Test("locates source straight quotes when selection has curly quotes")
-    func locateCurlyAgainstStraight() {
-        let source = "是为\"第五起\"这三个字。"               // 源码：直引号
-        let selected = "是为\u{201C}第五起\u{201D}这三个字"   // 选区：弯引号（渲染产物）
-        let r = CriticMarkup.locateRange(in: source, selectedText: selected, nearLine: 1)
-        #expect(r != nil)
-        #expect(r.map { String(source[$0]) } == "是为\"第五起\"这三个字")
-    }
-
-    @Test("highlight applies across a smart-quote mismatch (keeps source quotes)")
-    func highlightAcrossSmartQuotes() {
-        let source = "前文。是为\"第五起\"这。"
-        let selected = "是为\u{201C}第五起\u{201D}这"
+    @Test("locates text containing straight quotes exactly")
+    func locateStraightQuotes() {
+        let source = "不是为死的那个人停的。是为\"第五起\"这三个字。"
+        let selected = "是为\"第五起\"这三个字"
         let out = CriticMarkup.apply(.highlight, to: source, selectedText: selected, nearLine: 1)
-        #expect(out == "前文。{==是为\"第五起\"这==}。")
-    }
-
-    @Test("comment applies across a smart-quote mismatch")
-    func commentAcrossSmartQuotes() {
-        let source = "是为\"第五起\"这。"
-        let selected = "是为\u{201C}第五起\u{201D}这"
-        let out = CriticMarkup.apply(.comment("注"), to: source, selectedText: selected, nearLine: 1)
-        #expect(out == "{==是为\"第五起\"这==}{>>注<<}。")
-    }
-
-    @Test("single curly quotes / apostrophes also normalize")
-    func singleQuotes() {
-        let source = "it's a 'test'"
-        let selected = "it\u{2019}s a \u{2018}test\u{2019}"
-        let r = CriticMarkup.locateRange(in: source, selectedText: selected, nearLine: 1)
-        #expect(r.map { String(source[$0]) } == "it's a 'test'")
+        #expect(out == "不是为死的那个人停的。{==是为\"第五起\"这三个字==}。")
     }
 }

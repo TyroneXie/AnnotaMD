@@ -27,7 +27,10 @@ public enum MarkdownHTMLService {
 
     public static func render(_ markdown: String, baseURL: URL? = nil) -> RenderResult {
         let preprocessed = preprocess(markdown)
-        let doc = Markdown.Document(parsing: preprocessed)
+        // 关闭智能排版（.disableSmartOpts）：避免 swift-markdown 把直引号 " 转成弯引号 “”、
+        // -- 转破折号、... 转省略号。否则渲染文本与源码不再逐字一致，CriticMarkup 选词定位会失败。
+        // 保留源码位置信息（不传 .disableSourcePosOpts），data-line / 大纲仍需要它。
+        let doc = Markdown.Document(parsing: preprocessed, options: [.disableSmartOpts])
         var formatter = CustomHTMLFormatter(baseURL: baseURL, inlineImages: false)
         formatter.visit(doc)
         return RenderResult(
@@ -38,7 +41,10 @@ public enum MarkdownHTMLService {
 
     public static func renderWithInlineImages(_ markdown: String, baseURL: URL? = nil) -> RenderResult {
         let preprocessed = preprocess(markdown)
-        let doc = Markdown.Document(parsing: preprocessed)
+        // 关闭智能排版（.disableSmartOpts）：避免 swift-markdown 把直引号 " 转成弯引号 “”、
+        // -- 转破折号、... 转省略号。否则渲染文本与源码不再逐字一致，CriticMarkup 选词定位会失败。
+        // 保留源码位置信息（不传 .disableSourcePosOpts），data-line / 大纲仍需要它。
+        let doc = Markdown.Document(parsing: preprocessed, options: [.disableSmartOpts])
         var formatter = CustomHTMLFormatter(baseURL: baseURL, inlineImages: true)
         formatter.visit(doc)
         return RenderResult(
