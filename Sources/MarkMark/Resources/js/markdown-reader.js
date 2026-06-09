@@ -649,7 +649,12 @@
 
     _hideCriticToolbar() {
       const bar = document.getElementById('mr-critic-toolbar');
-      if (bar) bar.classList.remove('visible');
+      if (bar) {
+        bar.classList.remove('visible');
+        // 关键：清掉输入态标记，否则取消评论/替换后 selectionchange 守卫会一直 return，
+        // 导致再次选词时工具条不再弹出。
+        bar.classList.remove('critic-input-mode');
+      }
       MR._criticPending = null;
       MR._clearPendingHighlight();
     },

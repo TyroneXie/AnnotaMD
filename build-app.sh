@@ -123,6 +123,20 @@ if [ -d "$ASSETS_SRC" ]; then
         --output-format human-readable-text \
         --output-partial-info-plist /tmp/markdownreader_partial.plist \
         "$ASSETS_SRC" 2>/dev/null || echo "⚠️  actool 编译失败，图标可能不显示（不影响功能）"
+
+    # 用 iconutil 生成完整的 AppIcon.icns（actool 偶尔只产出到 256px，这里补全 16~1024）。
+    # appiconset 里的 icon_*.png 命名恰好符合 iconutil 的 .iconset 约定，可直接使用。
+    ICONSET_SRC="${ASSETS_SRC}/AppIcon.appiconset"
+    if [ -d "$ICONSET_SRC" ]; then
+        TMP_PARENT=$(mktemp -d)
+        TMP_ICONSET="${TMP_PARENT}/AppIcon.iconset"
+        mkdir -p "$TMP_ICONSET"
+        cp "$ICONSET_SRC"/icon_*.png "$TMP_ICONSET/" 2>/dev/null
+        if iconutil -c icns "$TMP_ICONSET" -o "$APP_BUNDLE/Contents/Resources/AppIcon.icns" 2>/dev/null; then
+            echo "🎨 AppIcon.icns 已由 iconutil 生成（全尺寸 16~1024）"
+        fi
+        rm -rf "$TMP_PARENT"
+    fi
 fi
 
 # 从模板生成 Info.plist（与 CI 流程共用同一模板）

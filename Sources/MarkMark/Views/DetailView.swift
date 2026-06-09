@@ -216,19 +216,8 @@ struct DetailView: View {
 
             Spacer()
 
-            // 渲染 / 编辑模式切换（纯文本模式下隐藏，因为只有原文视图可用）
-            if documentViewModel.hasDocument && !documentViewModel.isPlainTextMode {
-                Picker("", selection: Binding(
-                    get: { documentViewModel.displayMode },
-                    set: { documentViewModel.switchDisplayMode($0) }
-                )) {
-                    Text(L10n.tr(.displayModeRendered, language: language)).tag(DisplayMode.rendered)
-                    Text(L10n.tr(.displayModeRaw, language: language)).tag(DisplayMode.raw)
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 140)
-                .padding(.trailing, 8)
-            }
+            // MarkMark 无编辑功能，移除渲染/编辑切换。纯文本(.txt)以原文视图展示。
+
             // 操作按钮组与大纲图标下对齐，横向间隔一致
             HStack(alignment: .bottom, spacing: 8) {
                 // 刷新按钮（文件被外部修改时显示，在保存按钮左侧）
@@ -637,41 +626,34 @@ struct DetailView: View {
     @ViewBuilder
     private var documentContentView: some View {
         ZStack {
-            let isPlainText = documentViewModel.isPlainTextMode
-            // 是否显示原文/编辑视图：纯文本恒为真；Markdown 取决于显示模式
-            let showRaw = isPlainText || documentViewModel.displayMode == .raw
-
-            // 原文/编辑视图 — 始终保持存活，保留 NSTextView 的 undo 历史与内容；
-            // 通过 opacity / hitTesting 切换可见性，避免重建导致内容丢失。
-            RawMarkdownView(
-                content: Binding(
-                    get: { documentViewModel.content },
-                    set: { documentViewModel.content = $0 }
-                ),
-                fontSize: settings.sourceFontPointSize,
-                contentPadding: settings.contentPaddingPoints,
-                scrollToLine: documentViewModel.scrollToLineRequest,
-                fileURL: documentViewModel.currentFileURL,
-                isActive: showRaw,
-                isFindBarVisible: appViewModel.isFindBarVisible,
-                searchRef: textViewSearchRef,
-                onCursorLineNumberChanged: { lineNumber in
-                    documentViewModel.cursorLineNumber = lineNumber
-                }
-            )
-            .opacity(showRaw ? 1 : 0)
-            .allowsHitTesting(showRaw)
-            .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
-                if newValue != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        documentViewModel.clearScrollRequest()
+            // MarkMark 是纯阅读 + 标注，无编辑功能。
+            if documentViewModel.isPlainTextMode {
+                // 纯文本（.txt）无法渲染，用原文视图只读展示
+                RawMarkdownView(
+                    content: Binding(
+                        get: { documentViewModel.content },
+                        set: { documentViewModel.content = $0 }
+                    ),
+                    fontSize: settings.sourceFontPointSize,
+                    contentPadding: settings.contentPaddingPoints,
+                    scrollToLine: documentViewModel.scrollToLineRequest,
+                    fileURL: documentViewModel.currentFileURL,
+                    isActive: true,
+                    isFindBarVisible: appViewModel.isFindBarVisible,
+                    searchRef: textViewSearchRef,
+                    onCursorLineNumberChanged: { lineNumber in
+                        documentViewModel.cursorLineNumber = lineNumber
+                    }
+                )
+                .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
+                    if newValue != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            documentViewModel.clearScrollRequest()
+                        }
                     }
                 }
-            }
-
-            // 渲染视图 — Markdown 文件始终保持存活（不随切换重建），
-            // 这样从原文切回渲染时不会重新加载、不会跳到底部。纯文本不渲染。
-            if !isPlainText {
+            } else {
+                // Markdown：仅渲染视图
                 WebViewMarkdownView(
                     content: documentViewModel.content,
                     fileURL: documentViewModel.currentFileURL,
@@ -697,8 +679,6 @@ struct DetailView: View {
                     criticLabels: criticLabels,
                     handle: webViewHandle
                 )
-                .opacity(showRaw ? 0 : 1)
-                .allowsHitTesting(!showRaw)
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                     if newValue != nil {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
