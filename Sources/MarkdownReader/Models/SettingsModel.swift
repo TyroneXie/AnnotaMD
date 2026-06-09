@@ -95,7 +95,7 @@ final class SettingsModel {
         didSet { defaults.set(showNonMarkdownFiles, forKey: Keys.showNonMarkdownFiles) }
     }
 
-    /// 是否已设为 .md 文件默认打开程序
+    /// 是否已设为 Markdown 文件默认打开程序（.md / .markdown / .mdown / .mkd）
     /// 初始化时从系统实时检测；设置变更后同步写入 UserDefaults 作为缓存
     var isDefaultMdOpener: Bool {
         didSet { defaults.set(isDefaultMdOpener, forKey: Keys.isDefaultMdOpener) }
@@ -254,14 +254,19 @@ final class SettingsModel {
 
     // MARK: - 默认打开程序
 
-    /// 检查当前应用是否为 .md 文件的默认打开程序
     static func checkIsDefaultMdOpener() -> Bool {
         let bundleURL = Bundle.main.bundleURL
-        guard let mdType = UTType(filenameExtension: "md") else { return false }
-        if let defaultAppURL = NSWorkspace.shared.urlForApplication(toOpen: mdType) {
-            return defaultAppURL.resolvingSymlinksInPath() == bundleURL.resolvingSymlinksInPath()
+        let extensions = ["md", "markdown", "mdown", "mkd"]
+        for ext in extensions {
+            guard let type = UTType(filenameExtension: ext) else { continue }
+            if let defaultAppURL = NSWorkspace.shared.urlForApplication(toOpen: type),
+               defaultAppURL.resolvingSymlinksInPath() == bundleURL.resolvingSymlinksInPath() {
+                continue
+            }
+            // 任一扩展名未设为默认，则返回 false
+            return false
         }
-        return false
+        return true
     }
 
     /// 将当前应用设为 Markdown 文件的默认打开程序

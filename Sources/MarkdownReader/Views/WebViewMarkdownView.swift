@@ -50,6 +50,7 @@ struct WebViewMarkdownView: View {
     var onVisibleLineChanged: ((Int) -> Void)?
 
     @State private var page = WebPage()
+    @Binding var exportedPage: WebPage?
     @State private var scrollPosition = ScrollPosition(edge: .top)
     @State private var lastLoadedContent: String = ""
     @State private var lastLoadedURL: URL?
@@ -72,6 +73,7 @@ struct WebViewMarkdownView: View {
                 scheduleScrollSync()
             })
             .onAppear {
+                exportedPage = page
                 configureAndLoad()
             }
             .onChange(of: content) { _, _ in
@@ -153,6 +155,7 @@ struct WebViewMarkdownView: View {
             configuration: configuration,
             navigationDecider: navigationDecider
         )
+        exportedPage = page
 
         loadContent()
     }

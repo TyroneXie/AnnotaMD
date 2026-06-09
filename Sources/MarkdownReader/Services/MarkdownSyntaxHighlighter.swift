@@ -438,6 +438,8 @@ struct MarkdownSyntaxHighlighter {
 
         for match in matches {
             if covered.isFullyCovered(match.range) { continue }
+            // 部分覆盖说明匹配跨越了代码块等边界，应跳过整个匹配
+            if covered.isPartiallyCovered(match.range) { continue }
             // 标记符号
             let marker1 = match.range(at: 1)
             if !covered.isFullyCovered(marker1) {
@@ -470,6 +472,8 @@ struct MarkdownSyntaxHighlighter {
 
         for match in matches {
             if covered.isFullyCovered(match.range) { continue }
+            // 部分覆盖说明匹配跨越了代码块等边界，应跳过整个匹配
+            if covered.isPartiallyCovered(match.range) { continue }
             // 标记符号
             let marker1 = match.range(at: 1)
             if !covered.isFullyCovered(marker1) {
@@ -498,11 +502,14 @@ struct MarkdownSyntaxHighlighter {
     ) {
         // 使用单星号/下划线，但不匹配多星号/下划线的情况
         let pattern = "(?<!\\*)(\\*)(?!\\*)(?=\\S)(.+?)(?<=\\S)(\\*)(?!\\*)"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else { return }
+        // 斜体不应跨行匹配（CommonMark 规范：强调标记不跨越段落边界）
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return }
         let matches = regex.matches(in: nsString as String, options: [], range: fullRange)
 
         for match in matches {
             if covered.isFullyCovered(match.range) { continue }
+            // 部分覆盖说明匹配跨越了代码块等边界，应跳过整个匹配
+            if covered.isPartiallyCovered(match.range) { continue }
             // 开头标记
             if !covered.isFullyCovered(match.range(at: 1)) {
                 results.append(HighlightRange(range: match.range(at: 1), color: colors.italic.withAlphaComponent(0.60), isBold: false, isItalic: false))
@@ -521,12 +528,17 @@ struct MarkdownSyntaxHighlighter {
         }
 
         // 下划线斜体 _text_ — 与星号斜体一致，分标记/内容着色
-        let underscorePattern = "(?<!_)_(?!_)(?=\\S)(.+?)(?<=\\S)_(?!_)"
-        guard let regex2 = try? NSRegularExpression(pattern: underscorePattern, options: [.dotMatchesLineSeparators]) else { return }
+        // CommonMark 规则: 开始 _ 左侧不能是字母/数字，结束 _ 右侧不能是字母/数字
+        // 这样 tag_name、APP_PATH 等标识符中的下划线不会被误解析为斜体
+        let underscorePattern = "(?<![a-zA-Z0-9])_(?=\\S)(.+?)(?<=\\S)_(?![a-zA-Z0-9])"
+        // 下划线斜体不应跨行匹配（CommonMark 规范：强调标记不跨越段落边界）
+        guard let regex2 = try? NSRegularExpression(pattern: underscorePattern, options: []) else { return }
         let matches2 = regex2.matches(in: nsString as String, options: [], range: fullRange)
 
         for match in matches2 {
             if covered.isFullyCovered(match.range) { continue }
+            // 部分覆盖说明匹配跨越了代码块等边界，应跳过整个匹配
+            if covered.isPartiallyCovered(match.range) { continue }
             // 开头 _ 标记（1个字符）
             let openUnderscore = NSRange(location: match.range.location, length: 1)
             if !covered.isFullyCovered(openUnderscore) {

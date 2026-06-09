@@ -29,6 +29,10 @@ final class DocumentViewModel {
     /// 显示模式
     var displayMode: DisplayMode = .rendered
 
+    /// 当前文件是否为纯文本模式（非 Markdown 的 .txt 文件）
+    /// 纯文本模式下禁止切换到渲染模式
+    var isPlainTextMode: Bool = false
+
     /// 是否正在加载
     var isLoading: Bool = false
 
@@ -135,10 +139,13 @@ final class DocumentViewModel {
             diskContentSnapshot.removeValue(forKey: oldURL)
         }
 
-        // 检查是否为 Markdown 文件
-        // 对于 .md/.markdown/.mdown/.mkd 直接通过
-        // 对于 .txt 需要先读取内容进行 Markdown 特征检测
+        // 检查文件类型并决定加载方式
+        // .md/.markdown/.mdown/.mkd → 正常 Markdown 加载
+        // .txt → 读取内容检测，是 Markdown 则正常加载，否则以纯文本模式加载
+        // 其他 → 报 unsupportedFileType 错误
         let ext = url.pathExtension.lowercased()
+        var forceRawMode = false
+
         if FileService.markdownExtensions.contains(ext) {
             // 已知 Markdown 扩展名，直接加载
         } else if ext == "txt" {
@@ -146,16 +153,9 @@ final class DocumentViewModel {
             do {
                 let text = try await fileService.readFile(at: url)
                 if !FileService.detectMarkdownContent(text) {
-                    fileError = .unsupportedFileType(url.pathExtension)
-                    content = ""
-                    currentFileURL = url
-                    fileName = url.lastPathComponent
-                    outlineItems = []
-                    isDirty = false
-                    isUntitled = false
-                    return
+                    // 非 Markdown 的 .txt 文件，以纯文本模式加载
+                    forceRawMode = true
                 }
-                // .txt 文件内容确认为 Markdown，继续正常加载流程
             } catch {
                 fileError = .unsupportedFileType(url.pathExtension)
                 content = ""
@@ -179,6 +179,7 @@ final class DocumentViewModel {
 
         isLoading = true
         fileError = nil
+        isPlainTextMode = forceRawMode
 
         do {
             let diskContent = try await fileService.readFile(at: url)
@@ -198,8 +199,13 @@ final class DocumentViewModel {
             // 加载真实文件时重置 isUntitled
             isUntitled = false
             outlineItems = OutlineService.parse(content)
-            // 恢复目标文件的显示模式（有缓存用缓存，否则用默认设置）
-            displayMode = displayModeCache[url] ?? settings.defaultDisplayMode
+            // 恢复目标文件的显示模式
+            // 非 Markdown 的 .txt 文件强制使用纯文本模式
+            if forceRawMode {
+                displayMode = .raw
+            } else {
+                displayMode = displayModeCache[url] ?? settings.defaultDisplayMode
+            }
         } catch let fileError as FileError {
             self.fileError = fileError
             content = ""
@@ -241,6 +247,8 @@ final class DocumentViewModel {
 
     /// 切换显示模式
     func switchDisplayMode(_ mode: DisplayMode) {
+        // 纯文本模式下禁止切换到渲染模式
+        if isPlainTextMode && mode == .rendered { return }
         let previousMode = displayMode
         displayMode = mode
         if let url = currentFileURL {
@@ -408,6 +416,7 @@ final class DocumentViewModel {
         isLoading = false
         isDirty = false
         isUntitled = false
+        isPlainTextMode = false
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []
@@ -432,6 +441,7 @@ final class DocumentViewModel {
         isLoading = false
         isDirty = false
         isUntitled = false
+        isPlainTextMode = false
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []

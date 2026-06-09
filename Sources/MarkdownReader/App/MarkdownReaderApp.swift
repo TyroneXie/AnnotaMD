@@ -248,4 +248,6 @@ extension Notification.Name {
     static let findPrevious = Notification.Name("com.markdownreader.findPrevious")
     static let findAndReplace = Notification.Name("com.markdownreader.findAndReplace")
     static let exportPDF = Notification.Name("com.markdownreader.exportPDF")
+    static let dragHoverChanged = Notification.Name("com.markdownreader.dragHoverChanged")
+    static let unsupportedFileTypeDropped = Notification.Name("com.markdownreader.unsupportedFileTypeDropped")
 }

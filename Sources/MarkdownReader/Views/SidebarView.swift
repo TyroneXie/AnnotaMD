@@ -56,6 +56,7 @@ struct SidebarView: View {
                 Spacer()
             }
             .frame(height: 50)
+            .background(WindowDragArea())
 
             if appViewModel.isSingleFileMode {
                 singleFileView

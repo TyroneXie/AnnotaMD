@@ -57,6 +57,9 @@ struct DetailView: View {
     /// PDF 导出失败提示
     @State private var showExportPDFError = false
 
+    /// 导出用的 WebPage 引用
+    @State private var exportedPage: WebPage?
+
     var body: some View {
         VStack(spacing: 0) {
             titleBar
@@ -65,17 +68,6 @@ struct DetailView: View {
 
             // 内容区域
             contentArea
-                .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-                    guard let provider = providers.first else { return false }
-                    provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
-                        guard let data = data as? Data,
-                              let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                        DispatchQueue.main.async {
-                            handleDroppedURL(url)
-                        }
-                    }
-                    return true
-                }
                 .overlay {
                     if isDropTargeted {
                         RoundedRectangle(cornerRadius: 8)
@@ -84,9 +76,6 @@ struct DetailView: View {
                     }
                 }
         }
-        .background(
-            WebViewDropDisabler()
-        )
         .background(themeColors.surface, in: .rect(
             topLeadingRadius: 10,
             bottomLeadingRadius: 10,
@@ -109,6 +98,19 @@ struct DetailView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
             exportPDF()
+        }
+        // 拖拽视觉反馈：由 AppKit FileDropOverlayView 发送
+        .onReceive(NotificationCenter.default.publisher(for: .dragHoverChanged)) { notification in
+            if let isTargeted = notification.object as? Bool {
+                isDropTargeted = isTargeted
+            }
+        }
+        // 不支持文件类型提示：由 AppKit FileDropOverlayView 发送
+        .onReceive(NotificationCenter.default.publisher(for: .unsupportedFileTypeDropped)) { notification in
+            if let ext = notification.object as? String {
+                unsupportedFileExt = ext
+                showUnsupportedFileAlert = true
+            }
         }
         .alert(L10n.tr(.exportPDFFailed, language: language), isPresented: $showExportPDFError) {
             Button(L10n.tr(.confirm, language: language), role: .cancel) {}
@@ -197,8 +199,8 @@ struct DetailView: View {
 
             Spacer()
 
-            // 渲染 / 编辑模式切换
-            if documentViewModel.hasDocument {
+            // 渲染 / 编辑模式切换（纯文本模式下隐藏，因为只有编辑模式可用）
+            if documentViewModel.hasDocument && !documentViewModel.isPlainTextMode {
                 Picker("", selection: Binding(
                     get: { documentViewModel.displayMode },
                     set: { documentViewModel.switchDisplayMode($0) }
@@ -265,6 +267,7 @@ struct DetailView: View {
             .padding(.trailing, 12)
         }
         .frame(height: 50)
+        .background(WindowDragArea())
         .alert(L10n.tr(.fileModifiedExternallyTitle, language: language), isPresented: $showReloadAlert) {
             Button(L10n.tr(.fileModifiedExternallyReload, language: language), role: .destructive) {
                 Task {
@@ -366,53 +369,36 @@ struct DetailView: View {
     }
 
     private func exportPDF(to url: URL) async {
-        let baseURL = documentViewModel.currentFileURL?.deletingLastPathComponent()
-
-        let contentWidth: CGFloat
-        if settings.maxContentWidthFollowsWindow {
-            contentWidth = max(980, NSApp.keyWindow?.contentRect(forFrameRect: NSApp.keyWindow?.frame ?? .zero).width ?? 980)
-        } else {
-            contentWidth = 980
-        }
-
-        let html = MarkdownHTMLService.buildFullHTML(
-            content: documentViewModel.content,
-            themeCSS: themeColors.cssCustomProperties + themeColors.codeHighlightCSS,
-            contentPadding: settings.contentPaddingPoints,
-            maxContentWidthFollowsWindow: settings.maxContentWidthFollowsWindow,
-            baseURL: baseURL,
-            isDark: settings.resolvedThemeType == .dark
-        )
-
         do {
-            let data = try await PDFExportService.export(
-                html: html,
-                baseURL: baseURL,
-                contentWidth: contentWidth,
-                contentPadding: settings.contentPaddingPoints
-            )
+            let data: Data
+            if let page = exportedPage, documentViewModel.displayMode == .rendered {
+                data = try await PDFExportService.exportFromPage(page)
+            } else {
+                let baseURL = documentViewModel.currentFileURL?.deletingLastPathComponent()
+                let contentWidth: CGFloat
+                if settings.maxContentWidthFollowsWindow {
+                    contentWidth = max(980, NSApp.keyWindow?.contentRect(forFrameRect: NSApp.keyWindow?.frame ?? .zero).width ?? 980)
+                } else {
+                    contentWidth = 980
+                }
+                let html = MarkdownHTMLService.buildFullHTML(
+                    content: documentViewModel.content,
+                    themeCSS: themeColors.cssCustomProperties + themeColors.codeHighlightCSS,
+                    contentPadding: settings.contentPaddingPoints,
+                    maxContentWidthFollowsWindow: settings.maxContentWidthFollowsWindow,
+                    baseURL: baseURL,
+                    isDark: settings.resolvedThemeType == .dark
+                )
+                data = try await PDFExportService.export(
+                    html: html,
+                    baseURL: baseURL,
+                    contentWidth: contentWidth,
+                    contentPadding: settings.contentPaddingPoints
+                )
+            }
             try data.write(to: url)
         } catch {
             showExportPDFError = true
-        }
-    }
-
-    private func handleDroppedURL(_ url: URL) {
-        var isDir: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { return }
-
-        if isDir.boolValue {
-            NotificationCenter.default.post(name: .openDirectory, object: url)
-        } else {
-            // 前置检查文件类型：md/markdown/mdown/mkd/txt 可直接打开，其他类型提示不支持
-            let ext = url.pathExtension.lowercased()
-            let supportedExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
-            if supportedExtensions.contains(ext) || ext.isEmpty {
-                NotificationCenter.default.post(name: .openFile, object: url)
-            } else {
-                unsupportedFileExt = ext
-                showUnsupportedFileAlert = true
-            }
         }
     }
 
@@ -601,7 +587,8 @@ struct DetailView: View {
                     },
                     onVisibleLineChanged: { lineNumber in
                         documentViewModel.renderedVisibleLineNumber = lineNumber
-                    }
+                    },
+                    exportedPage: $exportedPage
                 )
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                     if newValue != nil {
@@ -637,79 +624,5 @@ struct DetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: .findNext)) { _ in performFindNext() }
         .onReceive(NotificationCenter.default.publisher(for: .findPrevious)) { _ in performFindPrevious() }
         .onReceive(NotificationCenter.default.publisher(for: .findAndReplace)) { _ in openFindAndReplace() }
-    }
-}
-
-// MARK: - 拖拽辅助
-
-/// 禁用 WKWebView 的拖拽接收，使父视图的 .onDrop 能正常工作
-///
-/// WKWebView 默认注册为拖拽目标，会拦截所有文件拖拽事件，
-/// 导致 SwiftUI .onDrop 无法触发。此视图在挂载后遍历视图层级，
-/// 找到 WKWebView 并注销其拖拽类型，让拖拽事件传递给父视图的 .onDrop。
-/// 仅影响拖拽接收，不影响 WebView 的其他交互（点击、滚动、链接等）。
-/// 使用定时器持续监控，防止 WKWebView 在页面导航后重新注册拖拽类型。
-struct WebViewDropDisabler: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        context.coordinator.anchor = view
-        DispatchQueue.main.async {
-            context.coordinator.unregisterWebViews()
-            context.coordinator.startMonitoring()
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.anchor = nsView
-        context.coordinator.unregisterWebViews()
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        coordinator.stopMonitoring()
-    }
-
-    class Coordinator: @MainActor ObservableObject {
-        weak var anchor: NSView?
-        private var monitorTimer: Timer?
-
-        @MainActor
-        func unregisterWebViews() {
-            guard let window = anchor?.window else { return }
-            Self.unregisterDraggedTypesRecursively(in: window.contentView)
-        }
-
-        @MainActor
-        func startMonitoring() {
-            stopMonitoring()
-            let weakAnchor = anchor
-            monitorTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                Task { @MainActor in
-                    guard let window = weakAnchor?.window else { return }
-                    Self.unregisterDraggedTypesRecursively(in: window.contentView)
-                }
-            }
-        }
-
-        @MainActor
-        func stopMonitoring() {
-            monitorTimer?.invalidate()
-            monitorTimer = nil
-        }
-
-        @MainActor
-        private static func unregisterDraggedTypesRecursively(in view: NSView?) {
-            guard let view else { return }
-            if view is WKWebView {
-                view.unregisterDraggedTypes()
-            }
-            for subview in view.subviews {
-                unregisterDraggedTypesRecursively(in: subview)
-            }
-        }
     }
 }

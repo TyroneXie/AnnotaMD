@@ -218,6 +218,7 @@ struct SettingsSidebarView: View {
                 Spacer()
             }
             .frame(height: 50)
+            .background(WindowDragArea())
 
             Rectangle().fill(themeColors.border).frame(height: 1)
 
