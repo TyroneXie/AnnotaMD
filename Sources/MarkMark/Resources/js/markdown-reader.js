@@ -927,7 +927,12 @@
         const inBar = bar && bar.contains(e.target);
         const onBubble = e.target.closest && e.target.closest('.critic-comment');
         if (!inPop && !onBubble) MR._hideCommentPopover();
-        if (!inBar && !inPop) { /* 选区工具条由 selectionchange 控制 */ }
+        // 输入态（评论/替换输入框打开）时 selectionchange 守卫不收工具条，
+        // 必须在这里兜底：点击工具条外部 → 关闭并清掉输入态，否则守卫永远
+        // return，之后选词不再弹工具条（需整页重载才能恢复）。
+        if (!inBar && !inPop && bar && bar.classList.contains('critic-input-mode')) {
+          MR._hideCriticToolbar();
+        }
       });
     },
 

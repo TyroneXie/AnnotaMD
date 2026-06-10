@@ -79,8 +79,15 @@ public final class MarkdownURLSchemeHandler: NSObject, WKURLSchemeHandler {
         if let customPaths = resourceSearchPaths {
             searchPaths = customPaths.map { $0.appendingPathComponent(path) }
         } else {
+            // SPM 资源 bundle 的内部布局随构建方式不同：
+            // - swift build 单架构（开发/旧版打包）：扁平 → <bundle>/Resources/css/...
+            // - swift build --arch arm64 --arch x86_64（universal 发布）：Xcode 式 →
+            //   <bundle>/Contents/Resources/Resources/css/...
+            // 两种都要搜，否则 universal 包内 css/js 全部 404（无样式、无选词菜单）。
+            let spmBundle = Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle")
             searchPaths = [
-                Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle").appendingPathComponent("Resources").appendingPathComponent(path),
+                spmBundle?.appendingPathComponent("Resources").appendingPathComponent(path),
+                spmBundle?.appendingPathComponent("Contents/Resources/Resources").appendingPathComponent(path),
                 Bundle.main.resourceURL?.appendingPathComponent("Resources").appendingPathComponent(path),
                 Bundle.main.resourceURL?.appendingPathComponent(path),
             ].compactMap { $0 }

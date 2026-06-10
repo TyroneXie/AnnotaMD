@@ -5,6 +5,13 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.0.7] - 2026-06-10
+
+### 修复
+
+- **Universal 包资源 404（2.0.6 重大回归）**：universal 构建产出的 SPM 资源 bundle 为 Xcode 式布局（`Contents/Resources/Resources/`），而 `mr://` scheme handler、PDF 导出与 Quick Look 扩展仍按单架构扁平布局查找，导致安装版 css/js 全部 404——主题样式全部丢失、选词标注菜单不出现。三处资源查找现已兼容两种布局
+- **选词工具条输入态死锁**：评论/替换输入框打开后若直接点击文档其他位置，输入态标记会永久拦截 selectionchange，之后选中任何文字都不再弹出工具条（需重开文件才能恢复）。现点击工具条外部即关闭输入框并复位
+
 ## [2.0.6] - 2026-06-10
 
 ### 修复

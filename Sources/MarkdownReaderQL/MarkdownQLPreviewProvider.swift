@@ -137,20 +137,23 @@ final class MarkdownQLPreviewProvider: NSViewController, QLPreviewingController 
     }
 
     private nonisolated static func resolveResourceSearchPaths() -> [URL] {
+        // SPM 资源 bundle 布局：单架构构建为扁平（<bundle>/Resources/css/...），
+        // universal 构建为 Xcode 式（<bundle>/Contents/Resources/Resources/css/...），两种都要搜。
+        let mainAppResources = Bundle.main.bundleURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Resources")
         let searchPaths: [URL] = [
             Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle").appendingPathComponent("Resources"),
-            Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle").appendingPathComponent("Contents").appendingPathComponent("Resources"),
+            Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle").appendingPathComponent("Contents/Resources/Resources"),
             Bundle.main.resourceURL,
-            Bundle.main.bundleURL
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .appendingPathComponent("Resources"),
-            Bundle.main.bundleURL
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .appendingPathComponent("Resources")
+            mainAppResources,
+            mainAppResources
                 .appendingPathComponent("MarkMark_MarkMark.bundle")
                 .appendingPathComponent("Resources"),
+            mainAppResources
+                .appendingPathComponent("MarkMark_MarkMark.bundle")
+                .appendingPathComponent("Contents/Resources/Resources"),
         ].compactMap { $0 }
 
         for path in searchPaths {
