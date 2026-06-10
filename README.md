@@ -79,16 +79,17 @@ swift build
 # 运行测试（CriticMarkup 核心逻辑）
 swift test
 
-# 构建 .app 包（含 ad-hoc 签名）— Apple Silicon
+# 构建 .app 包（含签名）— Universal (arm64 + x86_64)
 ./build-app.sh --release --sign
 
-# 打包 DMG
-./package.sh
+# 打包 DMG（加 -d 走分发模式：hardened 签名 + 公证 + staple）
+./package.sh        # 本地分享
+./package.sh -d     # 公证版（需先 notarytool store-credentials）
 ```
 
 ### 系统要求
 
-macOS 15.0 或更高版本（Apple Silicon）。
+macOS 15.0 或更高版本。Universal 二进制，**Intel 与 Apple Silicon 均可运行**。
 
 ---
 
