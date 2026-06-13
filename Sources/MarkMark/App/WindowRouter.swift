@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Combine
 
 /// 多窗口路由：让非 SwiftUI 层（AppDelegate）也能请求「为某个文件/目录打开一个窗口」。
@@ -16,6 +17,34 @@ final class WindowRouter {
 
     func openWindow(for url: URL) {
         open?(url)
+    }
+
+    /// 是否存在「可用窗口」：可见、能成为 key、非面板/非 sheet 的内容窗口。
+    /// 用于判断打开请求该投递到当前窗口，还是需要新建窗口。
+    func hasUsableWindow() -> Bool {
+        NSApp.windows.contains {
+            $0.isVisible && $0.canBecomeKey && !($0 is NSPanel) && !$0.isSheet
+        }
+    }
+
+    /// 打开「最近文件/目录」等应用内请求。
+    ///
+    /// - 有可用窗口（点菜单时应用必为前台、窗口即 key）→ 发通知，由当前窗口的
+    ///   `.onActiveReceive(.openFile/.openDirectory)` 在当前窗口内打开，保持原有「替换当前窗口内容」体验。
+    /// - 零窗口 / 无可用窗口 → 走 `openWindow(value:)` 新建窗口承载，由 `ContentView.task`
+    ///   的 `openedURL` 分支直接加载。修复「关掉所有窗口后，从顶部菜单或快捷方式打开文件
+    ///   只显示首页、窗口不激活」的问题（此时 `.onActiveReceive` 没有任何窗口可接收，通知被丢弃）。
+    func openRecent(_ url: URL, isDirectory: Bool) {
+        if hasUsableWindow() {
+            NotificationCenter.default.post(
+                name: isDirectory ? .openDirectory : .openFile,
+                object: url
+            )
+        } else {
+            // openWindow(value:) 对文件/目录均适用：ContentView.task 会按 isDirectory 正确处理。
+            open?(url)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 }
 

@@ -40,7 +40,7 @@ struct MarkdownReaderApp: App {
                 // 文件列表
                 ForEach(files) { item in
                     Button {
-                        NotificationCenter.default.post(name: .openFile, object: item.url)
+                        WindowRouter.shared.openRecent(item.url, isDirectory: false)
                     } label: {
                         HStack {
                             Image(systemName: "doc.text")
@@ -57,7 +57,7 @@ struct MarkdownReaderApp: App {
                 // 目录列表
                 ForEach(folders) { item in
                     Button {
-                        NotificationCenter.default.post(name: .openDirectory, object: item.url)
+                        WindowRouter.shared.openRecent(item.url, isDirectory: true)
                     } label: {
                         HStack {
                             Image(systemName: "folder")
