@@ -85,12 +85,22 @@ swift build -c release
 # 构建 .app 包（含签名）— Universal (arm64 + x86_64)
 ./build-app.sh --release --sign
 
-# 打包 DMG — Universal (arm64 + x86_64)
+# 打包 DMG（本地分享，ad-hoc 签名）— Universal (arm64 + x86_64)
 ./package.sh
 
-# 本地发布到 GitHub
+# 打包 DMG（正式分发，Developer ID 签名 + 公证 + staple）★ 正式发布用这个
+./package.sh -d
+
+# 本地发布到 GitHub（构建 + 公证 + 上传）
 ./release-local.sh
 ```
+
+> **正式发布必须用 `./package.sh -d`**（Developer ID 签名 + 公证）。
+> 公证用 notarytool 钥匙串 profile `markmark`（`NOTARY_PROFILE` 可覆盖），签名身份
+> `Developer ID Application: lijie chen (HUJ6HAE4VU)`，均存在本机钥匙串、**不在仓库**。
+> 公证需联网。验证：`xcrun stapler validate MarkMark.dmg` +
+> `spctl -a -vv MarkMark.app`（应为 `accepted / Notarized Developer ID`）。
+> 不带 `-d` 时为 ad-hoc 签名，仅供本地试用，**不要用于发布**。
 
 ## 依赖
 
@@ -137,8 +147,14 @@ swift build -c release
 
 GitHub Actions (`.github/workflows/release.yml`)：
 - 触发：版本 tag (`v*`) 或手动 dispatch
-- 流程：构建 → 组装 .app → ad-hoc 签名 → 创建 DMG → 发布 GitHub Release
-- 发布前需确认 CHANGELOG.md 包含对应版本号
+- **默认（推荐）流程**：push tag → CI 仅校验 CHANGELOG 并创建 **draft** release 占位（**不构建**）→
+  本地 `./package.sh -d` 出公证包（universal）→ `gh release upload <tag> MarkMark.dmg MarkMark.zip --clobber`
+  → `gh release edit <tag> --draft=false` 发布。`release-local.sh` 把后面几步自动化。
+- 资产名固定为 `MarkMark.dmg` / `MarkMark.zip`（不带版本号）。
+- 发布前需确认 CHANGELOG.md 包含对应版本号。
+- ⚠️ **`ci-build` job（`workflow_dispatch` 勾 `use_ci_build`）是不推荐的后备**：它是
+  `swift build --arch arm64`（**仅 arm64** + ad-hoc 签名），正是早期「Intel Mac 打不开」的根因，
+  且有编辑模式文字不可见的已知 bug。正式发布**勿用**，务必走上面的本地公证包路径。
 
 ## 已知注意事项
 
