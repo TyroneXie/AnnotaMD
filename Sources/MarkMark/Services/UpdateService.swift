@@ -192,9 +192,12 @@ final class UpdateService: Sendable {
     }
 
     /// 解析版本号为整数数组（"1.0.3" → [1, 0, 3]）
+    /// 忽略预发布/构建后缀，只比较数字主版本（"2.0.12-beta.1" → [2, 0, 12]），
+    /// 否则 "12-beta" 段会被 Int() 解析失败而丢弃，导致 beta 版被误判为旧版。
     private func parseVersion(_ version: String) -> [Int] {
         let clean = stripVersionPrefix(version)
-        return clean.split(separator: ".").compactMap { Int($0) }
+        let core = clean.split(separator: "-", maxSplits: 1).first.map(String.init) ?? clean
+        return core.split(separator: ".").compactMap { Int($0) }
     }
 }
 

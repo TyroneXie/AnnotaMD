@@ -12,8 +12,12 @@ APP_NAME="MarkMark"
 # 面向用户的 .app 包名（显示名 MarkMark；可执行文件仍为 ${APP_NAME}）
 APP_BUNDLE_NAME="MarkMark"
 
-# 动态读取版本号（优先级：git tag > CHANGELOG.md > 兜底）
-if VERSION=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//'); then
+# 动态读取版本号（优先级：VERSION_OVERRIDE 环境变量 > git tag > CHANGELOG.md > 兜底）
+# VERSION_OVERRIDE 用于本地/测试构建（如 beta 版），避免为此创建 git tag。
+if [[ -n "${VERSION_OVERRIDE:-}" ]]; then
+    VERSION="$VERSION_OVERRIDE"
+    echo "📌 版本号来自 VERSION_OVERRIDE: $VERSION"
+elif VERSION=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//'); then
     echo "📌 版本号来自 git tag: $VERSION"
 elif VERSION=$(grep -m1 -o '\[[0-9][0-9.]*\]' CHANGELOG.md 2>/dev/null | tr -d '[]'); then
     echo "📌 版本号来自 CHANGELOG.md: $VERSION"
@@ -123,7 +127,7 @@ if [ -d "$ASSETS_SRC" ]; then
     actool \
         --compile "$APP_BUNDLE/Contents/Resources" \
         --platform macosx \
-        --minimum-deployment-target 15 \
+        --minimum-deployment-target 14 \
         --app-icon AppIcon \
         --output-format human-readable-text \
         --output-partial-info-plist /tmp/markdownreader_partial.plist \
@@ -219,6 +223,7 @@ if [ "${#QL_MODULE_OBJS[@]}" -ge 2 ]; then
     echo "🔧 链接 Quick Look Extension (universal, entry: NSExtensionMain)..."
     SWIFT_LIB_DIR="$(xcrun -f swiftc 2>/dev/null | xargs dirname)/../lib/swift/macosx"
     "$CLANG" -arch arm64 -arch x86_64 \
+        -mmacosx-version-min=14.0 \
         -e _NSExtensionMain \
         -u _NSExtensionMain \
         -isysroot "$SDK" \
