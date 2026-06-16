@@ -5,6 +5,17 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.0.12] - 2026-06-16
+
+### 新增
+
+- **支持 macOS 14 与 Intel 芯片**：最低部署版本由 macOS 15 下调至 macOS 14；构建产物为 universal binary（arm64 + x86_64，主程序与 Quick Look 扩展均覆盖），Intel Mac 可原生运行。Quick Look 扩展链接时显式指定 `-mmacosx-version-min=14.0`，确保最低系统版本一致
+
+### 修复
+
+- **左侧文件栏点击区域小于选中高亮**：选中态高亮原先用 `.listRowBackground` 铺满整行单元格（含 List 默认行内边距、且不随层级缩进），而可点击区域只覆盖按钮内容，导致点在高亮边缘却选不中。现将高亮改为行内容的 `.background` 绘制并配合 `.contentShape`，使高亮 ⊆ 可点击区域，消除「看着选中却点不中」的死区
+- **预发布版本号被误判为旧版**：`parseVersion` 解析 `2.0.12-beta.1` 时，`12-beta` 段会被 `Int()` 解析失败而丢弃，导致 beta 版被误判为旧版本。现先按 `-` 截断，仅比较数字主版本
+
 ## [2.0.11] - 2026-06-13
 
 ### 修复

@@ -10,8 +10,9 @@ MarkMark 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/Mar
 > 仍保留 `MarkdownReader` 字样的是：共享库 target `MarkdownReaderKit`、Quick Look 扩展 target/二进制 `MarkdownReaderQL`、以及个别内部 Swift 文件/类型名（如 `MarkdownReaderApp.swift`）——它们是内部模块名，不面向用户，改名会牵动大量 import，故保留。
 > UserDefaults 键与 `Notification.Name` 仍用 `com.markdownreader.*` 前缀（仅作唯一键，改动会清空用户设置）。
 
-- **当前版本**: 2.0.10
-- **最低部署**: macOS 15.0（自 fork 起从 macOS 26 下调；渲染层由 SwiftUI WebView/WebPage 迁移回 WKWebView）
+- **当前版本**: 2.0.12
+- **最低部署**: macOS 14.0（自 fork 起从 macOS 26 → 15 → 14 逐步下调；渲染层由 SwiftUI WebView/WebPage 迁移回 WKWebView）
+- **架构**: Universal binary（arm64 + x86_64），Intel 与 Apple Silicon 均原生运行
 - **Bundle ID**: `com.markdownreader.app`
 - **许可证**: MIT
 
@@ -81,10 +82,10 @@ swift build
 # 构建（发布）
 swift build -c release
 
-# 构建 .app 包（含签名）— arm64 only
+# 构建 .app 包（含签名）— Universal (arm64 + x86_64)
 ./build-app.sh --release --sign
 
-# 打包 DMG — arm64 only
+# 打包 DMG — Universal (arm64 + x86_64)
 ./package.sh
 
 # 本地发布到 GitHub

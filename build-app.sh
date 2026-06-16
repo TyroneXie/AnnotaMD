@@ -1,5 +1,5 @@
 #!/bin/bash
-# 构建 MarkMark.app (Apple Silicon / arm64 only)
+# 构建 MarkMark.app (Universal: arm64 + x86_64)
 # 用法: ./build-app.sh [-r|--release] [-s|--sign [IDENTITY]] [-d|--distribution]
 #   --sign       签名 .app（非分发模式自动使用 ad-hoc 签名，可分享给他人）
 #   --sign ID    分发模式下使用指定签名身份（如 "Developer ID Application: xxx"）

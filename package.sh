@@ -1,5 +1,5 @@
 #!/bin/bash
-# 一键构建 + 打包 MarkMark.dmg (Apple Silicon / arm64 only)
+# 一键构建 + 打包 MarkMark.dmg (Universal: arm64 + x86_64)
 # 用法: ./package.sh [-d|--distribution]
 #   --distribution  启用分发模式签名（需 Developer ID 证书 + 公证）
 set -euo pipefail

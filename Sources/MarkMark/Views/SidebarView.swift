@@ -98,14 +98,22 @@ struct SidebarView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(themeColors.accent)
                         }
+                        Spacer()
                     }
                     .padding(.vertical, 4)
+                    .background {
+                        // 高亮作为内容背景，确保高亮 ⊆ 可点击区域（见 FileNodeRow.selectionHighlight）
+                        if fileTreeViewModel.selectedFileURL == url {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(themeColors.accentSoft)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .listRowBackground(
-                    fileTreeViewModel.selectedFileURL == url ? themeColors.accentSoft : Color.clear
-                )
+                .listRowBackground(Color.clear)
             }
         }
         .listStyle(.sidebar)
@@ -217,18 +225,20 @@ struct FileNodeRow: View {
         fileTreeViewModel.selectedFileURL == node.path
     }
 
-    /// 自定义选中背景（模仿系统选中样式：左侧留空、圆角、accentSoft）
+    /// 选中高亮（模仿系统选中样式：圆角、accentSoft、轻微内缩）
+    ///
+    /// 作为行内容（FileRowView）的 `.background` 绘制，而非 `.listRowBackground`。
+    /// `.listRowBackground` 会铺满整行单元格（含 List 默认行内边距、且不随层级缩进），
+    /// 但可点击区域只覆盖按钮 label（即内容本身），导致高亮比可点击区域大——
+    /// 点在高亮边缘却点不中。改为内容背景后，高亮 ⊆ 内容（=可点击区域），
+    /// 不再有「看着选中却点不中」的死区，同时保留 List 的层级缩进。
     @ViewBuilder
-    private var selectionBackground: some View {
+    private var selectionHighlight: some View {
         if isSelected {
-            // 先加圆角，再整体加 padding，确保圆角可见
-            themeColors.accentSoft
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .padding(.leading, 28)
-                .padding(.trailing, 6)
-                .padding(.vertical, 2)
-        } else {
-            Color.clear
+            RoundedRectangle(cornerRadius: 6)
+                .fill(themeColors.accentSoft)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
         }
     }
 
@@ -245,6 +255,7 @@ struct FileNodeRow: View {
                 }
             } label: {
                 FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
+                    .background(selectionHighlight)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         // 点击目录标签区域切换展开/折叠
@@ -252,17 +263,18 @@ struct FileNodeRow: View {
                     }
                     .contextMenu { directoryContextMenu }
             }
-            .listRowBackground(selectionBackground)
+            .listRowBackground(Color.clear)
         } else {
             // 文件行使用 Button 确保可靠选中
             Button {
                 fileTreeViewModel.selectFile(node)
             } label: {
                 FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
+                    .background(selectionHighlight)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .listRowBackground(selectionBackground)
+            .listRowBackground(Color.clear)
             .contextMenu { fileContextMenu }
         }
     }

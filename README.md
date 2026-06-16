@@ -4,7 +4,7 @@
 >
 > 一个安静的 macOS Markdown 阅读器 —— 现在还能边读边批注，一键把意见交给 AI。
 
-![macOS 15+](https://img.shields.io/badge/macOS-15+-blue)
+![macOS 14+](https://img.shields.io/badge/macOS-14+-blue)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
 **English** · [简体中文](#简体中文)
@@ -92,7 +92,7 @@ swift test
 
 ### Requirements
 
-macOS 15.0 or later. Universal binary — **runs on both Intel and Apple Silicon**.
+macOS 14.0 or later. Universal binary — **runs on both Intel and Apple Silicon**.
 
 ---
 
@@ -102,7 +102,7 @@ MarkMark is forked from and pays tribute to [**davidhoo/MarkdownReader**](https:
 
 On top of it, MarkMark mainly did three things:
 
-1. **Lowered the minimum requirement from macOS 26 to macOS 15** — migrated the rendering layer from the macOS-26-only SwiftUI `WebView`/`WebPage` back to the classic `WKWebView`.
+1. **Lowered the minimum requirement from macOS 26 to macOS 14** — migrated the rendering layer from the macOS-26-only SwiftUI `WebView`/`WebPage` back to the classic `WKWebView`, and ships a universal binary (arm64 + x86_64) so it runs natively on Intel Macs too.
 2. **Added CriticMarkup review and the "Copy for AI" workflow** — turning the reader into a lightweight AI content-review tool.
 3. **Removed editing, trimming to pure "read + annotate"** — a more focused positioning: not an editor, just a quiet reader and reviewer.
 
@@ -201,7 +201,7 @@ swift test
 
 ### 系统要求
 
-macOS 15.0 或更高版本。Universal 二进制，**Intel 与 Apple Silicon 均可运行**。
+macOS 14.0 或更高版本。Universal 二进制，**Intel 与 Apple Silicon 均可运行**。
 
 ---
 
@@ -211,7 +211,7 @@ MarkMark fork 自并致敬 [**davidhoo/MarkdownReader**](https://github.com/davi
 
 在它的基础上，MarkMark 主要做了三件事：
 
-1. **把最低系统要求从 macOS 26 下调到 macOS 15** —— 将渲染层从仅 macOS 26 可用的 SwiftUI `WebView`/`WebPage` 迁移回经典 `WKWebView`。
+1. **把最低系统要求从 macOS 26 下调到 macOS 14** —— 将渲染层从仅 macOS 26 可用的 SwiftUI `WebView`/`WebPage` 迁移回经典 `WKWebView`，并发布 universal 二进制（arm64 + x86_64），Intel Mac 也可原生运行。
 2. **加入 CriticMarkup 审阅与「复制给 AI」工作流** —— 让阅读器变成一个轻量的 AI 内容评审工具。
 3. **移除编辑功能，精简为纯「阅读 + 批注」** —— 定位更聚焦：不做编辑器，只做安静的阅读与审阅。
 
