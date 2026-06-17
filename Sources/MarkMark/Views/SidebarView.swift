@@ -225,20 +225,18 @@ struct FileNodeRow: View {
         fileTreeViewModel.selectedFileURL == node.path
     }
 
-    /// 选中高亮（模仿系统选中样式：圆角、accentSoft、轻微内缩）
+    /// 选中高亮（模仿系统选中样式：圆角、accentSoft）
     ///
     /// 作为行内容（FileRowView）的 `.background` 绘制，而非 `.listRowBackground`。
     /// `.listRowBackground` 会铺满整行单元格（含 List 默认行内边距、且不随层级缩进），
     /// 但可点击区域只覆盖按钮 label（即内容本身），导致高亮比可点击区域大——
-    /// 点在高亮边缘却点不中。改为内容背景后，高亮 ⊆ 内容（=可点击区域），
-    /// 不再有「看着选中却点不中」的死区，同时保留 List 的层级缩进。
+    /// 点在高亮边缘却点不中。改为内容背景后，高亮跟随内容（=可点击区域），
+    /// FileRowView 自身负责撑满可点击宽度和提供内边距，避免选中背景小于热区。
     @ViewBuilder
     private var selectionHighlight: some View {
         if isSelected {
             RoundedRectangle(cornerRadius: 6)
                 .fill(themeColors.accentSoft)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
         }
     }
 
@@ -263,6 +261,7 @@ struct FileNodeRow: View {
                     }
                     .contextMenu { directoryContextMenu }
             }
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
         } else {
             // 文件行使用 Button 确保可靠选中
@@ -274,6 +273,7 @@ struct FileNodeRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
             .contextMenu { fileContextMenu }
         }
