@@ -165,6 +165,9 @@ public enum L10n {
         case discardAnnotationsMenu
         case discardAnnotationsConfirmTitle
         case discardAnnotationsConfirmMessage
+        // 编辑菜单：撤销 / 重做
+        case editUndo
+        case editRedo
         // 标注列表面板
         case titleBarAnnotationPanel
         case annotationGroupNew
@@ -375,6 +378,8 @@ public enum L10n {
         .discardAnnotationsMenu: "Discard All Annotations…",
         .discardAnnotationsConfirmTitle: "Discard all annotations?",
         .discardAnnotationsConfirmMessage: "This removes every CriticMarkup mark and restores the original text. This cannot be undone.",
+        .editUndo: "Undo",
+        .editRedo: "Redo",
         .titleBarAnnotationPanel: "Annotations",
         .annotationGroupNew: "New this session",
         .annotationGroupHistory: "Existing",
@@ -578,6 +583,8 @@ public enum L10n {
         .discardAnnotationsMenu: "放弃所有标注…",
         .discardAnnotationsConfirmTitle: "放弃所有标注？",
         .discardAnnotationsConfirmMessage: "将移除所有 CriticMarkup 标注并恢复原文，此操作无法撤销。",
+        .editUndo: "撤销",
+        .editRedo: "重做",
         .titleBarAnnotationPanel: "标注列表",
         .annotationGroupNew: "本次新增",
         .annotationGroupHistory: "历史标注",
@@ -781,6 +788,8 @@ public enum L10n {
         .discardAnnotationsMenu: "放棄所有標註…",
         .discardAnnotationsConfirmTitle: "放棄所有標註？",
         .discardAnnotationsConfirmMessage: "將移除所有 CriticMarkup 標註並恢復原文，此操作無法復原。",
+        .editUndo: "復原",
+        .editRedo: "重做",
         .titleBarAnnotationPanel: "標註清單",
         .annotationGroupNew: "本次新增",
         .annotationGroupHistory: "歷史標註",

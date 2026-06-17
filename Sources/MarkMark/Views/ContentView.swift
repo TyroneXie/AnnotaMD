@@ -65,6 +65,19 @@ struct ContentView: View {
                 fileTreeViewModel.documentViewModel = documentViewModel
                 applyAppearance(settings.appearanceMode)
 
+                // 首次启动修正（issue #5）：SettingsModel.init 读取 NSApp.effectiveAppearance 过早，
+                // 在系统为深色时会把 systemIsDark 误判为 false，导致 resolvedTheme 退回浅色主题
+                // （白底），而窗口实际外观仍是系统深色 → 默认文字为白色 → 白底白字不可见。
+                // 这里用权威的 SwiftUI colorScheme 重新播种，并刷新缓存的主题色。
+                // （.onChange(of:colorScheme) 不会对初始值触发，故必须在此显式处理。）
+                if settings.appearanceMode == .system {
+                    let isDark = (colorScheme == .dark)
+                    if settings.systemIsDark != isDark {
+                        settings.systemIsDark = isDark
+                    }
+                }
+                themeColors = ThemeColors.from(settings.resolvedTheme)
+
                 // 注册多窗口路由：把 SwiftUI 的 openWindow(value:) 暴露给 AppDelegate。
                 // 任意窗口注册即可（openWindow 是 App 级动作），多窗口互相覆盖等价。
                 WindowRouter.shared.open = { url in openWindow(value: url) }
@@ -123,6 +136,12 @@ struct ContentView: View {
             }
             .onActiveReceive(NotificationCenter.default.publisher(for: .restoreLastLocation)) { _ in
                 restoreLastLocation()
+            }
+            .onActiveReceive(NotificationCenter.default.publisher(for: .performUndo)) { _ in
+                documentViewModel.performUndo()
+            }
+            .onActiveReceive(NotificationCenter.default.publisher(for: .performRedo)) { _ in
+                documentViewModel.performRedo()
             }
             .onChange(of: colorScheme) { _, newScheme in
                 // 仅在「跟随系统」模式下更新 systemIsDark

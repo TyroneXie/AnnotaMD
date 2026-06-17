@@ -104,6 +104,21 @@ struct MarkdownReaderApp: App {
         .defaultSize(width: 900, height: 600)
         .windowResizability(.automatic)
         .commands {
+            // 编辑菜单：自定义撤销/重做，直接作用于当前文件的 per-file UndoManager（issue #8）。
+            // 渲染模式下第一响应者是只读 WKWebView，不处理 `undo:`，默认菜单项会失效并发出系统提示音；
+            // 这里改为发通知给当前活跃窗口的 DocumentViewModel 主动执行撤销/重做。
+            CommandGroup(replacing: .undoRedo) {
+                Button(L10n.tr(.editUndo, language: language)) {
+                    NotificationCenter.default.post(name: .performUndo, object: nil)
+                }
+                .keyboardShortcut("z", modifiers: .command)
+
+                Button(L10n.tr(.editRedo, language: language)) {
+                    NotificationCenter.default.post(name: .performRedo, object: nil)
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+            }
+
             // 设置菜单：Cmd+, → 切换窗口内设置状态
             CommandGroup(replacing: .appSettings) {
                 Button(L10n.tr(.settingsMenuLabel, language: language)) {
@@ -218,6 +233,8 @@ extension Notification.Name {
     static let copyForAI = Notification.Name("com.markdownreader.copyForAI")
     static let applyAllAnnotations = Notification.Name("com.markdownreader.applyAllAnnotations")
     static let discardAllAnnotations = Notification.Name("com.markdownreader.discardAllAnnotations")
+    static let performUndo = Notification.Name("com.markdownreader.performUndo")
+    static let performRedo = Notification.Name("com.markdownreader.performRedo")
     static let dragHoverChanged = Notification.Name("com.markdownreader.dragHoverChanged")
     static let unsupportedFileTypeDropped = Notification.Name("com.markdownreader.unsupportedFileTypeDropped")
 }

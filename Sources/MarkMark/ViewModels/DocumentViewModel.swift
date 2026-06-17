@@ -110,6 +110,21 @@ final class DocumentViewModel {
     /// 确保 per-file UndoManager 的 undo 动作与内容一致
     private var contentCache: [URL: String] = [:]
 
+    /// CriticMarkup 标注专用的 per-file UndoManager（渲染模式，issue #8）。
+    /// 独立于被 swizzle 的 NSWindow.undoManager —— 后者会被 WKWebView 弹窗输入框的
+    /// 打字 undo 污染（comment/replace 要打字），导致撤销时出现「死按」。
+    /// 用自己持有的管理器后，WKWebView 输入框打字完全碰不到它。
+    /// groupsByEvent=false + 手动 begin/end 分组，保证每个 group 都非空。
+    private var criticUndoManagers: [URL: UndoManager] = [:]
+    private func criticUndoManager(for url: URL) -> UndoManager {
+        if let existing = criticUndoManagers[url] { return existing }
+        let manager = UndoManager()
+        manager.groupsByEvent = false
+        manager.levelsOfUndo = 100
+        criticUndoManagers[url] = manager
+        return manager
+    }
+
     /// Per-file 显示模式缓存：每个文件记住自己的显示模式
     /// 切换文件时保存当前模式，切换回来时恢复，避免模式全局串扰
     private var displayModeCache: [URL: DisplayMode] = [:]
@@ -297,6 +312,7 @@ final class DocumentViewModel {
             if let updated = CriticMarkup.editComment(
                 in: content, oldComment: action.text, newComment: action.payload ?? "", nearLine: action.line
             ) {
+                registerCriticUndo()
                 content = updated
                 updateSessionRecord(oldComment: action.text, newComment: action.payload ?? "")
                 return true
@@ -306,6 +322,7 @@ final class DocumentViewModel {
             if let updated = CriticMarkup.deleteComment(
                 in: content, comment: action.text, nearLine: action.line
             ) {
+                registerCriticUndo()
                 content = updated
                 removeSessionRecord(comment: action.text)
                 return true
@@ -331,11 +348,72 @@ final class DocumentViewModel {
             selectedText: action.text,
             nearLine: action.line
         ) {
+            registerCriticUndo()
             content = updated
             appendSessionRecord(kind: recordKind, action: action)
             return true
         }
         return false
+    }
+
+    // MARK: - CriticMarkup 撤销支持（渲染模式，issue #8）
+
+    /// 撤销当前文件的上一步标注操作（由 Edit→撤销 / Cmd+Z 触发）。
+    func performUndo() {
+        guard let url = currentFileURL else { return }
+        // .txt 纯文本由 NSTextView 编辑器自身的 per-file UndoManager 处理（provider）；
+        // markdown 渲染模式用 CriticMarkup 专用管理器。
+        if isPlainTextMode {
+            UndoManagerProvider.shared.undoManager(for: url)?.undo()
+            return
+        }
+        let undoManager = criticUndoManager(for: url)
+        guard undoManager.canUndo else { return }
+        undoManager.undo()
+    }
+
+    /// 重做当前文件的标注操作（由 Edit→重做 / Cmd+Shift+Z 触发）。
+    func performRedo() {
+        guard let url = currentFileURL else { return }
+        if isPlainTextMode {
+            UndoManagerProvider.shared.undoManager(for: url)?.redo()
+            return
+        }
+        let undoManager = criticUndoManager(for: url)
+        guard undoManager.canRedo else { return }
+        undoManager.redo()
+    }
+
+    /// 标注写入前调用：把当前 content + 会话标注记录快照注册到 CriticMarkup 专用 UndoManager。
+    /// 渲染模式没有 NSTextView，每次标注就是整串替换 content，撤销即恢复上一份快照。
+    private func registerCriticUndo() {
+        guard let url = currentFileURL else { return }
+        let prevContent = content
+        let prevRecords = sessionAnnotations[url]
+        let undoManager = criticUndoManager(for: url)
+        undoManager.beginUndoGrouping()
+        undoManager.registerUndo(withTarget: self) { vm in
+            vm.restoreCriticState(url: url, content: prevContent, records: prevRecords)
+        }
+        undoManager.endUndoGrouping()
+    }
+
+    /// 撤销/重做时恢复某份快照，并把「当前状态」注册为反向操作（UndoManager 在 undo 过程中
+    /// 会自动把这次注册归入重做栈），从而支持 Cmd+Z / Cmd+Shift+Z 来回切换。
+    private func restoreCriticState(url: URL, content newContent: String, records newRecords: [SessionAnnotationRecord]?) {
+        let undoManager = criticUndoManager(for: url)
+        let curContent = content
+        let curRecords = sessionAnnotations[url]
+        // 在 undo()/redo() 执行期间注册反向操作：管理器已开着对应方向的 group，直接注册即可。
+        undoManager.registerUndo(withTarget: self) { vm in
+            vm.restoreCriticState(url: url, content: curContent, records: curRecords)
+        }
+        if let newRecords {
+            sessionAnnotations[url] = newRecords
+        } else {
+            sessionAnnotations.removeValue(forKey: url)
+        }
+        content = newContent
     }
 
     /// 记录本次会话新增的标注。字段需与 `CriticMarkup.parseAnnotations` 的解析结果对齐，

@@ -106,7 +106,7 @@ public enum CriticMarkup {
         case .highlight:
             return "{==\(selected)==}"
         case .comment(let c):
-            return "{==\(selected)==}{>>\(c)<<}"
+            return "{==\(selected)==}{>>\(collapseBlankLines(c))<<}"
         case .replace(let new):
             return "{~~\(selected)~>\(new)~~}"
         case .insert(let new):
@@ -121,8 +121,20 @@ public enum CriticMarkup {
         let marker = "{>>\(oldComment)<<}"
         guard let range = locateRange(in: source, selectedText: marker, nearLine: nearLine) else { return nil }
         var result = source
-        result.replaceSubrange(range, with: "{>>\(newComment)<<}")
+        result.replaceSubrange(range, with: "{>>\(collapseBlankLines(newComment))<<}")
         return result
+    }
+
+    /// 折叠评论中的连续空行：连续 2+ 换行 → 单个换行，并去掉首尾空白（issue #6）。
+    /// 连续空行会让 cmark 把行内的 `{>>...<<}` 拆到不同段落，破坏标注配对与渲染。
+    /// 这是对 JS 端清洗的 Swift 兜底，确保任何调用路径都不会写入破坏性的评论。
+    static func collapseBlankLines(_ s: String) -> String {
+        let collapsed = s.replacingOccurrences(
+            of: "[ \\t]*\\r?\\n(?:[ \\t]*\\r?\\n)+",
+            with: "\n",
+            options: .regularExpression
+        )
+        return collapsed.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// 删除已有评论：定位 `{>>comment<<}` 并移除；

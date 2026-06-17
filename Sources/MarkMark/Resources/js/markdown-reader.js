@@ -650,6 +650,31 @@
       } catch (e) { /* no-op */ }
     },
 
+    // 评论草稿：按「位置（行号 + 选中文本）」暂存未提交的评论，重新对同一处选词写评论时自动恢复，
+    // 防止误触 Dismiss 丢失刚开始写的内容（issue #7，对应 issue 中的方案 3.3）。
+    _criticDraftKey(p) {
+      if (!p) return null;
+      return String(p.line || 0) + '' + (p.text || '');
+    },
+
+    // 把当前评论输入框的内容存为草稿（仅在输入态、且内容非空时）。
+    _saveCriticDraft() {
+      const bar = document.getElementById('mr-critic-toolbar');
+      if (!bar || !bar.classList.contains('critic-input-mode')) return;
+      const field = bar.querySelector('.critic-field');
+      const key = MR._criticInputDraftKey;
+      if (field && key && field.value.trim()) {
+        MR._criticDrafts = MR._criticDrafts || {};
+        MR._criticDrafts[key] = field.value;
+      }
+    },
+
+    // 折叠评论中的连续空行：连续 2+ 换行 → 单个换行，并去掉首尾空白行（issue #6）
+    _collapseBlankLines(s) {
+      if (typeof s !== 'string') return s;
+      return s.replace(/[ \t]*\r?\n(?:[ \t]*\r?\n)+/g, '\n').replace(/^\s+|\s+$/g, '');
+    },
+
     _postCriticAction(op, text, line, payload) {
       try {
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.criticAction) {
@@ -745,6 +770,13 @@
       field.placeholder = hint;
       if (multiline) field.rows = 3;
 
+      // 评论草稿：记录本次输入对应的位置 key，并恢复同一处未提交的草稿（issue #7）。
+      // 仅评论启用草稿，replace 不需要。
+      const draftKey = op === 'comment' ? MR._criticDraftKey(MR._criticPending) : null;
+      MR._criticInputDraftKey = draftKey;
+      MR._criticDrafts = MR._criticDrafts || {};
+      if (draftKey && MR._criticDrafts[draftKey] != null) field.value = MR._criticDrafts[draftKey];
+
       const confirm = document.createElement('button');
       confirm.textContent = L.confirm;
       confirm.className = 'critic-primary';
@@ -754,14 +786,21 @@
       const submit = () => {
         const v = field.value.trim();
         if (op === 'comment' && !v) { MR._hideCriticToolbar(); return; }
-        MR._commitCritic(op, field.value);
+        // 提交成功 → 清除该位置的草稿
+        if (draftKey) delete MR._criticDrafts[draftKey];
+        // 评论内的连续空行会破坏 CriticMarkup 行内格式（cmark 会按空行拆段），
+        // 提交前自动折叠空行（issue #6）。replace 仅替换正文文本，无需处理。
+        const payload = op === 'comment' ? MR._collapseBlankLines(field.value) : field.value;
+        MR._commitCritic(op, payload);
       };
+      // 取消/Esc 关闭前先把内容存为草稿（issue #7，方案 3.3）
+      const dismiss = () => { MR._saveCriticDraft(); MR._hideCriticToolbar(); };
       confirm.addEventListener('click', submit);
-      cancel.addEventListener('click', () => MR._hideCriticToolbar());
+      cancel.addEventListener('click', dismiss);
       field.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
         else if (e.key === 'Enter' && !multiline) { e.preventDefault(); submit(); }
-        else if (e.key === 'Escape') { e.preventDefault(); MR._hideCriticToolbar(); }
+        else if (e.key === 'Escape') { e.preventDefault(); dismiss(); }
       });
 
       const row = document.createElement('div');
@@ -876,8 +915,11 @@
         const v = field.value.trim();
         if (!v) {
           MR._postCriticAction('deleteComment', oldComment, line, null);
-        } else if (v !== oldComment) {
-          MR._postCriticAction('editComment', oldComment, line, field.value);
+        } else {
+          const next = MR._collapseBlankLines(field.value);
+          if (next !== oldComment) {
+            MR._postCriticAction('editComment', oldComment, line, next);
+          }
         }
         MR._hideCommentPopover();
       };
@@ -952,12 +994,18 @@
         const inPop = pop && pop.contains(e.target);
         const inBar = bar && bar.contains(e.target);
         const onBubble = e.target.closest && e.target.closest('.critic-comment');
-        if (!inPop && !onBubble) MR._hideCommentPopover();
+        if (!inPop && !onBubble) {
+          // 防误关：编辑已有评论且输入框有内容时，点击外部不关闭（issue #7）
+          const popField = pop && pop.classList.contains('critic-input-mode') && pop.querySelector('.critic-field');
+          if (!(popField && popField.value.trim())) MR._hideCommentPopover();
+        }
         // 输入态（评论/替换输入框打开）时 selectionchange 守卫不收工具条，
         // 必须在这里兜底：点击工具条外部 → 关闭并清掉输入态，否则守卫永远
         // return，之后选词不再弹工具条（需整页重载才能恢复）。
         if (!inBar && !inPop && bar && bar.classList.contains('critic-input-mode')) {
-          MR._hideCriticToolbar();
+          const field = bar.querySelector('.critic-field');
+          // 防误关：评论/替换输入框有内容时，点击外部保留工具条与已输入内容（issue #7）
+          if (!(field && field.value.trim())) MR._hideCriticToolbar();
         }
       });
     },

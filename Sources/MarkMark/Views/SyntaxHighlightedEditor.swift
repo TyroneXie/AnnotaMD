@@ -73,7 +73,11 @@ final class TextViewSearchRef {
         let storageLength = textStorage.length
         guard range.location >= 0,
               range.location + range.length <= storageLength else { return nil }
+        // 走 NSTextView 编辑管线（shouldChangeText/didChangeText），才能注册到 per-file UndoManager，
+        // 否则直接改 textStorage 会绕过 undo，导致替换无法用 Cmd+Z 撤销（issue #8）。
+        guard textView.shouldChangeText(in: range, replacementString: replacement) else { return nil }
         textStorage.replaceCharacters(in: range, with: replacement)
+        textView.didChangeText()
         let newLength = (replacement as NSString).length
         return NSRange(location: range.location, length: newLength)
     }
@@ -82,13 +86,19 @@ final class TextViewSearchRef {
         guard let textView = textView,
               let textStorage = textView.textStorage else { return 0 }
         var count = 0
+        // 整批替换包进一个 undo group，一次 Cmd+Z 即可撤销全部替换（issue #8）。
+        let undoManager = textView.undoManager
+        undoManager?.beginUndoGrouping()
         for range in ranges.reversed() {
             let storageLength = textStorage.length
             guard range.location >= 0,
                   range.location + range.length <= storageLength else { continue }
+            guard textView.shouldChangeText(in: range, replacementString: replacement) else { continue }
             textStorage.replaceCharacters(in: range, with: replacement)
+            textView.didChangeText()
             count += 1
         }
+        undoManager?.endUndoGrouping()
         return count
     }
 
