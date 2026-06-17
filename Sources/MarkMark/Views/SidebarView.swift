@@ -82,37 +82,26 @@ struct SidebarView: View {
     private var singleFileView: some View {
         List {
             if let url = appViewModel.singleFileURL {
+                let node = FileNode(
+                    name: url.lastPathComponent,
+                    path: url,
+                    isDirectory: false,
+                    isMarkdown: FileService.isTreeDisplayExtension(url)
+                )
+
                 Button {
                     fileTreeViewModel.selectedFileURL = url
                 } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "doc.text")
-                            .font(.system(size: 14))
-                            .foregroundStyle(themeColors.fgSecondary)
-                        Text(url.lastPathComponent)
-                            .font(.system(size: 13))
-                            .foregroundStyle(themeColors.ink)
-                            .lineLimit(1)
-                        if documentViewModel.isFileDirty(at: url) {
-                            Text("*")
-                                .font(.system(size: 13))
-                                .foregroundStyle(themeColors.accent)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .background {
-                        // 高亮作为内容背景，确保高亮 ⊆ 可点击区域（见 FileNodeRow.selectionHighlight）
-                        if fileTreeViewModel.selectedFileURL == url {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(themeColors.accentSoft)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                        }
-                    }
+                    FileRowView(
+                        node: node,
+                        fileTreeViewModel: fileTreeViewModel,
+                        documentViewModel: documentViewModel
+                    )
+                    .background(singleFileSelectionHighlight(for: url))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)
             }
         }
@@ -120,6 +109,14 @@ struct SidebarView: View {
         .scrollContentBackground(.hidden)
         .scrollIndicators(.automatic)
         .background(OverlayScrollerHelper())
+    }
+
+    @ViewBuilder
+    private func singleFileSelectionHighlight(for url: URL) -> some View {
+        if fileTreeViewModel.selectedFileURL == url {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(themeColors.accentSoft)
+        }
     }
 
     // MARK: - 目录树（使用递归 DisclosureGroup 渲染嵌套结构）

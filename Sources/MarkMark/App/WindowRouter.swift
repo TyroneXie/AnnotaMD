@@ -15,6 +15,10 @@ final class WindowRouter {
     /// 由 ContentView 注册（包装 openWindow(value:)）。
     var open: ((URL) -> Void)?
 
+    var canOpenWindow: Bool {
+        open != nil
+    }
+
     func openWindow(for url: URL) {
         open?(url)
     }

@@ -65,27 +65,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let first = urls.first else { return }
 
         if didFinishLaunching {
-            // 热启动：为每个 URL 打开/聚焦一个独立窗口（多窗口）
-            logger.info("Hot start: routing \(urls.count) URL(s) to new/focused window(s)")
-            for url in urls {
-                WindowRouter.shared.openWindow(for: url)
+            // 热启动：为每个 URL 打开/聚焦一个独立窗口（多窗口）。
+            // 如果 SwiftUI openWindow 尚未注册（极早期启动/无窗口边界），降级为 pending，
+            // 避免显式拖到 Dock 的打开请求被欢迎页/恢复上次位置流程吞掉。
+            if WindowRouter.shared.canOpenWindow {
+                logger.info("Hot start: routing \(urls.count) URL(s) to new/focused window(s)")
+                for url in urls {
+                    WindowRouter.shared.openWindow(for: url)
+                }
+                NSApp.activate(ignoringOtherApps: true)
+            } else {
+                logger.info("Hot start fallback: WindowRouter unavailable, storing pending URL")
+                storePendingOpenURL(first)
+                activateFirstHiddenWindow()
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.deliverPendingOpenURLIfPossible(first)
+                }
             }
-            NSApp.activate(ignoringOtherApps: true)
         } else {
             // 冷启动：首个 URL 存进 UserDefaults，由初始窗口的 ContentView.task 读取并打开。
             // （初始窗口承载第一个文件；冷启动多选只开第一个，与历史行为一致。）
-            var isDir: ObjCBool = false
-            FileManager.default.fileExists(atPath: first.path, isDirectory: &isDir)
-            if isDir.boolValue {
-                pendingOpenDirectoryURL = first
-                UserDefaults.standard.set(first.path as String, forKey: "pendingOpenDirectoryPath")
-                UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
-            } else {
-                pendingOpenFileURL = first
-                UserDefaults.standard.set(first.path as String, forKey: "pendingOpenFilePath")
-                UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
-            }
+            storePendingOpenURL(first)
             logger.info("Cold start: stored pending URL for initial window")
+        }
+    }
+
+    /// 将显式打开请求暂存给 ContentView.task 读取，确保它优先于恢复上次位置。
+    private func storePendingOpenURL(_ url: URL) {
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        if isDir.boolValue {
+            pendingOpenDirectoryURL = url
+            UserDefaults.standard.set(url.path as String, forKey: "pendingOpenDirectoryPath")
+            UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
+        } else {
+            pendingOpenFileURL = url
+            UserDefaults.standard.set(url.path as String, forKey: "pendingOpenFilePath")
+            UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
+        }
+    }
+
+    /// 热启动兜底：若已有窗口可以接收通知，则立即投递并清理 pending。
+    private func deliverPendingOpenURLIfPossible(_ url: URL) {
+        guard hasVisibleWindows() else { return }
+
+        var isDir: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        if isDir.boolValue {
+            UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
+            pendingOpenDirectoryURL = nil
+            NotificationCenter.default.post(name: .openDirectory, object: url)
+        } else {
+            UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
+            pendingOpenFileURL = nil
+            NotificationCenter.default.post(name: .openFile, object: url)
         }
     }
 
