@@ -5,6 +5,17 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.0.15] - 2026-06-18
+
+### 改进
+
+- **单文件模式侧栏与目录树模式显示一致**：直接打开单个 Markdown 文件时，侧栏不再使用单独手写的行视图，改为构造轻量 `FileNode` 并复用 `FileRowView`，使选中高亮、图标位置、可点击区域与目录树模式完全一致（#10，by @flashsoft）
+- **侧边栏支持键盘导航**：`FileTreeViewModel` 新增 `activeNodeURL`，目录与文件都可进入 active 态——↑ / ↓ 在可见节点间移动，→ 展开目录、← 收起目录或移动到父目录，Return 在目录上切换展开 / 在文件上打开；active 项移出可视区域时自动滚回中间（#10，by @flashsoft）
+
+### 新增
+
+- **支持把文件或目录拖到 Dock 图标打开**：在 `Info.plist` 的 `CFBundleDocumentTypes` 中补充 `public.folder`，让 Finder / Dock 可将目录作为可打开目标交给 MarkMark；同时明确显式打开目标优先于「恢复上次位置」，并为极早期启动（`openWindow` 尚未注册）补充 pending open 兜底，避免打开请求丢失（#10，by @flashsoft）
+
 ## [2.0.14] - 2026-06-17
 
 ### 修复
