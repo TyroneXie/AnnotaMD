@@ -57,6 +57,12 @@ final class FileTreeViewModel {
     /// 是否有待处理的刷新请求
     private var needsRefresh = false
 
+    /// 目录加载世代号。切换根目录或整批刷新时递增，用于丢弃过期异步结果。
+    private var directoryLoadGeneration = 0
+
+    /// 每个目录当前有效加载任务的 token，用于避免同一目录的旧异步结果覆盖新状态。
+    private var directoryLoadTokens: [URL: UUID] = [:]
+
     // MARK: - 初始化
 
     init(fileService: FileService = FileService(), settings: SettingsModel = SettingsModel.shared) {
@@ -69,47 +75,33 @@ final class FileTreeViewModel {
     /// 加载目录树
     /// - Parameter directory: 根目录 URL
     func loadDirectory(_ directory: URL) async {
-        isLoading = true
+        directoryLoadGeneration += 1
+        let generation = directoryLoadGeneration
+        directoryLoadTokens.removeAll()
+
+        isLoading = false
         errorMessage = nil
         isEmptyDirectory = false
+        needsRefresh = false
+        isRefreshing = false
 
         // 停止之前的监控
         fileSystemWatcher.stopWatching()
 
-        do {
-            let children = try await fileService.scanDirectory(
-                directory,
-                showHiddenFiles: settings.showHiddenFiles,
-                showNonMarkdownFiles: settings.showNonMarkdownFiles
-            )
-            isEmptyDirectory = !fileService.directoryContainsMarkdown(
-                directory,
-                showHiddenFiles: settings.showHiddenFiles
-            )
-
-            // 根目录作为一级节点显示，子目录内容作为其 children
-            let rootNode = FileNode(
-                name: directory.lastPathComponent,
-                path: directory,
-                isDirectory: true,
-                children: children
-            )
-            nodes = [rootNode]
-
-            // 默认展开根目录（显示第一级目录和文件）
-            expandedDirs.insert(directory)
-            if activeNodeURL == nil {
-                activeNodeURL = selectedFileURL ?? directory
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            nodes = []
+        // 根目录先作为可见节点出现，子节点异步加载。这样首屏不再等待完整递归扫描。
+        nodes = [FileNode(
+            name: directory.lastPathComponent,
+            path: directory,
+            isDirectory: true,
+            childrenState: .loading
+        )]
+        expandedDirs = [directory]
+        if activeNodeURL == nil {
+            activeNodeURL = selectedFileURL ?? directory
         }
 
-        isLoading = false
-
-        // 开始监控目录变化
         startWatching(directory)
+        await loadChildren(for: directory, force: true, generation: generation)
     }
 
     /// 刷新目录树（由文件系统监控触发，不显示加载状态，保留展开和选中状态）
@@ -133,48 +125,30 @@ final class FileTreeViewModel {
 
         isRefreshing = true
 
-        do {
-            let children = try await fileService.scanDirectory(
-                dir,
-                showHiddenFiles: settings.showHiddenFiles,
-                showNonMarkdownFiles: settings.showNonMarkdownFiles
-            )
-
-            let rootNode = FileNode(
-                name: dir.lastPathComponent,
-                path: dir,
-                isDirectory: true,
-                children: children
-            )
-            nodes = [rootNode]
-
-            // 清理已不存在的展开目录
-            let allPaths = Set(collectAllPaths(from: nodes))
-            expandedDirs = expandedDirs.intersection(allPaths)
-            expandedDirs.insert(dir)
-
-            // 如果选中的文件已不存在，清除选中
-            // 仅当选中文件的路径位于当前根目录下时才清除
-            // 单文件模式下，选中文件可能不在根目录树中，不应被清除
-            if let selected = selectedFileURL,
-               selected.path.hasPrefix(dir.path + "/"),
-               !allPaths.contains(selected) {
-                selectedFileURL = nil
-            }
-
-            if let active = activeNodeURL, !allPaths.contains(active) {
-                activeNodeURL = selectedFileURL ?? dir
-            }
-
-            isEmptyDirectory = !fileService.directoryContainsMarkdown(
-                dir,
-                showHiddenFiles: settings.showHiddenFiles
-            )
-            errorMessage = nil
-        } catch {
-            // 刷新失败时不覆盖已有数据，仅记录错误
+        let directoriesToRefresh = loadedDirectoryPaths(from: nodes)
+        for directory in directoriesToRefresh where directoryExists(directory) {
+            await loadChildren(for: directory, force: true)
         }
 
+        // 清理已不存在的展开目录。懒加载后不再用“已加载树包含”判断存在性。
+        expandedDirs = expandedDirs.filter { directoryExists($0) }
+        expandedDirs.insert(dir)
+
+        // 如果选中的文件已不存在，清除选中。
+        // 单文件模式下，选中文件可能不在根目录树中；仅清理当前根目录内的缺失项。
+        if let selected = selectedFileURL,
+           selected.path.hasPrefix(dir.path + "/"),
+           !FileManager.default.fileExists(atPath: selected.path) {
+            selectedFileURL = nil
+        }
+
+        if let active = activeNodeURL,
+           active.path.hasPrefix(dir.path),
+           !FileManager.default.fileExists(atPath: active.path) {
+            activeNodeURL = selectedFileURL ?? dir
+        }
+
+        errorMessage = nil
         isRefreshing = false
 
         // 如果刷新期间有新的变更，再次刷新
@@ -201,15 +175,34 @@ final class FileTreeViewModel {
         isEmptyDirectory = false
         isRefreshing = false
         needsRefresh = false
+        directoryLoadGeneration += 1
+        directoryLoadTokens.removeAll()
     }
 
     /// 切换目录展开/折叠
     func toggleExpand(_ url: URL) {
         if expandedDirs.contains(url) {
-            expandedDirs.remove(url)
+            collapseDirectory(url)
         } else {
-            expandedDirs.insert(url)
+            expandDirectory(url)
         }
+    }
+
+    func setExpanded(_ url: URL, expanded: Bool) {
+        if expanded {
+            expandDirectory(url)
+        } else {
+            collapseDirectory(url)
+        }
+    }
+
+    func expandDirectory(_ url: URL) {
+        expandedDirs.insert(url)
+        loadChildrenIfNeeded(for: url)
+    }
+
+    func collapseDirectory(_ url: URL) {
+        expandedDirs.remove(url)
     }
 
     /// 判断目录是否已展开
@@ -268,7 +261,7 @@ final class FileTreeViewModel {
     func expandActiveNode() {
         guard let node = activeNode() else { return }
         if node.isDirectory {
-            expandedDirs.insert(node.path)
+            expandDirectory(node.path)
         }
     }
 
@@ -281,6 +274,67 @@ final class FileTreeViewModel {
         }
         if let parent = parentDirectoryNode(for: node.path) {
             activeNodeURL = parent.path
+        }
+    }
+
+    /// 按需加载目录的一层子节点。
+    private func loadChildrenIfNeeded(for directory: URL) {
+        guard let node = findNode(in: nodes, url: directory), node.isDirectory else { return }
+        switch node.childrenState {
+        case .notLoaded, .failed:
+            Task { @MainActor in
+                await loadChildren(for: directory)
+            }
+        case .loading, .loaded:
+            break
+        }
+    }
+
+    /// 加载指定目录的一层内容，并保留已加载子目录的状态。
+    private func loadChildren(for directory: URL, force: Bool = false, generation: Int? = nil) async {
+        guard let node = findNode(in: nodes, url: directory), node.isDirectory else { return }
+        if !force {
+            switch node.childrenState {
+            case .loading, .loaded:
+                return
+            case .notLoaded, .failed:
+                break
+            }
+        }
+
+        let expectedGeneration = generation ?? directoryLoadGeneration
+        let loadToken = UUID()
+        directoryLoadTokens[directory] = loadToken
+        setDirectoryChildrenState(for: directory, to: .loading)
+
+        do {
+            var children = try await fileService.scanDirectoryLevel(
+                directory,
+                showHiddenFiles: settings.showHiddenFiles,
+                showNonMarkdownFiles: settings.showNonMarkdownFiles
+            )
+            guard expectedGeneration == directoryLoadGeneration,
+                  directoryLoadTokens[directory] == loadToken else { return }
+
+            // 扫描期间其他目录可能已经完成加载；用最新状态合并，避免刷新覆盖展开结果。
+            let currentStates = directoryChildrenStateByPath(from: nodes)
+            preserveDirectoryStates(in: &children, using: currentStates)
+            setDirectoryChildrenState(for: directory, to: .loaded(children))
+            directoryLoadTokens[directory] = nil
+            if directory == rootDirectory {
+                isEmptyDirectory = children.isEmpty
+            }
+        } catch {
+            guard expectedGeneration == directoryLoadGeneration,
+                  directoryLoadTokens[directory] == loadToken else { return }
+
+            let message = error.localizedDescription
+            setDirectoryChildrenState(for: directory, to: .failed(message))
+            directoryLoadTokens[directory] = nil
+            if directory == rootDirectory {
+                errorMessage = message
+                isEmptyDirectory = false
+            }
         }
     }
 
@@ -328,10 +382,10 @@ final class FileTreeViewModel {
             return nil
         }
 
-        // 刷新目录树（使用 refreshDirectory 避免重启监控器）
+        // 刷新目标目录的一层内容即可，避免整棵树重扫。
         Task {
-            await refreshDirectory()
-            // 选中新建的文件
+            expandedDirs.insert(dir)
+            await loadChildren(for: dir, force: true)
             selectedFileURL = fileURL
         }
 
@@ -369,6 +423,85 @@ final class FileTreeViewModel {
 
     // MARK: - 私有方法
 
+    private func loadedDirectoryPaths(from nodes: [FileNode]) -> [URL] {
+        var paths: [URL] = []
+        for node in nodes where node.isDirectory {
+            if node.isChildrenLoaded || node.path == rootDirectory {
+                paths.append(node.path)
+            }
+            if let children = node.children {
+                paths.append(contentsOf: loadedDirectoryPaths(from: children))
+            }
+        }
+        return paths
+    }
+
+    private func directoryChildrenStateByPath(from nodes: [FileNode]) -> [URL: DirectoryChildrenState] {
+        var states: [URL: DirectoryChildrenState] = [:]
+        collectDirectoryChildrenStates(from: nodes, into: &states)
+        return states
+    }
+
+    private func collectDirectoryChildrenStates(
+        from nodes: [FileNode],
+        into states: inout [URL: DirectoryChildrenState]
+    ) {
+        for node in nodes where node.isDirectory {
+            states[node.path] = node.childrenState
+            if let children = node.children {
+                collectDirectoryChildrenStates(from: children, into: &states)
+            }
+        }
+    }
+
+    private func preserveDirectoryStates(
+        in children: inout [FileNode],
+        using states: [URL: DirectoryChildrenState]
+    ) {
+        for index in children.indices where children[index].isDirectory {
+            if let previousState = states[children[index].path] {
+                children[index].childrenState = previousState
+            }
+        }
+    }
+
+    private func setDirectoryChildrenState(for directory: URL, to state: DirectoryChildrenState) {
+        updateNode(directory) { node in
+            guard node.isDirectory else { return }
+            node.childrenState = state
+        }
+    }
+
+    private func updateNode(_ url: URL, transform: (inout FileNode) -> Void) {
+        updateNode(in: &nodes, url: url, transform: transform)
+    }
+
+    @discardableResult
+    private func updateNode(
+        in nodes: inout [FileNode],
+        url: URL,
+        transform: (inout FileNode) -> Void
+    ) -> Bool {
+        for index in nodes.indices {
+            if nodes[index].path == url {
+                transform(&nodes[index])
+                return true
+            }
+            if var children = nodes[index].children,
+               updateNode(in: &children, url: url, transform: transform) {
+                nodes[index].children = children
+                return true
+            }
+        }
+        return false
+    }
+
+    private func directoryExists(_ directory: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+    }
+
     private func flattenChildren(_ children: [FileNode]) -> [FileNode] {
         var result: [FileNode] = []
         for node in children {
@@ -404,9 +537,8 @@ final class FileTreeViewModel {
         do {
             try fileService.createDirectory(in: parentDirectory, name: dirName)
             Task {
-                await refreshDirectory()
-                // 展开父目录以显示新建的子目录
                 expandedDirs.insert(parentDirectory)
+                await loadChildren(for: parentDirectory, force: true)
             }
         } catch {
             errorMessage = error.localizedDescription

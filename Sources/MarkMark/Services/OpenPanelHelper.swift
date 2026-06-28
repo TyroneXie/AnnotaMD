@@ -6,16 +6,12 @@ import UniformTypeIdentifiers
 /// MarkdownReaderApp（菜单 Cmd+O）和各视图按钮共用
 enum OpenPanelHelper {
 
-    /// Markdown 相关的 UTType 列表，用于文件选择面板过滤
+    /// MarkMark 主窗口支持直接打开的 Markdown UTType 列表。
     static let markdownContentTypes: [UTType] = {
         var types: [UTType] = []
         // net.daringfireball.markdown 涵盖 .md/.markdown/.mdown/.mkd
         if let markdownType = UTType("net.daringfireball.markdown") {
             types.append(markdownType)
-        }
-        // .txt 作为纯文本，需单独添加
-        if let txtType = UTType(filenameExtension: "txt") {
-            types.append(txtType)
         }
         // 回退：逐个添加扩展名（防止 UTType 注册表缺失）
         for ext in ["md", "markdown", "mdown", "mkd"] {
@@ -25,6 +21,9 @@ enum OpenPanelHelper {
         }
         return types
     }()
+
+    /// 打开面板允许选择目录和任意数据文件；具体是否可显示在点击后由头字节嗅探决定。
+    static let openableContentTypes: [UTType] = [.folder, .data] + markdownContentTypes
 
     /// 防止重复弹窗的重入保护
     /// WindowGroup 可能创建多个 ContentView 实例同时监听通知，
@@ -47,7 +46,7 @@ enum OpenPanelHelper {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = L10n.tr(.open, language: language)
-        panel.allowedContentTypes = [.folder] + Self.markdownContentTypes
+        panel.allowedContentTypes = Self.openableContentTypes
 
         if panel.runModal() == .OK, let url = panel.url {
             var isDir: ObjCBool = false

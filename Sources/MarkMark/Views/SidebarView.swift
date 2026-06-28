@@ -91,7 +91,7 @@ struct SidebarView: View {
                 )
 
                 Button {
-                    isFileTreeFocused = true
+                    requestFileTreeFocus()
                     fileTreeViewModel.activateNode(node)
                 } label: {
                     FileRowView(
@@ -128,7 +128,12 @@ struct SidebarView: View {
         ScrollViewReader { proxy in
             List {
                 ForEach(fileTreeViewModel.nodes) { node in
-                    FileNodeRow(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
+                    FileNodeRow(
+                        node: node,
+                        fileTreeViewModel: fileTreeViewModel,
+                        documentViewModel: documentViewModel,
+                        onRequestFileTreeFocus: requestFileTreeFocus
+                    )
                 }
             }
             .listStyle(.sidebar)
@@ -137,8 +142,8 @@ struct SidebarView: View {
             .background(OverlayScrollerHelper())
             .focusable()
             .focused($isFileTreeFocused)
-            .onAppear { isFileTreeFocused = true }
-            .onTapGesture { isFileTreeFocused = true }
+            .onAppear { requestFileTreeFocus() }
+            .onTapGesture { requestFileTreeFocus() }
             .onMoveCommand { direction in
                 switch direction {
                 case .up:
@@ -235,6 +240,18 @@ struct SidebarView: View {
         }
         return nil
     }
+
+    /// 将键盘焦点显式交还给目录树。
+    ///
+    /// 点击行内 Button / DisclosureGroup 标签时，外层 List 的 onTapGesture 往往不会触发；
+    /// 如果此前 NSTextView / WKWebView 是 first responder，方向键会继续被内容区吃掉。
+    /// 这里同步 + 下一轮 runloop 各设置一次，覆盖 SwiftUI 行控件点击后的焦点回写。
+    private func requestFileTreeFocus() {
+        isFileTreeFocused = true
+        DispatchQueue.main.async {
+            isFileTreeFocused = true
+        }
+    }
 }
 
 // MARK: - 递归目录节点视图
@@ -244,6 +261,7 @@ struct FileNodeRow: View {
     let node: FileNode
     let fileTreeViewModel: FileTreeViewModel
     let documentViewModel: DocumentViewModel
+    let onRequestFileTreeFocus: () -> Void
     @Environment(\.themeColors) private var themeColors
     @Environment(\.language) private var language
 
@@ -269,46 +287,114 @@ struct FileNodeRow: View {
     }
 
     var body: some View {
-        if let children = node.children, !children.isEmpty {
-            DisclosureGroup(
-                isExpanded: Binding(
-                    get: { fileTreeViewModel.isExpanded(node.path) },
-                    set: { _ in fileTreeViewModel.toggleExpand(node.path) }
-                )
-            ) {
-                ForEach(children) { child in
-                    FileNodeRow(node: child, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
-                }
-            } label: {
-                FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
-                    .background(selectionHighlight)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        // 点击目录标签区域先 active，再切换展开/折叠
-                        fileTreeViewModel.activateNode(node)
-                        fileTreeViewModel.toggleExpand(node.path)
-                    }
-                    .contextMenu { directoryContextMenu }
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            .listRowBackground(Color.clear)
-            .id(node.path)
+        if node.isDirectory {
+            directoryRow
         } else {
-            // 文件行使用 Button 确保可靠选中
-            Button {
-                fileTreeViewModel.activateNode(node)
-            } label: {
-                FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
-                    .background(selectionHighlight)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            .listRowBackground(Color.clear)
-            .contextMenu { fileContextMenu }
-            .id(node.path)
+            fileRow
         }
     }
+
+    private var directoryRow: some View {
+        DisclosureGroup(
+            isExpanded: Binding(
+                get: { fileTreeViewModel.isExpanded(node.path) },
+                set: { isExpanded in
+                    onRequestFileTreeFocus()
+                    fileTreeViewModel.setExpanded(node.path, expanded: isExpanded)
+                }
+            )
+        ) {
+            directoryChildren
+        } label: {
+            FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
+                .background(selectionHighlight)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    // 点击目录标签区域先 active，再切换展开/折叠
+                    onRequestFileTreeFocus()
+                    fileTreeViewModel.activateNode(node)
+                    fileTreeViewModel.toggleExpand(node.path)
+                }
+                .contextMenu { directoryContextMenu }
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+        .id(node.path)
+    }
+
+    @ViewBuilder
+    private var directoryChildren: some View {
+        switch node.childrenState {
+        case .notLoaded:
+            if fileTreeViewModel.isExpanded(node.path) {
+                loadingRow
+            } else {
+                EmptyView()
+            }
+        case .loading:
+            loadingRow
+        case let .failed(message):
+            errorRow(message)
+        case let .loaded(children):
+            ForEach(children) { child in
+                FileNodeRow(
+                    node: child,
+                    fileTreeViewModel: fileTreeViewModel,
+                    documentViewModel: documentViewModel,
+                    onRequestFileTreeFocus: onRequestFileTreeFocus
+                )
+            }
+        }
+    }
+
+    private var loadingRow: some View {
+        HStack(spacing: 6) {
+            ProgressView()
+                .controlSize(.small)
+                .scaleEffect(0.65)
+            Text(L10n.tr(.loading, language: language))
+                .font(.system(size: 12))
+                .foregroundStyle(themeColors.fgSecondary)
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .padding(.leading, 8)
+        .padding(.trailing, 2)
+    }
+
+    private func errorRow(_ message: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(themeColors.fgMuted)
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundStyle(themeColors.fgSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .padding(.leading, 8)
+        .padding(.trailing, 2)
+    }
+
+    private var fileRow: some View {
+        // 文件行使用 Button 确保可靠选中
+        Button {
+            onRequestFileTreeFocus()
+            fileTreeViewModel.activateNode(node)
+        } label: {
+            FileRowView(node: node, fileTreeViewModel: fileTreeViewModel, documentViewModel: documentViewModel)
+                .background(selectionHighlight)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowBackground(Color.clear)
+        .contextMenu { fileContextMenu }
+        .id(node.path)
+    }
+
 
     // MARK: - 目录右键菜单
 

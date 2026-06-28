@@ -1,7 +1,8 @@
 #!/bin/bash
 # 构建 MarkMark.app (Universal: arm64 + x86_64)
 # 用法: ./build-app.sh [-r|--release] [-s|--sign [IDENTITY]] [-d|--distribution]
-#   --sign       签名 .app（非分发模式自动使用 ad-hoc 签名，可分享给他人）
+#   默认        自动使用可用开发证书签名；找不到证书则 ad-hoc 签名并跳过 Quick Look 扩展
+#   --sign       签名 .app（非分发模式自动使用可用证书，找不到则 ad-hoc）
 #   --sign ID    分发模式下使用指定签名身份（如 "Developer ID Application: xxx"）
 #   -d           分发模式：启用 hardened runtime + timestamp（需 Developer ID 证书 + 公证）
 
@@ -47,6 +48,13 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+# 默认也做签名。未签名的 .app 在现代 macOS 上可能被 LaunchServices 直接杀掉，
+# 也会导致 Finder Services 端口打不开。
+if [[ -z "$SIGN_IDENTITY" ]]; then
+    SIGN_IDENTITY="auto"
+    echo "🔑 默认: 自动选择签名身份"
+fi
 
 echo "🔨 构建 ${APP_NAME} (${CONFIG}, universal: arm64 + x86_64)..."
 
@@ -158,6 +166,25 @@ else
     exit 1
 fi
 
+# 复制主 bundle 级本地化资源。SPM 会把 Sources/MarkMark/Resources 放进
+# MarkMark_MarkMark.bundle，但 Finder Services 这类系统入口只读取主 app bundle
+# 的 Contents/Resources/*.lproj/ServicesMenu.strings。
+LOCALIZED_RESOURCES_SRC="${PROJECT_DIR}/Sources/${APP_NAME}/Resources"
+if [ -d "$LOCALIZED_RESOURCES_SRC" ]; then
+    while IFS= read -r lproj; do
+        dest="$APP_BUNDLE/Contents/Resources/$(basename "$lproj")"
+        mkdir -p "$dest"
+        copied=0
+        while IFS= read -r file; do
+            cp "$file" "$dest/"
+            copied=$((copied + 1))
+        done < <(find "$lproj" -maxdepth 1 -type f \( -name "ServicesMenu.strings" -o -name "InfoPlist.strings" \))
+        if [ "$copied" -gt 0 ]; then
+            echo "🌐 复制主 bundle 本地化资源: $(basename "$lproj")"
+        fi
+    done < <(find "$LOCALIZED_RESOURCES_SRC" -maxdepth 1 -type d -name "*.lproj" | sort)
+fi
+
 # 创建 PkgInfo
 echo -n "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
@@ -166,7 +193,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     if $DISTRIBUTION; then
         # 分发模式：需要真实的 Developer ID 证书
         if [[ "$SIGN_IDENTITY" == "auto" ]]; then
-            SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed -n 's/.*"\(.*\)"/\1/p')
+            SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed -n 's/.*"\(.*\)"/\1/p' || true)
             if [[ -z "$SIGN_IDENTITY" ]]; then
                 echo "❌ 分发模式需要 Developer ID Application 证书，未找到"
                 exit 1
@@ -177,7 +204,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
         # 开发模式：如果指定了签名身份则使用，否则 ad-hoc
         if [[ "$SIGN_IDENTITY" == "auto" ]]; then
             # 优先查找 Apple Development / Developer ID Application 证书
-            RESOLVED_IDENTITY=$(security find-identity -v -p codesigning | grep -E "Apple Development|Developer ID Application" | head -1 | sed -n 's/.*"\(.*\)"/\1/p')
+            RESOLVED_IDENTITY=$(security find-identity -v -p codesigning | grep -E "Apple Development|Developer ID Application" | head -1 | sed -n 's/.*"\(.*\)"/\1/p' || true)
             if [[ -n "$RESOLVED_IDENTITY" ]]; then
                 SIGN_IDENTITY="$RESOLVED_IDENTITY"
                 echo "🔑 开发模式: 使用检测到的签名身份: $SIGN_IDENTITY"
@@ -191,11 +218,20 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
     fi
 fi
 
+INCLUDE_QUICKLOOK=true
+if [[ "$SIGN_IDENTITY" == "-" && "${MARKMARK_INCLUDE_QUICKLOOK_ADHOC:-}" != "1" ]]; then
+    INCLUDE_QUICKLOOK=false
+    echo "⚠️  ad-hoc 签名下跳过 Quick Look Extension（避免容器 app 被系统杀掉）"
+    /usr/libexec/PlistBuddy -c "Delete :CFBundlePlugIns" "$APP_BUNDLE/Contents/Info.plist" 2>/dev/null || true
+fi
+
 # MARK: - Quick Look Extension
 
 QL_EXT_NAME="MarkdownReaderQL"
 QL_APPEX="${APP_BUNDLE}/Contents/PlugIns/${QL_EXT_NAME}.appex"
 QL_BINARY="${QL_APPEX}/Contents/MacOS/${QL_EXT_NAME}"
+
+if $INCLUDE_QUICKLOOK; then
 
 mkdir -p "${QL_APPEX}/Contents/MacOS"
 mkdir -p "${QL_APPEX}/Contents/Resources"
@@ -318,6 +354,10 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
         codesign --force --entitlements "$QL_ENTITLEMENTS" --sign "$SIGN_IDENTITY" "${QL_APPEX}"
     fi
     echo "   Quick Look Extension 已签名"
+fi
+
+else
+    rm -rf "${APP_BUNDLE}/Contents/PlugIns"
 fi
 
 # 签名
