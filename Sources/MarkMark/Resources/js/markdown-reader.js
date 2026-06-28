@@ -882,26 +882,30 @@
       const textBox = document.createElement('div');
       textBox.className = 'critic-popover-text';
       textBox.textContent = comment;
-
-      const btns = document.createElement('div');
-      btns.className = 'critic-input-btns';
-      const editBtn = document.createElement('button');
-      editBtn.textContent = L.edit;
-      editBtn.className = 'critic-primary';
-      const delBtn = document.createElement('button');
-      delBtn.textContent = L.delete;
-      delBtn.className = 'critic-danger';
-
-      editBtn.addEventListener('click', () => MR._editCommentPopover(el, comment, line));
-      delBtn.addEventListener('click', () => {
-        MR._postCriticAction('deleteComment', comment, line, null);
-        MR._hideCommentPopover();
-      });
-
-      btns.appendChild(delBtn);
-      btns.appendChild(editBtn);
       pop.appendChild(textBox);
-      pop.appendChild(btns);
+
+      // 只读环境（QuickLook / 导出 HTML）：仅展示评论内容，不提供编辑 / 删除入口
+      if (!MR._isReadonly()) {
+        const btns = document.createElement('div');
+        btns.className = 'critic-input-btns';
+        const editBtn = document.createElement('button');
+        editBtn.textContent = L.edit;
+        editBtn.className = 'critic-primary';
+        const delBtn = document.createElement('button');
+        delBtn.textContent = L.delete;
+        delBtn.className = 'critic-danger';
+
+        editBtn.addEventListener('click', () => MR._editCommentPopover(el, comment, line));
+        delBtn.addEventListener('click', () => {
+          MR._postCriticAction('deleteComment', comment, line, null);
+          MR._hideCommentPopover();
+        });
+
+        btns.appendChild(delBtn);
+        btns.appendChild(editBtn);
+        pop.appendChild(btns);
+      }
+
       pop.classList.add('visible');
       MR._positionCriticPopover(pop, el.getBoundingClientRect());
     },
@@ -956,9 +960,39 @@
     },
 
     _initCriticSelection() {
-      // 只读环境（QuickLook 预览、导出的静态 HTML）无法保存标注；直接跳过，
-      // 避免出现无效的选词工具条与评论气泡的编辑/删除入口。
-      if (this._isReadonly()) return;
+      const readonly = this._isReadonly();
+
+      // 点击已有评论气泡 → 弹出查看（只读环境无编辑/删除按钮，见 _showCommentPopover）。
+      // 该查看能力在只读环境下也保留，便于阅读评论内容。
+      document.addEventListener('click', (e) => {
+        const bubble = e.target.closest && e.target.closest('.critic-comment');
+        if (bubble) {
+          e.preventDefault();
+          e.stopPropagation();
+          MR._showCommentPopover(bubble);
+        }
+      });
+
+      // 点击空白处隐藏评论弹窗（可写环境下还兼顾工具条输入态兜底；只读环境下工具条不存在，分支自然空转）
+      document.addEventListener('mousedown', (e) => {
+        const pop = document.getElementById('mr-critic-popover');
+        const bar = document.getElementById('mr-critic-toolbar');
+        const inPop = pop && pop.contains(e.target);
+        const inBar = bar && bar.contains(e.target);
+        const onBubble = e.target.closest && e.target.closest('.critic-comment');
+        if (!inPop && !onBubble) {
+          // 防误关：编辑已有评论且输入框有内容时，点击外部不关闭（issue #7）
+          const popField = pop && pop.classList.contains('critic-input-mode') && pop.querySelector('.critic-field');
+          if (!(popField && popField.value.trim())) MR._hideCommentPopover();
+        }
+        if (!inBar && !inPop && bar && bar.classList.contains('critic-input-mode')) {
+          const field = bar.querySelector('.critic-field');
+          if (!(field && field.value.trim())) MR._hideCriticToolbar();
+        }
+      });
+
+      // 选词标注工具条仅在可写环境提供：只读环境（QuickLook / 导出 HTML）无法保存标注。
+      if (readonly) return;
 
       const onSelectionChange = () => {
         // 输入态（评论/替换正在输入）时不刷新工具条
@@ -989,38 +1023,6 @@
       document.addEventListener('selectionchange', () => {
         clearTimeout(MR._criticSelTimer);
         MR._criticSelTimer = setTimeout(onSelectionChange, 120);
-      });
-
-      // 点击已有评论气泡 → 查看/编辑/删除
-      document.addEventListener('click', (e) => {
-        const bubble = e.target.closest && e.target.closest('.critic-comment');
-        if (bubble) {
-          e.preventDefault();
-          e.stopPropagation();
-          MR._showCommentPopover(bubble);
-        }
-      });
-
-      // 点击空白处隐藏评论弹窗（点工具条/弹窗内部不隐藏）
-      document.addEventListener('mousedown', (e) => {
-        const pop = document.getElementById('mr-critic-popover');
-        const bar = document.getElementById('mr-critic-toolbar');
-        const inPop = pop && pop.contains(e.target);
-        const inBar = bar && bar.contains(e.target);
-        const onBubble = e.target.closest && e.target.closest('.critic-comment');
-        if (!inPop && !onBubble) {
-          // 防误关：编辑已有评论且输入框有内容时，点击外部不关闭（issue #7）
-          const popField = pop && pop.classList.contains('critic-input-mode') && pop.querySelector('.critic-field');
-          if (!(popField && popField.value.trim())) MR._hideCommentPopover();
-        }
-        // 输入态（评论/替换输入框打开）时 selectionchange 守卫不收工具条，
-        // 必须在这里兜底：点击工具条外部 → 关闭并清掉输入态，否则守卫永远
-        // return，之后选词不再弹工具条（需整页重载才能恢复）。
-        if (!inBar && !inPop && bar && bar.classList.contains('critic-input-mode')) {
-          const field = bar.querySelector('.critic-field');
-          // 防误关：评论/替换输入框有内容时，点击外部保留工具条与已输入内容（issue #7）
-          if (!(field && field.value.trim())) MR._hideCriticToolbar();
-        }
       });
     },
 
