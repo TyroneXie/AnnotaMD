@@ -149,11 +149,18 @@ enum HTMLExportService {
             files.filter { $0.hasPrefix("prism-") && $0.hasSuffix(".min.js") }
                 .map { String($0.dropFirst("prism-".count).dropLast(".min.js".count)) }
         )
+        if available.contains("php") {
+            logger.info("HTMLExport: prism-php skipped (markup-templating plugin not bundled)")
+        }
+        return orderedPrismLanguages(available: available).map { "js/prism-\($0).min.js" }
+    }
 
-        // 依赖未随包提供 → 排除
-        let unsatisfiable: Set<String> = ["php"]   // 需要 markup-templating（未打包）
-
-        // 提供给其他组件做依赖的语言，须先加载
+    /// 纯逻辑：给定可用的 prism 语言组件名集合，返回应内联的语言（按依赖顺序、剔除依赖缺失者）。
+    /// 抽出便于单元测试（运行 swift test 时取不到 bundle 资源）。
+    static func orderedPrismLanguages(available: Set<String>) -> [String] {
+        // 依赖未随包提供 → 排除（php 需要 markup-templating 插件）
+        let unsatisfiable: Set<String> = ["php"]
+        // 被其他组件 extend 的语言须先加载：cpp→c、shell-session→bash、tsx→jsx+typescript
         let dependencyProviders = ["c", "bash", "jsx", "typescript"]
 
         var ordered: [String] = []
@@ -163,10 +170,7 @@ enum HTMLExportService {
         for lang in available.subtracting(ordered).subtracting(unsatisfiable).sorted() {
             ordered.append(lang)
         }
-        if available.contains("php") {
-            logger.info("HTMLExport: prism-php skipped (markup-templating plugin not bundled)")
-        }
-        return ordered.map { "js/prism-\($0).min.js" }
+        return ordered
     }
 
     // MARK: - 特性探测

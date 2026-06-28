@@ -55,4 +55,32 @@ struct HTMLExportTests {
         #expect(html.contains("data:image/png;base64,"))
         #expect(!html.contains("src=\"pic.png\""))
     }
+
+    // MARK: - Prism 语言组件排序（离线内联，无 autoloader）
+
+    @Test("php is excluded (needs un-bundled markup-templating plugin)")
+    func prismExcludesPHP() {
+        let langs = HTMLExportService.orderedPrismLanguages(available: ["php", "swift", "python"])
+        #expect(!langs.contains("php"))
+        #expect(langs.contains("swift"))
+    }
+
+    @Test("dependency providers precede the components that extend them")
+    func prismDependencyOrder() {
+        let langs = HTMLExportService.orderedPrismLanguages(
+            available: ["cpp", "c", "tsx", "jsx", "typescript", "shell-session", "bash", "swift"]
+        )
+        func idx(_ l: String) -> Int { langs.firstIndex(of: l)! }
+        #expect(idx("c") < idx("cpp"))
+        #expect(idx("bash") < idx("shell-session"))
+        #expect(idx("jsx") < idx("tsx"))
+        #expect(idx("typescript") < idx("tsx"))
+    }
+
+    @Test("missing dependency providers don't crash ordering")
+    func prismNoProvidersIsFine() {
+        let langs = HTMLExportService.orderedPrismLanguages(available: ["swift", "python", "yaml"])
+        #expect(Set(langs) == ["swift", "python", "yaml"])
+        #expect(HTMLExportService.orderedPrismLanguages(available: []).isEmpty)
+    }
 }
