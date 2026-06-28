@@ -5,7 +5,7 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [2.0.16] - 2026-06-28
+## [2.0.16] - 2026-06-29
 
 ### 修复
 
@@ -13,7 +13,7 @@
 
 ### 新增
 
-- **导出为 HTML**：「文件 → 导出 HTML…」（⌘⇧E）及标题栏导出菜单新增 HTML 导出，生成**自包含单文件 HTML**——markdown.css / 主题样式、Prism 代码高亮、KaTeX（含数学字体 base64 内联）、Mermaid 与 `markdown-reader.js` 全部内联，正文图片转为 base64 data URL，导出文件不含任何 `mr://` 引用，可脱离 app 在任意浏览器离线打开并保持与阅读视图一致的渲染。Mermaid / KaTeX 仅在文档实际用到时才内联以控制体积（#11）
+- **导出为 HTML**：「文件 → 导出 HTML…」（⌘⇧E）及标题栏导出菜单新增 HTML 导出，生成**自包含单文件 HTML**——markdown.css / 主题样式、Prism 代码高亮、KaTeX（含数学字体 base64 内联）、Mermaid 与 `markdown-reader.js` 全部内联，正文图片转为 base64 data URL，导出文件不含任何 `mr://` 引用，可脱离 app 在任意浏览器离线打开并保持与阅读视图一致的渲染。导出页中标注为**只读查看**：点击评论气泡仍可查看评论内容，但不提供新建 / 编辑 / 删除等编辑入口。Mermaid / KaTeX 仅在文档实际用到时才内联以控制体积（#11）
 
 ### 改进
 
