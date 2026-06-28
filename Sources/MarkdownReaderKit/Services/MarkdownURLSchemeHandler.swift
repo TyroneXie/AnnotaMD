@@ -64,7 +64,26 @@ public final class MarkdownURLSchemeHandler: NSObject, WKURLSchemeHandler {
 
     public func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
 
-    static func resolveResourceURL(path: String, baseURL: URL?, resourceSearchPaths: [URL]?) -> URL? {
+    /// 在 app bundle 中定位一个 `mr:///` 资源（如 `css/markdown.css`、`js/katex.min.js`）。
+    /// 复用 scheme handler 的 bundle 搜索逻辑，供 HTML 自包含导出内联资源时使用。
+    /// 纯文件查找，`nonisolated` 以便从任意上下文调用（WKURLSchemeHandler 使类成为 MainActor 隔离）。
+    public nonisolated static func bundleResourceURL(forPath path: String) -> URL? {
+        resolveResourceURL(path: path, baseURL: nil, resourceSearchPaths: nil)
+    }
+
+    /// 读取一个 bundle 资源的原始数据；找不到或读取失败返回 nil。
+    public nonisolated static func bundleResourceData(forPath path: String) -> Data? {
+        guard let url = bundleResourceURL(forPath: path) else { return nil }
+        return try? Data(contentsOf: url)
+    }
+
+    /// 读取一个 bundle 资源并按 UTF-8 解码为字符串。
+    public nonisolated static func bundleResourceString(forPath path: String) -> String? {
+        guard let data = bundleResourceData(forPath: path) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    nonisolated static func resolveResourceURL(path: String, baseURL: URL?, resourceSearchPaths: [URL]?) -> URL? {
         let absoluteURL = URL(fileURLWithPath: "/" + path)
         if FileManager.default.fileExists(atPath: absoluteURL.path) {
             return absoluteURL

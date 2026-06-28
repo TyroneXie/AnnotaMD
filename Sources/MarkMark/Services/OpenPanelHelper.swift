@@ -105,6 +105,43 @@ enum OpenPanelHelper {
         return result
     }
 
+    @MainActor
+    static func showExportHTMLPanel(
+        language: Language,
+        defaultDirectory: URL? = nil,
+        suggestedName: String = "Untitled.html"
+    ) -> URL? {
+        guard !isPanelShowing else { return nil }
+        isPanelShowing = true
+
+        NSApp.activate(ignoringOtherApps: true)
+
+        let panel = NSSavePanel()
+        panel.prompt = L10n.tr(.exportHTML, language: language)
+        panel.allowedContentTypes = [UTType(filenameExtension: "html")].compactMap { $0 }
+        panel.nameFieldStringValue = suggestedName
+        panel.canCreateDirectories = true
+
+        if let dir = defaultDirectory {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue {
+                panel.directoryURL = dir
+            } else if dir.pathExtension.isEmpty == false {
+                panel.directoryURL = dir.deletingLastPathComponent()
+            }
+        }
+
+        let result: URL?
+        if panel.runModal() == .OK, let url = panel.url {
+            result = url
+        } else {
+            result = nil
+        }
+
+        isPanelShowing = false
+        return result
+    }
+
     /// 显示另存为面板，让用户选择保存位置
     /// - Parameters:
     ///   - language: 当前界面语言

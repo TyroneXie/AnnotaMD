@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.0.16] - 2026-06-28
+
+### 新增
+
+- **导出为 HTML**：「文件 → 导出 HTML…」（⌘⇧E）及标题栏导出菜单新增 HTML 导出，生成**自包含单文件 HTML**——markdown.css / 主题样式、Prism 代码高亮、KaTeX（含数学字体 base64 内联）、Mermaid 与 `markdown-reader.js` 全部内联，正文图片转为 base64 data URL，导出文件不含任何 `mr://` 引用，可脱离 app 在任意浏览器离线打开并保持与阅读视图一致的渲染。Mermaid / KaTeX 仅在文档实际用到时才内联以控制体积（#11）
+
+### 改进
+
+- **Finder「用 MarkMark 打开」服务、侧边栏目录懒加载、非 Markdown 文本只读预览**：新增 Finder Services 入口（文件 / 目录，简繁英三语）；统一外部（Finder / Services / 拖到图标 / `open`）与内部打开请求路由（`OpenRequestCoordinator`），修复显式打开被「恢复上次位置」覆盖及冷启动 / 窗口复用问题；侧边栏目录树改为首屏只加载根目录、展开时按需加载且扫描阶段不读文件内容；非 Markdown 的 UTF-8 / UTF-16 文本文件支持只读查看（图片 / 二进制仍不支持）（#12，by @flashsoft）
+
 ## [2.0.15] - 2026-06-18
 
 ### 改进

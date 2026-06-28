@@ -154,6 +154,11 @@ struct MarkdownReaderApp: App {
                 }
                 .keyboardShortcut("e", modifiers: [.command, .option])
 
+                Button(L10n.tr(.exportHTML, language: language)) {
+                    NotificationCenter.default.post(name: .exportHTML, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+
                 Divider()
 
                 // CriticMarkup：复制带标注文档给 AI
@@ -233,6 +238,7 @@ extension Notification.Name {
     static let findPrevious = Notification.Name("com.markdownreader.findPrevious")
     static let findAndReplace = Notification.Name("com.markdownreader.findAndReplace")
     static let exportPDF = Notification.Name("com.markdownreader.exportPDF")
+    static let exportHTML = Notification.Name("com.markdownreader.exportHTML")
     static let copyForAI = Notification.Name("com.markdownreader.copyForAI")
     static let applyAllAnnotations = Notification.Name("com.markdownreader.applyAllAnnotations")
     static let discardAllAnnotations = Notification.Name("com.markdownreader.discardAllAnnotations")

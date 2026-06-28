@@ -57,6 +57,8 @@ struct DetailView: View {
     /// PDF 导出失败提示
     @State private var showExportPDFError = false
 
+    @State private var showExportHTMLError = false
+
     /// 导出 / CriticMarkup 复用的 WKWebView 句柄
     @State private var webViewHandle = WebViewHandle()
 
@@ -121,6 +123,9 @@ struct DetailView: View {
         .onActiveReceive(NotificationCenter.default.publisher(for: .exportPDF)) { _ in
             exportPDF()
         }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .exportHTML)) { _ in
+            exportHTML()
+        }
         .onActiveReceive(NotificationCenter.default.publisher(for: .copyForAI)) { _ in
             copyForAI()
         }
@@ -160,6 +165,9 @@ struct DetailView: View {
             }
         }
         .alert(L10n.tr(.exportPDFFailed, language: language), isPresented: $showExportPDFError) {
+            Button(L10n.tr(.confirm, language: language), role: .cancel) {}
+        }
+        .alert(L10n.tr(.exportHTMLFailed, language: language), isPresented: $showExportHTMLError) {
             Button(L10n.tr(.confirm, language: language), role: .cancel) {}
         }
         .alert(
@@ -276,14 +284,24 @@ struct DetailView: View {
                     .disabled(!documentViewModel.isDirty)
                     .help(L10n.tr(.titleBarSave, language: language))
 
-                    Button {
-                        exportPDF()
+                    Menu {
+                        Button {
+                            exportPDF()
+                        } label: {
+                            Label(L10n.tr(.exportPDF, language: language), systemImage: "doc.richtext")
+                        }
+                        Button {
+                            exportHTML()
+                        } label: {
+                            Label(L10n.tr(.exportHTML, language: language), systemImage: "chevron.left.forwardslash.chevron.right")
+                        }
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14))
                             .foregroundStyle(themeColors.fgMuted)
                     }
-                    .buttonStyle(.plain)
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                     .help(L10n.tr(.titleBarExportPDF, language: language))
 
                     // 应用 / 放弃所有标注（仅当存在标注时显示）
@@ -583,6 +601,46 @@ struct DetailView: View {
             try data.write(to: url)
         } catch {
             showExportPDFError = true
+        }
+    }
+
+    private func exportHTML() {
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
+        let language = settings.languagePref.resolvedLanguage
+        let stem = URL(fileURLWithPath: documentViewModel.fileName).deletingPathExtension().lastPathComponent
+        let suggestedName = stem.isEmpty ? "Untitled.html" : "\(stem).html"
+        let defaultDir = settings.lastOpenedDirectory
+            ?? documentViewModel.currentFileURL?.deletingLastPathComponent()
+
+        guard let saveURL = OpenPanelHelper.showExportHTMLPanel(
+            language: language,
+            defaultDirectory: defaultDir,
+            suggestedName: suggestedName
+        ) else { return }
+
+        let stemTitle = stem
+        let baseURL = documentViewModel.currentFileURL?.deletingLastPathComponent()
+        let content = documentViewModel.content
+        let themeCSS = themeColors.cssCustomProperties + themeColors.codeHighlightCSS
+        let padding = settings.contentPaddingPoints
+        let followsWindow = settings.maxContentWidthFollowsWindow
+        let isDark = settings.resolvedThemeType == .dark
+
+        Task {
+            let html = HTMLExportService.buildSelfContainedHTML(
+                content: content,
+                title: stemTitle,
+                themeCSS: themeCSS,
+                contentPadding: padding,
+                maxContentWidthFollowsWindow: followsWindow,
+                baseURL: baseURL,
+                isDark: isDark
+            )
+            do {
+                try html.data(using: .utf8)?.write(to: saveURL)
+            } catch {
+                showExportHTMLError = true
+            }
         }
     }
 

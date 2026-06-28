@@ -270,6 +270,12 @@ public enum L10n {
         case exportPDFSuccess
         case exportPDFFailed
 
+        // 导出 HTML
+        case exportHTML
+        case titleBarExportHTML
+        case exportHTMLSuccess
+        case exportHTMLFailed
+
         // 拖拽
         case unsupportedFileTypeAlert
     }
@@ -478,6 +484,10 @@ public enum L10n {
         .titleBarExportPDF: "Export PDF",
         .exportPDFSuccess: "PDF exported successfully",
         .exportPDFFailed: "Failed to export PDF",
+        .exportHTML: "Export HTML\u{2026}",
+        .titleBarExportHTML: "Export HTML",
+        .exportHTMLSuccess: "HTML exported successfully",
+        .exportHTMLFailed: "Failed to export HTML",
         .unsupportedFileTypeAlert: "Unsupported file type (.{ext}). Only Markdown files can be opened.",
     ]
 
@@ -683,6 +693,10 @@ public enum L10n {
         .titleBarExportPDF: "导出 PDF",
         .exportPDFSuccess: "PDF 导出成功",
         .exportPDFFailed: "PDF 导出失败",
+        .exportHTML: "导出 HTML\u{2026}",
+        .titleBarExportHTML: "导出 HTML",
+        .exportHTMLSuccess: "HTML 导出成功",
+        .exportHTMLFailed: "HTML 导出失败",
         .unsupportedFileTypeAlert: "不支持的文件类型（.{ext}）。仅支持打开 Markdown 文件。",
     ]
 
@@ -888,6 +902,10 @@ public enum L10n {
         .titleBarExportPDF: "匯出 PDF",
         .exportPDFSuccess: "PDF 匯出成功",
         .exportPDFFailed: "PDF 匯出失敗",
+        .exportHTML: "匯出 HTML\u{2026}",
+        .titleBarExportHTML: "匯出 HTML",
+        .exportHTMLSuccess: "HTML 匯出成功",
+        .exportHTMLFailed: "HTML 匯出失敗",
         .unsupportedFileTypeAlert: "不支援的檔案類型（.{ext}）。僅支援開啟 Markdown 檔案。",
     ]
 
