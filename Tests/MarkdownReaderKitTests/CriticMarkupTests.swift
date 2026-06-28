@@ -281,6 +281,43 @@ struct CriticMarkupPipelineTests {
     }
 }
 
+@Suite("MarkdownHTMLService math blocks")
+struct MarkdownMathBlockTests {
+
+    @Test("block math keeps superscript LaTeX intact (no injected <sup>)")
+    func blockMathSuperscriptPreserved() {
+        // $$...$$ 转成 math 代码块后，块内 LaTeX 的 ^ 不应被上标预处理改写
+        let html = MarkdownHTMLService.render("$$e^{-x^2}$$").html
+        #expect(html.contains("language-math"))
+        #expect(html.contains("e^{-x^2}"))
+        #expect(!html.contains("<sup>"))
+    }
+
+    @Test("block math keeps tilde LaTeX intact (no injected <sub>)")
+    func blockMathTildePreserved() {
+        // 块内裸 ~ 不应被下标预处理改写成 <sub>
+        let html = MarkdownHTMLService.render("$$a~b~c$$").html
+        #expect(html.contains("language-math"))
+        #expect(html.contains("a~b~c"))
+        #expect(!html.contains("<sub>"))
+    }
+
+    @Test("block math keeps highlight markers intact (no injected <mark>)")
+    func blockMathHighlightPreserved() {
+        // 块内 == 不应被高亮预处理改写成 <mark>
+        let html = MarkdownHTMLService.render("$$a==b==c$$").html
+        #expect(html.contains("language-math"))
+        #expect(!html.contains("<mark>"))
+    }
+
+    @Test("inline math still renders alongside block math")
+    func inlineMathStillWorks() {
+        let html = MarkdownHTMLService.render("Energy $E = mc^2$ done.").html
+        #expect(html.contains("language-math"))
+        #expect(html.contains("E = mc^2"))
+    }
+}
+
 @Suite("CriticMarkup combined highlight+comment")
 struct CriticMarkupCombinedTests {
     @Test("highlight immediately followed by a comment renders both")

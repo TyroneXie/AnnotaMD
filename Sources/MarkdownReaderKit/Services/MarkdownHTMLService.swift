@@ -152,8 +152,10 @@ public enum MarkdownHTMLService {
         result = CriticMarkup.renderToHTML(result)
 
         // 扩展语法预处理（顺序重要：先处理占多行的，再处理行内的）
-        result = preprocessBlockMath(result)
-        result = preprocessInlineMath(result)
+        // 数学公式转换后立刻存入保护占位符：块内 LaTeX 常含 ^ / ~ / ==，
+        // 否则会被后面的上标 / 下标 / 高亮预处理误改写（如 $$e^{-x^2}$$ 被插入 <sup>）。
+        result = preprocessBlockMath(result, store: &codeStore)
+        result = preprocessInlineMath(result, store: &codeStore)
         result = preprocessFootnotes(result)
         result = preprocessHighlight(result)
         result = preprocessSuperscript(result)
@@ -216,8 +218,10 @@ public enum MarkdownHTMLService {
 
     // MARK: - 数学公式预处理
 
-    /// 将 $$...$$ 块级数学公式转换为 ```math 代码块格式，复用已有 KaTeX 渲染管线
-    private static func preprocessBlockMath(_ content: String) -> String {
+    /// 将 $$...$$ 块级数学公式转换为 ```math 代码块格式，复用已有 KaTeX 渲染管线。
+    /// 转换结果存入保护占位符（CODEBLOCK_），避免块内 LaTeX 的 ^ / ~ / == 被后续
+    /// 上标 / 下标 / 高亮预处理误改写；在 preprocess 末尾随代码区域一并还原。
+    private static func preprocessBlockMath(_ content: String, store: inout [String]) -> String {
         // 匹配 $$...\n...\n$$ 或同一行的 $$...$$
         let pattern = #"\$\$([\s\S]+?)\$\$"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return content }
@@ -230,14 +234,17 @@ public enum MarkdownHTMLService {
                   let contentRange = Range(match.range(at: 1), in: result) else { continue }
             let mathContent = String(result[contentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
             let replacement = "```math\n\(mathContent)\n```"
-            result.replaceSubrange(range, with: replacement)
+            let placeholder = "\u{0000}CODEBLOCK_\(store.count)\u{0000}"
+            store.append(replacement)
+            result.replaceSubrange(range, with: placeholder)
         }
         return result
     }
 
     /// 将 $...$ 行内数学公式转换为 HTML span，由 JS KaTeX 渲染
-    /// 转换为 <code class="language-math inline"> 格式，与现有 KaTeX 管道兼容
-    private static func preprocessInlineMath(_ content: String) -> String {
+    /// 转换为 <code class="language-math inline"> 格式，与现有 KaTeX 管道兼容。
+    /// 同样存入保护占位符（CODEINLINE_），避免公式内 ^ / ~ / == 被后续行内预处理误改写。
+    private static func preprocessInlineMath(_ content: String, store: inout [String]) -> String {
         // 匹配 $...$ 但不匹配 $$（已由块级处理）和 \$（转义美元符号）
         // 要求 $ 后不能为空格，$ 前不能为空格（避免匹配普通美元符号）
         let pattern = #"(?<!\$)\$(?!\s)(.+?)(?<!\s)\$(?!\$)"#
@@ -251,7 +258,9 @@ public enum MarkdownHTMLService {
                   let contentRange = Range(match.range(at: 1), in: result) else { continue }
             let mathContent = String(result[contentRange]).htmlEscaped
             let replacement = "<code class=\"language-math inline\">\(mathContent)</code>"
-            result.replaceSubrange(range, with: replacement)
+            let placeholder = "\u{0000}CODEINLINE_\(store.count)\u{0000}"
+            store.append(replacement)
+            result.replaceSubrange(range, with: placeholder)
         }
         return result
     }
