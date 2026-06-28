@@ -135,15 +135,38 @@ enum HTMLExportService {
         return result
     }
 
-    /// 全部 prism-<lang> 语言组件资源路径（不含 core 与 autoloader）。
+    /// prism-<lang> 语言组件资源路径（不含 core / autoloader），按依赖顺序排列。
+    ///
+    /// 导出不使用 autoloader（它需联网/按需取文件），改为内联语言组件，因此必须自己处理：
+    /// 1. 依赖顺序——组件用 `Prism.languages.extend('c', …)` 等，依赖须先加载，否则 extend
+    ///    of undefined 抛错（cpp→c、tsx→jsx+typescript、shell-session→bash）。
+    /// 2. 缺失依赖——`prism-php` 依赖未随包提供的 `markup-templating` 插件，加载即抛
+    ///    `tokenizePlaceholders` TypeError，直接排除（php 代码块退化为无高亮，可接受）。
     private static func prismLanguageResourcePaths() -> [String] {
         guard let jsDir = MarkdownURLSchemeHandler.bundleResourceURL(forPath: "js") else { return [] }
         let files = (try? FileManager.default.contentsOfDirectory(atPath: jsDir.path)) ?? []
-        return files
-            .filter { $0.hasPrefix("prism-") && $0.hasSuffix(".min.js") }
-            .filter { $0 != "prism-core.min.js" && $0 != "prism-autoloader.min.js" }
-            .sorted()
-            .map { "js/\($0)" }
+        let available = Set(
+            files.filter { $0.hasPrefix("prism-") && $0.hasSuffix(".min.js") }
+                .map { String($0.dropFirst("prism-".count).dropLast(".min.js".count)) }
+        )
+
+        // 依赖未随包提供 → 排除
+        let unsatisfiable: Set<String> = ["php"]   // 需要 markup-templating（未打包）
+
+        // 提供给其他组件做依赖的语言，须先加载
+        let dependencyProviders = ["c", "bash", "jsx", "typescript"]
+
+        var ordered: [String] = []
+        for lang in dependencyProviders where available.contains(lang) && !unsatisfiable.contains(lang) {
+            ordered.append(lang)
+        }
+        for lang in available.subtracting(ordered).subtracting(unsatisfiable).sorted() {
+            ordered.append(lang)
+        }
+        if available.contains("php") {
+            logger.info("HTMLExport: prism-php skipped (markup-templating plugin not bundled)")
+        }
+        return ordered.map { "js/prism-\($0).min.js" }
     }
 
     // MARK: - 特性探测
