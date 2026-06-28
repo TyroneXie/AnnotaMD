@@ -60,8 +60,10 @@ enum HTMLExportService {
         for langPath in prismLanguageResourcePaths() {
             scriptBlock += wrapScript(inlineResourceText(langPath))
         }
-        // markdown-reader.js：复用 app 的 prism/katex/mermaid 初始化（webkit 桥接均有守卫，浏览器安全）
-        scriptBlock += "<script data-is-dark=\"\(isDark)\">\n\(inlineResourceText("js/markdown-reader.js"))\n</script>\n"
+        // markdown-reader.js：复用 app 的 prism/katex/mermaid 初始化（webkit 桥接均有守卫，浏览器安全）。
+        // - data-mr-config：脚本内联无 src，用此标记让 markdown-reader.js 找到配置
+        // - data-readonly：静态导出无法保存标注，关闭选词工具条与评论编辑/删除入口
+        scriptBlock += "<script data-mr-config data-is-dark=\"\(isDark)\" data-readonly=\"true\">\n\(inlineResourceText("js/markdown-reader.js"))\n</script>\n"
 
         let safeTitle = title.isEmpty ? "MarkMark" : escapeHTML(title)
 

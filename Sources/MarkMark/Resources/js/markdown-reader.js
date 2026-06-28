@@ -99,8 +99,22 @@
       };
     },
 
+    // 解析承载配置的 <script> 标签。
+    // app / QuickLook 通过 src 引用脚本（src*="markdown-reader.js"）；
+    // HTML 导出把脚本内联（无 src），改用 data-mr-config 标记定位。
+    _configEl() {
+      return document.querySelector('script[data-mr-config]')
+        || document.querySelector('script[src*="markdown-reader.js"]');
+    },
+
+    // 只读环境（QuickLook 预览、导出的静态 HTML）不应出现无效的标注编辑入口。
+    _isReadonly() {
+      const el = this._configEl();
+      return !!el && (el.dataset.isQuicklook === 'true' || el.dataset.readonly === 'true');
+    },
+
     _resolveThemeColors() {
-      const scriptTag = document.querySelector('script[src*="markdown-reader.js"]');
+      const scriptTag = this._configEl();
       const isDark = scriptTag ? scriptTag.dataset.isDark === 'true' : true;
 
       // Mermaid strips var() refs (sanitizeDirective) and khroma needs hex for adjust/darken/invert.
@@ -942,9 +956,9 @@
     },
 
     _initCriticSelection() {
-      // QuickLook 预览为只读环境，无法保存标注；此处直接跳过，避免出现无效的标注悬浮工具条。
-      const scriptTag = document.querySelector('script[src*="markdown-reader.js"]');
-      if (scriptTag && scriptTag.dataset.isQuicklook === 'true') return;
+      // 只读环境（QuickLook 预览、导出的静态 HTML）无法保存标注；直接跳过，
+      // 避免出现无效的选词工具条与评论气泡的编辑/删除入口。
+      if (this._isReadonly()) return;
 
       const onSelectionChange = () => {
         // 输入态（评论/替换正在输入）时不刷新工具条
