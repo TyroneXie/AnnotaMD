@@ -20,25 +20,33 @@ struct FileRowView: View {
                     .foregroundStyle(themeColors.ink)
                     .frame(width: 16)
             } else {
-                Image(systemName: node.isMarkdown ? "doc.text" : "doc")
-                    .foregroundStyle(node.isMarkdown ? themeColors.fgSecondary : themeColors.fgMuted)
+                Image(systemName: iconName)
+                    .foregroundStyle(node.isPreviewable ? themeColors.fgSecondary : themeColors.fgMuted)
                     .frame(width: 16)
             }
 
             Text(node.name)
-                .foregroundStyle(node.isMarkdown || node.isDirectory ? themeColors.ink : themeColors.fgSecondary)
+                .foregroundStyle(node.isPreviewable || node.isDirectory ? themeColors.ink : themeColors.fgSecondary)
                 .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
             if isDirty {
                 Text("*")
                     .foregroundStyle(themeColors.accent)
+                    .layoutPriority(2)
             }
-
-            Spacer()
         }
         .padding(.vertical, 8)
-        .padding(.horizontal, 8)
+        .padding(.leading, 6)
+        .padding(.trailing, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }
+
+    private var iconName: String {
+        node.isMarkdown ? "doc.richtext" : "doc"
+    }
+
 }

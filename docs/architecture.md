@@ -50,9 +50,19 @@ ContentView (HStack)
 ### 3.1 App 层
 
 - **MarkdownReaderApp**: 应用入口，WindowGroup 配置（`.windowStyle(.hiddenTitleBar)` + `.defaultSize(width: 900, height: 600)`），最低部署目标 macOS 26
-  - `onOpenURL` 处理 Finder 双击打开
+  - 值型 `WindowGroup(for: URL.self)` 承载多窗口打开：不同 URL 新窗口，同 URL 聚焦已有窗口
   - 菜单命令：Cmd+, (设置)、Cmd+O (打开)、Cmd+\ (切换 Sidebar)、Cmd+Shift+E/R (渲染/原文)
-  - 6 个 Notification.Name 常量：toggleSidebar, switchToRendered, switchToRaw, openDirectory, openFile, toggleSettings
+  - `openWindow(value:)` 注册到 `WindowRouter`，供 AppKit 层打开外部 URL
+- **AppDelegate**: AppKit 生命周期 adapter，接收 LaunchServices open URL、Finder Services、Dock reopen、窗口拖拽 overlay 安装
+  - 不直接决定产品语义，而是把外部打开、启动完成、Dock reopen 交给 `OpenRequestCoordinator`
+  - 保留隐藏窗口激活、activation pulse、fallback window 等 macOS/SwiftUI 时序兜底
+- **OpenRequestCoordinator**: 打开请求路由的深模块，统一决定 Open Request 的处理方式
+  - External Open：双击、打开方式、拖到 App 图标、Finder Services → 多窗口路径
+  - Internal Open：打开最近、欢迎页最近文件等 App 内导航 → 替换当前 key window；无窗口时退化为多窗口路径
+  - Restore Request：仅在无 pending/external URL 时恢复上次位置或显示欢迎页
+  - Pending Open：冷启动早期写入 UserDefaults，等待初始 `ContentView.task` 消费，watchdog 未消费时再显式路由
+- **WindowRouter**: SwiftUI/AppKit 之间的窗口分发 adapter
+  - 封装 `openWindow(value:)`，并为 App 内打开入口调用 `OpenRequestCoordinator.handleInternalOpen`
 
 ### 3.2 视图层 (Views)
 

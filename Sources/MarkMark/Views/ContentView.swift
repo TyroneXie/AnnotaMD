@@ -1,11 +1,46 @@
 import SwiftUI
 import MarkdownReaderKit
 
+
+private struct WindowCaptureView: NSViewRepresentable {
+    let onResolve: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> CapturingNSView {
+        let view = CapturingNSView(frame: .zero)
+        view.onResolve = onResolve
+        return view
+    }
+
+    func updateNSView(_ nsView: CapturingNSView, context: Context) {
+        nsView.onResolve = onResolve
+        nsView.resolveWindow()
+    }
+
+    final class CapturingNSView: NSView {
+        var onResolve: ((NSWindow) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            resolveWindow()
+        }
+
+        func resolveWindow() {
+            guard let window else { return }
+            DispatchQueue.main.async { [weak self, weak window] in
+                guard let self, let window else { return }
+                self.onResolve?(window)
+            }
+        }
+    }
+}
+
 /// 主视图，管理自定义 HStack 两列布局
 /// 设置模式下左侧显示设置菜单，右侧显示设置内容
 struct ContentView: View {
     /// 该窗口绑定的文件/目录 URL（值型 WindowGroup）。nil = 冷启动/欢迎页窗口。
     var openedURL: URL? = nil
+    var registersWindowRouter: Bool = true
+    var showsWindowTitle: Bool = true
 
     @State private var appViewModel = AppViewModel()
     @State private var fileTreeViewModel = FileTreeViewModel()
@@ -21,12 +56,15 @@ struct ContentView: View {
         SettingsModel.shared.resolvedTheme
     )
 
+    @State private var registeredOpenURL: URL?
+    @State private var hostingWindow: NSWindow?
+
     var body: some View {
         mainLayout
             .frame(minWidth: 650, minHeight: 450)
             .ignoresSafeArea()
             .background(themeColors.surface)
-            .navigationTitle(appViewModel.windowTitle)
+            .navigationTitle(showsWindowTitle ? appViewModel.windowTitle : "")
             .environment(\.language, settings.languagePref.resolvedLanguage)
             .applyThemeColors(themeColors)
             .tint(themeColors.accent)
@@ -39,7 +77,9 @@ struct ContentView: View {
                 appViewModel: appViewModel,
                 documentViewModel: documentViewModel,
                 fileTreeViewModel: fileTreeViewModel,
-                settings: settings
+                settings: settings,
+                acceptsExternalOpen: openedURL == nil,
+                recordOpenedURL: { registerWindowURL($0) }
             ))
             .modifier(DirectoryChangeModifier(
                 appViewModel: appViewModel,
@@ -60,6 +100,12 @@ struct ContentView: View {
             .modifier(ToggleSettingsModifier(appViewModel: appViewModel))
             .background(TrafficLightHider(bgColor: themeColors.bgSubtle))
             .background(WindowCloseGuard(documentViewModel: documentViewModel, settings: settings))
+            .background(WindowCaptureView { window in
+                hostingWindow = window
+                if let registeredOpenURL {
+                    WindowRouter.shared.attachWindow(window, to: registeredOpenURL)
+                }
+            })
             .task {
                 // 连接 FileTreeViewModel 与 DocumentViewModel
                 fileTreeViewModel.documentViewModel = documentViewModel
@@ -80,13 +126,17 @@ struct ContentView: View {
 
                 // 注册多窗口路由：把 SwiftUI 的 openWindow(value:) 暴露给 AppDelegate。
                 // 任意窗口注册即可（openWindow 是 App 级动作），多窗口互相覆盖等价。
-                WindowRouter.shared.open = { url in openWindow(value: url) }
+                if registersWindowRouter {
+                    WindowRouter.shared.open = { url in openWindow(value: url) }
+                }
 
                 // 本窗口绑定了具体 URL（多窗口场景：双击文件新开的窗口）→ 直接打开它，
                 // 不读 UserDefaults pending，避免与冷启动初始窗口抢同一个 pending。
                 if let url = openedURL {
                     var isDir: ObjCBool = false
                     FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+                    clearPendingOpenDefaultsIfMatching(url)
+                    registerWindowURL(url)
                     if isDir.boolValue {
                         appViewModel.openDirectory(url)
                         settings.lastOpenedDirectory = url
@@ -109,6 +159,7 @@ struct ContentView: View {
                 if let filePath = UserDefaults.standard.string(forKey: "pendingOpenFilePath") {
                     UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
                     let url = URL(fileURLWithPath: filePath)
+                    registerWindowURL(url)
                     appViewModel.openSingleFile(url)
                     fileTreeViewModel.selectedFileURL = url
                     settings.lastOpenedDirectory = nil
@@ -120,6 +171,7 @@ struct ContentView: View {
                 } else if let dirPath = UserDefaults.standard.string(forKey: "pendingOpenDirectoryPath") {
                     UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
                     let url = URL(fileURLWithPath: dirPath)
+                    registerWindowURL(url)
                     appViewModel.openDirectory(url)
                     settings.lastOpenedDirectory = url
                     settings.lastOpenedFile = nil
@@ -178,9 +230,9 @@ struct ContentView: View {
                 // 设置模式：左侧设置菜单
                 SettingsSidebarView(appViewModel: appViewModel)
                     .frame(width: appViewModel.sidebarWidth)
-
-                ResizeHandle(appViewModel: appViewModel)
-                    .background(themeColors.bgSubtle)
+                    .overlay(alignment: .trailing) {
+                        floatingSidebarResizeHandle
+                    }
 
                 // 右侧设置内容
                 SettingsContentView(appViewModel: appViewModel, settings: settings)
@@ -197,10 +249,10 @@ struct ContentView: View {
                 .frame(width: appViewModel.isSidebarVisible ? appViewModel.sidebarWidth : 0)
                 .clipped()
                 .allowsHitTesting(appViewModel.isSidebarVisible)
-
-                if appViewModel.isSidebarVisible {
-                    ResizeHandle(appViewModel: appViewModel)
-                        .background(themeColors.bgSubtle)
+                .overlay(alignment: .trailing) {
+                    if appViewModel.isSidebarVisible {
+                        floatingSidebarResizeHandle
+                    }
                 }
 
                 DetailView(
@@ -214,7 +266,61 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.2), value: appViewModel.isShowingSettings)
     }
 
+    /// 侧边栏拖拽热区：浮动吸附在侧边栏右缘，不作为 HStack 的独立布局列。
+    private var floatingSidebarResizeHandle: some View {
+        ResizeHandle(appViewModel: appViewModel)
+            .offset(x: 4)
+            .zIndex(10)
+    }
+
     // MARK: - 方法
+
+
+    private func clearPendingOpenDefaultsIfMatching(_ url: URL) {
+        let canonicalURL = url.markMarkCanonicalFileURL
+        let pendingFileKey = "pendingOpenFilePath"
+        let pendingDirectoryKey = "pendingOpenDirectoryPath"
+        let pendingFileURL = UserDefaults.standard.string(forKey: pendingFileKey)
+            .map { URL(fileURLWithPath: $0).markMarkCanonicalFileURL }
+        let pendingDirectoryURL = UserDefaults.standard.string(forKey: pendingDirectoryKey)
+            .map { URL(fileURLWithPath: $0).markMarkCanonicalFileURL }
+
+        if pendingFileURL == canonicalURL || pendingDirectoryURL == canonicalURL {
+            UserDefaults.standard.removeObject(forKey: pendingFileKey)
+            UserDefaults.standard.removeObject(forKey: pendingDirectoryKey)
+        }
+    }
+
+    private func registerWindowURL(_ url: URL) {
+        let canonicalURL = url.markMarkCanonicalFileURL
+        if registeredOpenURL == canonicalURL { return }
+        if let registeredOpenURL {
+            WindowRouter.shared.unregisterOpenedURL(registeredOpenURL)
+        }
+        registeredOpenURL = canonicalURL
+        WindowRouter.shared.registerOpenedURL(canonicalURL, window: windowForOpenRegistration())
+    }
+
+
+    private func windowForOpenRegistration() -> NSWindow? {
+        if let hostingWindow { return hostingWindow }
+        if let keyWindow = NSApp.keyWindow, keyWindow.isVisible, keyWindow.canBecomeKey, !(keyWindow is NSPanel), !keyWindow.isSheet {
+            return keyWindow
+        }
+        if let mainWindow = NSApp.mainWindow, mainWindow.isVisible, mainWindow.canBecomeKey, !(mainWindow is NSPanel), !mainWindow.isSheet {
+            return mainWindow
+        }
+        return NSApp.windows.first {
+            $0.isVisible && $0.canBecomeKey && !($0 is NSPanel) && !$0.isSheet
+        }
+    }
+
+    private func unregisterWindowURL() {
+        if let registeredOpenURL {
+            WindowRouter.shared.unregisterOpenedURL(registeredOpenURL)
+            self.registeredOpenURL = nil
+        }
+    }
 
     private func applyAppearance(_ mode: AppearanceMode) {
         NSApp.appearance = mode.nsAppearance
@@ -223,6 +329,7 @@ struct ContentView: View {
     /// 重置所有 ViewModel 状态，显示欢迎页
     /// 用于 Dock 点击重新激活时，避免恢复旧窗口的文档内容
     private func resetToWelcome() {
+        unregisterWindowURL()
         appViewModel.rootDirectory = nil
         appViewModel.isSingleFileMode = false
         appViewModel.singleFileURL = nil
@@ -248,9 +355,11 @@ struct ContentView: View {
             return
         }
         if let dir = settings.lastOpenedDirectory {
+            registerWindowURL(dir)
             appViewModel.openDirectory(dir)
             settings.addRecentItem(url: dir, isDirectory: true)
         } else if let file = settings.lastOpenedFile {
+            registerWindowURL(file)
             appViewModel.openSingleFile(file)
             fileTreeViewModel.selectedFileURL = file
             settings.addRecentItem(url: file, isDirectory: false)
@@ -444,51 +553,27 @@ private struct FileOpenModifier: ViewModifier {
     let documentViewModel: DocumentViewModel
     let fileTreeViewModel: FileTreeViewModel
     let settings: SettingsModel
+    let acceptsExternalOpen: Bool
+    let recordOpenedURL: (URL) -> Void
     @Environment(\.language) private var language
 
     func body(content: Content) -> some View {
         content
+            .onReceive(NotificationCenter.default.publisher(for: .openExternalDirectory)) { notification in
+                guard acceptsExternalOpen, let url = notification.object as? URL else { return }
+                openDirectory(url)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openExternalFile)) { notification in
+                guard acceptsExternalOpen, let url = notification.object as? URL else { return }
+                openFile(url)
+            }
             .onActiveReceive(NotificationCenter.default.publisher(for: .openDirectory)) { notification in
                 guard let url = notification.object as? URL else { return }
-                // 幂等保护：如果已经在显示此目录，跳过
-                if appViewModel.rootDirectory == url { return }
-                if documentViewModel.isUntitled && documentViewModel.isDirty {
-                    handleUnsavedChangesBeforeAction { proceed in
-                        guard proceed else { return }
-                        appViewModel.openDirectory(url)
-                        settings.lastOpenedDirectory = url
-                        settings.lastOpenedFile = nil
-                        settings.addRecentItem(url: url, isDirectory: true)
-                    }
-                } else {
-                    appViewModel.openDirectory(url)
-                    settings.lastOpenedDirectory = url
-                    settings.lastOpenedFile = nil
-                    settings.addRecentItem(url: url, isDirectory: true)
-                }
+                openDirectory(url)
             }
             .onActiveReceive(NotificationCenter.default.publisher(for: .openFile)) { notification in
                 guard let url = notification.object as? URL else { return }
-                // 幂等保护：如果已经在显示此文件，跳过（防止 application(_:open:) 和 .onOpenURL 同时触发导致重复打开）
-                if documentViewModel.currentFileURL == url { return }
-                if documentViewModel.isUntitled && documentViewModel.isDirty {
-                    handleUnsavedChangesBeforeAction { proceed in
-                        guard proceed else { return }
-                        appViewModel.openSingleFile(url)
-                        fileTreeViewModel.selectedFileURL = url
-                        settings.lastOpenedDirectory = nil
-                        settings.lastOpenedFile = url
-                        settings.addRecentItem(url: url, isDirectory: false)
-                        // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
-                    }
-                } else {
-                    appViewModel.openSingleFile(url)
-                    fileTreeViewModel.selectedFileURL = url
-                    settings.lastOpenedDirectory = nil
-                    settings.lastOpenedFile = url
-                    settings.addRecentItem(url: url, isDirectory: false)
-                    // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
-                }
+                openFile(url)
             }
             .onActiveReceive(NotificationCenter.default.publisher(for: .newFromClipboard)) { _ in
                 // 从剪贴板新建标注：将剪贴板文本写入临时文件并以渲染模式打开
@@ -546,6 +631,50 @@ private struct FileOpenModifier: ViewModifier {
                     }
                 }
             }
+    }
+
+    private func openDirectory(_ url: URL) {
+        // 幂等保护：如果已经在显示此目录，跳过
+        if appViewModel.rootDirectory == url { return }
+        if documentViewModel.isUntitled && documentViewModel.isDirty {
+            handleUnsavedChangesBeforeAction { proceed in
+                guard proceed else { return }
+                applyOpenDirectory(url)
+            }
+        } else {
+            applyOpenDirectory(url)
+        }
+    }
+
+    private func applyOpenDirectory(_ url: URL) {
+        recordOpenedURL(url)
+        appViewModel.openDirectory(url)
+        settings.lastOpenedDirectory = url
+        settings.lastOpenedFile = nil
+        settings.addRecentItem(url: url, isDirectory: true)
+    }
+
+    private func openFile(_ url: URL) {
+        // 幂等保护：如果已经在显示此文件，跳过（防止 application(_:open:) 和 .onOpenURL 同时触发导致重复打开）
+        if documentViewModel.currentFileURL == url { return }
+        if documentViewModel.isUntitled && documentViewModel.isDirty {
+            handleUnsavedChangesBeforeAction { proceed in
+                guard proceed else { return }
+                applyOpenFile(url)
+            }
+        } else {
+            applyOpenFile(url)
+        }
+    }
+
+    private func applyOpenFile(_ url: URL) {
+        recordOpenedURL(url)
+        appViewModel.openSingleFile(url)
+        fileTreeViewModel.selectedFileURL = url
+        settings.lastOpenedDirectory = nil
+        settings.lastOpenedFile = url
+        settings.addRecentItem(url: url, isDirectory: false)
+        // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
     }
 
     /// 通用未保存修改弹窗处理

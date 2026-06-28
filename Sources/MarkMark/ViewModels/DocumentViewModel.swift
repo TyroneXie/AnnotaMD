@@ -1,6 +1,14 @@
 import SwiftUI
 import MarkdownReaderKit
 
+/// 主内容区当前已加载的文档类型。
+///
+/// Markdown 是 MarkMark 的主能力；非 Markdown 文本只作为只读 Raw 文本兜底查看。
+enum LoadedDocumentKind: Equatable {
+    case markdown
+    case plainText
+}
+
 /// 文档视图模型，管理当前文档状态和文件读取
 @MainActor
 @Observable
@@ -29,9 +37,18 @@ final class DocumentViewModel {
     /// 显示模式
     var displayMode: DisplayMode = .rendered
 
-    /// 当前文件是否为纯文本模式（非 Markdown 的 .txt 文件）
-    /// 纯文本模式下禁止切换到渲染模式
-    var isPlainTextMode: Bool = false
+    /// 当前已加载文档类型；nil 表示尚未加载或当前文件不支持。
+    var documentKind: LoadedDocumentKind? {
+        didSet { syncHasDocument() }
+    }
+
+    var isMarkdownDocument: Bool {
+        hasDocument && documentKind == .markdown
+    }
+
+    var isPlainTextDocument: Bool {
+        hasDocument && documentKind == .plainText
+    }
 
     /// 是否正在加载
     var isLoading: Bool = false
@@ -172,55 +189,17 @@ final class DocumentViewModel {
             diskContentSnapshot.removeValue(forKey: oldURL)
         }
 
-        // 检查文件类型并决定加载方式
-        // .md/.markdown/.mdown/.mkd → 正常 Markdown 加载
-        // .txt → 读取内容检测，是 Markdown 则正常加载，否则以纯文本模式加载
-        // 其他 → 报 unsupportedFileType 错误
-        let ext = url.pathExtension.lowercased()
-        var forceRawMode = false
-
-        // 先清除之前的错误状态，确保切换文件时 hasDocument 能正确更新
-        // 修复：从不支持格式文件切换到 md 文件时，旧 fileError 未及时清除，
-        // 导致 hasDocument 始终为 false，DetailView 继续显示 ErrorView 而非文档内容
         fileError = nil
-
-        if FileService.markdownExtensions.contains(ext) {
-            // 已知 Markdown 扩展名，直接加载
-        } else if ext == "txt" {
-            // .txt 文件需要内容检测
-            do {
-                let text = try await fileService.readFile(at: url)
-                if !FileService.detectMarkdownContent(text) {
-                    // 非 Markdown 的 .txt 文件，以纯文本模式加载
-                    forceRawMode = true
-                }
-            } catch {
-                fileError = .unsupportedFileType(url.pathExtension)
-                content = ""
-                currentFileURL = url
-                fileName = url.lastPathComponent
-                outlineItems = []
-                isDirty = false
-                isUntitled = false
-                return
-            }
-        } else {
-            fileError = .unsupportedFileType(url.pathExtension)
-            content = ""
-            currentFileURL = url
-            fileName = url.lastPathComponent
-            outlineItems = []
-            isDirty = false
-            isUntitled = false
-            return
-        }
-
         isLoading = true
         fileError = nil
-        isPlainTextMode = forceRawMode
 
         do {
-            let diskContent = try await fileService.readFile(at: url)
+            guard let loaded = try await readDisplayableText(at: url) else {
+                showUnsupportedFile(url)
+                return
+            }
+            let diskContent = loaded.content
+            documentKind = loaded.kind
             currentFileURL = url
             fileName = url.lastPathComponent
             // 保存磁盘内容快照，用于脏状态判断
@@ -236,19 +215,14 @@ final class DocumentViewModel {
             isDirty = (content != diskContent)
             // 加载真实文件时重置 isUntitled
             isUntitled = false
-            outlineItems = OutlineService.parse(content)
-            // 恢复目标文件的显示模式
-            // 非 Markdown 的 .txt 文件强制使用纯文本模式
-            if forceRawMode {
-                displayMode = .raw
-            } else {
-                displayMode = displayModeCache[url] ?? settings.defaultDisplayMode
-            }
+            outlineItems = loaded.kind == .markdown ? OutlineService.parse(content) : []
+            displayMode = loaded.kind == .markdown ? (displayModeCache[url] ?? settings.defaultDisplayMode) : .raw
         } catch let fileError as FileError {
             self.fileError = fileError
             content = ""
             currentFileURL = url
             fileName = url.lastPathComponent
+            documentKind = nil
             outlineItems = []
             isDirty = false
             isUntitled = false
@@ -257,6 +231,7 @@ final class DocumentViewModel {
             content = ""
             currentFileURL = url
             fileName = url.lastPathComponent
+            documentKind = nil
             outlineItems = []
             isDirty = false
             isUntitled = false
@@ -268,25 +243,40 @@ final class DocumentViewModel {
         startFileWatcher(for: url)
     }
 
+    private func showUnsupportedFile(_ url: URL) {
+        stopFileWatcher()
+        fileError = .unsupportedFileType(url.pathExtension)
+        content = ""
+        currentFileURL = url
+        fileName = url.lastPathComponent
+        documentKind = nil
+        outlineItems = []
+        isLoading = false
+        isDirty = false
+        isUntitled = false
+        isFileModifiedExternally = false
+    }
+
+    private func readDisplayableText(at url: URL) async throws -> (content: String, kind: LoadedDocumentKind)? {
+        if FileService.isKnownMarkdownExtension(url) {
+            return (try await fileService.readFile(at: url), .markdown)
+        }
+        guard let text = try await fileService.readTextFileIfLikelyText(at: url) else {
+            return nil
+        }
+        return (text, .plainText)
+    }
+
     /// 加载选中的文件节点
     /// - Parameter node: 文件节点
     func loadFileNode(_ node: FileNode) async {
-        if !node.isMarkdown {
-            fileError = .unsupportedFileType(node.path.pathExtension)
-            currentFileURL = node.path
-            fileName = node.name
-            content = ""
-            outlineItems = []
-            isUntitled = false
-            return
-        }
+        guard !node.isDirectory else { return }
         await loadFile(at: node.path)
     }
 
     /// 切换显示模式
     func switchDisplayMode(_ mode: DisplayMode) {
-        // 纯文本模式下禁止切换到渲染模式
-        if isPlainTextMode && mode == .rendered { return }
+        guard !isPlainTextDocument || mode == .raw else { return }
         displayMode = mode
         if let url = currentFileURL {
             displayModeCache[url] = mode
@@ -306,6 +296,7 @@ final class DocumentViewModel {
     /// - Returns: 是否成功定位并写入（失败时调用方可提示「无法定位选区」）。
     @discardableResult
     func applyCriticAction(_ action: CriticActionPayload) -> Bool {
+        guard isMarkdownDocument else { return false }
         // 对已有评论的编辑/删除（action.text 为旧评论内容）
         switch action.op {
         case "editComment":
@@ -361,12 +352,7 @@ final class DocumentViewModel {
     /// 撤销当前文件的上一步标注操作（由 Edit→撤销 / Cmd+Z 触发）。
     func performUndo() {
         guard let url = currentFileURL else { return }
-        // .txt 纯文本由 NSTextView 编辑器自身的 per-file UndoManager 处理（provider）；
-        // markdown 渲染模式用 CriticMarkup 专用管理器。
-        if isPlainTextMode {
-            UndoManagerProvider.shared.undoManager(for: url)?.undo()
-            return
-        }
+        guard isMarkdownDocument else { return }
         let undoManager = criticUndoManager(for: url)
         guard undoManager.canUndo else { return }
         undoManager.undo()
@@ -375,10 +361,7 @@ final class DocumentViewModel {
     /// 重做当前文件的标注操作（由 Edit→重做 / Cmd+Shift+Z 触发）。
     func performRedo() {
         guard let url = currentFileURL else { return }
-        if isPlainTextMode {
-            UndoManagerProvider.shared.undoManager(for: url)?.redo()
-            return
-        }
+        guard isMarkdownDocument else { return }
         let undoManager = criticUndoManager(for: url)
         guard undoManager.canRedo else { return }
         undoManager.redo()
@@ -473,14 +456,14 @@ final class DocumentViewModel {
 
     /// 应用所有标注：删除/替换生效、新增保留、高亮评论移除。同时清空该文件的会话记录。
     func applyAllAnnotations() {
-        guard hasDocument else { return }
+        guard hasDocument, isMarkdownDocument else { return }
         content = CriticMarkup.accepting(content)
         if let url = currentFileURL { sessionAnnotations[url] = [] }
     }
 
     /// 放弃所有标注：还原标注前的原文。同时清空该文件的会话记录。
     func discardAllAnnotations() {
-        guard hasDocument else { return }
+        guard hasDocument, isMarkdownDocument else { return }
         content = CriticMarkup.rejecting(content)
         if let url = currentFileURL { sessionAnnotations[url] = [] }
     }
@@ -521,6 +504,7 @@ final class DocumentViewModel {
 
         currentFileURL = fileURL
         fileName = name
+        documentKind = .markdown
         // 先设置快照，再设置 content，确保 markDirtyIfNeeded 即使被调用也能正确比较
         diskContentSnapshot[fileURL] = text
         contentCache[fileURL] = text
@@ -528,7 +512,6 @@ final class DocumentViewModel {
         outlineItems = OutlineService.parse(text)
         isDirty = false
         isUntitled = true
-        isPlainTextMode = false
         fileError = nil
         displayMode = .rendered  // 标注在渲染视图中进行
 
@@ -543,6 +526,7 @@ final class DocumentViewModel {
     @discardableResult
     func save() async -> Bool {
         guard let url = currentFileURL else { return false }
+        guard isMarkdownDocument || isUntitled else { return false }
 
         // 未保存的新建文件需要另存为
         if isUntitled {
@@ -585,6 +569,7 @@ final class DocumentViewModel {
             // 更新文件引用
             currentFileURL = newURL
             fileName = newURL.lastPathComponent
+            documentKind = .markdown
             diskContentSnapshot[newURL] = content
             contentCache[newURL] = content
             isDirty = false
@@ -599,6 +584,10 @@ final class DocumentViewModel {
 
     /// 检查内容是否与磁盘快照不同，更新脏状态
     private func markDirtyIfNeeded() {
+        guard isMarkdownDocument || isUntitled else {
+            isDirty = false
+            return
+        }
         guard let url = currentFileURL else {
             isDirty = false
             return
@@ -611,7 +600,7 @@ final class DocumentViewModel {
     /// 同步 hasDocument 存储属性，确保 @Observable 可靠追踪
     /// 在 currentFileURL / fileError 的 didSet 中自动调用
     private func syncHasDocument() {
-        hasDocument = (currentFileURL != nil && fileError == nil)
+        hasDocument = (currentFileURL != nil && fileError == nil && documentKind != nil)
     }
 
     /// 检查指定文件是否有未保存的修改
@@ -640,11 +629,11 @@ final class DocumentViewModel {
         content = ""
         currentFileURL = nil
         fileName = ""
+        documentKind = nil
         fileError = nil
         isLoading = false
         isDirty = false
         isUntitled = false
-        isPlainTextMode = false
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []
@@ -665,11 +654,11 @@ final class DocumentViewModel {
         content = ""
         currentFileURL = nil
         fileName = ""
+        documentKind = nil
         fileError = nil
         isLoading = false
         isDirty = false
         isUntitled = false
-        isPlainTextMode = false
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []
@@ -719,16 +708,19 @@ final class DocumentViewModel {
               !url.path.hasPrefix(Self.untitledDirectory.path) else { return }
 
         do {
-            let diskContent = try await fileService.readFile(at: url)
+            guard let loaded = try await readDisplayableText(at: url) else { return }
+            let diskContent = loaded.content
             // 与当前快照比较，若不同则处理外部修改
             if let snapshot = diskContentSnapshot[url], diskContent != snapshot {
                 if !isDirty {
                     // 用户未修改过，自动静默刷新
                     // 先更新快照，再设置 content，防止 didSet 中 markDirtyIfNeeded() 误判
+                    documentKind = loaded.kind
                     diskContentSnapshot[url] = diskContent
                     contentCache[url] = diskContent
                     content = diskContent
-                    outlineItems = OutlineService.parse(diskContent)
+                    outlineItems = loaded.kind == .markdown ? OutlineService.parse(diskContent) : []
+                    displayMode = loaded.kind == .markdown ? displayMode : .raw
                     isDirty = false
                 } else {
                     // 用户有修改，显示刷新按钮
@@ -748,12 +740,18 @@ final class DocumentViewModel {
         isFileModifiedExternally = false
 
         do {
-            let diskContent = try await fileService.readFile(at: url)
+            guard let loaded = try await readDisplayableText(at: url) else {
+                showUnsupportedFile(url)
+                return
+            }
+            let diskContent = loaded.content
+            documentKind = loaded.kind
             content = diskContent
             diskContentSnapshot[url] = diskContent
             contentCache[url] = diskContent
             isDirty = false
-            outlineItems = OutlineService.parse(diskContent)
+            outlineItems = loaded.kind == .markdown ? OutlineService.parse(diskContent) : []
+            displayMode = loaded.kind == .markdown ? displayMode : .raw
         } catch {
             fileError = .unknown(error)
         }
@@ -806,6 +804,7 @@ final class DocumentViewModel {
                 let tempURL = Self.untitledDirectory.appendingPathComponent(fileName)
                 try? content.write(to: tempURL, atomically: true, encoding: .utf8)
                 currentFileURL = tempURL
+                documentKind = .markdown
                 isUntitled = true
                 diskContentSnapshot[tempURL] = content
                 contentCache[tempURL] = content

@@ -9,6 +9,8 @@ struct RawMarkdownView: View {
     var contentPadding: CGFloat = 20
     var scrollToLine: Int?
     var fileURL: URL?
+    var isEditable: Bool = true
+    var isMarkdownSyntaxHighlightingEnabled: Bool = true
     /// 是否处于活跃状态（Raw 模式），用于自动获取焦点
     var isActive: Bool = false
     var isFindBarVisible: Bool = false
@@ -23,6 +25,8 @@ struct RawMarkdownView: View {
             contentPadding: contentPadding,
             scrollToLine: scrollToLine,
             themeColors: themeColors,
+            isEditable: isEditable,
+            isMarkdownSyntaxHighlightingEnabled: isMarkdownSyntaxHighlightingEnabled,
             fileURL: fileURL,
             isActive: isActive,
             searchRef: searchRef,

@@ -104,6 +104,9 @@ final class OverlayScrollerFinderView: NSView {
 
     private func applyThinOverlay(to scrollView: NSScrollView) {
         scrollView.scrollerStyle = .overlay
+        scrollView.scrollerInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        scrollView.contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        scrollView.automaticallyAdjustsContentInsets = false
         if !(scrollView.documentView is NSTextView),
            !(scrollView.verticalScroller is ThinOverlayScroller) {
             scrollView.verticalScroller = ThinOverlayScroller()
@@ -117,7 +120,7 @@ final class ThinOverlayScroller: NSScroller {
     override func drawKnob() {
         let knobFrame = rect(for: .knob)
         let thinRect = NSRect(
-            x: knobFrame.maxX - Self.knobWidth - 1,
+            x: knobFrame.maxX - Self.knobWidth,
             y: knobFrame.origin.y + 1,
             width: Self.knobWidth,
             height: max(knobFrame.height - 2, Self.knobWidth)

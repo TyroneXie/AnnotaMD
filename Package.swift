@@ -58,6 +58,13 @@ let package = Package(
                 "MarkdownReaderKit"
             ],
             path: "Tests/MarkdownReaderKitTests"
+        ),
+        .testTarget(
+            name: "MarkMarkTests",
+            dependencies: [
+                "MarkMark"
+            ],
+            path: "Tests/MarkMarkTests"
         )
     ]
 )

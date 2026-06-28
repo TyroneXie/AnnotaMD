@@ -262,6 +262,8 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
     var contentPadding: CGFloat = 20
     var scrollToLine: Int?
     var themeColors: ThemeColors
+    var isEditable: Bool = true
+    var isMarkdownSyntaxHighlightingEnabled: Bool = true
     /// 当前文件 URL，用于 per-file undo 管理
     var fileURL: URL?
     /// 是否处于活跃状态（Raw 模式），用于自动获取焦点
@@ -289,7 +291,7 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         let textView = HighlightableTextView()
         textView.delegate = context.coordinator
         textView.isRichText = false
-        textView.allowsUndo = true
+        textView.allowsUndo = isEditable
         textView.usesFindBar = false
         textView.isIncrementalSearchingEnabled = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -303,7 +305,7 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         textView.isAutomaticTextCompletionEnabled = false
         textView.smartInsertDeleteEnabled = false
         textView.isSelectable = true
-        textView.isEditable = true
+        textView.isEditable = isEditable
         textView.drawsBackground = false
         textView.backgroundColor = .clear  // 显式设置透明背景，防止 appearance 变化时 AppKit 重置为不透明
         textView.isVerticallyResizable = true
@@ -337,14 +339,7 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         // 设置边距
         textView.textContainerInset = NSSize(width: contentPadding, height: contentPadding)
 
-        // 应用初始高亮
-        let syntaxColors = deriveSyntaxColors(from: themeColors)
-        MarkdownSyntaxHighlighter.applyHighlights(
-            to: textView,
-            text: content,
-            colors: syntaxColors,
-            fontSize: fontSize
-        )
+        applyTextAttributes(to: textView, text: content)
 
         context.coordinator.textView = textView
         context.coordinator.scrollView = scrollView
@@ -395,6 +390,8 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
 
         // 更新插入点颜色
         textView.insertionPointColor = themeColors.accent.nsColor
+        textView.isEditable = isEditable
+        textView.allowsUndo = isEditable
         // typingAttributes 只影响新输入文字的颜色，不覆盖 textStorage 中已有的 per-range 语法高亮
         // textView.textColor 在 isRichText=false 模式下会覆盖全部 foregroundColor 属性
         textView.typingAttributes[.foregroundColor] = themeColors.ink.nsColor
@@ -406,16 +403,10 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         // 检测 appearance 变化（NSApp.appearance 被设置时 AppKit 会重置 NSTextView 属性）
         context.coordinator.checkAppearanceChange()
 
-        // 始终重新应用语法高亮：isRichText=false 模式下，AppKit 可能在布局变化时
-        // （切换大纲面板、窗口缩放、渲染/编辑切换等）清除 textStorage 的 per-range 属性
-        // 不使用脏标记优化：首字符颜色检测无法覆盖中段语法元素被清除的情况
-        let syntaxColors = deriveSyntaxColors(from: themeColors)
-        MarkdownSyntaxHighlighter.applyHighlights(
-            to: textView,
-            text: textView.string,
-            colors: syntaxColors,
-            fontSize: fontSize
-        )
+        // 始终重新应用文本属性：isRichText=false 模式下，AppKit 可能在布局变化时
+        // （切换大纲面板、窗口缩放、渲染/编辑切换等）清除 textStorage 的 per-range 属性。
+        // Markdown 原文启用语法高亮；普通文本只应用等宽字体和主题前景色。
+        applyTextAttributes(to: textView, text: textView.string)
         context.coordinator.previousThemeColors = themeColors
         context.coordinator.wasActive = isActive
 
@@ -451,6 +442,34 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
     }
 
     // MARK: - 颜色转换
+
+    private func applyTextAttributes(to textView: NSTextView, text: String) {
+        if isMarkdownSyntaxHighlightingEnabled {
+            let syntaxColors = deriveSyntaxColors(from: themeColors)
+            MarkdownSyntaxHighlighter.applyHighlights(
+                to: textView,
+                text: text,
+                colors: syntaxColors,
+                fontSize: fontSize
+            )
+            return
+        }
+
+        let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
+        guard fullRange.length > 0 else {
+            textView.font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+            textView.textColor = themeColors.ink.nsColor
+            return
+        }
+
+        textView.textStorage?.setAttributes(
+            [
+                .font: NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular),
+                .foregroundColor: themeColors.ink.nsColor
+            ],
+            range: fullRange
+        )
+    }
 
     /// 从 ThemeColors 派生 SyntaxColors
     private func deriveSyntaxColors(from tc: ThemeColors) -> SyntaxColors {

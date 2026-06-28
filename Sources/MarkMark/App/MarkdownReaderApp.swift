@@ -208,6 +208,7 @@ struct MarkdownReaderApp: App {
     }
 }
 
+
 // MARK: - Notification Names
 
 extension Notification.Name {
@@ -216,6 +217,8 @@ extension Notification.Name {
     static let switchToRaw = Notification.Name("com.markdownreader.switchToRaw")
     static let openDirectory = Notification.Name("com.markdownreader.openDirectory")
     static let openFile = Notification.Name("com.markdownreader.openFile")
+    static let openExternalDirectory = Notification.Name("com.markdownreader.openExternalDirectory")
+    static let openExternalFile = Notification.Name("com.markdownreader.openExternalFile")
     static let toggleSettings = Notification.Name("com.markdownreader.toggleSettings")
     static let newFromClipboard = Notification.Name("com.markdownreader.newFromClipboard")
     static let saveFile = Notification.Name("com.markdownreader.saveFile")

@@ -246,7 +246,7 @@ struct DetailView: View {
 
             Spacer()
 
-            // MarkMark 无编辑功能，移除渲染/编辑切换。纯文本(.txt)以原文视图展示。
+            // MarkMark 无编辑功能，移除渲染/编辑切换。
 
             // 操作按钮组与大纲图标下对齐，横向间隔一致
             HStack(alignment: .bottom, spacing: 8) {
@@ -264,7 +264,7 @@ struct DetailView: View {
                 }
 
                 // 保存按钮（在渲染模式切换右侧）
-                if documentViewModel.hasDocument {
+                if documentViewModel.hasDocument && documentViewModel.isMarkdownDocument {
                     Button {
                         NotificationCenter.default.post(name: .saveFile, object: nil)
                     } label: {
@@ -362,7 +362,7 @@ struct DetailView: View {
                         .foregroundStyle(outlineButtonColor)
                 }
                 .buttonStyle(.plain)
-                .disabled(!documentViewModel.hasDocument)
+                .disabled(!documentViewModel.hasDocument || !documentViewModel.isMarkdownDocument)
                 .help(L10n.tr(.titleBarToggleOutline, language: language))
             }
             .padding(.trailing, 12)
@@ -427,12 +427,12 @@ struct DetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // 右侧：大纲 / 标注列表侧边栏（互斥，共用宽度与拖拽手柄）
-            if appViewModel.isOutlineVisible {
+            if appViewModel.isOutlineVisible && documentViewModel.isMarkdownDocument {
                 OutlineResizeHandle(appViewModel: appViewModel)
 
                 outlineSidebar
                     .frame(width: appViewModel.outlineWidth)
-            } else if appViewModel.isAnnotationPanelVisible {
+            } else if appViewModel.isAnnotationPanelVisible && documentViewModel.isMarkdownDocument {
                 OutlineResizeHandle(appViewModel: appViewModel)
 
                 AnnotationPanelView(documentViewModel: documentViewModel, onCopied: { flashCopiedToast() })
@@ -459,7 +459,7 @@ struct DetailView: View {
 
     /// 当前文档是否包含 CriticMarkup 标注
     private var documentHasAnnotations: Bool {
-        CriticMarkup.hasMarkup(documentViewModel.content)
+        documentViewModel.isMarkdownDocument && CriticMarkup.hasMarkup(documentViewModel.content)
     }
 
     /// 传给渲染视图选词工具条的本地化文案
@@ -480,21 +480,21 @@ struct DetailView: View {
 
     /// 复制带标注的文档（含引导提示词模板）到剪贴板，供粘贴给 AI
     private func copyForAI() {
-        guard documentViewModel.hasDocument else { return }
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
         let prompt = settings.resolvedAIPrompt(language: language)
         writeToPasteboard(CriticMarkup.exportForAI(documentViewModel.content, prompt: prompt))
     }
 
     /// 复制带 CriticMarkup 标注的原文（不含 AI 引导说明）
     private func copyCritic() {
-        guard documentViewModel.hasDocument else { return }
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
         writeToPasteboard(documentViewModel.content)
     }
 
     /// 复制本次会话新增的标注片段（含上下文，纯片段不带提示头）；
     /// 没有本次新增时打开标注列表面板，让用户从历史标注中自选
     private func copySessionFragments() {
-        guard documentViewModel.hasDocument else { return }
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
         let annotations = documentViewModel.sessionMatchedAnnotations()
         guard !annotations.isEmpty else {
             if !appViewModel.isAnnotationPanelVisible {
@@ -534,7 +534,7 @@ struct DetailView: View {
     }
 
     private func exportPDF() {
-        guard documentViewModel.hasDocument else { return }
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
         let language = settings.languagePref.resolvedLanguage
         let stem = URL(fileURLWithPath: documentViewModel.fileName).deletingPathExtension().lastPathComponent
         let suggestedName = stem.isEmpty ? "Untitled.pdf" : "\(stem).pdf"
@@ -612,13 +612,28 @@ struct DetailView: View {
 
     // MARK: - 查找替换
 
+    private var isUsingTextSearch: Bool {
+        documentViewModel.isPlainTextDocument
+    }
+
+    private var isSearchableDocument: Bool {
+        documentViewModel.isMarkdownDocument || documentViewModel.isPlainTextDocument
+    }
+
+    private var canReplaceInCurrentView: Bool {
+        // 当前仅提供渲染阅读与 CriticMarkup 标注，不开放原文替换。
+        false
+    }
+
     private func openFindBar() {
+        guard isSearchableDocument else { return }
         if !appViewModel.isFindBarVisible {
             appViewModel.showFindBar()
         }
     }
 
     private func openFindAndReplace() {
+        guard isSearchableDocument else { return }
         if !appViewModel.isFindBarVisible {
             appViewModel.showFindBar()
         }
@@ -632,10 +647,11 @@ struct DetailView: View {
     }
 
     private func performSearch() {
+        guard isSearchableDocument else { return }
         let text = documentViewModel.content
         findReplaceViewModel.performSearch(in: text)
 
-        if documentViewModel.displayMode == .raw {
+        if isUsingTextSearch {
             if findReplaceViewModel.hasResults {
                 textViewSearchRef.reapplySearchHighlights(
                     matchRanges: findReplaceViewModel.matchRanges,
@@ -676,7 +692,7 @@ struct DetailView: View {
     }
 
     private func navigateToCurrentMatch() {
-        if documentViewModel.displayMode == .raw {
+        if isUsingTextSearch {
             textViewSearchRef.reapplySearchHighlights(
                 matchRanges: findReplaceViewModel.matchRanges,
                 currentIndex: findReplaceViewModel.currentMatchIndex
@@ -691,7 +707,7 @@ struct DetailView: View {
     }
 
     private func performReplace() {
-        guard documentViewModel.displayMode == .raw,
+        guard canReplaceInCurrentView,
               let currentRange = findReplaceViewModel.currentMatchRange else { return }
 
         let _ = textViewSearchRef.replaceCurrentMatch(at: currentRange, with: findReplaceViewModel.replaceText)
@@ -700,7 +716,7 @@ struct DetailView: View {
     }
 
     private func performReplaceAll() {
-        guard documentViewModel.displayMode == .raw,
+        guard canReplaceInCurrentView,
               !findReplaceViewModel.matchRanges.isEmpty else { return }
 
         let _ = textViewSearchRef.replaceAllMatches(ranges: findReplaceViewModel.matchRanges, with: findReplaceViewModel.replaceText)
@@ -728,34 +744,30 @@ struct DetailView: View {
     @ViewBuilder
     private var documentContentView: some View {
         ZStack {
-            // MarkMark 是纯阅读 + 标注，无编辑功能。
-            if documentViewModel.isPlainTextMode {
-                // 纯文本（.txt）无法渲染，用原文视图只读展示
+            if documentViewModel.isPlainTextDocument {
+                // 非 Markdown 文本：只读 Raw 文本兜底查看，不开放 Markdown 渲染/标注能力。
                 RawMarkdownView(
                     content: Binding(
                         get: { documentViewModel.content },
                         set: { documentViewModel.content = $0 }
                     ),
-                    fontSize: settings.sourceFontPointSize,
+                    fontSize: CGFloat(settings.sourceFontSize),
                     contentPadding: settings.contentPaddingPoints,
-                    scrollToLine: documentViewModel.scrollToLineRequest,
                     fileURL: documentViewModel.currentFileURL,
-                    isActive: true,
+                    isEditable: false,
+                    isMarkdownSyntaxHighlightingEnabled: false,
+                    // 只读文本预览不主动成为 first responder，避免从左侧文件树打开 .txt/.json/.log
+                    // 后抢走键盘焦点，导致上下左右导航失效。用户仍可点击文本区域后选择/搜索。
+                    isActive: false,
                     isFindBarVisible: appViewModel.isFindBarVisible,
                     searchRef: textViewSearchRef,
                     onCursorLineNumberChanged: { lineNumber in
                         documentViewModel.cursorLineNumber = lineNumber
                     }
                 )
-                .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
-                    if newValue != nil {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            documentViewModel.clearScrollRequest()
-                        }
-                    }
-                }
+                .id(documentViewModel.currentFileURL)
             } else {
-                // Markdown：仅渲染视图
+                // Markdown：仅渲染视图。文本兜底不进入此分支。
                 WebViewMarkdownView(
                     content: documentViewModel.content,
                     fileURL: documentViewModel.currentFileURL,
@@ -791,10 +803,10 @@ struct DetailView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            if appViewModel.isFindBarVisible, documentViewModel.hasDocument {
+            if appViewModel.isFindBarVisible, documentViewModel.hasDocument, isSearchableDocument {
                 FindReplaceBar(
                     viewModel: findReplaceViewModel,
-                    isRawMode: documentViewModel.displayMode == .raw,
+                    isRawMode: canReplaceInCurrentView,
                     onFindNext: { performFindNext() },
                     onFindPrevious: { performFindPrevious() },
                     onReplace: { performReplace() },
