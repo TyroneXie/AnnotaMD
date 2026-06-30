@@ -138,6 +138,7 @@ struct ContentView: View {
             .background(WindowCloseGuard(documentViewModel: documentViewModel, settings: settings))
             .background(WindowCaptureView { window in
                 hostingWindow = window
+                Self.configureContentWindow(window)
                 if let registeredOpenURL {
                     WindowRouter.shared.attachWindow(window, to: registeredOpenURL)
                 }
@@ -540,6 +541,18 @@ struct ContentView: View {
             UserDefaults.standard.removeObject(forKey: pendingFileKey)
             UserDefaults.standard.removeObject(forKey: pendingDirectoryKey)
         }
+    }
+
+    /// 内容窗口的多屏 / 多 Space 行为修正。
+    ///
+    /// 在「显示器具有单独的 Space」开启时，从某个全屏 App 的 Space 里启动 MarkMark，
+    /// SwiftUI 会把窗口建在另一个桌面 Space / 显示器上，且 App 不一定切到用户当前所在
+    /// 的 Space —— 表现为「启动后看不到窗口、菜单点不开、像卡死」。
+    /// `.moveToActiveSpace` 让窗口跟随用户当前 Space 出现；关闭 restoration 避免上次会话
+    /// 的窗口被 SwiftUI scene 恢复出来叠加成多窗口。
+    static func configureContentWindow(_ window: NSWindow) {
+        window.isRestorable = false
+        window.collectionBehavior.insert(.moveToActiveSpace)
     }
 
     private func registerWindowURL(_ url: URL) {
