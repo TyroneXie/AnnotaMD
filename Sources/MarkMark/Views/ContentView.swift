@@ -474,8 +474,16 @@ struct ContentView: View {
             settings.rememberDirectorySelectedFile(selectedFileURL, rootDirectory: rootURL)
         }
 
-        if appViewModel.isSingleFileMode
-            || appViewModel.rootDirectory?.markMarkCanonicalFileURL != rootURL {
+        // `openDirectory` 同步改写 `rootDirectory`；只有当它确实变更时，
+        // `onChange(of: rootDirectory)`(见 DirectoryChangeModifier) 才会触发并负责
+        // 复位 `isApplyingHistoryNavigation`。因此两条路径必须各自拥有复位：
+        // - willChangeRoot：root 会变 → onChange 必触发 → 由它收尾复位；
+        // - 否则：root 不变 → onChange 不会触发 → 在此处同步分支自行复位。
+        // 不变量：willChangeRoot 的判定必须与「openDirectory 是否真的改变 rootDirectory」
+        // 完全一致，否则历史导航标志会卡死、前进/后退失效。改动此处务必维持该一致性。
+        let willChangeRoot = appViewModel.isSingleFileMode
+            || appViewModel.rootDirectory?.markMarkCanonicalFileURL != rootURL
+        if willChangeRoot {
             historyNavigationDirectoryChange = snapshot
             appViewModel.openDirectory(rootURL)
             return
