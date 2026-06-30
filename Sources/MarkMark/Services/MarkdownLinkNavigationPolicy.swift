@@ -87,21 +87,36 @@ enum MarkdownLinkNavigationPolicy {
             }
 
             let sourceDirectory = sourceFileURL?.markMarkCanonicalFileURL.deletingLastPathComponent() ?? root
+            let common = nearestCommonDirectory(sourceDirectory, targetDirectory)
             return Decision(
                 targetURL: canonicalTarget,
                 targetKind: targetKind,
-                rootURL: nearestCommonDirectory(sourceDirectory, targetDirectory),
+                rootURL: cappedRoot(common, fallback: targetDirectory),
                 requiresConfirmation: true
             )
         }
 
         let sourceDirectory = sourceFileURL?.markMarkCanonicalFileURL.deletingLastPathComponent() ?? targetDirectory
+        let common = nearestCommonDirectory(sourceDirectory, targetDirectory)
+        // 单文件模式（无 currentRoot）下默认静默打开目录树；但若公共祖先塌到文件系统根，
+        // 退回目标所在目录并要求确认，避免把整盘当 workspace 加载。
+        let collapsedToFilesystemRoot = isFilesystemRoot(common)
         return Decision(
             targetURL: canonicalTarget,
             targetKind: targetKind,
-            rootURL: nearestCommonDirectory(sourceDirectory, targetDirectory),
-            requiresConfirmation: false
+            rootURL: cappedRoot(common, fallback: targetDirectory),
+            requiresConfirmation: collapsedToFilesystemRoot
         )
+    }
+
+    /// 文件系统根 `/` 永远不应成为侧边栏 root（会触发全盘加载）。
+    static func isFilesystemRoot(_ url: URL) -> Bool {
+        url.markMarkCanonicalFileURL.pathComponents == ["/"]
+    }
+
+    /// 把候选 root 封顶：塌到 `/` 时退回到目标所在目录这一有界范围。
+    static func cappedRoot(_ candidate: URL, fallback: URL) -> URL {
+        isFilesystemRoot(candidate) ? fallback : candidate
     }
 
     static func contains(_ child: URL, inOrEqualTo root: URL) -> Bool {

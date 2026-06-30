@@ -101,6 +101,51 @@ struct MarkdownLinkNavigationPolicyTests {
         #expect(!decision.requiresConfirmation)
     }
 
+    @Test("single file mode never sets the filesystem root, and asks for confirmation")
+    func singleFileModeCapsFilesystemRootWithConfirmation() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // 真实目标在临时目录里；伪造一个在文件系统根处就分叉的来源路径，
+        // 迫使最近公共父目录塌到 `/`。
+        let target = root.appendingPathComponent("notes/target.md")
+        try createFile(target)
+        let divergentSource = URL(fileURLWithPath: "/markmark-nonexistent-root/a/current.md")
+
+        let decision = MarkdownLinkNavigationPolicy.decide(
+            sourceFileURL: divergentSource,
+            currentRootURL: nil,
+            targetURL: target
+        )
+
+        #expect(decision.targetKind == .markdownFile)
+        // 绝不把 `/` 当 root；退回到目标所在目录这一有界范围。
+        #expect(!MarkdownLinkNavigationPolicy.isFilesystemRoot(decision.rootURL!))
+        #expect(decision.rootURL == target.deletingLastPathComponent().markMarkCanonicalFileURL)
+        #expect(decision.requiresConfirmation)
+    }
+
+    @Test("root capping helpers reject the filesystem root")
+    func rootCappingHelpers() throws {
+        let filesystemRoot = URL(fileURLWithPath: "/", isDirectory: true)
+        let normal = URL(fileURLWithPath: "/Users/someone/docs", isDirectory: true)
+        let fallback = URL(fileURLWithPath: "/Users/someone/docs/notes", isDirectory: true)
+
+        #expect(MarkdownLinkNavigationPolicy.isFilesystemRoot(filesystemRoot))
+        #expect(!MarkdownLinkNavigationPolicy.isFilesystemRoot(normal))
+
+        // `/` 被封顶为 fallback；正常目录保持不变。
+        #expect(MarkdownLinkNavigationPolicy.cappedRoot(filesystemRoot, fallback: fallback) == fallback)
+        #expect(MarkdownLinkNavigationPolicy.cappedRoot(normal, fallback: fallback) == normal)
+
+        // 分叉于文件系统根的两条路径，其最近公共父目录就是 `/`。
+        let common = MarkdownLinkNavigationPolicy.nearestCommonDirectory(
+            URL(fileURLWithPath: "/markmark-aaa/x"),
+            URL(fileURLWithPath: "/markmark-bbb/y")
+        )
+        #expect(MarkdownLinkNavigationPolicy.isFilesystemRoot(common))
+    }
+
     @Test("missing and unsupported targets do not navigate")
     func missingAndUnsupportedTargetsDoNotNavigate() throws {
         let root = try makeTemporaryDirectory()
