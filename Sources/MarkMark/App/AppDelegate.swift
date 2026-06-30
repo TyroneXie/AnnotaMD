@@ -51,8 +51,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 应用即将完成启动
     func applicationWillFinishLaunching(_ notification: Notification) {
         logger.info("applicationWillFinishLaunching")
+        // 单实例守卫必须最早执行：从 DMG 覆盖安装后旧版本仍在运行时，LaunchServices
+        // 会因 bundle 路径变化而再起一个进程，导致两个 MarkMark 同时运行——两边的启动
+        // 收敛循环（窗口 prune / focus pulse）都反复 NSApp.activate(ignoringOtherApps:)，
+        // 互相抢前台、把菜单瞬间关掉，表现为「菜单闪一下就再也打不开/像卡死」。
+        if relinquishToExistingInstanceIfNeeded() { return }
         NSApp.servicesProvider = self
         installContentWindowReadyObserver()
+    }
+
+    /// 若已有同 bundle id 的实例在运行，则激活它并立即退出本进程，确保全局单实例。
+    ///
+    /// 自动更新（守夜人脚本）会先 `exit(0)` 旧进程、待 pid 消失后再 `open` 新包，
+    /// 那时不存在其它实例，本守卫不会误伤更新流程。
+    private func relinquishToExistingInstanceIfNeeded() -> Bool {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let current = NSRunningApplication.current
+        let others = NSRunningApplication
+            .runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0 != current && !$0.isTerminated }
+        guard let existing = others.first else { return false }
+
+        logger.info("Another MarkMark instance is already running (pid \(existing.processIdentifier)); relinquishing.")
+        existing.activate(options: [.activateAllWindows])
+        // 用 exit(0) 立即退出：此刻尚未建任何窗口，无需走 terminate 的关闭流程。
+        exit(0)
     }
 
     /// 允许普通直接启动创建 SwiftUI 的 untitled/nil 默认窗口。
