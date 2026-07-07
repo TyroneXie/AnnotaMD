@@ -117,14 +117,16 @@ final class DocumentViewModel {
 
     /// 大纲导航滚动请求（非 nil 时触发滚动，滚动后应清空）
     var scrollToLineRequest: Int?
+    private(set) var scrollRequestGeneration: Int = 0
 
     /// 当前光标所在行号（1-based），Raw 模式下由编辑器实时更新
-    /// 与 HTML data-line 属性和 OutlineItem.lineNumber 使用相同约定
     var cursorLineNumber: Int = 1
 
-    /// 渲染视图当前可见区域顶部的行号（1-based），Rendered 模式下由 WebView 滚动回调实时更新
-    /// 切换回 Raw 模式时用于同步滚动位置
-    var renderedVisibleLineNumber: Int = 1
+    /// 编辑视图当前可见区域顶部的行号（0-based），Raw 模式下由 NSTextView 滚动回调实时更新。
+    var rawVisibleLineNumber: Int = 0
+
+    /// 渲染视图当前可见区域顶部的行号（0-based），Rendered 模式下由 WebView 滚动回调实时更新。
+    var renderedVisibleLineNumber: Int = 0
 
     /// Per-file 内容缓存：保存未写入磁盘的编辑内容
     /// 切换文件时保存当前内容，切换回来时恢复缓存内容
@@ -221,6 +223,7 @@ final class DocumentViewModel {
             isUntitled = false
             outlineItems = loaded.kind == .markdown ? OutlineService.parse(content) : []
             displayMode = loaded.kind == .markdown ? (displayModeCache[url] ?? settings.defaultDisplayMode) : .raw
+            resetScrollTracking()
         } catch let fileError as FileError {
             self.fileError = fileError
             content = ""
@@ -230,6 +233,7 @@ final class DocumentViewModel {
             outlineItems = []
             isDirty = false
             isUntitled = false
+            resetScrollTracking()
         } catch {
             self.fileError = .unknown(error)
             content = ""
@@ -239,6 +243,7 @@ final class DocumentViewModel {
             outlineItems = []
             isDirty = false
             isUntitled = false
+            resetScrollTracking()
         }
 
         isLoading = false
@@ -259,6 +264,7 @@ final class DocumentViewModel {
         isDirty = false
         isUntitled = false
         isFileModifiedExternally = false
+        resetScrollTracking()
     }
 
     private func readDisplayableText(at url: URL) async throws -> (content: String, kind: LoadedDocumentKind)? {
@@ -279,19 +285,46 @@ final class DocumentViewModel {
     }
 
     /// 切换显示模式
-    func switchDisplayMode(_ mode: DisplayMode) {
+    func switchDisplayMode(_ mode: DisplayMode, preservingLine explicitLineNumber: Int? = nil) {
         guard !isPlainTextDocument || mode == .raw else { return }
+        guard mode != displayMode else { return }
+
+        let lineToPreserve: Int? = isMarkdownDocument
+            ? (explicitLineNumber ?? (displayMode == .rendered ? renderedVisibleLineNumber : rawVisibleLineNumber))
+            : nil
+
         displayMode = mode
         if let url = currentFileURL {
             displayModeCache[url] = mode
         }
-        // 渲染视图与原文视图均常驻 ZStack（仅切换 opacity），各自保留滚动位置；
-        // 切换时不再强制同步滚动，避免「切回渲染跳到底部」。
+
+        if let lineToPreserve {
+            requestScrollToLine(max(0, lineToPreserve))
+        }
+    }
+
+    func toggleDisplayMode() {
+        switchDisplayMode(displayMode == .rendered ? .raw : .rendered)
     }
 
     /// 请求滚动到指定行号（大纲导航使用）
     func requestScrollToLine(_ lineNumber: Int) {
-        scrollToLineRequest = lineNumber
+        let clampedLine = max(0, lineNumber)
+        scrollRequestGeneration += 1
+        let generation = scrollRequestGeneration
+        scrollToLineRequest = nil
+        Task { @MainActor in
+            guard self.scrollRequestGeneration == generation else { return }
+            self.scrollToLineRequest = clampedLine
+        }
+    }
+
+    private func resetScrollTracking() {
+        scrollRequestGeneration += 1
+        scrollToLineRequest = nil
+        cursorLineNumber = 1
+        rawVisibleLineNumber = 0
+        renderedVisibleLineNumber = 0
     }
 
     /// 应用来自渲染视图选词工具条的 CriticMarkup 标注。
@@ -341,7 +374,8 @@ final class DocumentViewModel {
             op,
             to: content,
             selectedText: action.text,
-            nearLine: action.line
+            nearLine: action.line,
+            locator: action.locator
         ) {
             registerCriticUndo()
             content = updated
@@ -349,6 +383,143 @@ final class DocumentViewModel {
             return true
         }
         return false
+    }
+
+    @discardableResult
+    func applyMarkdownEditAction(_ action: MarkdownEditActionPayload) -> Bool {
+        guard isMarkdownDocument else { return false }
+        switch action.op {
+        case "bold":
+            return toggleMarkdownWrapping(
+                selectedText: action.text,
+                nearLine: action.line,
+                locator: action.locator,
+                prefix: "**",
+                suffix: "**"
+            )
+        case "italic":
+            return toggleMarkdownWrapping(
+                selectedText: action.text,
+                nearLine: action.line,
+                locator: action.locator,
+                prefix: "*",
+                suffix: "*"
+            )
+        case "underline":
+            return toggleMarkdownWrapping(
+                selectedText: action.text,
+                nearLine: action.line,
+                locator: action.locator,
+                prefix: "<u>",
+                suffix: "</u>"
+            )
+        case "code":
+            return toggleMarkdownWrapping(
+                selectedText: action.text,
+                nearLine: action.line,
+                locator: action.locator,
+                prefix: "`",
+                suffix: "`"
+            )
+        default:
+            return false
+        }
+    }
+
+    private func toggleMarkdownWrapping(
+        selectedText: String,
+        nearLine: Int,
+        locator: CriticMarkup.SelectionLocator?,
+        prefix: String,
+        suffix: String
+    ) -> Bool {
+        guard let range = CriticMarkup.locateRange(
+            in: content,
+            selectedText: selectedText,
+            nearLine: nearLine,
+            locator: locator
+        ) else {
+            return false
+        }
+
+        let hasOuterMarkers = content[..<range.lowerBound].hasSuffix(prefix)
+            && content[range.upperBound...].hasPrefix(suffix)
+        var updated = content
+        let lowerOffset = content.distance(from: content.startIndex, to: range.lowerBound)
+        let upperOffset = content.distance(from: content.startIndex, to: range.upperBound)
+        let updatedLower = updated.index(updated.startIndex, offsetBy: lowerOffset)
+        let updatedUpper = updated.index(updated.startIndex, offsetBy: upperOffset)
+        registerCriticUndo()
+        if hasOuterMarkers {
+            let prefixStart = updated.index(updatedLower, offsetBy: -prefix.count)
+            let suffixEnd = updated.index(updatedUpper, offsetBy: suffix.count)
+            updated.removeSubrange(updatedUpper..<suffixEnd)
+            updated.removeSubrange(prefixStart..<updatedLower)
+        } else {
+            updated.replaceSubrange(updatedLower..<updatedUpper, with: prefix + String(updated[updatedLower..<updatedUpper]) + suffix)
+        }
+        content = updated
+        return true
+    }
+
+    @discardableResult
+    func applyMarkdownBlockAction(_ action: MarkdownBlockActionPayload) -> Bool {
+        guard isMarkdownDocument else { return false }
+        switch action.op {
+        case "paragraph":
+            return setMarkdownHeadingLevel(atLine: action.line, level: nil)
+        case "heading":
+            guard let level = action.level, (1...6).contains(level) else { return false }
+            return setMarkdownHeadingLevel(atLine: action.line, level: level)
+        default:
+            return false
+        }
+    }
+
+    private func setMarkdownHeadingLevel(atLine sourceLine: Int, level: Int?) -> Bool {
+        var lines = content.components(separatedBy: "\n")
+        let hadTrailingNewline = content.hasSuffix("\n")
+        if hadTrailingNewline {
+            lines.removeLast()
+        }
+
+        let candidateIndexes = [sourceLine - 1, sourceLine]
+            .filter { $0 >= 0 && $0 < lines.count }
+        var seen = Set<Int>()
+
+        for index in candidateIndexes {
+            guard seen.insert(index).inserted else { continue }
+            guard let rewritten = rewriteMarkdownHeadingLine(lines[index], level: level) else { continue }
+            guard rewritten != lines[index] else { return true }
+            registerCriticUndo()
+            lines[index] = rewritten
+            content = lines.joined(separator: "\n") + (hadTrailingNewline ? "\n" : "")
+            return true
+        }
+
+        return false
+    }
+
+    private func rewriteMarkdownHeadingLine(_ line: String, level: Int?) -> String? {
+        let nsLine = line as NSString
+        let headingPattern = #"^([ \t]{0,3})(#{1,6})(?:[ \t]+|$)(.*?)([ \t]+#+[ \t]*)?$"#
+        if let regex = try? NSRegularExpression(pattern: headingPattern),
+           let match = regex.firstMatch(in: line, range: NSRange(location: 0, length: nsLine.length)) {
+            let indent = match.range(at: 1).location == NSNotFound ? "" : nsLine.substring(with: match.range(at: 1))
+            let title = match.range(at: 3).location == NSNotFound ? "" : nsLine.substring(with: match.range(at: 3))
+            guard let level else {
+                return indent + title.trimmingCharacters(in: .whitespaces)
+            }
+            return indent + String(repeating: "#", count: level) + " " + title.trimmingCharacters(in: .whitespaces)
+        }
+
+        guard let level else { return nil }
+        guard !line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let leadingWhitespace = line.prefix { $0 == " " || $0 == "\t" }
+        guard !leadingWhitespace.contains("\t"), leadingWhitespace.count <= 3 else { return nil }
+        let body = line.dropFirst(leadingWhitespace.count).trimmingCharacters(in: .whitespaces)
+        guard !body.isEmpty else { return nil }
+        return String(leadingWhitespace) + String(repeating: "#", count: level) + " " + body
     }
 
     // MARK: - CriticMarkup 撤销支持（渲染模式，issue #8）
@@ -473,7 +644,10 @@ final class DocumentViewModel {
     }
 
     /// 清除滚动请求（滚动完成后调用）
-    func clearScrollRequest() {
+    func clearScrollRequest(ifGeneration generation: Int? = nil) {
+        if let generation, generation != scrollRequestGeneration {
+            return
+        }
         scrollToLineRequest = nil
     }
 
@@ -518,6 +692,7 @@ final class DocumentViewModel {
         isUntitled = true
         fileError = nil
         displayMode = .rendered  // 标注在渲染视图中进行
+        resetScrollTracking()
 
         isLoading = false
 
@@ -641,6 +816,7 @@ final class DocumentViewModel {
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []
+        resetScrollTracking()
         contentCache.removeAll()
         displayModeCache.removeAll()
         diskContentSnapshot.removeAll()
@@ -666,6 +842,7 @@ final class DocumentViewModel {
         isFileModifiedExternally = false
         displayMode = settings.defaultDisplayMode
         outlineItems = []
+        resetScrollTracking()
     }
 
     func discardUntitledFile() {

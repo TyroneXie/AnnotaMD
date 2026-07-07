@@ -20,6 +20,21 @@ public enum CriticMarkup {
         case insert(String)    // 在选区之后插入新文本
     }
 
+    /// 渲染层传回的选区定位辅助信息。
+    /// `nearLine` 只能定位到块级行号；当同一行有重复文本或前方已有评论标记时，
+    /// 需要用「渲染视图里的第几次出现 + 前后文」把写回位置钉到当前选区。
+    public struct SelectionLocator: Equatable, Sendable {
+        public let occurrence: Int?
+        public let prefix: String?
+        public let suffix: String?
+
+        public init(occurrence: Int?, prefix: String?, suffix: String?) {
+            self.occurrence = occurrence
+            self.prefix = prefix
+            self.suffix = suffix
+        }
+    }
+
     // MARK: - 定位
 
     /// 在 `source` 中定位 `selectedText`，在多处出现时选取最接近 `nearLine`（1 基）的一处。
@@ -32,14 +47,60 @@ public enum CriticMarkup {
     ///    源码子串。此时把选区逐字符之间允许夹杂少量 Markdown 噪声（`* _ ~ \` \ ` 及空白）后再匹配。
     ///    边界可能多包/少包一两个标记符，但能定位到位（参考 Hypothesis 的「精确失败→容错」策略）。
     public static func locateRange(in source: String, selectedText: String, nearLine: Int) -> Range<String.Index>? {
-        guard !selectedText.isEmpty else { return nil }
-
-        // 第一级：精确
-        if let r = nearestRange(among: exactRanges(of: selectedText, in: source), in: source, nearLine: nearLine) {
-            return r
+        for text in selectionTextVariants(selectedText) {
+            // 第一级：精确
+            if let r = nearestRange(among: exactRanges(of: text, in: source), in: source, nearLine: nearLine) {
+                return r
+            }
+            // 第二级：标记/空白容错
+            if let r = nearestRange(among: tolerantRanges(of: text, in: source), in: source, nearLine: nearLine) {
+                return r
+            }
         }
-        // 第二级：标记/空白容错
-        return nearestRange(among: tolerantRanges(of: selectedText, in: source), in: source, nearLine: nearLine)
+
+        return nil
+    }
+
+    /// 带渲染层选区定位器的定位入口。优先在「去掉 CriticMarkup 定界符后的可见文本投影」里
+    /// 按当前选区的出现序号/上下文查找，再回退到旧的行号近邻策略。
+    public static func locateRange(
+        in source: String,
+        selectedText: String,
+        nearLine: Int,
+        locator: SelectionLocator?
+    ) -> Range<String.Index>? {
+        guard !selectedText.isEmpty else { return nil }
+        if let locator {
+            for text in selectionTextVariants(selectedText) {
+                if let projected = locateRangeInDisplayProjection(
+                    in: source,
+                    selectedText: text,
+                    nearLine: nearLine,
+                    locator: locator
+                ) {
+                    return projected
+                }
+            }
+        }
+        return locateRange(in: source, selectedText: selectedText, nearLine: nearLine)
+    }
+
+    private static func selectionTextVariants(_ selectedText: String) -> [String] {
+        let trimmed = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let collapsed = collapseWhitespace(in: trimmed)
+        var result: [String] = []
+        for candidate in [selectedText, trimmed, collapsed] where !candidate.isEmpty && !result.contains(candidate) {
+            result.append(candidate)
+        }
+        return result
+    }
+
+    private static func collapseWhitespace(in text: String) -> String {
+        text.replacingOccurrences(
+            of: #"\s+"#,
+            with: " ",
+            options: .regularExpression
+        )
     }
 
     /// 在 `source` 中查找 `needle` 的所有（非重叠）精确出现。
@@ -68,15 +129,242 @@ public enum CriticMarkup {
         return matches.compactMap { Range($0.range, in: source) }
     }
 
+    private struct ProjectedSource {
+        var text: String
+        var sourceIndices: [String.Index]
+
+        func sourceRange(for projectedRange: Range<String.Index>, in source: String) -> Range<String.Index>? {
+            let lowerOffset = text.distance(from: text.startIndex, to: projectedRange.lowerBound)
+            let upperOffset = text.distance(from: text.startIndex, to: projectedRange.upperBound)
+            guard lowerOffset >= 0,
+                  upperOffset > lowerOffset,
+                  upperOffset <= sourceIndices.count else { return nil }
+
+            let sourceLower = sourceIndices[lowerOffset]
+            let sourceUpper = source.index(after: sourceIndices[upperOffset - 1])
+            return sourceLower..<sourceUpper
+        }
+    }
+
+    private enum ProjectionMode {
+        case plain
+        case addition
+        case deletion
+        case highlight
+        case substitution
+    }
+
+    /// 生成接近渲染视图可见文本的源码投影，同时保留每个投影字符对应的源码位置。
+    /// 这里剥离 CriticMarkup 定界符，以及常见的 Markdown 可见文本外壳（标题 #、链接 URL、强调符号、行内代码反引号）。
+    private static func criticDisplayProjection(of source: String) -> ProjectedSource {
+        var text = ""
+        var sourceIndices: [String.Index] = []
+        var i = source.startIndex
+        var mode: ProjectionMode = .plain
+        var atLineStart = true
+
+        func hasPrefix(_ marker: String) -> Bool {
+            source[i...].hasPrefix(marker)
+        }
+
+        func advance(by marker: String) {
+            i = source.index(i, offsetBy: marker.count)
+        }
+
+        func skipCurrentCharacter() {
+            if source[i] == "\n" {
+                atLineStart = true
+            }
+            i = source.index(after: i)
+        }
+
+        func appendCurrentCharacter() {
+            text.append(source[i])
+            sourceIndices.append(i)
+            atLineStart = source[i] == "\n"
+            i = source.index(after: i)
+        }
+
+        func skipLineStartMarkdownPrefixIfNeeded() -> Bool {
+            guard atLineStart else { return false }
+
+            var j = i
+            var spaces = 0
+            while j < source.endIndex, source[j] == " ", spaces < 3 {
+                spaces += 1
+                j = source.index(after: j)
+            }
+
+            var hashes = 0
+            var h = j
+            while h < source.endIndex, source[h] == "#", hashes < 6 {
+                hashes += 1
+                h = source.index(after: h)
+            }
+            if hashes > 0, h < source.endIndex, source[h].isWhitespace {
+                while i < h { skipCurrentCharacter() }
+                while i < source.endIndex, source[i].isWhitespace, source[i] != "\n" {
+                    skipCurrentCharacter()
+                }
+                atLineStart = false
+                return true
+            }
+
+            if source[j...].hasPrefix("- ") || source[j...].hasPrefix("* ") || source[j...].hasPrefix("+ ") {
+                let markerEnd = source.index(j, offsetBy: 2)
+                while i < markerEnd { skipCurrentCharacter() }
+                atLineStart = false
+                return true
+            }
+
+            return false
+        }
+
+        func appendLinkLabelIfPresent() -> Bool {
+            guard source[i] == "[" else { return false }
+            guard let closeLabel = source[i..<source.endIndex].firstIndex(of: "]") else { return false }
+            let afterLabel = source.index(after: closeLabel)
+            guard afterLabel < source.endIndex,
+                  source[afterLabel] == "(",
+                  let closeURL = source[afterLabel..<source.endIndex].firstIndex(of: ")") else {
+                return false
+            }
+
+            i = source.index(after: i)
+            while i < closeLabel {
+                appendCurrentCharacter()
+            }
+            i = source.index(after: closeURL)
+            atLineStart = false
+            return true
+        }
+
+        func skipImageIfPresent() -> Bool {
+            guard hasPrefix("![") else { return false }
+            guard let closeLabel = source[i..<source.endIndex].firstIndex(of: "]") else { return false }
+            let afterLabel = source.index(after: closeLabel)
+            guard afterLabel < source.endIndex,
+                  source[afterLabel] == "(",
+                  let closeURL = source[afterLabel..<source.endIndex].firstIndex(of: ")") else {
+                return false
+            }
+            i = source.index(after: closeURL)
+            atLineStart = false
+            return true
+        }
+
+        while i < source.endIndex {
+            switch mode {
+            case .plain:
+                if skipLineStartMarkdownPrefixIfNeeded() { continue }
+                if hasPrefix("{>>"),
+                   let end = source.range(of: "<<}", range: i..<source.endIndex) {
+                    text.append("💬")
+                    sourceIndices.append(i)
+                    i = end.upperBound
+                    atLineStart = false
+                    continue
+                }
+                if hasPrefix("{++") { advance(by: "{++"); mode = .addition; continue }
+                if hasPrefix("{--") { advance(by: "{--"); mode = .deletion; continue }
+                if hasPrefix("{==") { advance(by: "{=="); mode = .highlight; continue }
+                if hasPrefix("{~~") { advance(by: "{~~"); mode = .substitution; continue }
+                if skipImageIfPresent() { continue }
+                if appendLinkLabelIfPresent() { continue }
+                if source[i] == "`" || source[i] == "*" || source[i] == "~" {
+                    skipCurrentCharacter()
+                    continue
+                }
+
+            case .addition:
+                if hasPrefix("++}") { advance(by: "++}"); mode = .plain; continue }
+
+            case .deletion:
+                if hasPrefix("--}") { advance(by: "--}"); mode = .plain; continue }
+
+            case .highlight:
+                if hasPrefix("==}") { advance(by: "==}"); mode = .plain; continue }
+
+            case .substitution:
+                if hasPrefix("~>") { advance(by: "~>"); continue }
+                if hasPrefix("~~}") { advance(by: "~~}"); mode = .plain; continue }
+            }
+
+            appendCurrentCharacter()
+        }
+
+        return ProjectedSource(text: text, sourceIndices: sourceIndices)
+    }
+
+    /// 定位器模式下合并精确与容错候选：当前选区可能跨 Markdown 标记，
+    /// 但文档前方也可能存在一个精确同名文本，不能因为精确候选非空就跳过容错候选。
+    private static func candidateRanges(of selectedText: String, in text: String) -> [Range<String.Index>] {
+        let ranges = (exactRanges(of: selectedText, in: text) + tolerantRanges(of: selectedText, in: text))
+            .sorted {
+                if $0.lowerBound != $1.lowerBound { return $0.lowerBound < $1.lowerBound }
+                return text.distance(from: $0.lowerBound, to: $0.upperBound)
+                    < text.distance(from: $1.lowerBound, to: $1.upperBound)
+            }
+        var result: [Range<String.Index>] = []
+        for range in ranges where !result.contains(where: { rangesOverlap($0, range) }) {
+            result.append(range)
+        }
+        return result
+    }
+
+    private static func rangesOverlap(_ lhs: Range<String.Index>, _ rhs: Range<String.Index>) -> Bool {
+        lhs.lowerBound < rhs.upperBound && rhs.lowerBound < lhs.upperBound
+    }
+
+    private static func locateRangeInDisplayProjection(
+        in source: String,
+        selectedText: String,
+        nearLine: Int,
+        locator: SelectionLocator
+    ) -> Range<String.Index>? {
+        let projection = criticDisplayProjection(of: source)
+        let ranges = candidateRanges(of: selectedText, in: projection.text)
+        guard !ranges.isEmpty else { return nil }
+
+        var bestRange: Range<String.Index>?
+        var bestScore = Int.max
+
+        for (index, projectedRange) in ranges.enumerated() {
+            guard let sourceRange = projection.sourceRange(for: projectedRange, in: source) else { continue }
+
+            var score = abs(lineNumber(in: source, at: sourceRange.lowerBound) - nearLine) * 50
+            if let occurrence = locator.occurrence {
+                score += abs(index - occurrence) * 1_000
+            }
+            if let prefix = locator.prefix, !prefix.isEmpty {
+                let before = String(projection.text[projection.text.startIndex..<projectedRange.lowerBound])
+                let matched = commonSuffixLength(prefix, before, limit: 120)
+                score -= matched * 15
+                if matched == 0 { score += 120 }
+            }
+            if let suffix = locator.suffix, !suffix.isEmpty {
+                let after = String(projection.text[projectedRange.upperBound..<projection.text.endIndex])
+                let matched = commonPrefixLength(suffix, after, limit: 120)
+                score -= matched * 15
+                if matched == 0 { score += 120 }
+            }
+
+            if score < bestScore {
+                bestScore = score
+                bestRange = sourceRange
+            }
+        }
+
+        return bestRange
+    }
+
     /// 在候选区间里选取起点行号最接近 `nearLine` 的一处。
     private static func nearestRange(among ranges: [Range<String.Index>], in source: String, nearLine: Int) -> Range<String.Index>? {
         guard !ranges.isEmpty else { return nil }
         var best = ranges[0]
         var bestDistance = Int.max
         for r in ranges {
-            let line = source[source.startIndex..<r.lowerBound].reduce(into: 1) { acc, ch in
-                if ch == "\n" { acc += 1 }
-            }
+            let line = lineNumber(in: source, at: r.lowerBound)
             let distance = abs(line - nearLine)
             if distance < bestDistance {
                 bestDistance = distance
@@ -86,11 +374,51 @@ public enum CriticMarkup {
         return best
     }
 
+    private static func lineNumber(in source: String, at index: String.Index) -> Int {
+        source[source.startIndex..<index].reduce(into: 1) { acc, ch in
+            if ch == "\n" { acc += 1 }
+        }
+    }
+
+    private static func commonSuffixLength(_ a: String, _ b: String, limit: Int) -> Int {
+        var ia = a.endIndex
+        var ib = b.endIndex
+        var count = 0
+        while ia > a.startIndex, ib > b.startIndex, count < limit {
+            let pa = a.index(before: ia)
+            let pb = b.index(before: ib)
+            if a[pa] != b[pb] { break }
+            count += 1
+            ia = pa
+            ib = pb
+        }
+        return count
+    }
+
+    private static func commonPrefixLength(_ a: String, _ b: String, limit: Int) -> Int {
+        var ia = a.startIndex
+        var ib = b.startIndex
+        var count = 0
+        while ia < a.endIndex, ib < b.endIndex, count < limit {
+            if a[ia] != b[ib] { break }
+            count += 1
+            ia = a.index(after: ia)
+            ib = b.index(after: ib)
+        }
+        return count
+    }
+
     // MARK: - 应用标注
 
     /// 在源码中定位选区并写入对应 CriticMarkup。找不到选区时返回 nil。
-    public static func apply(_ op: Operation, to source: String, selectedText: String, nearLine: Int) -> String? {
-        guard let range = locateRange(in: source, selectedText: selectedText, nearLine: nearLine) else {
+    public static func apply(
+        _ op: Operation,
+        to source: String,
+        selectedText: String,
+        nearLine: Int,
+        locator: SelectionLocator? = nil
+    ) -> String? {
+        guard let range = locateRange(in: source, selectedText: selectedText, nearLine: nearLine, locator: locator) else {
             return nil
         }
         let selected = String(source[range])

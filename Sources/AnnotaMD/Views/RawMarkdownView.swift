@@ -5,7 +5,7 @@ import MarkdownReaderKit
 /// 像 VS Code / Sublime Text 一样对 Markdown 语法元素进行着色渲染
 struct RawMarkdownView: View {
     @Binding var content: String
-    var fontSize: CGFloat = 13
+    var fontSize: CGFloat = 15
     var contentPadding: CGFloat = 20
     var scrollToLine: Int?
     var fileURL: URL?
@@ -16,6 +16,7 @@ struct RawMarkdownView: View {
     var isFindBarVisible: Bool = false
     var searchRef: TextViewSearchRef?
     var onCursorLineNumberChanged: ((Int) -> Void)?
+    var onVisibleLineChanged: ((Int) -> Void)?
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
@@ -31,7 +32,8 @@ struct RawMarkdownView: View {
             isActive: isActive,
             searchRef: searchRef,
             isFindBarVisible: isFindBarVisible,
-            onCursorLineNumberChanged: onCursorLineNumberChanged
+            onCursorLineNumberChanged: onCursorLineNumberChanged,
+            onVisibleLineChanged: onVisibleLineChanged
         )
         .background(themeColors.surface)
     }

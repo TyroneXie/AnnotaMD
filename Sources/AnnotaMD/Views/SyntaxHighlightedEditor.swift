@@ -55,6 +55,65 @@ final class TextViewSearchRef {
         textStorage.removeAttribute(.backgroundColor, range: fullRange)
     }
 
+    func currentVisibleLineNumber() -> Int? {
+        guard let textView = textView,
+              let layoutManager = textView.layoutManager,
+              let textContainer = textView.textContainer else { return nil }
+
+        layoutManager.ensureLayout(for: textContainer)
+        let visibleCharRange = currentVisibleCharacterRange(
+            textView: textView,
+            layoutManager: layoutManager,
+            textContainer: textContainer
+        )
+
+        let selectedLocation = textView.selectedRange().location
+        if selectedLocation >= visibleCharRange.location,
+           selectedLocation <= visibleCharRange.location + visibleCharRange.length {
+            return lineNumber(at: selectedLocation, in: textView.string)
+        }
+
+        return lineNumber(at: visibleCharRange.location, in: textView.string)
+    }
+
+    private func currentVisibleCharacterRange(
+        textView: NSTextView,
+        layoutManager: NSLayoutManager,
+        textContainer: NSTextContainer
+    ) -> NSRange {
+        let visibleRect = textView.enclosingScrollView?.contentView.bounds ?? textView.visibleRect
+        let textContainerOrigin = textView.textContainerOrigin
+        let containerVisibleRect = NSRect(
+            x: visibleRect.minX - textContainerOrigin.x,
+            y: visibleRect.minY - textContainerOrigin.y,
+            width: visibleRect.width,
+            height: visibleRect.height
+        )
+
+        let glyphRange = layoutManager.glyphRange(forBoundingRect: containerVisibleRect, in: textContainer)
+        let characterRange = layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+        let textLength = (textView.string as NSString).length
+        guard characterRange.location != NSNotFound else {
+            return NSRange(location: 0, length: 0)
+        }
+
+        let location = max(0, min(characterRange.location, textLength))
+        let maxLength = max(0, textLength - location)
+        let length = max(0, min(characterRange.length, maxLength))
+        return NSRange(
+            location: location,
+            length: length
+        )
+    }
+
+    private func lineNumber(at characterLocation: Int, in text: String) -> Int {
+        let nsText = text as NSString
+        let clampedLocation = max(0, min(characterLocation, nsText.length))
+        guard clampedLocation > 0 else { return 0 }
+        let prefix = nsText.substring(with: NSRange(location: 0, length: clampedLocation))
+        return max(0, prefix.components(separatedBy: "\n").count - 1)
+    }
+
     func selectMatch(at index: Int, in ranges: [NSRange]) {
         guard let textView = textView,
               index >= 0, index < ranges.count else { return }
@@ -100,6 +159,52 @@ final class TextViewSearchRef {
         }
         undoManager?.endUndoGrouping()
         return count
+    }
+
+    func toggleMarkdownWrapping(prefix: String, suffix: String) -> Bool {
+        guard let textView = textView,
+              let textStorage = textView.textStorage else { return false }
+        let nsText = textView.string as NSString
+        let selectedRange = textView.selectedRange()
+        guard selectedRange.location >= 0,
+              selectedRange.location + selectedRange.length <= nsText.length else { return false }
+
+        let prefixLength = (prefix as NSString).length
+        let suffixLength = (suffix as NSString).length
+        let replacementRange: NSRange
+        let replacement: String
+        let resultSelection: NSRange
+
+        if selectedRange.length > 0 {
+            let selectedText = nsText.substring(with: selectedRange)
+            let hasOuterMarkers = selectedRange.location >= prefixLength
+                && selectedRange.location + selectedRange.length + suffixLength <= nsText.length
+                && nsText.substring(with: NSRange(location: selectedRange.location - prefixLength, length: prefixLength)) == prefix
+                && nsText.substring(with: NSRange(location: selectedRange.location + selectedRange.length, length: suffixLength)) == suffix
+
+            if hasOuterMarkers {
+                replacementRange = NSRange(
+                    location: selectedRange.location - prefixLength,
+                    length: prefixLength + selectedRange.length + suffixLength
+                )
+                replacement = selectedText
+                resultSelection = NSRange(location: selectedRange.location - prefixLength, length: selectedRange.length)
+            } else {
+                replacementRange = selectedRange
+                replacement = prefix + selectedText + suffix
+                resultSelection = NSRange(location: selectedRange.location + prefixLength, length: selectedRange.length)
+            }
+        } else {
+            replacementRange = selectedRange
+            replacement = prefix + suffix
+            resultSelection = NSRange(location: selectedRange.location + prefixLength, length: 0)
+        }
+
+        guard textView.shouldChangeText(in: replacementRange, replacementString: replacement) else { return false }
+        textStorage.replaceCharacters(in: replacementRange, with: replacement)
+        textView.didChangeText()
+        textView.setSelectedRange(resultSelection)
+        return true
     }
 
     func allMatchRanges() -> [NSRange] { highlightedRanges }
@@ -252,13 +357,23 @@ class HighlightableTextView: NSTextView {
     }
 }
 
+@MainActor
+private final class ScrollNotifyingClipView: NSClipView {
+    var onBoundsDidChange: (() -> Void)?
+
+    override func setBoundsOrigin(_ newOrigin: NSPoint) {
+        super.setBoundsOrigin(newOrigin)
+        onBoundsDidChange?()
+    }
+}
+
 // MARK: - 语法高亮编辑器
 
 /// 基于 NSTextView 的语法高亮编辑器
 /// 支持 Markdown 语法着色、主题色适配、滚动到指定行
 struct SyntaxHighlightedEditor: NSViewRepresentable {
     @Binding var content: String
-    var fontSize: CGFloat = 13
+    var fontSize: CGFloat = 15
     var contentPadding: CGFloat = 20
     var scrollToLine: Int?
     var themeColors: ThemeColors
@@ -271,8 +386,10 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
     var searchRef: TextViewSearchRef?
     /// 查找面板是否可见，可见时不抢占焦点
     var isFindBarVisible: Bool = false
-    /// 光标行号变化回调（0-based 行号）
+    /// 光标行号变化回调（1-based 行号）
     var onCursorLineNumberChanged: ((Int) -> Void)?
+    /// 当前可见区域顶部行号变化回调（0-based 行号）
+    var onVisibleLineChanged: ((Int) -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -287,6 +404,8 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         scrollView.hasHorizontalScroller = false
         scrollView.scrollerStyle = .overlay
         scrollView.borderType = .noBorder
+        let clipView = ScrollNotifyingClipView()
+        scrollView.contentView = clipView
 
         let textView = HighlightableTextView()
         textView.delegate = context.coordinator
@@ -346,6 +465,9 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         context.coordinator.wasActive = isActive
         context.coordinator.previousThemeColors = themeColors
         searchRef?.textView = textView
+        clipView.onBoundsDidChange = { [weak coordinator = context.coordinator] in
+            coordinator?.scheduleVisibleLineNotification()
+        }
 
         // 记录当前 appearance，后续 updateNSView 中检测变化
         context.coordinator.lastAppearanceToken = NSApp.effectiveAppearance.description
@@ -360,11 +482,16 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
             }
         }
 
+        DispatchQueue.main.async {
+            context.coordinator.notifyVisibleLineNumber()
+        }
+
         return scrollView
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? HighlightableTextView else { return }
+        context.coordinator.parent = self
 
         // 检测文件切换：更新 UndoManagerProvider 的活跃文件
         if context.coordinator.currentFileURL != fileURL {
@@ -437,8 +564,15 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         if let line = scrollToLine {
             DispatchQueue.main.async {
                 scrollToLineInTextView(textView, line: line, content: textView.string)
+                context.coordinator.scheduleVisibleLineNotification()
             }
         }
+    }
+
+    static func dismantleNSView(_ scrollView: NSScrollView, coordinator: Coordinator) {
+        coordinator.cancelPendingVisibleLineNotification()
+        coordinator.removeVisibleBoundsObserver()
+        (scrollView.contentView as? ScrollNotifyingClipView)?.onBoundsDidChange = nil
     }
 
     // MARK: - 颜色转换
@@ -495,39 +629,37 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
 
     private func scrollToLineInTextView(_ textView: NSTextView, line: Int, content: String) {
         let lines = content.components(separatedBy: "\n")
-        guard line < lines.count else { return }
+        guard !lines.isEmpty else { return }
+        let targetLine = max(0, min(line, max(lines.count - 1, 0)))
 
         var charOffset = 0
-        for i in 0..<line {
+        for i in 0..<targetLine {
             charOffset += lines[i].count + 1
         }
 
         let range = NSRange(location: charOffset, length: 0)
-        textView.scrollRangeToVisible(range)
+        textView.setSelectedRange(range)
+        textView.window?.makeFirstResponder(textView)
 
-        // 1/3 位置效果
         if let scrollView = textView.enclosingScrollView,
            let layoutManager = textView.layoutManager,
            let textContainer = textView.textContainer {
 
+            layoutManager.ensureLayout(for: textContainer)
             let glyphRange = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
             let rect = layoutManager.boundingRect(forGlyphRange: glyphRange, in: textContainer)
             let textContainerOrigin = textView.textContainerOrigin
             let targetY = rect.origin.y + textContainerOrigin.y
 
             let visibleHeight = scrollView.visibleRect.height
-            let adjustedY = max(0, targetY - visibleHeight / 3.0)
+            let adjustedY = max(0, targetY - 8)
 
             let documentHeight = scrollView.documentView?.frame.height ?? 0
-            let clampedY = min(adjustedY, documentHeight - visibleHeight)
-
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.3
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                scrollView.contentView.animator().setBoundsOrigin(
-                    NSPoint(x: scrollView.contentView.bounds.origin.x, y: clampedY)
-                )
-            }
+            let maxY = max(0, documentHeight - visibleHeight)
+            let clampedY = min(adjustedY, maxY)
+            scrollView.contentView.setBoundsOrigin(
+                NSPoint(x: scrollView.contentView.bounds.origin.x, y: clampedY)
+            )
         }
     }
 
@@ -543,9 +675,40 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         var wasActive: Bool = false
         /// 上次记录的 appearance token，用于检测 appearance 变化
         var lastAppearanceToken: String?
+        private var visibleLineWorkItem: DispatchWorkItem?
+        private var lastVisibleLineNumber: Int?
+        var visibleBoundsObserver: NSObjectProtocol?
 
         init(_ parent: SyntaxHighlightedEditor) {
             self.parent = parent
+        }
+
+        deinit {
+            cancelPendingVisibleLineNotification()
+            removeVisibleBoundsObserver()
+        }
+
+        func cancelPendingVisibleLineNotification() {
+            visibleLineWorkItem?.cancel()
+            visibleLineWorkItem = nil
+        }
+
+        func removeVisibleBoundsObserver() {
+            if let visibleBoundsObserver {
+                NotificationCenter.default.removeObserver(visibleBoundsObserver)
+                self.visibleBoundsObserver = nil
+            }
+        }
+
+        @MainActor
+        func scheduleVisibleLineNotification() {
+            notifyVisibleLineNumber()
+            visibleLineWorkItem?.cancel()
+            let item = DispatchWorkItem { [weak self] in
+                self?.notifyVisibleLineNumber()
+            }
+            visibleLineWorkItem = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: item)
         }
 
         @MainActor
@@ -597,9 +760,46 @@ struct SyntaxHighlightedEditor: NSViewRepresentable {
         private func notifyCursorLineNumber(_ textView: NSTextView) {
             let location = textView.selectedRange().location
             let text = textView.string
-            // 1-based line number, consistent with HTML data-line and OutlineItem.lineNumber
+            // 1-based cursor line for status/UI display. Scroll synchronization uses onVisibleLineChanged.
             let lineNumber = text[..<text.index(text.startIndex, offsetBy: min(location, text.count))].components(separatedBy: "\n").count
             parent.onCursorLineNumberChanged?(lineNumber)
+        }
+
+        @MainActor
+        func notifyVisibleLineNumber() {
+            guard let textView = textView,
+                  let layoutManager = textView.layoutManager,
+                  let textContainer = textView.textContainer else { return }
+
+            layoutManager.ensureLayout(for: textContainer)
+
+            let visibleRect = textView.enclosingScrollView?.contentView.bounds ?? textView.visibleRect
+            let textContainerOrigin = textView.textContainerOrigin
+            let containerVisibleRect = NSRect(
+                x: visibleRect.minX - textContainerOrigin.x,
+                y: visibleRect.minY - textContainerOrigin.y,
+                width: visibleRect.width,
+                height: visibleRect.height
+            )
+            let glyphRange = layoutManager.glyphRange(forBoundingRect: containerVisibleRect, in: textContainer)
+            let characterRange = layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+            guard characterRange.location != NSNotFound else { return }
+
+            let textLength = (textView.string as NSString).length
+            let characterIndex = max(0, min(characterRange.location, textLength))
+            let lineNumber = lineNumber(at: characterIndex, in: textView.string)
+
+            guard lineNumber != lastVisibleLineNumber else { return }
+            lastVisibleLineNumber = lineNumber
+            parent.onVisibleLineChanged?(lineNumber)
+        }
+
+        private func lineNumber(at characterLocation: Int, in text: String) -> Int {
+            let nsText = text as NSString
+            let clampedLocation = max(0, min(characterLocation, nsText.length))
+            guard clampedLocation > 0 else { return 0 }
+            let prefix = nsText.substring(with: NSRange(location: 0, length: clampedLocation))
+            return max(0, prefix.components(separatedBy: "\n").count - 1)
         }
 
         @MainActor

@@ -34,6 +34,128 @@ private struct WindowCaptureView: NSViewRepresentable {
     }
 }
 
+private struct WindowFrameObserver: NSViewRepresentable {
+    let settings: SettingsModel
+
+    func makeNSView(context: Context) -> ObservingNSView {
+        let view = ObservingNSView(frame: .zero)
+        view.update(settings: settings)
+        return view
+    }
+
+    func updateNSView(_ nsView: ObservingNSView, context: Context) {
+        nsView.update(settings: settings)
+    }
+
+    static func dismantleNSView(_ nsView: ObservingNSView, coordinator: ()) {
+        nsView.detach()
+    }
+
+    final class ObservingNSView: NSView {
+        private weak var observedWindow: NSWindow?
+        private var settings: SettingsModel?
+        private var observers: [NSObjectProtocol] = []
+        private var didApplyRememberedSize = false
+        private var lastRememberWindowSize = false
+        private var isApplyingRememberedSize = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            attach(to: window)
+        }
+
+        func update(settings: SettingsModel) {
+            let wasRemembering = lastRememberWindowSize
+            self.settings = settings
+            lastRememberWindowSize = settings.rememberWindowSize
+            attach(to: window)
+
+            if !wasRemembering && settings.rememberWindowSize {
+                recordCurrentWindowSize()
+            }
+        }
+
+        func detach() {
+            observers.forEach { NotificationCenter.default.removeObserver($0) }
+            observers.removeAll()
+            observedWindow = nil
+        }
+
+        private func attach(to newWindow: NSWindow?) {
+            guard observedWindow !== newWindow else {
+                applyRememberedSizeIfNeeded()
+                return
+            }
+
+            detach()
+            observedWindow = newWindow
+            didApplyRememberedSize = false
+
+            guard let newWindow else { return }
+            applyRememberedSizeIfNeeded()
+
+            let center = NotificationCenter.default
+            observers.append(center.addObserver(
+                forName: NSWindow.didResizeNotification,
+                object: newWindow,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.recordCurrentWindowSize()
+                }
+            })
+            observers.append(center.addObserver(
+                forName: NSWindow.didEndLiveResizeNotification,
+                object: newWindow,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.recordCurrentWindowSize()
+                }
+            })
+            observers.append(center.addObserver(
+                forName: NSWindow.willCloseNotification,
+                object: newWindow,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.recordCurrentWindowSize()
+                }
+            })
+        }
+
+        private func applyRememberedSizeIfNeeded() {
+            guard !didApplyRememberedSize else { return }
+            didApplyRememberedSize = true
+
+            guard let settings,
+                  settings.rememberWindowSize,
+                  let window = observedWindow else { return }
+
+            isApplyingRememberedSize = true
+            let didApply = WindowSizeMemory.applyRememberedSize(to: window, settings: settings)
+            if didApply {
+                Task { @MainActor [weak self] in
+                    self?.isApplyingRememberedSize = false
+                }
+            } else {
+                isApplyingRememberedSize = false
+            }
+        }
+
+        private func recordCurrentWindowSize() {
+            guard let settings,
+                  settings.rememberWindowSize,
+                  let window = observedWindow,
+                  !isApplyingRememberedSize,
+                  !window.isMiniaturized,
+                  !window.styleMask.contains(.fullScreen) else { return }
+
+            settings.rememberWindowFrameSize(WindowSizeMemory.currentContentSize(for: window))
+        }
+    }
+}
+
 private struct LinkNavigationDirectoryChange: Equatable {
     let rootURL: URL
     let targetURL: URL
@@ -97,7 +219,6 @@ struct ContentView: View {
             .modifier(FullScreenStateModifier(appViewModel: appViewModel))
             .modifier(KeyboardShortcutModifier(
                 appViewModel: appViewModel,
-                documentViewModel: documentViewModel,
                 toggleSidebar: toggleSidebarAndRemember
             ))
             .modifier(FileOpenModifier(
@@ -136,9 +257,15 @@ struct ContentView: View {
             .modifier(ToggleSettingsModifier(appViewModel: appViewModel))
             .background(TrafficLightHider(bgColor: themeColors.bgSubtle))
             .background(WindowCloseGuard(documentViewModel: documentViewModel, settings: settings))
+            .background(WindowFrameObserver(settings: settings))
             .background(WindowCaptureView { window in
                 hostingWindow = window
                 Self.configureContentWindow(window)
+                WindowSizeMemory.applyRememberedSize(to: window, settings: settings)
+                Task { @MainActor [weak window] in
+                    guard let window else { return }
+                    WindowSizeMemory.applyRememberedSize(to: window)
+                }
                 if let registeredOpenURL {
                     WindowRouter.shared.attachWindow(window, to: registeredOpenURL)
                 }
@@ -178,12 +305,14 @@ struct ContentView: View {
                     registerWindowURL(url)
                     notifyLaunchContentWindowReadyIfNeeded()
                     if isDir.boolValue {
-                        appViewModel.openDirectory(url)
+                        appViewModel.openDirectory(url, sidebarVisible: settings.rememberedSidebarVisible)
+                        applyRememberedChromeState()
                         settings.rememberOpenedDirectory(url)
                         settings.addRecentItem(url: url, isDirectory: true)
                         await fileTreeViewModel.loadDirectory(url)
                     } else {
-                        appViewModel.openSingleFile(url)
+                        appViewModel.openSingleFile(url, sidebarVisible: settings.rememberedSidebarVisible)
+                        applyRememberedChromeState()
                         fileTreeViewModel.selectedFileURL = url
                         settings.rememberOpenedSingleFile(url)
                         settings.addRecentItem(url: url, isDirectory: false)
@@ -198,7 +327,8 @@ struct ContentView: View {
                     UserDefaults.standard.removeObject(forKey: "pendingOpenFilePath")
                     let url = URL(fileURLWithPath: filePath)
                     registerWindowURL(url)
-                    appViewModel.openSingleFile(url)
+                    appViewModel.openSingleFile(url, sidebarVisible: settings.rememberedSidebarVisible)
+                    applyRememberedChromeState()
                     fileTreeViewModel.selectedFileURL = url
                     settings.rememberOpenedSingleFile(url)
                     settings.addRecentItem(url: url, isDirectory: false)
@@ -209,7 +339,8 @@ struct ContentView: View {
                     UserDefaults.standard.removeObject(forKey: "pendingOpenDirectoryPath")
                     let url = URL(fileURLWithPath: dirPath)
                     registerWindowURL(url)
-                    appViewModel.openDirectory(url)
+                    appViewModel.openDirectory(url, sidebarVisible: settings.rememberedSidebarVisible)
+                    applyRememberedChromeState()
                     settings.rememberOpenedDirectory(url)
                     settings.addRecentItem(url: url, isDirectory: true)
                     // 冷启动时显式加载目录
@@ -795,18 +926,12 @@ struct ContentView: View {
             }
             registerWindowURL(dir)
             appViewModel.openDirectory(dir, sidebarVisible: settings.rememberedSidebarVisible)
-            appViewModel.applyRememberedChromeState(
-                sidebarVisible: settings.rememberedSidebarVisible,
-                outlineVisible: settings.rememberedOutlineVisible
-            )
+            applyRememberedChromeState()
             settings.addRecentItem(url: dir, isDirectory: true)
         } else if let file = settings.lastOpenedFile {
             registerWindowURL(file)
             appViewModel.openSingleFile(file, sidebarVisible: settings.rememberedSidebarVisible)
-            appViewModel.applyRememberedChromeState(
-                sidebarVisible: settings.rememberedSidebarVisible,
-                outlineVisible: settings.rememberedOutlineVisible
-            )
+            applyRememberedChromeState()
             fileTreeViewModel.selectedFileURL = file
             settings.addRecentItem(url: file, isDirectory: false)
             Task { @MainActor in
@@ -825,6 +950,13 @@ struct ContentView: View {
     private func toggleOutlineAndRemember() {
         appViewModel.toggleOutline()
         settings.rememberedOutlineVisible = appViewModel.isOutlineVisible
+    }
+
+    private func applyRememberedChromeState() {
+        appViewModel.applyRememberedChromeState(
+            sidebarVisible: settings.rememberedSidebarVisible,
+            outlineVisible: settings.rememberedOutlineVisible
+        )
     }
 }
 
@@ -989,19 +1121,12 @@ private struct FullScreenStateModifier: ViewModifier {
 
 private struct KeyboardShortcutModifier: ViewModifier {
     let appViewModel: AppViewModel
-    let documentViewModel: DocumentViewModel
     let toggleSidebar: () -> Void
 
     func body(content: Content) -> some View {
         content
             .onActiveReceive(NotificationCenter.default.publisher(for: .toggleSidebar)) { _ in
                 toggleSidebar()
-            }
-            .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
-                documentViewModel.switchDisplayMode(.rendered)
-            }
-            .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRaw)) { _ in
-                documentViewModel.switchDisplayMode(.raw)
             }
     }
 }
@@ -1112,7 +1237,8 @@ private struct FileOpenModifier: ViewModifier {
 
     private func applyOpenDirectory(_ url: URL) {
         recordOpenedURL(url)
-        appViewModel.openDirectory(url)
+        appViewModel.openDirectory(url, sidebarVisible: settings.rememberedSidebarVisible)
+        applyRememberedChromeState()
         settings.rememberOpenedDirectory(url)
         settings.addRecentItem(url: url, isDirectory: true)
     }
@@ -1132,11 +1258,19 @@ private struct FileOpenModifier: ViewModifier {
 
     private func applyOpenFile(_ url: URL) {
         recordOpenedURL(url)
-        appViewModel.openSingleFile(url)
+        appViewModel.openSingleFile(url, sidebarVisible: settings.rememberedSidebarVisible)
+        applyRememberedChromeState()
         fileTreeViewModel.selectedFileURL = url
         settings.rememberOpenedSingleFile(url)
         settings.addRecentItem(url: url, isDirectory: false)
         // 不需要显式调用 loadFile — selectedFileURL 变化会触发 SelectionChangeModifier 统一加载
+    }
+
+    private func applyRememberedChromeState() {
+        appViewModel.applyRememberedChromeState(
+            sidebarVisible: settings.rememberedSidebarVisible,
+            outlineVisible: settings.rememberedOutlineVisible
+        )
     }
 
     /// 通用未保存修改弹窗处理

@@ -1,10 +1,25 @@
 import SwiftUI
 import MarkdownReaderKit
 import WebKit
+import AppKit
 
 /// 暴露底层 WKWebView 的句柄，供 PDF 导出等场景复用当前已渲染的页面。
 final class WebViewHandle {
     weak var webView: WKWebView?
+}
+
+/// 拦截 macOS 触控板 pinch，把图片/图表上的缩放手势交给页面里的媒体缩放逻辑。
+final class MediaGestureWebView: WKWebView {
+    override func magnify(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        let clientX = min(max(point.x, 0), bounds.width)
+        let rawClientY = isFlipped ? point.y : bounds.height - point.y
+        let clientY = min(max(rawClientY, 0), bounds.height)
+        let script = """
+        window.MR && MR.handleNativeMediaMagnify && MR.handleNativeMediaMagnify(\(clientX), \(clientY), \(event.magnification));
+        """
+        evaluateJavaScript(script, completionHandler: nil)
+    }
 }
 
 /// WKWebView 预热：App 启动时创建隐藏 WebView 提前拉起 Web 内容进程与 JS 引擎，
@@ -43,6 +58,24 @@ struct CriticActionPayload {
     let text: String        // 选中的纯文本
     let line: Int           // 选区所在块的 data-line（用于在源码中定位）
     let payload: String?    // 评论内容 / 替换后的新文本
+    let locator: CriticMarkup.SelectionLocator?
+}
+
+/// 渲染视图中用户发起的普通 Markdown 编辑动作。
+/// 例如 Cmd+B 将当前渲染选区写回为 `**选区**`。
+struct MarkdownEditActionPayload {
+    let op: String          // "bold"
+    let text: String
+    let line: Int
+    let locator: CriticMarkup.SelectionLocator?
+}
+
+/// 渲染视图中用户发起的块级 Markdown 编辑动作。
+/// 例如把当前段落改成 H2，或把标题改回正文。
+struct MarkdownBlockActionPayload {
+    let op: String          // "paragraph" | "heading"
+    let line: Int
+    let level: Int?
 }
 
 /// macOS 15 兼容的 Markdown 渲染视图：以 NSViewRepresentable 封装 WKWebView。
@@ -67,6 +100,9 @@ struct WebViewMarkdownView: NSViewRepresentable {
     var onVisibleLineChanged: ((Int) -> Void)?
     /// 返回是否成功定位并写入；失败时渲染层会闪一个「无法定位选区」提示。
     var onCriticAction: ((CriticActionPayload) -> Bool)?
+    var onMarkdownEditAction: ((MarkdownEditActionPayload) -> Bool)?
+    var onMarkdownBlockAction: ((MarkdownBlockActionPayload) -> Bool)?
+    var onEditRequest: ((Int) -> Void)?
     /// 用户点击 Markdown 中的相对本地链接时，渲染层将 `mr:///...` 还原为本地文件 URL 后上报。
     var onLocalLinkActivated: ((URL) -> Void)?
     /// CriticMarkup 选词工具条的本地化文案（键：delete/highlight/comment/replace/confirm/cancel/edit/commentHint/replaceHint/notFound）
@@ -90,10 +126,13 @@ struct WebViewMarkdownView: NSViewRepresentable {
         let proxy = WeakScriptMessageHandler(target: coordinator)
         contentController.add(proxy, name: "scrollSync")
         contentController.add(proxy, name: "criticAction")
+        contentController.add(proxy, name: "markdownEditAction")
+        contentController.add(proxy, name: "markdownBlockAction")
+        contentController.add(proxy, name: "editRequest")
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = MediaGestureWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = coordinator
-        webView.allowsMagnification = true
+        webView.allowsMagnification = false
         webView.allowsLinkPreview = false
         webView.allowsBackForwardNavigationGestures = false
         // 透明背景，渲染前透出底层主题色（等价于旧 .webViewContentBackground(.hidden)）
@@ -117,6 +156,9 @@ struct WebViewMarkdownView: NSViewRepresentable {
         let ucc = webView.configuration.userContentController
         ucc.removeScriptMessageHandler(forName: "scrollSync")
         ucc.removeScriptMessageHandler(forName: "criticAction")
+        ucc.removeScriptMessageHandler(forName: "markdownEditAction")
+        ucc.removeScriptMessageHandler(forName: "markdownBlockAction")
+        ucc.removeScriptMessageHandler(forName: "editRequest")
     }
 
     // MARK: - Coordinator
@@ -279,8 +321,9 @@ struct WebViewMarkdownView: NSViewRepresentable {
             pushCriticLabels()
             if let line = pendingScrollToLine {
                 pendingScrollToLine = nil
-                // 给 JS 渲染（KaTeX/Mermaid/Prism）留出布局时间
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                scrollToLineNumber(line)
+                // 图表和语法高亮可能会在首轮布局后改变高度，补一次无动画定位。
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
                     self?.scrollToLineNumber(line)
                 }
             }
@@ -359,6 +402,12 @@ struct WebViewMarkdownView: NSViewRepresentable {
                 handleScrollSync(message.body)
             case "criticAction":
                 handleCriticAction(message.body)
+            case "markdownEditAction":
+                handleMarkdownEditAction(message.body)
+            case "markdownBlockAction":
+                handleMarkdownBlockAction(message.body)
+            case "editRequest":
+                handleEditRequest(message.body)
             default:
                 break
             }
@@ -386,13 +435,77 @@ struct WebViewMarkdownView: NSViewRepresentable {
             guard let dict = body as? [String: Any],
                   let op = dict["op"] as? String,
                   let text = dict["text"] as? String else { return }
-            let line = (dict["line"] as? Int) ?? 0
+            let line = Self.intValue(dict["line"]) ?? 0
             let extra = dict["payload"] as? String
-            let ok = parent.onCriticAction?(CriticActionPayload(op: op, text: text, line: line, payload: extra)) ?? true
+            let locator = Self.selectionLocator(from: dict["locator"])
+            let ok = parent.onCriticAction?(CriticActionPayload(
+                op: op,
+                text: text,
+                line: line,
+                payload: extra,
+                locator: locator
+            )) ?? true
             if !ok {
                 // 容错匹配仍定位失败：渲染层闪一个提示，避免「静默无反应」
                 eval("MR.flashCriticError && MR.flashCriticError()")
             }
+        }
+
+        private func handleMarkdownEditAction(_ body: Any) {
+            guard let dict = body as? [String: Any],
+                  let op = dict["op"] as? String,
+                  let text = dict["text"] as? String else { return }
+            let line = Self.intValue(dict["line"]) ?? 0
+            let locator = Self.selectionLocator(from: dict["locator"])
+            let ok = parent.onMarkdownEditAction?(MarkdownEditActionPayload(
+                op: op,
+                text: text,
+                line: line,
+                locator: locator
+            )) ?? true
+            if !ok {
+                eval("MR.flashCriticError && MR.flashCriticError()")
+            }
+        }
+
+        private func handleMarkdownBlockAction(_ body: Any) {
+            guard let dict = body as? [String: Any],
+                  let op = dict["op"] as? String else { return }
+            let line = Self.intValue(dict["line"]) ?? 0
+            let level = Self.intValue(dict["level"])
+            let ok = parent.onMarkdownBlockAction?(MarkdownBlockActionPayload(
+                op: op,
+                line: line,
+                level: level
+            )) ?? true
+            if !ok {
+                eval("MR.flashCriticError && MR.flashCriticError()")
+            }
+        }
+
+        private func handleEditRequest(_ body: Any) {
+            if let dict = body as? [String: Any] {
+                parent.onEditRequest?(Self.intValue(dict["line"]) ?? 0)
+                return
+            }
+            if let line = Self.intValue(body) {
+                parent.onEditRequest?(line)
+            }
+        }
+
+        private static func selectionLocator(from raw: Any?) -> CriticMarkup.SelectionLocator? {
+            guard let dict = raw as? [String: Any] else { return nil }
+            let occurrence = intValue(dict["occurrence"])
+            let prefix = dict["prefix"] as? String
+            let suffix = dict["suffix"] as? String
+            guard occurrence != nil || prefix != nil || suffix != nil else { return nil }
+            return CriticMarkup.SelectionLocator(occurrence: occurrence, prefix: prefix, suffix: suffix)
+        }
+
+        private static func intValue(_ raw: Any?) -> Int? {
+            if let value = raw as? Int { return value }
+            if let value = raw as? NSNumber { return value.intValue }
+            return nil
         }
     }
 }

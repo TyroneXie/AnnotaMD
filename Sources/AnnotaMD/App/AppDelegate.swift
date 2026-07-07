@@ -375,7 +375,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(\.language, SettingsModel.shared.languagePref.resolvedLanguage)
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
+            contentRect: WindowSizeMemory.launchContentRect(),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -422,7 +422,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(\.language, SettingsModel.shared.languagePref.resolvedLanguage)
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
+            contentRect: WindowSizeMemory.launchContentRect(),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -538,6 +538,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         launchRoutingState.markDidBecomeActive()
         tryRouteLaunchCompletion()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        rememberVisibleWindowSizeBeforeExit()
+    }
+
+    private func rememberVisibleWindowSizeBeforeExit() {
+        let settings = SettingsModel.shared
+        guard settings.rememberWindowSize else { return }
+
+        let preferredWindows = [NSApp.keyWindow, NSApp.mainWindow].compactMap { $0 } + NSApp.windows
+        var seen = Set<ObjectIdentifier>()
+        for window in preferredWindows {
+            let id = ObjectIdentifier(window)
+            guard !seen.contains(id) else { continue }
+            seen.insert(id)
+
+            guard isRememberableContentWindow(window) else { continue }
+            settings.rememberWindowFrameSize(WindowSizeMemory.currentContentSize(for: window))
+            return
+        }
+    }
+
+    private func isRememberableContentWindow(_ window: NSWindow) -> Bool {
+        guard window.isVisible,
+              !window.isMiniaturized,
+              window.styleMask.contains(.resizable),
+              !window.styleMask.contains(.fullScreen) else {
+            return false
+        }
+
+        let size = WindowSizeMemory.currentContentSize(for: window)
+        return size.width >= 650 && size.height >= 450
     }
 
     private func tryRouteLaunchCompletion() {

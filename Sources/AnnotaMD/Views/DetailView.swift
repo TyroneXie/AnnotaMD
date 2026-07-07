@@ -27,6 +27,58 @@ struct LeftEdgeShape: Shape {
     }
 }
 
+private struct DetailTransientAlerts: ViewModifier {
+    let language: Language
+    @Binding var showExportPDFError: Bool
+    @Binding var showExportHTMLError: Bool
+    @Binding var showUnsupportedFileAlert: Bool
+    let unsupportedFileExt: String
+
+    func body(content: Content) -> some View {
+        content
+            .alert(L10n.tr(.exportPDFFailed, language: language), isPresented: $showExportPDFError) {
+                Button(L10n.tr(.confirm, language: language), role: .cancel) {}
+            }
+            .alert(L10n.tr(.exportHTMLFailed, language: language), isPresented: $showExportHTMLError) {
+                Button(L10n.tr(.confirm, language: language), role: .cancel) {}
+            }
+            .alert(
+                L10n.tr(.unsupportedFileTypeAlert, language: language, args: ["ext": unsupportedFileExt]),
+                isPresented: $showUnsupportedFileAlert
+            ) {
+                Button(L10n.tr(.confirm, language: language), role: .cancel) {}
+            }
+    }
+}
+
+private struct DetailAnnotationAlerts: ViewModifier {
+    let language: Language
+    @Binding var showApplyAnnotationsAlert: Bool
+    @Binding var showDiscardAnnotationsAlert: Bool
+    let applyAllAnnotations: () -> Void
+    let discardAllAnnotations: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert(L10n.tr(.applyAnnotationsConfirmTitle, language: language), isPresented: $showApplyAnnotationsAlert) {
+                Button(L10n.tr(.applyAnnotationsMenu, language: language), role: .destructive) {
+                    applyAllAnnotations()
+                }
+                Button(L10n.tr(.unsavedCancel, language: language), role: .cancel) {}
+            } message: {
+                Text(L10n.tr(.applyAnnotationsConfirmMessage, language: language))
+            }
+            .alert(L10n.tr(.discardAnnotationsConfirmTitle, language: language), isPresented: $showDiscardAnnotationsAlert) {
+                Button(L10n.tr(.discardAnnotationsMenu, language: language), role: .destructive) {
+                    discardAllAnnotations()
+                }
+                Button(L10n.tr(.unsavedCancel, language: language), role: .cancel) {}
+            } message: {
+                Text(L10n.tr(.discardAnnotationsConfirmMessage, language: language))
+            }
+    }
+}
+
 /// 右侧主体区容器（圆角），包含内容区和底部项目状态栏
 struct DetailView: View {
     let appViewModel: AppViewModel
@@ -142,22 +194,27 @@ struct DetailView: View {
         .onActiveReceive(NotificationCenter.default.publisher(for: .discardAllAnnotations)) { _ in
             if documentHasAnnotations { showDiscardAnnotationsAlert = true }
         }
-        .alert(L10n.tr(.applyAnnotationsConfirmTitle, language: language), isPresented: $showApplyAnnotationsAlert) {
-            Button(L10n.tr(.applyAnnotationsMenu, language: language), role: .destructive) {
-                documentViewModel.applyAllAnnotations()
-            }
-            Button(L10n.tr(.unsavedCancel, language: language), role: .cancel) {}
-        } message: {
-            Text(L10n.tr(.applyAnnotationsConfirmMessage, language: language))
+        .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRendered)) { _ in
+            switchDisplayModePreservingVisibleLine(.rendered)
         }
-        .alert(L10n.tr(.discardAnnotationsConfirmTitle, language: language), isPresented: $showDiscardAnnotationsAlert) {
-            Button(L10n.tr(.discardAnnotationsMenu, language: language), role: .destructive) {
+        .onActiveReceive(NotificationCenter.default.publisher(for: .switchToRaw)) { _ in
+            switchDisplayModePreservingVisibleLine(.raw)
+        }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .toggleDisplayMode)) { _ in
+            let targetMode: DisplayMode = documentViewModel.displayMode == .rendered ? .raw : .rendered
+            switchDisplayModePreservingVisibleLine(targetMode)
+        }
+        .modifier(DetailAnnotationAlerts(
+            language: language,
+            showApplyAnnotationsAlert: $showApplyAnnotationsAlert,
+            showDiscardAnnotationsAlert: $showDiscardAnnotationsAlert,
+            applyAllAnnotations: {
+                documentViewModel.applyAllAnnotations()
+            },
+            discardAllAnnotations: {
                 documentViewModel.discardAllAnnotations()
             }
-            Button(L10n.tr(.unsavedCancel, language: language), role: .cancel) {}
-        } message: {
-            Text(L10n.tr(.discardAnnotationsConfirmMessage, language: language))
-        }
+        ))
         // 拖拽视觉反馈：由 AppKit FileDropOverlayView 发送
         .onReceive(NotificationCenter.default.publisher(for: .dragHoverChanged)) { notification in
             if let isTargeted = notification.object as? Bool {
@@ -171,18 +228,13 @@ struct DetailView: View {
                 showUnsupportedFileAlert = true
             }
         }
-        .alert(L10n.tr(.exportPDFFailed, language: language), isPresented: $showExportPDFError) {
-            Button(L10n.tr(.confirm, language: language), role: .cancel) {}
-        }
-        .alert(L10n.tr(.exportHTMLFailed, language: language), isPresented: $showExportHTMLError) {
-            Button(L10n.tr(.confirm, language: language), role: .cancel) {}
-        }
-        .alert(
-            L10n.tr(.unsupportedFileTypeAlert, language: language, args: ["ext": unsupportedFileExt]),
-            isPresented: $showUnsupportedFileAlert
-        ) {
-            Button(L10n.tr(.confirm, language: language), role: .cancel) {}
-        }
+        .modifier(DetailTransientAlerts(
+            language: language,
+            showExportPDFError: $showExportPDFError,
+            showExportHTMLError: $showExportHTMLError,
+            showUnsupportedFileAlert: $showUnsupportedFileAlert,
+            unsupportedFileExt: unsupportedFileExt
+        ))
     }
 
     // MARK: - TitleBar
@@ -236,36 +288,6 @@ struct DetailView: View {
                 .padding(.leading, 2)
             }
 
-            // 文件路径或 Untitled 标识（左对齐，仅在有文档时显示）
-            if documentViewModel.hasDocument {
-                if documentViewModel.isUntitled {
-                    Text(documentViewModel.fileName)
-                        .font(.system(size: 12))
-                        .foregroundStyle(themeColors.fgMuted)
-                        .padding(.leading, 12)
-                } else if let path = documentViewModel.currentFileURL?.path {
-                    Text(path)
-                        .font(.system(size: 12))
-                        .foregroundStyle(themeColors.fgMuted)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .padding(.leading, 12)
-
-                    Button {
-                        let pasteboard = NSPasteboard.general
-                        pasteboard.clearContents()
-                        pasteboard.setString(path, forType: .string)
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 10))
-                            .foregroundStyle(themeColors.fgMuted)
-                    }
-                    .buttonStyle(.plain)
-                    .help(L10n.tr(.titleBarCopyPath, language: language))
-                    .padding(.leading, 2)
-                }
-            }
-
             Spacer()
 
             if documentViewModel.hasDocument && documentViewModel.isMarkdownDocument {
@@ -275,7 +297,7 @@ struct DetailView: View {
                         get: { documentViewModel.displayMode },
                         set: { newMode in
                             textViewSearchRef.clearSearchHighlights()
-                            documentViewModel.switchDisplayMode(newMode)
+                            switchDisplayModePreservingVisibleLine(newMode)
                             if appViewModel.isFindBarVisible {
                                 performSearch()
                             }
@@ -286,6 +308,7 @@ struct DetailView: View {
                     Text(L10n.tr(.displayModeRaw, language: language)).tag(DisplayMode.raw)
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 .controlSize(.small)
                 .frame(width: 128)
                 .help(L10n.tr(.titleBarDisplayMode, language: language))
@@ -517,7 +540,61 @@ struct DetailView: View {
             "notFound": L10n.tr(.criticNotFound, language: language),
             "commentHint": L10n.tr(.criticCommentHint, language: language),
             "replaceHint": L10n.tr(.criticReplaceHint, language: language),
+            "bold": L10n.tr(.formatBold, language: language),
+            "italic": L10n.tr(.formatItalic, language: language),
+            "underline": L10n.tr(.formatUnderline, language: language),
+            "code": L10n.tr(.formatInlineCode, language: language),
+            "paragraph": language == .en ? "Paragraph" : "正文",
+            "heading": language == .en ? "Heading" : "标题",
         ]
+    }
+
+    private var markdownThemeCSS: String {
+        let fontSize = Int(settings.sourceFontPointSize.rounded())
+        return themeColors.cssCustomProperties
+            + "\n:root { --font-size-base: \(fontSize)px; }\n"
+            + themeColors.codeHighlightCSS
+    }
+
+    private func performBoldFormatting() {
+        performMarkdownFormatting("bold", prefix: "**", suffix: "**")
+    }
+
+    private func performItalicFormatting() {
+        performMarkdownFormatting("italic", prefix: "*", suffix: "*")
+    }
+
+    private func performUnderlineFormatting() {
+        performMarkdownFormatting("underline", prefix: "<u>", suffix: "</u>")
+    }
+
+    private func performInlineCodeFormatting() {
+        performMarkdownFormatting("code", prefix: "`", suffix: "`")
+    }
+
+    private func switchDisplayModePreservingVisibleLine(_ mode: DisplayMode) {
+        guard mode != documentViewModel.displayMode else { return }
+
+        if documentViewModel.displayMode == .raw,
+           let lineNumber = textViewSearchRef.currentVisibleLineNumber() {
+            documentViewModel.rawVisibleLineNumber = lineNumber
+            documentViewModel.switchDisplayMode(mode, preservingLine: lineNumber)
+            return
+        }
+
+        let lineNumber = documentViewModel.displayMode == .rendered
+            ? documentViewModel.renderedVisibleLineNumber
+            : documentViewModel.rawVisibleLineNumber
+        documentViewModel.switchDisplayMode(mode, preservingLine: lineNumber)
+    }
+
+    private func performMarkdownFormatting(_ op: String, prefix: String, suffix: String) {
+        guard documentViewModel.hasDocument, documentViewModel.isMarkdownDocument else { return }
+        if documentViewModel.displayMode == .raw {
+            _ = textViewSearchRef.toggleMarkdownWrapping(prefix: prefix, suffix: suffix)
+        } else {
+            webViewHandle.webView?.evaluateJavaScript("MR.formatSelection && MR.formatSelection('\(op)')", completionHandler: nil)
+        }
     }
 
     /// 复制带标注的文档（含引导提示词模板）到剪贴板，供粘贴给 AI
@@ -609,7 +686,7 @@ struct DetailView: View {
                 }
                 let html = MarkdownHTMLService.buildFullHTML(
                     content: documentViewModel.content,
-                    themeCSS: themeColors.cssCustomProperties + themeColors.codeHighlightCSS,
+                    themeCSS: markdownThemeCSS,
                     contentPadding: settings.contentPaddingPoints,
                     maxContentWidthFollowsWindow: settings.maxContentWidthFollowsWindow,
                     baseURL: baseURL,
@@ -645,7 +722,7 @@ struct DetailView: View {
         let stemTitle = stem
         let baseURL = documentViewModel.currentFileURL?.deletingLastPathComponent()
         let content = documentViewModel.content
-        let themeCSS = themeColors.cssCustomProperties + themeColors.codeHighlightCSS
+        let themeCSS = markdownThemeCSS
         let padding = settings.contentPaddingPoints
         let followsWindow = settings.maxContentWidthFollowsWindow
         let isDark = settings.resolvedThemeType == .dark
@@ -833,7 +910,7 @@ struct DetailView: View {
                         get: { documentViewModel.content },
                         set: { documentViewModel.content = $0 }
                     ),
-                    fontSize: CGFloat(settings.sourceFontSize),
+                    fontSize: settings.sourceFontPointSize,
                     contentPadding: settings.contentPaddingPoints,
                     fileURL: documentViewModel.currentFileURL,
                     isEditable: false,
@@ -845,6 +922,9 @@ struct DetailView: View {
                     searchRef: textViewSearchRef,
                     onCursorLineNumberChanged: { lineNumber in
                         documentViewModel.cursorLineNumber = lineNumber
+                    },
+                    onVisibleLineChanged: { lineNumber in
+                        documentViewModel.rawVisibleLineNumber = lineNumber
                     }
                 )
                 .id(documentViewModel.currentFileURL)
@@ -856,7 +936,7 @@ struct DetailView: View {
                                 get: { documentViewModel.content },
                                 set: { documentViewModel.content = $0 }
                             ),
-                            fontSize: CGFloat(settings.sourceFontSize),
+                            fontSize: settings.sourceFontPointSize,
                             contentPadding: settings.contentPaddingPoints,
                             scrollToLine: documentViewModel.scrollToLineRequest,
                             fileURL: documentViewModel.currentFileURL,
@@ -867,6 +947,9 @@ struct DetailView: View {
                             searchRef: textViewSearchRef,
                             onCursorLineNumberChanged: { lineNumber in
                                 documentViewModel.cursorLineNumber = lineNumber
+                            },
+                            onVisibleLineChanged: { lineNumber in
+                                documentViewModel.rawVisibleLineNumber = lineNumber
                             }
                         )
                         .id(documentViewModel.currentFileURL)
@@ -877,7 +960,7 @@ struct DetailView: View {
                             contentPadding: settings.contentPaddingPoints,
                             maxContentWidthFollowsWindow: settings.maxContentWidthFollowsWindow,
                             scrollToLine: documentViewModel.scrollToLineRequest,
-                            themeCSS: themeColors.cssCustomProperties + themeColors.codeHighlightCSS,
+                            themeCSS: markdownThemeCSS,
                             isDark: settings.resolvedThemeType == .dark,
                             searchQuery: findReplaceViewModel.searchText,
                             searchCaseSensitive: findReplaceViewModel.isCaseSensitive,
@@ -893,6 +976,15 @@ struct DetailView: View {
                             onCriticAction: { action in
                                 documentViewModel.applyCriticAction(action)
                             },
+                            onMarkdownEditAction: { action in
+                                documentViewModel.applyMarkdownEditAction(action)
+                            },
+                            onMarkdownBlockAction: { action in
+                                documentViewModel.applyMarkdownBlockAction(action)
+                            },
+                            onEditRequest: { lineNumber in
+                                documentViewModel.switchDisplayMode(.raw, preservingLine: lineNumber)
+                            },
                             onLocalLinkActivated: onLocalMarkdownLink,
                             criticLabels: criticLabels,
                             handle: webViewHandle
@@ -901,9 +993,10 @@ struct DetailView: View {
                 }
                 .onChange(of: documentViewModel.scrollToLineRequest) { _, newValue in
                     guard newValue != nil else { return }
+                    let generation = documentViewModel.scrollRequestGeneration
                     let delay: Double = documentViewModel.displayMode == .rendered ? 2.5 : 0.6
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        documentViewModel.clearScrollRequest()
+                        documentViewModel.clearScrollRequest(ifGeneration: generation)
                     }
                 }
                 .onChange(of: documentViewModel.displayMode) { _, _ in
@@ -940,5 +1033,9 @@ struct DetailView: View {
         .onActiveReceive(NotificationCenter.default.publisher(for: .findNext)) { _ in performFindNext() }
         .onActiveReceive(NotificationCenter.default.publisher(for: .findPrevious)) { _ in performFindPrevious() }
         .onActiveReceive(NotificationCenter.default.publisher(for: .findAndReplace)) { _ in openFindAndReplace() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .formatBold)) { _ in performBoldFormatting() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .formatItalic)) { _ in performItalicFormatting() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .formatUnderline)) { _ in performUnderlineFormatting() }
+        .onActiveReceive(NotificationCenter.default.publisher(for: .formatInlineCode)) { _ in performInlineCodeFormatting() }
     }
 }

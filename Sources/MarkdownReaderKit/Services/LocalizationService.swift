@@ -35,6 +35,7 @@ public enum L10n {
         // 设置 - 启动
         case settingsGeneralStartupTitle
         case settingsGeneralReopenLastLocation
+        case settingsGeneralRememberWindowSize
 
         // 设置 - 文件树
         case settingsGeneralFileTreeTitle
@@ -59,6 +60,13 @@ public enum L10n {
         case settingsGeneralQuickLookTitle
         case settingsGeneralQuickLookDesc
         case settingsGeneralQuickLookEnabled
+
+        // 设置 - 快捷键
+        case settingsGeneralShortcutsTitle
+        case settingsGeneralShortcutToggleMode
+        case settingsGeneralShortcutBold
+        case settingsGeneralShortcutDoubleClickEdit
+        case settingsGeneralShortcutDoubleClickEditValue
 
         // 设置 - 外观 - 主题模式
         case settingsAppearanceThemeTitle
@@ -103,6 +111,12 @@ public enum L10n {
         // 显示模式
         case displayModeRendered
         case displayModeRaw
+        case toggleDisplayModeMenu
+        case formatMenu
+        case formatBold
+        case formatItalic
+        case formatUnderline
+        case formatInlineCode
 
         // 通用操作
         case open
@@ -309,6 +323,7 @@ public enum L10n {
         .settingsGeneralMaxWidthFollowsWindow: "Follow window width",
         .settingsGeneralStartupTitle: "Startup",
         .settingsGeneralReopenLastLocation: "Reopen last location on launch",
+        .settingsGeneralRememberWindowSize: "Keep window size on launch",
         .settingsGeneralFileTreeTitle: "File Tree",
         .settingsGeneralShowHiddenFiles: "Show hidden files",
         .settingsGeneralShowNonMarkdownFiles: "Show non-Markdown files",
@@ -325,6 +340,11 @@ public enum L10n {
         .settingsGeneralQuickLookTitle: "Quick Look Preview",
         .settingsGeneralQuickLookDesc: "Enable Markdown rendering in Finder Quick Look (press Space to preview).",
         .settingsGeneralQuickLookEnabled: "Enable Quick Look preview",
+        .settingsGeneralShortcutsTitle: "Shortcuts",
+        .settingsGeneralShortcutToggleMode: "Toggle Read/Edit",
+        .settingsGeneralShortcutBold: "Bold selected text",
+        .settingsGeneralShortcutDoubleClickEdit: "Double-click reading content",
+        .settingsGeneralShortcutDoubleClickEditValue: "Edit at line",
         .settingsAppearanceThemeTitle: "Theme",
         .settingsAppearanceThemeDesc: "Choose the application appearance mode.",
         .settingsAppearanceModeLight: "Light",
@@ -347,14 +367,20 @@ public enum L10n {
         .settingsAppearanceContrastLow: "Low",
         .settingsAppearanceContrastHigh: "High",
         .settingsAppearanceTypographyTitle: "Typography",
-        .settingsAppearanceSourceFontSize: "Source font size",
+        .settingsAppearanceSourceFontSize: "Font size",
         .settingsAppearanceContentPadding: "Content padding",
         .languageAuto: "Auto / Auto Detect",
         .languageZhCN: "Simplified Chinese",
         .languageZhTW: "Traditional Chinese",
         .languageEn: "English",
-        .displayModeRendered: "Rendered",
+        .displayModeRendered: "Read",
         .displayModeRaw: "Raw",
+        .toggleDisplayModeMenu: "Toggle Read/Edit",
+        .formatMenu: "Format",
+        .formatBold: "Bold",
+        .formatItalic: "Italic",
+        .formatUnderline: "Underline",
+        .formatInlineCode: "Inline Code",
         .open: "Open",
         .save: "Save",
         .reset: "Reset",
@@ -527,6 +553,7 @@ public enum L10n {
         .settingsGeneralMaxWidthFollowsWindow: "跟随窗口宽度",
         .settingsGeneralStartupTitle: "启动",
         .settingsGeneralReopenLastLocation: "启动时重新打开上次位置",
+        .settingsGeneralRememberWindowSize: "启动时保持窗口大小",
         .settingsGeneralFileTreeTitle: "文件树",
         .settingsGeneralShowHiddenFiles: "显示隐藏文件",
         .settingsGeneralShowNonMarkdownFiles: "显示非 Markdown 文件",
@@ -543,6 +570,11 @@ public enum L10n {
         .settingsGeneralQuickLookTitle: "Quick Look 预览",
         .settingsGeneralQuickLookDesc: "在 Finder 中按空格键预览 Markdown 文件的渲染效果。",
         .settingsGeneralQuickLookEnabled: "启用 Quick Look 预览",
+        .settingsGeneralShortcutsTitle: "快捷键",
+        .settingsGeneralShortcutToggleMode: "切换阅读/编辑",
+        .settingsGeneralShortcutBold: "加粗选中文本",
+        .settingsGeneralShortcutDoubleClickEdit: "双击阅读内容",
+        .settingsGeneralShortcutDoubleClickEditValue: "定位编辑",
         .settingsAppearanceThemeTitle: "主题",
         .settingsAppearanceThemeDesc: "选择应用的外观模式。",
         .settingsAppearanceModeLight: "浅色",
@@ -565,14 +597,20 @@ public enum L10n {
         .settingsAppearanceContrastLow: "低",
         .settingsAppearanceContrastHigh: "高",
         .settingsAppearanceTypographyTitle: "字体与排版",
-        .settingsAppearanceSourceFontSize: "源码字号",
+        .settingsAppearanceSourceFontSize: "字号",
         .settingsAppearanceContentPadding: "内容边距",
         .languageAuto: "自动检测",
         .languageZhCN: "简体中文",
         .languageZhTW: "繁體中文",
         .languageEn: "English",
-        .displayModeRendered: "渲染",
+        .displayModeRendered: "阅读",
         .displayModeRaw: "编辑",
+        .toggleDisplayModeMenu: "切换阅读/编辑",
+        .formatMenu: "格式",
+        .formatBold: "加粗",
+        .formatItalic: "斜体",
+        .formatUnderline: "下划线",
+        .formatInlineCode: "行内代码",
         .open: "打开",
         .save: "保存",
         .reset: "重置",
@@ -745,6 +783,7 @@ public enum L10n {
         .settingsGeneralMaxWidthFollowsWindow: "跟隨視窗寬度",
         .settingsGeneralStartupTitle: "啟動",
         .settingsGeneralReopenLastLocation: "啟動時重新開啟上次位置",
+        .settingsGeneralRememberWindowSize: "啟動時保持視窗大小",
         .settingsGeneralFileTreeTitle: "檔案樹",
         .settingsGeneralShowHiddenFiles: "顯示隱藏檔案",
         .settingsGeneralShowNonMarkdownFiles: "顯示非 Markdown 檔案",
@@ -761,6 +800,11 @@ public enum L10n {
         .settingsGeneralQuickLookTitle: "Quick Look 預覽",
         .settingsGeneralQuickLookDesc: "在 Finder 中按空白鍵預覽 Markdown 檔案的渲染效果。",
         .settingsGeneralQuickLookEnabled: "啟用 Quick Look 預覽",
+        .settingsGeneralShortcutsTitle: "快捷鍵",
+        .settingsGeneralShortcutToggleMode: "切換閱讀/編輯",
+        .settingsGeneralShortcutBold: "加粗所選文字",
+        .settingsGeneralShortcutDoubleClickEdit: "雙擊閱讀內容",
+        .settingsGeneralShortcutDoubleClickEditValue: "定位編輯",
         .settingsAppearanceThemeTitle: "主題",
         .settingsAppearanceThemeDesc: "選擇應用的外觀模式。",
         .settingsAppearanceModeLight: "淺色",
@@ -783,14 +827,20 @@ public enum L10n {
         .settingsAppearanceContrastLow: "低",
         .settingsAppearanceContrastHigh: "高",
         .settingsAppearanceTypographyTitle: "字體與排版",
-        .settingsAppearanceSourceFontSize: "原始碼字號",
+        .settingsAppearanceSourceFontSize: "字號",
         .settingsAppearanceContentPadding: "內容邊距",
         .languageAuto: "自動偵測",
         .languageZhCN: "简体中文",
         .languageZhTW: "繁體中文",
         .languageEn: "English",
-        .displayModeRendered: "渲染",
+        .displayModeRendered: "閱讀",
         .displayModeRaw: "編輯",
+        .toggleDisplayModeMenu: "切換閱讀/編輯",
+        .formatMenu: "格式",
+        .formatBold: "加粗",
+        .formatItalic: "斜體",
+        .formatUnderline: "底線",
+        .formatInlineCode: "行內程式碼",
         .open: "開啟",
         .save: "儲存",
         .reset: "重設",

@@ -57,11 +57,45 @@ struct GeneralSettingsView: View {
 
             SettingsDivider()
 
+            // 快捷键
+            SettingsSection(
+                title: L10n.tr(.settingsGeneralShortcutsTitle, language: language)
+            ) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ShortcutHelpRow(
+                        title: L10n.tr(.settingsGeneralShortcutToggleMode, language: language),
+                        value: "⌘↩"
+                    )
+                    ShortcutHelpRow(
+                        title: L10n.tr(.settingsGeneralShortcutBold, language: language),
+                        value: "⌘B"
+                    )
+                    ShortcutHelpRow(
+                        title: L10n.tr(.formatItalic, language: language),
+                        value: "⌘I"
+                    )
+                    ShortcutHelpRow(
+                        title: L10n.tr(.formatUnderline, language: language),
+                        value: "⌘U"
+                    )
+                    ShortcutHelpRow(
+                        title: L10n.tr(.formatInlineCode, language: language),
+                        value: "⌘⇧K"
+                    )
+                    ShortcutHelpRow(
+                        title: L10n.tr(.settingsGeneralShortcutDoubleClickEdit, language: language),
+                        value: L10n.tr(.settingsGeneralShortcutDoubleClickEditValue, language: language)
+                    )
+                }
+            }
+
+            SettingsDivider()
+
             // 启动行为
             SettingsSection(
                 title: L10n.tr(.settingsGeneralStartupTitle, language: language)
             ) {
-                Toggle(L10n.tr(.settingsGeneralReopenLastLocation, language: language), isOn: $settings.reopenLastLocation)
+                Toggle(L10n.tr(.settingsGeneralRememberWindowSize, language: language), isOn: $settings.rememberWindowSize)
             }
 
             SettingsDivider()
@@ -86,7 +120,7 @@ struct GeneralSettingsView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.green)
                         Text(L10n.tr(.settingsGeneralIsDefault, language: language))
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                     }
                 } else {
                     Button {
@@ -176,7 +210,7 @@ struct GeneralSettingsView: View {
             ) {
                 VStack(alignment: .leading, spacing: 8) {
                     TextEditor(text: aiPromptBinding)
-                        .font(.system(size: 12))
+                        .font(.system(size: 14))
                         .scrollContentBackground(.hidden)
                         .padding(6)
                         .frame(height: 160)
@@ -193,6 +227,7 @@ struct GeneralSettingsView: View {
                 }
             }
         }
+        .font(.system(size: 14))
         .padding(24)
         .onAppear {
             settings.refreshDefaultOpenerStatus()
@@ -278,6 +313,7 @@ struct AppearanceSettingsView: View {
             // 字体排版
             typographySection
         }
+        .font(.system(size: 14))
         .padding(24)
     }
 
@@ -408,15 +444,15 @@ struct AppearanceSettingsView: View {
                 )
                 HStack {
                     Text(L10n.tr(.settingsAppearanceContrastLow, language: language))
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundStyle(themeColors.fgMuted)
                     Spacer()
                     Text("\(currentContrast)")
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(size: 14, design: .monospaced))
                         .foregroundStyle(themeColors.fgSecondary)
                     Spacer()
                     Text(L10n.tr(.settingsAppearanceContrastHigh, language: language))
-                        .font(.caption)
+                        .font(.system(size: 14))
                         .foregroundStyle(themeColors.fgMuted)
                 }
             }
@@ -490,14 +526,14 @@ private struct ThemeModeCard: View {
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(isSelected ? themeColors.accent : themeColors.fgSecondary)
                         Text(title)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(themeColors.ink)
                         Spacer()
                     }
 
                     // Row 2: 描述
                     Text(description)
-                        .font(.system(size: 11))
+                        .font(.system(size: 13))
                         .foregroundStyle(themeColors.fgMuted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -596,7 +632,7 @@ private struct ColorSchemeCard: View {
 
                 // 主题名称（使用主题自身的 ink 色）
                 Text(theme.name)
-                    .font(.system(size: 10))
+                    .font(.system(size: 12))
                     .foregroundStyle(inkColor)
                     .lineLimit(1)
                     .padding(.horizontal, 4)
@@ -677,7 +713,7 @@ private struct ColorBarRow: View {
 
             // 标签
             Text(label)
-                .font(.system(size: 13))
+                .font(.system(size: 15))
                 .foregroundStyle(themeColors.ink)
 
             Spacer()
@@ -686,7 +722,7 @@ private struct ColorBarRow: View {
             if isEditingHex {
                 TextField("#", text: $editHexText)
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 13, design: .monospaced))
                     .frame(width: 72)
                     .onSubmit {
                         let cleaned = editHexText.hasPrefix("#") ? String(editHexText.dropFirst()) : editHexText
@@ -701,7 +737,7 @@ private struct ColorBarRow: View {
                     isEditingHex = true
                 } label: {
                     Text(hexValue.uppercased())
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 13, design: .monospaced))
                         .foregroundStyle(themeColors.fgSecondary)
                 }
                 .buttonStyle(.plain)
@@ -753,12 +789,12 @@ private struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(themeColors.ink)
 
             if let desc = description {
                 Text(desc)
-                    .font(.system(size: 11))
+                    .font(.system(size: 13))
                     .foregroundStyle(themeColors.fgMuted)
             }
 
@@ -775,6 +811,36 @@ private struct SettingsDivider: View {
             .fill(themeColors.border)
             .frame(height: 1)
             .padding(.vertical, 12)
+    }
+}
+
+private struct ShortcutHelpRow: View {
+    let title: String
+    let value: String
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .foregroundStyle(themeColors.fgSecondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                .foregroundStyle(themeColors.ink)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(themeColors.bgSubtle)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .strokeBorder(themeColors.border)
+                )
+        }
+        .frame(maxWidth: 360)
     }
 }
 

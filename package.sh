@@ -10,6 +10,32 @@ APP_BUNDLE_NAME="AnnotaMD"       # 面向用户的 .app 包名
 DISTRIBUTION=false
 ARCH="arm64"
 
+finish_create_dmg_fallback() {
+    local DMG_NAME="$1"
+    local RW_DMG
+    RW_DMG="$(ls -t "rw."*".${DMG_NAME}" 2>/dev/null | head -1 || true)"
+
+    if [[ -z "$RW_DMG" || ! -f "$RW_DMG" ]]; then
+        echo "❌ 未找到 create-dmg 生成的临时读写镜像，无法 fallback"
+        return 1
+    fi
+
+    echo "⚠️  create-dmg 收尾失败，尝试从临时镜像生成最终 DMG: ${RW_DMG}"
+    local RW_ABS="${PWD}/${RW_DMG}"
+    hdiutil info | awk -v img="$RW_ABS" '
+        $1 == "image-path" { current = $3; next }
+        current == img && $1 ~ /^\/dev\/disk[0-9]+$/ { print $1 }
+    ' | while IFS= read -r dev; do
+        echo "   卸载临时卷: ${dev}"
+        hdiutil detach "$dev" -force >/dev/null 2>&1 || true
+    done
+
+    sleep 1
+    rm -f "$DMG_NAME"
+    hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -o "$DMG_NAME"
+    rm -f "$RW_DMG"
+}
+
 build_dmg() {
     local DMG_NAME="AnnotaMD.dmg"
 
@@ -65,7 +91,9 @@ build_dmg() {
         if [ -n "$VOLICON" ]; then
             CREATE_DMG_ARGS+=(--volicon "${VOLICON}")
         fi
-        create-dmg "${CREATE_DMG_ARGS[@]}" "$DMG_NAME" "${APP_BUNDLE_NAME}.app"
+        if ! create-dmg "${CREATE_DMG_ARGS[@]}" "$DMG_NAME" "${APP_BUNDLE_NAME}.app"; then
+            finish_create_dmg_fallback "$DMG_NAME"
+        fi
     else
         echo "📦 create-dmg 未安装，使用 hdiutil 打包（DMG 将无自定义图标和布局）..."
         echo "   💡 提示：运行 brew install create-dmg 可获得更好的 DMG 打包效果"

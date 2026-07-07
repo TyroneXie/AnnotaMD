@@ -90,6 +90,50 @@ struct CriticMarkupApplyTests {
         let out = CriticMarkup.apply(.delete, to: source, selectedText: "drop me", nearLine: 4)
         #expect(out == "drop me\n\n\n{--drop me--}")
     }
+
+    @Test("selection locator targets the current rendered occurrence on the same line")
+    func selectionLocatorOccurrence() {
+        let source = "前面{==目标==}{>>已有评论<<}，后面目标"
+        let locator = CriticMarkup.SelectionLocator(occurrence: 1, prefix: "💬，后面", suffix: "")
+        let out = CriticMarkup.apply(.replace("新目标"), to: source, selectedText: "目标", nearLine: 1, locator: locator)
+        #expect(out == "前面{==目标==}{>>已有评论<<}，后面{~~目标~>新目标~~}")
+    }
+
+    @Test("selection locator ignores comment payload text when locating")
+    func selectionLocatorSkipsCommentPayload() {
+        let source = "第一处{>>目标评论<<}，第二处目标"
+        let locator = CriticMarkup.SelectionLocator(occurrence: 0, prefix: "💬，第二处", suffix: "")
+        let out = CriticMarkup.apply(.replace("新目标"), to: source, selectedText: "目标", nearLine: 1, locator: locator)
+        #expect(out == "第一处{>>目标评论<<}，第二处{~~目标~>新目标~~}")
+    }
+
+    @Test("selection locator matches rendered text across markdown link syntax")
+    func selectionLocatorAcrossMarkdownLink() {
+        let source = "AnnotaMD fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)。感谢原项目。"
+        let locator = CriticMarkup.SelectionLocator(occurrence: 0, prefix: "", suffix: "")
+        let out = CriticMarkup.apply(
+            .comment("保留致谢"),
+            to: source,
+            selectedText: "fork 自 davidhoo/MarkdownReader。感谢",
+            nearLine: 1,
+            locator: locator
+        )
+        #expect(out == "AnnotaMD {==fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)。感谢==}{>>保留致谢<<}原项目。")
+    }
+
+    @Test("selection locator trims accidental whitespace around rendered selection")
+    func selectionLocatorTrimsSelectionWhitespace() {
+        let source = "## 发布到 GitHub Release\n\n正文"
+        let locator = CriticMarkup.SelectionLocator(occurrence: 0, prefix: "", suffix: "")
+        let out = CriticMarkup.apply(
+            .comment("删掉这一节"),
+            to: source,
+            selectedText: "\n发布到 GitHub Release\n",
+            nearLine: 1,
+            locator: locator
+        )
+        #expect(out == "## {==发布到 GitHub Release==}{>>删掉这一节<<}\n\n正文")
+    }
 }
 
 // MARK: - edit / delete comment

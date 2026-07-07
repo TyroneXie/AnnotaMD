@@ -19,7 +19,8 @@
     scrollToLine(lineNumber) {
       const target = document.querySelector(`[data-line="${lineNumber}"]`);
       if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        window.scrollBy(0, -8);
         return true;
       }
       let closest = null;
@@ -32,7 +33,8 @@
         }
       });
       if (closest) {
-        closest.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        closest.scrollIntoView({ behavior: 'auto', block: 'start' });
+        window.scrollBy(0, -8);
         return true;
       }
       return false;
@@ -47,6 +49,8 @@
         MR.renderPlantUML();
         MR.renderKaTeX();
         MR.renderAdmonitions();
+        MR.enableResizableTables();
+        MR.enableZoomableMedia();
         MR.addCopyButtons();
         if (typeof Prism !== 'undefined') {
           Prism.highlightAll();
@@ -153,15 +157,28 @@
         return result;
       };
 
+      const surface = toHex(resolve('var(--surface)'));
+      const bgElevated = toHex(resolve('var(--bg-elevated)'));
+      const bgSubtle = toHex(resolve('var(--bg-subtle)'));
+      const border = toHex(resolve('var(--border)'));
+      const ink = toHex(resolve('var(--ink)'));
+      const fgMuted = toHex(resolve('var(--fg-muted)'));
+
       return {
         isDark,
         themeVariables: {
-          primaryColor: toHex(resolve('var(--accent)')),
-          primaryTextColor: toHex(resolve('var(--ink)')),
-          primaryBorderColor: toHex(resolve('var(--border)')),
-          lineColor: toHex(resolve('var(--fg-muted)')),
-          secondaryColor: toHex(resolve('var(--bg-elevated)')),
-          tertiaryColor: toHex(resolve('var(--bg-subtle)'))
+          background: surface,
+          mainBkg: bgElevated,
+          primaryColor: bgElevated,
+          primaryTextColor: ink,
+          primaryBorderColor: border,
+          lineColor: fgMuted,
+          secondaryColor: bgElevated,
+          tertiaryColor: bgSubtle,
+          edgeLabelBackground: surface,
+          attributeBackgroundColorOdd: bgElevated,
+          attributeBackgroundColorEven: bgElevated,
+          attributeBorderColor: border
         }
       };
     },
@@ -244,6 +261,7 @@
         const id = 'mermaid-' + (++idx) + '-' + Math.random().toString(36).slice(2);
         mermaid.render(id, source).then(({ svg, bindFunctions }) => {
           container.innerHTML = svg;
+          MR._makeZoomableMedia(container);
           if (bindFunctions) bindFunctions(container);
         }).catch(err => {
           console.error('[AnnotaMD] mermaid.render error:', err);
@@ -275,6 +293,7 @@
         container.innerHTML = '';
         mermaid.render(id, source).then(({ svg, bindFunctions }) => {
           container.innerHTML = svg;
+          MR._makeZoomableMedia(container);
           if (bindFunctions) bindFunctions(container);
         }).catch(err => {
           console.error('[AnnotaMD] mermaid rerender error:', err);
@@ -305,6 +324,7 @@
         svgEl.style.maxWidth = '100%';
         svgEl.style.height = 'auto';
       }
+      MR._makeZoomableMedia(container);
     },
 
     async renderPlantUML() {
@@ -431,9 +451,630 @@
       });
     },
 
+    enableZoomableMedia() {
+      const root = document.getElementById('mr-content') || document;
+
+      root.querySelectorAll('.mermaid-container, .plantuml-container').forEach(container => {
+        MR._makeZoomableMedia(container);
+      });
+
+      root.querySelectorAll('img').forEach(img => {
+        if (img.closest('.mr-media-viewer')) return;
+        if (img.closest('.katex, #mr-critic-toolbar, #mr-critic-popover')) return;
+        MR._wrapImageForZoom(img);
+      });
+
+      MR._installMediaGestureZoom();
+    },
+
+    _wrapImageForZoom(img) {
+      const link = img.parentElement && img.parentElement.tagName === 'A'
+        && img.parentElement.children.length === 1
+        ? img.parentElement
+        : null;
+      const mediaNode = link || img;
+      const parent = mediaNode.parentNode;
+      if (!parent) return;
+      if (!MR._isStandaloneImageNode(mediaNode)) return;
+
+      const viewer = document.createElement('span');
+      viewer.className = 'mr-media-viewer mr-image-viewer';
+      parent.insertBefore(viewer, mediaNode);
+      viewer.appendChild(mediaNode);
+      MR._makeZoomableMedia(viewer);
+    },
+
+    _isStandaloneImageNode(mediaNode) {
+      if (!mediaNode || !mediaNode.parentNode) return false;
+      if (mediaNode.closest && mediaNode.closest('table, pre, code, h1, h2, h3, h4, h5, h6, #mr-critic-toolbar, #mr-critic-popover')) {
+        return false;
+      }
+
+      const parent = mediaNode.parentNode;
+      const parentEl = parent.nodeType === Node.ELEMENT_NODE ? parent : null;
+      if (!parentEl) return false;
+
+      if (parentEl.matches && parentEl.matches('p, figure')) {
+        return Array.from(parentEl.childNodes).every(node => {
+          if (node === mediaNode) return true;
+          if (node.nodeType === Node.TEXT_NODE) return !node.textContent.trim();
+          if (node.nodeType !== Node.ELEMENT_NODE) return true;
+          if (node.tagName === 'BR') return true;
+          return false;
+        });
+      }
+
+      return parentEl.id === 'mr-content' || parentEl.classList.contains('markdown-preview');
+    },
+
+    _makeZoomableMedia(host) {
+      if (!host) return;
+      const existingViewport = Array.from(host.children).find(el => el.classList && el.classList.contains('mr-media-viewport'));
+      if (host.dataset.mrZoomable === 'true' && existingViewport) return;
+      delete host.dataset.mrZoomable;
+
+      const movableNodes = Array.from(host.childNodes).filter(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          return !node.classList.contains('mr-media-toolbar')
+            && !node.classList.contains('mr-media-viewport')
+            && !node.classList.contains('mermaid-error')
+            && !node.classList.contains('plantuml-error')
+            && !node.classList.contains('plantuml-loading');
+        }
+        return node.textContent && node.textContent.trim();
+      });
+
+      const hasMedia = movableNodes.some(node => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+        if (node.matches('img, svg')) return true;
+        return !!node.querySelector('img, svg');
+      });
+      if (!hasMedia) return;
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'mr-media-toolbar';
+
+      const viewport = document.createElement('div');
+      viewport.className = 'mr-media-viewport';
+
+      const content = document.createElement('div');
+      content.className = 'mr-media-content';
+      movableNodes.forEach(node => content.appendChild(node));
+      viewport.appendChild(content);
+      MR._prepareZoomableMediaContent(host, content);
+
+      const minus = MR._mediaZoomButton('-', 'Zoom out', () => MR._changeMediaZoom(host, -0.25));
+      const label = document.createElement('span');
+      label.className = 'mr-media-zoom-label';
+      label.textContent = '100%';
+      const plus = MR._mediaZoomButton('+', 'Zoom in', () => MR._changeMediaZoom(host, 0.25));
+      const reset = MR._mediaZoomButton('1:1', 'Reset zoom', () => MR._setMediaZoom(host, 1));
+
+      toolbar.appendChild(minus);
+      toolbar.appendChild(label);
+      toolbar.appendChild(plus);
+      toolbar.appendChild(reset);
+
+      host.classList.add('mr-media-viewer');
+      host.dataset.mrZoomable = 'true';
+      host.appendChild(toolbar);
+      host.appendChild(viewport);
+      host.dataset.mrBaseScale = String(MR._defaultMediaBaseScale(host, content, viewport));
+      MR._setMediaZoom(host, Number.parseFloat(host.dataset.mrScale || '1') || 1);
+      requestAnimationFrame(() => MR._refreshMediaZoom(host));
+      setTimeout(() => MR._refreshMediaZoom(host), 120);
+    },
+
+    _installMediaGestureZoom() {
+      if (MR._mediaGestureZoomInstalled) return;
+      MR._mediaGestureZoomInstalled = true;
+
+      const listenerOptions = { passive: false, capture: true };
+
+      document.addEventListener('wheel', event => {
+        if (!event.ctrlKey) return;
+        const host = MR._mediaHostFromEvent(event);
+        if (!host) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        const now = performance.now();
+        if (MR._lastNativeMediaMagnifyAt && now - MR._lastNativeMediaMagnifyAt < 80) return;
+        MR._lastDomMediaPinchAt = now;
+        MR._zoomMediaFromWheel(host, event.deltaY, event.deltaMode);
+      }, listenerOptions);
+
+      document.addEventListener('gesturestart', event => {
+        const host = MR._mediaHostFromEvent(event);
+        if (!host) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        const now = performance.now();
+        if (MR._lastNativeMediaMagnifyAt && now - MR._lastNativeMediaMagnifyAt < 80) return;
+        host.dataset.mrGestureStartScale = host.dataset.mrScale || '1';
+        MR._lastDomMediaPinchAt = now;
+      }, listenerOptions);
+
+      document.addEventListener('gesturechange', event => {
+        const host = MR._mediaHostFromEvent(event);
+        if (!host) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        const now = performance.now();
+        if (MR._lastNativeMediaMagnifyAt && now - MR._lastNativeMediaMagnifyAt < 80) return;
+        const start = Number.parseFloat(host.dataset.mrGestureStartScale || host.dataset.mrScale || '1') || 1;
+        const gestureScale = Number.parseFloat(event.scale || '1') || 1;
+        MR._setMediaZoom(host, start * gestureScale);
+        MR._lastDomMediaPinchAt = now;
+      }, listenerOptions);
+
+      document.addEventListener('gestureend', event => {
+        const host = MR._mediaHostFromEvent(event);
+        if (!host) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        const now = performance.now();
+        if (MR._lastNativeMediaMagnifyAt && now - MR._lastNativeMediaMagnifyAt < 80) return;
+        delete host.dataset.mrGestureStartScale;
+        MR._lastDomMediaPinchAt = now;
+      }, listenerOptions);
+    },
+
+    _mediaHostFromEvent(event) {
+      const target = event && event.target && event.target.nodeType === Node.ELEMENT_NODE
+        ? event.target
+        : event && event.target && event.target.parentElement;
+      if (!target || !target.closest) return null;
+      return target.closest('.mr-media-viewer[data-mr-zoomable="true"]');
+    },
+
+    _mediaHostFromPoint(clientX, clientY) {
+      const x = Number(clientX);
+      const y = Number(clientY);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      const el = document.elementFromPoint(x, y);
+      if (!el || !el.closest) return null;
+      return el.closest('.mr-media-viewer[data-mr-zoomable="true"]');
+    },
+
+    handleNativeMediaMagnify(clientX, clientY, magnification) {
+      const host = MR._mediaHostFromPoint(clientX, clientY);
+      if (!host) return false;
+
+      const now = performance.now();
+      if (MR._lastDomMediaPinchAt && now - MR._lastDomMediaPinchAt < 80) {
+        return true;
+      }
+
+      const delta = Number(magnification);
+      if (!Number.isFinite(delta) || Math.abs(delta) < 0.0005) return true;
+      const clamped = Math.max(-0.35, Math.min(0.35, delta));
+      MR._lastNativeMediaMagnifyAt = now;
+      MR._zoomMediaByFactor(host, Math.exp(clamped * 1.8));
+      return true;
+    },
+
+    _zoomMediaFromWheel(host, deltaY, deltaMode) {
+      const rawDelta = Number(deltaY);
+      if (!Number.isFinite(rawDelta) || Math.abs(rawDelta) < 0.01) return;
+      const mode = Number(deltaMode) || 0;
+      const pixelDelta = mode === 1 ? rawDelta * 16 : mode === 2 ? rawDelta * window.innerHeight : rawDelta;
+      const clamped = Math.max(-80, Math.min(80, pixelDelta));
+      MR._zoomMediaByFactor(host, Math.exp(-clamped * 0.006));
+    },
+
+    _zoomMediaByFactor(host, factor) {
+      const current = Number.parseFloat(host.dataset.mrScale || '1') || 1;
+      const nextFactor = Number(factor);
+      if (!Number.isFinite(nextFactor) || nextFactor <= 0) return;
+      MR._setMediaZoom(host, current * nextFactor);
+    },
+
+    _refreshMediaZoom(host) {
+      if (!host || host.dataset.mrZoomable !== 'true') return;
+      MR._setMediaZoom(host, Number.parseFloat(host.dataset.mrScale || '1') || 1);
+    },
+
+    _refreshAllMediaZoom() {
+      document.querySelectorAll('.mr-media-viewer[data-mr-zoomable="true"]').forEach(host => {
+        MR._refreshMediaZoom(host);
+      });
+    },
+
+    _defaultMediaBaseScale(host, content, viewport) {
+      const contentWidth = MR._mediaIntrinsicWidth(content);
+      const viewportWidth = MR._mediaViewportWidth(host, viewport);
+      if (!Number.isFinite(contentWidth) || contentWidth <= 0 || !Number.isFinite(viewportWidth) || viewportWidth <= 0) {
+        return 1;
+      }
+
+      const fitScale = viewportWidth / contentWidth;
+      const safeFitScale = Math.floor(fitScale * 100) / 100;
+      return Math.max(0.01, Math.min(8, safeFitScale || 1));
+    },
+
+    _mediaViewportWidth(host, viewport) {
+      const rectWidth = viewport?.getBoundingClientRect?.().width
+        || host.getBoundingClientRect?.().width
+        || host.parentElement?.getBoundingClientRect?.().width
+        || document.getElementById('mr-content')?.getBoundingClientRect?.().width
+        || window.innerWidth;
+      return Math.max(1, Math.floor(rectWidth || 1));
+    },
+
+    _mediaIntrinsicWidth(content) {
+      if (!content) return 0;
+      const img = content.querySelector('img');
+      if (img) {
+        const attrWidth = Number.parseFloat(img.getAttribute('width') || '');
+        return img.naturalWidth || attrWidth || img.getBoundingClientRect().width || img.scrollWidth || 0;
+      }
+
+      const svg = content.querySelector('svg');
+      if (svg) {
+        const attrWidth = Number.parseFloat(svg.getAttribute('width') || '');
+        const viewBoxWidth = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal.width : 0;
+        const rectWidth = svg.getBoundingClientRect().width || svg.scrollWidth || 0;
+        return viewBoxWidth || attrWidth || rectWidth || 0;
+      }
+
+      return content.scrollWidth || content.getBoundingClientRect().width || 0;
+    },
+
+    _prepareZoomableMediaContent(host, content) {
+      const isDiagram = host.classList.contains('mermaid-container') || host.classList.contains('plantuml-container');
+      if (!isDiagram) return;
+      content.querySelectorAll('svg').forEach(svg => {
+        const viewBoxWidth = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal.width : 0;
+        const widthAttr = svg.getAttribute('width') || '';
+        svg.style.maxWidth = 'none';
+        svg.style.height = 'auto';
+        if (viewBoxWidth > 0 && (!widthAttr || widthAttr.includes('%'))) {
+          svg.style.width = viewBoxWidth + 'px';
+        }
+      });
+    },
+
+    _mediaZoomButton(label, title, handler) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.title = title;
+      button.setAttribute('aria-label', title);
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        handler();
+      });
+      return button;
+    },
+
+    _changeMediaZoom(host, delta) {
+      const current = Number.parseFloat(host.dataset.mrScale || '1') || 1;
+      MR._setMediaZoom(host, current + delta);
+    },
+
+    _setMediaZoom(host, scale) {
+      const next = Math.max(0.25, Math.min(8, Math.round(scale * 100) / 100));
+      const content = host.querySelector('.mr-media-content');
+      const viewport = host.querySelector('.mr-media-viewport');
+      const baseScale = MR._defaultMediaBaseScale(host, content, viewport);
+      const actualScale = Math.round(baseScale * next * 100) / 100;
+      host.dataset.mrScale = String(next);
+      host.dataset.mrBaseScale = String(baseScale);
+      const label = host.querySelector('.mr-media-zoom-label');
+      if (content) {
+        content.style.zoom = String(actualScale);
+      }
+      if (label) {
+        label.textContent = Math.round(next * 100) + '%';
+      }
+      host.classList.toggle('mr-media-zoomed', Math.abs(next - 1) > 0.01);
+    },
+
+    enableResizableTables() {
+      const root = document.getElementById('mr-content') || document;
+      root.querySelectorAll('table').forEach(table => {
+        if (table.closest('.katex')) return;
+        const row = table.tHead && table.tHead.rows.length ? table.tHead.rows[0] : table.rows[0];
+        if (!row || row.cells.length < 2) return;
+
+        if (!table.parentElement || !table.parentElement.classList.contains('mr-table-wrap')) {
+          const wrap = document.createElement('div');
+          wrap.className = 'mr-table-wrap';
+          table.parentNode.insertBefore(wrap, table);
+          wrap.appendChild(table);
+        }
+
+        if (table.dataset.mrResizable === 'true') return;
+        table.dataset.mrResizable = 'true';
+        MR._installTableColumns(table, row);
+        table.classList.add('mr-resizable-table');
+        MR._installTableResizeHandles(table, row);
+      });
+    },
+
+    _installTableColumns(table, row) {
+      const cells = Array.from(row.cells);
+      const oldColgroup = Array.from(table.children).find(el =>
+        el.tagName === 'COLGROUP' && el.dataset.mrColgroup === 'true'
+      );
+      if (oldColgroup) oldColgroup.remove();
+
+      const wrap = table.parentElement && table.parentElement.classList.contains('mr-table-wrap')
+        ? table.parentElement
+        : null;
+      const wrapRect = wrap ? wrap.getBoundingClientRect() : null;
+      const targetWidth = Math.max(
+        1,
+        Math.floor((wrapRect && wrapRect.width) || table.parentElement?.getBoundingClientRect().width || table.getBoundingClientRect().width || 1)
+      );
+
+      const previousStyle = {
+        display: table.style.display,
+        width: table.style.width,
+        minWidth: table.style.minWidth,
+        maxWidth: table.style.maxWidth,
+        tableLayout: table.style.tableLayout,
+        overflowX: table.style.overflowX,
+        overflowY: table.style.overflowY
+      };
+      table.style.display = 'table';
+      table.style.width = 'max-content';
+      table.style.minWidth = '0px';
+      table.style.maxWidth = 'none';
+      table.style.tableLayout = 'auto';
+      table.style.overflowX = 'visible';
+      table.style.overflowY = 'visible';
+
+      const rows = Array.from(table.rows);
+      const columnCount = cells.length;
+      const naturalWidths = Array.from({ length: columnCount }, (_, columnIndex) => {
+        let width = 64;
+        rows.forEach(rowEl => {
+          const cell = rowEl.cells[columnIndex];
+          if (!cell) return;
+          width = Math.max(
+            width,
+            Math.ceil(cell.getBoundingClientRect().width || 0),
+            Math.ceil(cell.scrollWidth || 0)
+          );
+        });
+        return Math.max(64, width);
+      });
+      const widths = MR._fitTableColumnWidths(
+        MR._capDefaultTableColumnWidths(naturalWidths, targetWidth),
+        targetWidth
+      );
+
+      table.style.display = previousStyle.display;
+      table.style.width = previousStyle.width;
+      table.style.minWidth = previousStyle.minWidth;
+      table.style.maxWidth = previousStyle.maxWidth;
+      table.style.tableLayout = previousStyle.tableLayout;
+      table.style.overflowX = previousStyle.overflowX;
+      table.style.overflowY = previousStyle.overflowY;
+
+      const colgroup = document.createElement('colgroup');
+      colgroup.dataset.mrColgroup = 'true';
+      widths.forEach(width => {
+        const col = document.createElement('col');
+        col.style.width = (width / targetWidth * 100) + '%';
+        colgroup.appendChild(col);
+      });
+      table.insertBefore(colgroup, table.firstChild);
+
+      table.style.width = '100%';
+      table.style.minWidth = '100%';
+      table.style.maxWidth = '100%';
+      table.style.tableLayout = 'fixed';
+      MR._syncTableOverflowState(table);
+    },
+
+    _capDefaultTableColumnWidths(widths, targetWidth) {
+      const count = widths.length;
+      if (count === 0) return widths;
+
+      const safeTarget = Math.max(1, Math.floor(targetWidth || 1));
+      const evenWidth = safeTarget / count;
+      const maxShare = count === 2 ? 0.82 : count === 3 ? 0.58 : 0.46;
+      const maxWidth = Math.max(evenWidth * 1.45, safeTarget * maxShare);
+      const minWeight = count === 2
+        ? Math.max(96, Math.min(safeTarget * 0.18, safeTarget * 0.42))
+        : Math.max(64, Math.min(140, evenWidth * 0.55));
+
+      return widths.map(width => Math.max(minWeight, Math.min(width, maxWidth)));
+    },
+
+    _fitTableColumnWidths(widths, targetWidth) {
+      const count = widths.length;
+      const safeTarget = Math.max(1, Math.floor(targetWidth || 1));
+      if (count === 0) return [];
+
+      const total = widths.reduce((sum, width) => sum + Math.max(1, width), 0);
+      if (total <= 0) {
+        const even = Math.max(1, Math.floor(safeTarget / count));
+        return Array.from({ length: count }, () => even);
+      }
+
+      let minWidth = 48;
+      if (safeTarget < minWidth * count) {
+        minWidth = Math.max(1, safeTarget / count);
+      }
+
+      let fitted = widths.map(width => Math.max(minWidth, (Math.max(1, width) / total) * safeTarget));
+
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const fittedTotal = fitted.reduce((sum, width) => sum + width, 0);
+        const excess = fittedTotal - safeTarget;
+        if (excess <= 0.5) break;
+        const shrinkable = fitted
+          .map((width, index) => ({ width, index, room: width - minWidth }))
+          .filter(item => item.room > 0.5);
+        const roomTotal = shrinkable.reduce((sum, item) => sum + item.room, 0);
+        if (roomTotal <= 0) break;
+        shrinkable.forEach(item => {
+          fitted[item.index] = Math.max(minWidth, item.width - excess * (item.room / roomTotal));
+        });
+      }
+
+      const rounded = fitted.map(width => Math.max(1, Math.round(width)));
+      const order = Array.from({ length: count }, (_, index) => index)
+        .sort((a, b) => rounded[b] - rounded[a]);
+      let delta = safeTarget - rounded.reduce((sum, width) => sum + width, 0);
+      while (delta !== 0 && order.length > 0) {
+        let changed = false;
+        for (const index of order) {
+          if (delta === 0) break;
+          if (delta > 0) {
+            rounded[index] += 1;
+            delta -= 1;
+            changed = true;
+          } else if (rounded[index] > 1) {
+            rounded[index] -= 1;
+            delta += 1;
+            changed = true;
+          }
+        }
+        if (!changed) break;
+      }
+      return rounded;
+    },
+
+    _installTableResizeHandles(table, row) {
+      Array.from(row.cells).forEach((cell, index) => {
+        const hasHandle = Array.from(cell.children).some(el =>
+          el.classList && el.classList.contains('mr-col-resizer')
+        );
+        if (hasHandle) return;
+        cell.classList.add('mr-resizable-cell');
+
+        const handle = document.createElement('span');
+        handle.className = 'mr-col-resizer';
+        handle.title = 'Drag to resize column';
+        handle.setAttribute('aria-hidden', 'true');
+
+        const startResize = event => MR._startTableColumnResize(event, table, index);
+        handle.addEventListener('mousedown', startResize);
+        handle.addEventListener('touchstart', startResize, { passive: false });
+        cell.appendChild(handle);
+      });
+    },
+
+    _tableColumns(table) {
+      const colgroup = Array.from(table.children).find(el =>
+        el.tagName === 'COLGROUP' && el.dataset.mrColgroup === 'true'
+      );
+      return colgroup ? Array.from(colgroup.children).filter(el => el.tagName === 'COL') : [];
+    },
+
+    _columnWidth(col) {
+      const width = parseFloat(col.style.width);
+      if (Number.isFinite(width) && col.style.width.includes('px')) return width;
+      const rectWidth = col.getBoundingClientRect ? col.getBoundingClientRect().width : 0;
+      return rectWidth > 0 ? rectWidth : 64;
+    },
+
+    _setTableWidthFromColumns(table) {
+      const total = MR._tableColumns(table).reduce((sum, col) => sum + MR._columnWidth(col), 0);
+      const wrap = table.parentElement && table.parentElement.classList.contains('mr-table-wrap')
+        ? table.parentElement
+        : null;
+      const wrapWidth = Math.floor((wrap && wrap.getBoundingClientRect().width) || 0);
+      if (total > 0) {
+        table.style.width = Math.max(Math.round(total), wrapWidth) + 'px';
+        table.style.minWidth = '100%';
+        table.style.maxWidth = 'none';
+      }
+      MR._syncTableOverflowState(table);
+    },
+
+    _syncTableOverflowState(table) {
+      const wrap = table.parentElement && table.parentElement.classList.contains('mr-table-wrap')
+        ? table.parentElement
+        : null;
+      if (!wrap) return;
+      window.requestAnimationFrame(() => {
+        const overflowed = table.getBoundingClientRect().width > wrap.clientWidth + 1;
+        wrap.classList.toggle('mr-table-overflow', overflowed);
+      });
+    },
+
+    _freezeTableColumnsToPixels(table) {
+      const columns = MR._tableColumns(table);
+      const row = table.tHead && table.tHead.rows.length ? table.tHead.rows[0] : table.rows[0];
+      if (!row) return columns;
+      columns.forEach((col, index) => {
+        const cell = row.cells[index];
+        const width = cell ? cell.getBoundingClientRect().width : MR._columnWidth(col);
+        col.style.width = Math.max(1, Math.round(width)) + 'px';
+      });
+      MR._setTableWidthFromColumns(table);
+      return columns;
+    },
+
+    _eventClientX(event) {
+      if (event.touches && event.touches.length) return event.touches[0].clientX;
+      if (event.changedTouches && event.changedTouches.length) return event.changedTouches[0].clientX;
+      return Number.isFinite(event.clientX) ? event.clientX : null;
+    },
+
+    _startTableColumnResize(event, table, columnIndex) {
+      if (event.type === 'mousedown' && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      let columns = MR._freezeTableColumnsToPixels(table);
+      const col = columns[columnIndex];
+      const startX = MR._eventClientX(event);
+      if (!col || startX === null) return;
+
+      const startWidth = col.getBoundingClientRect().width || MR._columnWidth(col);
+      const minWidth = 48;
+
+      if (MR._hideCriticToolbar) MR._hideCriticToolbar();
+      if (MR._hideCommentPopover) MR._hideCommentPopover();
+      window.getSelection()?.removeAllRanges();
+      table.classList.add('mr-table-resizing');
+      table.classList.add('mr-table-fixed');
+      table.style.tableLayout = 'fixed';
+      table.style.maxWidth = 'none';
+      document.body.classList.add('mr-resizing-table');
+
+      const onMove = moveEvent => {
+        moveEvent.preventDefault();
+        const clientX = MR._eventClientX(moveEvent);
+        if (clientX === null) return;
+        const nextWidth = Math.max(minWidth, Math.round(startWidth + clientX - startX));
+        col.style.width = nextWidth + 'px';
+        table.style.minWidth = '0px';
+        MR._setTableWidthFromColumns(table);
+      };
+
+      const onEnd = () => {
+        table.classList.remove('mr-table-resizing');
+        document.body.classList.remove('mr-resizing-table');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+      document.addEventListener('touchcancel', onEnd);
+    },
+
     addCopyButtons() {
       const preBlocks = document.querySelectorAll('pre');
       preBlocks.forEach(pre => {
+        MR._addCodeLanguageLabel(pre);
         if (pre.querySelector('.mr-copy-btn')) return;
         pre.style.position = 'relative';
 
@@ -473,6 +1114,84 @@
 
         pre.appendChild(btn);
       });
+    },
+
+    _addCodeLanguageLabel(pre) {
+      if (pre.querySelector('.mr-code-lang-label')) return;
+      const rawLanguage = MR._codeLanguageForPre(pre);
+      if (!rawLanguage) return;
+      pre.classList.add('mr-code-with-language');
+      const label = document.createElement('span');
+      label.className = 'mr-code-lang-label';
+      label.textContent = MR._displayCodeLanguage(rawLanguage);
+      pre.appendChild(label);
+    },
+
+    _codeLanguageForPre(pre) {
+      const code = pre.querySelector('code');
+      if (!code || !code.classList) return '';
+      for (const className of code.classList) {
+        if (className.startsWith('language-')) {
+          const language = className.slice('language-'.length).trim();
+          if (language && language !== 'none' && language !== 'plaintext' && language !== 'text') {
+            return language;
+          }
+        }
+      }
+      return '';
+    },
+
+    _displayCodeLanguage(language) {
+      const normalized = String(language || '').trim();
+      const key = normalized.toLowerCase();
+      const aliases = {
+        bash: 'Bash',
+        c: 'C',
+        cpp: 'C++',
+        'c++': 'C++',
+        csharp: 'C#',
+        cs: 'C#',
+        css: 'CSS',
+        diff: 'Diff',
+        dockerfile: 'Dockerfile',
+        go: 'Go',
+        graphql: 'GraphQL',
+        html: 'HTML',
+        java: 'Java',
+        javascript: 'JavaScript',
+        js: 'JavaScript',
+        json: 'JSON',
+        jsx: 'JSX',
+        kotlin: 'Kotlin',
+        kt: 'Kotlin',
+        latex: 'LaTeX',
+        markdown: 'Markdown',
+        md: 'Markdown',
+        mermaid: 'Mermaid',
+        objectivec: 'Objective-C',
+        objc: 'Objective-C',
+        php: 'PHP',
+        plantuml: 'PlantUML',
+        puml: 'PlantUML',
+        python: 'Python',
+        py: 'Python',
+        ruby: 'Ruby',
+        rb: 'Ruby',
+        rust: 'Rust',
+        rs: 'Rust',
+        shell: 'Shell',
+        sh: 'Shell',
+        sql: 'SQL',
+        swift: 'Swift',
+        toml: 'TOML',
+        ts: 'TypeScript',
+        tsx: 'TSX',
+        typescript: 'TypeScript',
+        xml: 'XML',
+        yaml: 'YAML',
+        yml: 'YAML'
+      };
+      return aliases[key] || normalized;
     },
 
     _searchHighlights: [],
@@ -668,7 +1387,8 @@
     // 防止误触 Dismiss 丢失刚开始写的内容（issue #7，对应 issue 中的方案 3.3）。
     _criticDraftKey(p) {
       if (!p) return null;
-      return String(p.line || 0) + '' + (p.text || '');
+      const occurrence = p.locator && Number.isFinite(p.locator.occurrence) ? p.locator.occurrence : '';
+      return String(p.line || 0) + '\u0001' + occurrence + '\u0001' + (p.text || '');
     },
 
     // 把当前评论输入框的内容存为草稿（仅在输入态、且内容非空时）。
@@ -689,25 +1409,169 @@
       return s.replace(/[ \t]*\r?\n(?:[ \t]*\r?\n)+/g, '\n').replace(/^\s+|\s+$/g, '');
     },
 
-    _postCriticAction(op, text, line, payload) {
+    _postCriticAction(op, text, line, payload, locator) {
       try {
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.criticAction) {
           window.webkit.messageHandlers.criticAction.postMessage({
-            op: op, text: text, line: line, payload: payload || null
+            op: op, text: text, line: line, payload: payload || null, locator: locator || null
           });
         }
       } catch (e) { /* no-op */ }
     },
 
-    _criticLineFor(node) {
+    _postMarkdownEditAction(op, text, line, locator) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.markdownEditAction) {
+          window.webkit.messageHandlers.markdownEditAction.postMessage({
+            op: op, text: text, line: line, locator: locator || null
+          });
+        }
+      } catch (e) { /* no-op */ }
+    },
+
+    _postMarkdownBlockAction(op, line, level) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.markdownBlockAction) {
+          window.webkit.messageHandlers.markdownBlockAction.postMessage({
+            op: op,
+            line: line || 0,
+            level: Number.isFinite(level) ? level : null
+          });
+        }
+      } catch (e) { /* no-op */ }
+    },
+
+    _postEditRequest(line) {
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.editRequest) {
+          window.webkit.messageHandlers.editRequest.postMessage({ line: line || 0 });
+        }
+      } catch (e) { /* no-op */ }
+    },
+
+    _countTextOccurrences(haystack, needle) {
+      if (!haystack || !needle) return 0;
+      let count = 0;
+      const step = Math.max(needle.length, 1);
+      for (let index = haystack.indexOf(needle); index !== -1; index = haystack.indexOf(needle, index + step)) {
+        count += 1;
+      }
+      return count;
+    },
+
+    _criticLineElementFor(node) {
       let el = (node && node.nodeType === 3) ? node.parentElement : node;
       while (el && el !== document.body) {
-        if (el.dataset && el.dataset.line) {
-          return parseInt(el.dataset.line) || 0;
+        if (el.dataset && el.dataset.line) return el;
+        el = el.parentElement;
+      }
+      return null;
+    },
+
+    _criticTextBefore(root, range) {
+      const r = document.createRange();
+      r.selectNodeContents(root);
+      r.setEnd(range.startContainer, range.startOffset);
+      return r.toString();
+    },
+
+    _criticTextAfter(root, range) {
+      const r = document.createRange();
+      r.selectNodeContents(root);
+      r.setStart(range.endContainer, range.endOffset);
+      return r.toString();
+    },
+
+    _criticLocatorFor(range, text) {
+      try {
+        const content = document.getElementById('mr-content');
+        if (!content || !range || !text) return null;
+        const beforeAll = MR._criticTextBefore(content, range);
+        const lineEl = MR._criticLineElementFor(range.startContainer);
+        const contextRoot = lineEl && lineEl.contains(range.endContainer) ? lineEl : content;
+        return {
+          occurrence: MR._countTextOccurrences(beforeAll, text),
+          prefix: MR._criticTextBefore(contextRoot, range).slice(-160),
+          suffix: MR._criticTextAfter(contextRoot, range).slice(0, 160)
+        };
+      } catch (e) {
+        return null;
+      }
+    },
+
+    _criticLineFor(node) {
+      const el = MR._criticLineElementFor(node);
+      return el ? (parseInt(el.dataset.line) || 0) : 0;
+    },
+
+    _lineForEventTarget(target) {
+      const el = MR._criticLineElementFor(target);
+      return el ? (parseInt(el.dataset.line) || 0) : MR.getTopVisibleLine();
+    },
+
+    _blockElementFor(target) {
+      let el = target && target.nodeType === 3 ? target.parentElement : target;
+      while (el && el !== document.body) {
+        if (el.matches && el.matches('p, h1, h2, h3, h4, h5, h6')) {
+          if (el.closest('li, blockquote, table, pre, .admonition, .katex-display, #mr-critic-toolbar, #mr-critic-popover')) {
+            return null;
+          }
+          return el.dataset && el.dataset.line ? el : null;
         }
         el = el.parentElement;
       }
-      return 0;
+      return null;
+    },
+
+    _blockLevelFor(block) {
+      if (!block || !block.tagName) return null;
+      if (/^H[1-6]$/.test(block.tagName)) return parseInt(block.tagName.slice(1));
+      if (block.tagName === 'P') return 0;
+      return null;
+    },
+
+    _selectionPayloadFromWindow() {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) return null;
+      const text = sel.toString();
+      if (!text || !text.trim()) return null;
+      const range = sel.getRangeAt(0);
+      const content = document.getElementById('mr-content');
+      if (!content || !content.contains(range.commonAncestorContainer)) return null;
+      const block = MR._blockElementFor(range.startContainer);
+      return {
+        text: text,
+        line: MR._criticLineFor(range.startContainer),
+        locator: MR._criticLocatorFor(range, text),
+        blockLevel: MR._blockLevelFor(block),
+        range: range
+      };
+    },
+
+    formatSelection(op) {
+      const payload = MR._selectionPayloadFromWindow() || MR._criticPending;
+      if (!payload || !payload.text || !payload.text.trim()) {
+        MR.flashCriticError && MR.flashCriticError();
+        return false;
+      }
+      MR._postMarkdownEditAction(op, payload.text, payload.line || 0, payload.locator || null);
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+      MR._hideCriticToolbar();
+      return true;
+    },
+
+    _commitMarkdownBlockAction(level) {
+      const payload = MR._criticPending || MR._selectionPayloadFromWindow();
+      if (!payload || !payload.line) {
+        MR.flashCriticError && MR.flashCriticError();
+        return false;
+      }
+      MR._postMarkdownBlockAction(level === 0 ? 'paragraph' : 'heading', payload.line, level);
+      const sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+      MR._hideCriticToolbar();
+      return true;
     },
 
     _ensureCriticToolbar() {
@@ -735,24 +1599,121 @@
       MR._clearPendingHighlight();
     },
 
-    _showCriticToolbar(range, text, line) {
+    _showCriticToolbar(range, text, line, locator) {
       const bar = MR._ensureCriticToolbar();
-      MR._criticPending = { text: text, line: line };
+      const block = MR._blockElementFor(range.startContainer);
+      MR._criticPending = {
+        text: text,
+        line: line,
+        locator: locator || null,
+        blockLevel: MR._blockLevelFor(block)
+      };
       const L = MR.criticLabels;
       bar.innerHTML = '';
 
-      const mkBtn = (label, handler, primary) => {
+      const mkBtn = ({ label, html, title, className, handler }) => {
         const b = document.createElement('button');
-        b.textContent = label;
-        if (primary) b.className = 'critic-primary';
+        b.type = 'button';
+        if (html) b.innerHTML = html;
+        else b.textContent = label;
+        b.className = ['critic-icon-btn', className || ''].filter(Boolean).join(' ');
+        b.title = title || label;
+        b.setAttribute('aria-label', title || label);
         b.addEventListener('click', handler);
         return b;
       };
 
-      bar.appendChild(mkBtn(L.delete, () => MR._commitCritic('delete')));
-      bar.appendChild(mkBtn(L.highlight, () => MR._commitCritic('highlight')));
-      bar.appendChild(mkBtn(L.comment, () => MR._promptCritic('comment', L.commentHint, true)));
-      bar.appendChild(mkBtn(L.replace, () => MR._promptCritic('replace', L.replaceHint, false)));
+      const mkSep = () => {
+        const sep = document.createElement('span');
+        sep.className = 'critic-sep';
+        return sep;
+      };
+
+      const mkLevelPicker = () => {
+        const wrap = document.createElement('span');
+        wrap.className = 'critic-level-wrap';
+        const currentLevel = Number.isFinite(MR._criticPending.blockLevel)
+          ? MR._criticPending.blockLevel
+          : null;
+        const trigger = mkBtn({
+          label: 'T',
+          title: L.heading || 'Paragraph / Heading',
+          className: 'fmt-level',
+          handler: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            wrap.classList.toggle('open');
+          }
+        });
+        const menu = document.createElement('div');
+        menu.className = 'critic-level-menu';
+
+        [['P', 0], ['H1', 1], ['H2', 2], ['H3', 3], ['H4', 4], ['H5', 5], ['H6', 6]].forEach(([label, level]) => {
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.textContent = label;
+          item.className = ['critic-level-item', currentLevel === level ? 'active' : ''].filter(Boolean).join(' ');
+          item.title = level === 0 ? (L.paragraph || 'Paragraph') : `${L.heading || 'Heading'} ${level}`;
+          item.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            MR._commitMarkdownBlockAction(level);
+          });
+          menu.appendChild(item);
+        });
+
+        wrap.appendChild(trigger);
+        wrap.appendChild(menu);
+        return wrap;
+      };
+
+      const commentIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5C5 4.7 5.7 4 6.5 4h11c.8 0 1.5.7 1.5 1.5v8c0 .8-.7 1.5-1.5 1.5H10l-4.2 3.3c-.3.2-.8 0-.8-.4V5.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+
+      bar.appendChild(mkLevelPicker());
+      bar.appendChild(mkSep());
+      bar.appendChild(mkBtn({
+        label: 'B',
+        title: `${L.bold || 'Bold'} (⌘B)`,
+        className: 'fmt-bold',
+        handler: () => MR.formatSelection('bold')
+      }));
+      bar.appendChild(mkBtn({
+        label: 'I',
+        title: `${L.italic || 'Italic'} (⌘I)`,
+        className: 'fmt-italic',
+        handler: () => MR.formatSelection('italic')
+      }));
+      bar.appendChild(mkBtn({
+        label: 'U',
+        title: `${L.underline || 'Underline'} (⌘U)`,
+        className: 'fmt-underline',
+        handler: () => MR.formatSelection('underline')
+      }));
+      bar.appendChild(mkBtn({
+        label: '</>',
+        title: `${L.code || 'Inline code'} (⌘⇧K)`,
+        className: 'fmt-code',
+        handler: () => MR.formatSelection('code')
+      }));
+      bar.appendChild(mkSep());
+      bar.appendChild(mkBtn({
+        label: 'S',
+        title: L.delete,
+        className: 'fmt-delete critic-danger',
+        handler: () => MR._commitCritic('delete')
+      }));
+      bar.appendChild(mkBtn({
+        label: 'A',
+        title: L.highlight,
+        className: 'fmt-highlight',
+        handler: () => MR._commitCritic('highlight')
+      }));
+      bar.appendChild(mkBtn({
+        html: commentIcon,
+        title: L.comment,
+        className: 'fmt-comment',
+        handler: () => MR._promptCritic('comment', L.commentHint, true)
+      }));
 
       bar.classList.add('visible');
       MR._positionCriticToolbar(bar, range.getBoundingClientRect());
@@ -834,7 +1795,7 @@
     _commitCritic(op, payload) {
       const p = MR._criticPending;
       if (!p) return;
-      MR._postCriticAction(op, p.text, p.line, payload);
+      MR._postCriticAction(op, p.text, p.line, payload, p.locator);
       const sel = window.getSelection();
       if (sel) sel.removeAllRanges();
       const bar = document.getElementById('mr-critic-toolbar');
@@ -991,6 +1952,29 @@
         }
       });
 
+      if (!readonly) {
+        document.addEventListener('contextmenu', (e) => {
+          if (e.target.closest && e.target.closest('.mr-media-toolbar')) return;
+          const payload = MR._selectionPayloadFromWindow();
+          if (!payload || !payload.range) return;
+          const content = document.getElementById('mr-content');
+          if (!content || !content.contains(e.target)) return;
+          e.preventDefault();
+          MR._criticRange = payload.range.cloneRange();
+          MR._showCriticToolbar(payload.range, payload.text, payload.line, payload.locator);
+        });
+
+        document.addEventListener('dblclick', (e) => {
+          const content = document.getElementById('mr-content');
+          if (!content || !content.contains(e.target)) return;
+          if (e.target.closest && e.target.closest('a, button, input, textarea, #mr-critic-toolbar, #mr-critic-popover, .critic-comment, .copy-code-button, .table-resize-handle, .mr-media-toolbar')) {
+            return;
+          }
+          const line = MR._lineForEventTarget(e.target);
+          MR._postEditRequest(line);
+        });
+      }
+
       // 选词标注工具条仅在可写环境提供：只读环境（QuickLook / 导出 HTML）无法保存标注。
       if (readonly) return;
 
@@ -1017,7 +2001,8 @@
         if (rect.width === 0 && rect.height === 0) { MR._hideCriticToolbar(); return; }
         MR._criticRange = range.cloneRange();
         const line = MR._criticLineFor(range.startContainer);
-        MR._showCriticToolbar(range, text, line);
+        const locator = MR._criticLocatorFor(range, text);
+        MR._showCriticToolbar(range, text, line, locator);
       };
 
       document.addEventListener('selectionchange', () => {
@@ -1031,6 +2016,8 @@
       MR.renderPlantUML();
       MR.renderKaTeX();
       MR.renderAdmonitions();
+      MR.enableResizableTables();
+      MR.enableZoomableMedia();
       MR.addCopyButtons();
       MR._initCriticSelection();
       if (typeof Prism !== 'undefined') {
@@ -1054,14 +2041,37 @@
   }
 
   let _mrScrollTimer = null;
-  window.addEventListener('scroll', function() {
+  let _mrLastScrollSyncAt = 0;
+  let _mrPostScrollSync = function() {
+    const now = Date.now();
+    if (now - _mrLastScrollSyncAt >= 50) {
+      _mrLastScrollSyncAt = now;
+      postScrollSync();
+    }
     if (_mrScrollTimer) clearTimeout(_mrScrollTimer);
-    _mrScrollTimer = setTimeout(postScrollSync, 200);
+    _mrScrollTimer = setTimeout(function() {
+      _mrLastScrollSyncAt = Date.now();
+      postScrollSync();
+    }, 80);
+  };
+  window.addEventListener('scroll', function() {
+    _mrPostScrollSync();
+  }, { passive: true });
+  window.addEventListener('resize', function() {
+    document.querySelectorAll('table.mr-resizable-table').forEach(table => {
+      MR._syncTableOverflowState(table);
+    });
+    MR._refreshAllMediaZoom();
   }, { passive: true });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', MR.init);
-  } else {
+  function initAndSyncScroll() {
     MR.init();
+    setTimeout(postScrollSync, 0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAndSyncScroll);
+  } else {
+    initAndSyncScroll();
   }
 })();

@@ -26,6 +26,10 @@ struct AnnotaMDApp: App {
         SettingsModel.shared.recentItems
     }
 
+    private var launchWindowSize: CGSize {
+        SettingsModel.shared.launchWindowSize
+    }
+
     /// 打开最近的子菜单（文件在上、目录在下，不显示分区标题）
     @ViewBuilder
     private var openRecentMenu: some View {
@@ -101,7 +105,7 @@ struct AnnotaMDApp: App {
         // 冷启动时 ContentView.task 通过 UserDefaults 读取 AppDelegate 写入的文件路径，
         // 无需 SwiftUI 为外部事件创建额外窗口，避免出现双窗口问题
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 900, height: 600)
+        .defaultSize(width: launchWindowSize.width, height: launchWindowSize.height)
         .windowResizability(.automatic)
         .commands {
             // 编辑菜单：自定义撤销/重做，直接作用于当前文件的 per-file UndoManager（issue #8）。
@@ -197,6 +201,34 @@ struct AnnotaMDApp: App {
                     NotificationCenter.default.post(name: .toggleSidebar, object: nil)
                 }
                 .keyboardShortcut("\\", modifiers: .command)
+
+                Button(L10n.tr(.toggleDisplayModeMenu, language: language)) {
+                    NotificationCenter.default.post(name: .toggleDisplayMode, object: nil)
+                }
+                .keyboardShortcut(.return, modifiers: .command)
+            }
+
+            // Markdown 格式
+            CommandMenu(L10n.tr(.formatMenu, language: language)) {
+                Button(L10n.tr(.formatBold, language: language)) {
+                    NotificationCenter.default.post(name: .formatBold, object: nil)
+                }
+                .keyboardShortcut("b", modifiers: .command)
+
+                Button(L10n.tr(.formatItalic, language: language)) {
+                    NotificationCenter.default.post(name: .formatItalic, object: nil)
+                }
+                .keyboardShortcut("i", modifiers: .command)
+
+                Button(L10n.tr(.formatUnderline, language: language)) {
+                    NotificationCenter.default.post(name: .formatUnderline, object: nil)
+                }
+                .keyboardShortcut("u", modifiers: .command)
+
+                Button(L10n.tr(.formatInlineCode, language: language)) {
+                    NotificationCenter.default.post(name: .formatInlineCode, object: nil)
+                }
+                .keyboardShortcut("k", modifiers: [.command, .shift])
             }
 
             // 查找菜单
@@ -232,6 +264,11 @@ extension Notification.Name {
     static let toggleSidebar = Notification.Name("com.xielintao.annotamd.toggleSidebar")
     static let switchToRendered = Notification.Name("com.xielintao.annotamd.switchToRendered")
     static let switchToRaw = Notification.Name("com.xielintao.annotamd.switchToRaw")
+    static let toggleDisplayMode = Notification.Name("com.xielintao.annotamd.toggleDisplayMode")
+    static let formatBold = Notification.Name("com.xielintao.annotamd.formatBold")
+    static let formatItalic = Notification.Name("com.xielintao.annotamd.formatItalic")
+    static let formatUnderline = Notification.Name("com.xielintao.annotamd.formatUnderline")
+    static let formatInlineCode = Notification.Name("com.xielintao.annotamd.formatInlineCode")
     static let openDirectory = Notification.Name("com.xielintao.annotamd.openDirectory")
     static let openFile = Notification.Name("com.xielintao.annotamd.openFile")
     static let openExternalDirectory = Notification.Name("com.xielintao.annotamd.openExternalDirectory")

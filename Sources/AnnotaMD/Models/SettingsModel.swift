@@ -40,6 +40,11 @@ final class SettingsModel {
     /// 全局共享实例，确保 ContentView 与 SettingsView 引用同一对象
     /// 语言切换等设置变更可即时传播到所有视图
     static let shared = SettingsModel()
+    private static let defaultSourceFontSize = 15
+    private static let legacyDefaultSourceFontSize = 13
+    private static let defaultWindowSize = CGSize(width: 900, height: 600)
+    private static let minWindowSize = CGSize(width: 650, height: 450)
+    private static let maxWindowSize = CGSize(width: 4000, height: 3000)
 
     // MARK: - UserDefaults Keys
 
@@ -50,6 +55,7 @@ final class SettingsModel {
         static let showNonMarkdownFiles = "com.xielintao.annotamd.showNonMarkdownFiles"
         static let appearanceMode       = "com.xielintao.annotamd.appearanceMode"
         static let sourceFontSize       = "com.xielintao.annotamd.sourceFontSize"
+        static let sourceFontSizeLegacyMigrated = "com.xielintao.annotamd.sourceFontSizeLegacyMigrated"
         static let contentPadding       = "com.xielintao.annotamd.contentPadding"
         static let languagePref         = "com.xielintao.annotamd.languagePref"
         static let themeId              = "com.xielintao.annotamd.themeId"
@@ -68,6 +74,9 @@ final class SettingsModel {
         static let aiPromptTemplate     = "com.xielintao.annotamd.aiPromptTemplate"
         static let rememberedSidebarVisible = "com.xielintao.annotamd.rememberedSidebarVisible"
         static let rememberedOutlineVisible = "com.xielintao.annotamd.rememberedOutlineVisible"
+        static let rememberWindowSize   = "com.xielintao.annotamd.rememberWindowSize"
+        static let rememberedWindowWidth = "com.xielintao.annotamd.rememberedWindowWidth"
+        static let rememberedWindowHeight = "com.xielintao.annotamd.rememberedWindowHeight"
     }
 
     private let defaults: UserDefaults
@@ -87,6 +96,14 @@ final class SettingsModel {
     /// 启动时重新打开上次位置
     var reopenLastLocation: Bool {
         didSet { defaults.set(reopenLastLocation, forKey: Keys.reopenLastLocation) }
+    }
+
+    /// 启动时恢复上次退出前的窗口大小
+    var rememberWindowSize: Bool {
+        didSet {
+            defaults.set(rememberWindowSize, forKey: Keys.rememberWindowSize)
+            defaults.synchronize()
+        }
     }
 
     /// 在侧边栏显示隐藏文件
@@ -189,6 +206,39 @@ final class SettingsModel {
     /// 渲染视图内容边距（pt）
     var contentPadding: Int {
         didSet { defaults.set(contentPadding, forKey: Keys.contentPadding) }
+    }
+
+    /// 上次记录的窗口宽度
+    private var rememberedWindowWidth: CGFloat {
+        didSet { defaults.set(Double(rememberedWindowWidth), forKey: Keys.rememberedWindowWidth) }
+    }
+
+    /// 上次记录的窗口高度
+    private var rememberedWindowHeight: CGFloat {
+        didSet { defaults.set(Double(rememberedWindowHeight), forKey: Keys.rememberedWindowHeight) }
+    }
+
+    var launchWindowSize: CGSize {
+        guard rememberWindowSize else { return Self.defaultWindowSize }
+        return rememberedWindowSize
+    }
+
+    var rememberedWindowSize: CGSize {
+        CGSize(
+            width: max(Self.minWindowSize.width, rememberedWindowWidth),
+            height: max(Self.minWindowSize.height, rememberedWindowHeight)
+        )
+    }
+
+    func rememberWindowFrameSize(_ size: CGSize) {
+        let width = max(Self.minWindowSize.width, min(Self.maxWindowSize.width, size.width))
+        let height = max(Self.minWindowSize.height, min(Self.maxWindowSize.height, size.height))
+        guard abs(width - rememberedWindowWidth) > 0.5 || abs(height - rememberedWindowHeight) > 0.5 else {
+            return
+        }
+        rememberedWindowWidth = width
+        rememberedWindowHeight = height
+        defaults.synchronize()
     }
 
     // MARK: - 上次位置记忆
@@ -320,7 +370,7 @@ final class SettingsModel {
         resolveTheme(base: currentBaseTheme, custom: themeCustomOverrides)
     }
 
-    /// 源码视图字号（安全范围 10~24）
+    /// 阅读 / 编辑视图字号（安全范围 10~24）
     var sourceFontPointSize: CGFloat {
         CGFloat(min(max(sourceFontSize, 10), 24))
     }
@@ -422,6 +472,7 @@ final class SettingsModel {
         self.defaultDisplayMode = DisplayMode(rawValue: defaults.string(forKey: Keys.defaultDisplayMode) ?? "") ?? .rendered
         self.languagePref = LanguagePref(rawValue: defaults.string(forKey: Keys.languagePref) ?? "") ?? .auto
         self.reopenLastLocation = defaults.object(forKey: Keys.reopenLastLocation) as? Bool ?? false
+        self.rememberWindowSize = defaults.object(forKey: Keys.rememberWindowSize) as? Bool ?? false
         self.showHiddenFiles = defaults.object(forKey: Keys.showHiddenFiles) as? Bool ?? false
         self.showNonMarkdownFiles = defaults.object(forKey: Keys.showNonMarkdownFiles) as? Bool ?? true
         self.isDefaultMdOpener = Self.checkIsDefaultMdOpener()
@@ -435,7 +486,7 @@ final class SettingsModel {
         }
         self.enableQuickLookPreview = defaults.bool(forKey: Keys.enableQuickLookPreview)
         self.rememberedSidebarVisible = defaults.object(forKey: Keys.rememberedSidebarVisible) as? Bool ?? false
-        self.rememberedOutlineVisible = defaults.object(forKey: Keys.rememberedOutlineVisible) as? Bool ?? false
+        self.rememberedOutlineVisible = defaults.object(forKey: Keys.rememberedOutlineVisible) as? Bool ?? true
         self.aiPromptTemplate = defaults.string(forKey: Keys.aiPromptTemplate) ?? ""
         self.skippedVersion = defaults.string(forKey: Keys.skippedVersion)
         self.lastUpdateCheckTime = defaults.object(forKey: Keys.lastUpdateCheckTime) as? Date
@@ -447,8 +498,25 @@ final class SettingsModel {
         } else {
             self.themeCustomOverrides = .empty
         }
-        self.sourceFontSize = defaults.object(forKey: Keys.sourceFontSize) as? Int ?? 13
+        let didMigrateLegacySourceFontSize = defaults.bool(forKey: Keys.sourceFontSizeLegacyMigrated)
+        if let storedSourceFontSize = defaults.object(forKey: Keys.sourceFontSize) as? Int {
+            if !didMigrateLegacySourceFontSize && storedSourceFontSize <= Self.legacyDefaultSourceFontSize {
+                self.sourceFontSize = Self.defaultSourceFontSize
+                defaults.set(Self.defaultSourceFontSize, forKey: Keys.sourceFontSize)
+                defaults.set(true, forKey: Keys.sourceFontSizeLegacyMigrated)
+            } else {
+                self.sourceFontSize = storedSourceFontSize
+                if !didMigrateLegacySourceFontSize {
+                    defaults.set(true, forKey: Keys.sourceFontSizeLegacyMigrated)
+                }
+            }
+        } else {
+            self.sourceFontSize = Self.defaultSourceFontSize
+            defaults.set(true, forKey: Keys.sourceFontSizeLegacyMigrated)
+        }
         self.contentPadding = defaults.object(forKey: Keys.contentPadding) as? Int ?? 20
+        self.rememberedWindowWidth = CGFloat(defaults.object(forKey: Keys.rememberedWindowWidth) as? Double ?? Double(Self.defaultWindowSize.width))
+        self.rememberedWindowHeight = CGFloat(defaults.object(forKey: Keys.rememberedWindowHeight) as? Double ?? Double(Self.defaultWindowSize.height))
         // NSApp 在应用启动极早期可能尚未初始化（如通过 UpdateViewModel → SettingsModel.shared 触发时），
         // 使用可选链安全访问，不可用时默认为 false（浅色）
         self.systemIsDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua

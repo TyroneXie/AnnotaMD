@@ -12,12 +12,16 @@ set -euo pipefail
 APP_NAME="AnnotaMD"
 # 面向用户的 .app 包名（显示名 AnnotaMD；可执行文件仍为 ${APP_NAME}）
 APP_BUNDLE_NAME="AnnotaMD"
+APP_VERSION="1.0.0"
 
-# 动态读取版本号（优先级：VERSION_OVERRIDE 环境变量 > git tag > CHANGELOG.md > 兜底）
+# 动态读取版本号（优先级：VERSION_OVERRIDE 环境变量 > APP_VERSION > git tag > CHANGELOG.md > 兜底）
 # VERSION_OVERRIDE 用于本地/测试构建（如 beta 版），避免为此创建 git tag。
 if [[ -n "${VERSION_OVERRIDE:-}" ]]; then
     VERSION="$VERSION_OVERRIDE"
     echo "📌 版本号来自 VERSION_OVERRIDE: $VERSION"
+elif [[ -n "${APP_VERSION:-}" ]]; then
+    VERSION="$APP_VERSION"
+    echo "📌 版本号来自 APP_VERSION: $VERSION"
 elif VERSION=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null | sed 's/^v//'); then
     echo "📌 版本号来自 git tag: $VERSION"
 elif VERSION=$(grep -m1 -o '\[[0-9][0-9.]*\]' CHANGELOG.md 2>/dev/null | tr -d '[]'); then

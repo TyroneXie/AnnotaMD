@@ -97,24 +97,45 @@ public struct ThemeColors: Equatable, Sendable {
 
         let isDark = surfaceNS.perceivedBrightness < inkNS.perceivedBrightness
 
-        let codeFg = isDark ? cssHex(ink.opacity(0.85)) : cssHex(ink.opacity(0.88))
-        let codeBg = isDark
-            ? cssHex(surface.mixed(with: ink, fraction: 0.06))
-            : cssHex(surface.mixed(with: ink, fraction: 0.04))
-        let keyword = cssHex(accent)
-        let string = isDark ? cssHex(success.lighter(by: 0.15)) : cssHex(Color(nsColor: successNS.blended(with: 0.15, of: inkNS) ?? successNS))
-        let number = cssHex(Color(nsColor: accentNS.blended(with: 0.25, of: dangerNS) ?? accentNS))
-        let comment = cssRGBA(fgMuted)
-        let functionName = cssHex(Color(nsColor: accentNS.blended(with: 0.4, of: inkNS) ?? accentNS))
-        let variable = cssHex(Color(nsColor: inkNS.blended(with: 0.15, of: successNS) ?? inkNS))
-        let className = cssHex(success)
-        let tag = cssHex(Color(nsColor: accentNS.blended(with: 0.4, of: successNS) ?? accentNS))
-        let attr = cssHex(Color(nsColor: accentNS.blended(with: 0.3, of: dangerNS) ?? accentNS))
+        let codeFg: String
+        let keyword: String
+        let string: String
+        let number: String
+        let comment: String
+        let functionName: String
+        let variable: String
+        let className: String
+        let tag: String
+        let attr: String
+        if isDark {
+            codeFg = cssHex(ink.opacity(0.85))
+            keyword = cssHex(accent)
+            string = cssHex(success.lighter(by: 0.15))
+            number = cssHex(Color(nsColor: accentNS.blended(with: 0.25, of: dangerNS) ?? accentNS))
+            comment = cssRGBA(fgMuted)
+            functionName = cssHex(Color(nsColor: accentNS.blended(with: 0.4, of: inkNS) ?? accentNS))
+            variable = cssHex(Color(nsColor: inkNS.blended(with: 0.15, of: successNS) ?? inkNS))
+            className = cssHex(success)
+            tag = cssHex(Color(nsColor: accentNS.blended(with: 0.4, of: successNS) ?? accentNS))
+            attr = cssHex(Color(nsColor: accentNS.blended(with: 0.3, of: dangerNS) ?? accentNS))
+        } else {
+            // Match Typora's default CodeMirror palette closely without copying its stylesheet wholesale.
+            codeFg = "#333333"
+            keyword = "#770088"
+            string = "#aa1111"
+            number = "#116644"
+            comment = "#aa5500"
+            functionName = "#0000ff"
+            variable = "#000000"
+            className = "#008855"
+            tag = "#117700"
+            attr = "#0000cc"
+        }
         let deleted = cssHex(danger)
         let inserted = cssHex(success)
 
         return """
-        pre { color: \(codeFg); background: \(codeBg); }
+        pre { color: \(codeFg); background: var(--bg-elevated); }
         .token.keyword { color: \(keyword); font-weight: 600; }
         .token.string, .token.regex { color: \(string); }
         .token.number { color: \(number); }
@@ -149,15 +170,16 @@ public struct ThemeColors: Equatable, Sendable {
             accent: accent,
             success: success,
             danger: danger,
+            // 低对比度贴近 Typora/GitHub 的浅灰层；高对比度保留原先更强的层次。
             bgElevated: isDark
-                ? surface.mixed(with: ink, fraction: 0.08 + c * 0.08)
-                : surface.mixed(with: ink, fraction: 0.16 + c * 0.12),
+                ? surface.mixed(with: ink, fraction: 0.03 + c * 0.10)
+                : surface.mixed(with: ink, fraction: 0.03 + c * 0.18),
             bgSubtle: isDark
-                ? surface.mixed(with: ink, fraction: 0.02 + c * 0.02)
-                : surface.mixed(with: ink, fraction: 0.08 + c * 0.08),
+                ? surface.mixed(with: ink, fraction: 0.01 + c * 0.03)
+                : surface.mixed(with: ink, fraction: 0.015 + c * 0.08),
             bgMuted: isDark
-                ? surface.mixed(with: ink, fraction: 0.04 + c * 0.03)
-                : surface.mixed(with: ink, fraction: 0.12 + c * 0.10),
+                ? surface.mixed(with: ink, fraction: 0.025 + c * 0.06)
+                : surface.mixed(with: ink, fraction: 0.045 + c * 0.15),
             fgSecondary: ink.opacity(0.65 + c * 0.10),
             fgMuted: isDark
                 ? ink.opacity(0.42 + c * 0.13)
@@ -168,8 +190,12 @@ public struct ThemeColors: Equatable, Sendable {
             accentSoft: isDark
                 ? Color.black.mixed(with: accent, fraction: 0.20 + c * 0.08)
                 : surface.mixed(with: accent, fraction: 0.11 + c * 0.04),
-            border: ink.opacity(0.06 + c * 0.04),
-            borderSubtle: ink.opacity(0.04 + c * 0.02),
+            border: isDark
+                ? ink.opacity(0.06 + c * 0.06)
+                : ink.opacity(0.10 + c * 0.06),
+            borderSubtle: isDark
+                ? ink.opacity(0.04 + c * 0.04)
+                : ink.opacity(0.06 + c * 0.04),
             bodyFontFamily: theme.bodyFontFamily,
             headingFontFamily: theme.headingFontFamily,
             codeFontFamily: theme.codeFontFamily,
