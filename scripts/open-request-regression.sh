@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Command-level regression for MarkMark external open routing.
+# Command-level regression for AnnotaMD external open routing.
 #
 # This exercises the LaunchServices path with `open -a <app> <url>` and checks
 # relative window-count changes. It is not a full replacement for Finder manual
 # QA, but it catches duplicate-window regressions for repeated same-URL opens.
 #
 # Usage:
-#   scripts/open-request-regression.sh [path/to/MarkMark.app]
+#   scripts/open-request-regression.sh [path/to/AnnotaMD.app]
 #
 # Optional:
-#   MARKMARK_RESET_DEFAULTS=1 scripts/open-request-regression.sh
+#   ANNOTAMD_RESET_DEFAULTS=1 scripts/open-request-regression.sh
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-APP_PATH="${1:-$ROOT_DIR/MarkMark.app}"
+APP_PATH="${1:-$ROOT_DIR/AnnotaMD.app}"
 APP_PATH="$(cd "$(dirname "$APP_PATH")" && pwd)/$(basename "$APP_PATH")"
-BUNDLE_ID="com.ft07.markmark"
-APP_PROCESS="MarkMark"
+BUNDLE_ID="com.xielintao.annotamd"
+APP_PROCESS="AnnotaMD"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "❌ App bundle not found: $APP_PATH" >&2
@@ -25,18 +25,18 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
-TMP_DIR="$(mktemp -d /tmp/markmark-open-regression.XXXXXX)"
+TMP_DIR="$(mktemp -d /tmp/annotamd-open-regression.XXXXXX)"
 cleanup() {
   kill_app
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
 
-cat > "$TMP_DIR/count_markmark_windows.swift" <<'SWIFT'
+cat > "$TMP_DIR/count_annotamd_windows.swift" <<'SWIFT'
 import AppKit
 import Foundation
 
-let owner = CommandLine.arguments.dropFirst().first ?? "MarkMark"
+let owner = CommandLine.arguments.dropFirst().first ?? "AnnotaMD"
 let pid = CommandLine.arguments.dropFirst(2).first.flatMap(Int.init)
 let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
 let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
@@ -47,9 +47,9 @@ let matches = list.filter { info in
 }
 print(matches.count)
 SWIFT
-swiftc "$TMP_DIR/count_markmark_windows.swift" -o "$TMP_DIR/count_markmark_windows"
+swiftc "$TMP_DIR/count_annotamd_windows.swift" -o "$TMP_DIR/count_annotamd_windows"
 
-cat > "$TMP_DIR/perform_markmark_service.swift" <<'SWIFT'
+cat > "$TMP_DIR/perform_annotamd_service.swift" <<'SWIFT'
 import AppKit
 import Foundation
 
@@ -59,12 +59,12 @@ if CommandLine.arguments.count > 2 {
     serviceNames = [CommandLine.arguments[2]]
 } else {
     serviceNames = [
-        "用 MarkMark 打开",
-        "Open with MarkMark",
-        "用 MarkMark 開啟"
+        "用 AnnotaMD 打开",
+        "Open with AnnotaMD",
+        "用 AnnotaMD 開啟"
     ]
 }
-let pasteboard = NSPasteboard(name: NSPasteboard.Name("MarkMarkServiceRegression-\(UUID().uuidString)"))
+let pasteboard = NSPasteboard(name: NSPasteboard.Name("AnnotaMDServiceRegression-\(UUID().uuidString)"))
 pasteboard.clearContents()
 let url = URL(fileURLWithPath: path)
 pasteboard.setPropertyList([path], forType: NSPasteboard.PasteboardType("NSFilenamesPboardType"))
@@ -81,7 +81,7 @@ for serviceName in serviceNames {
 print("not-performed: \(serviceNames.joined(separator: ", "))")
 exit(1)
 SWIFT
-swiftc "$TMP_DIR/perform_markmark_service.swift" -o "$TMP_DIR/perform_markmark_service"
+swiftc "$TMP_DIR/perform_annotamd_service.swift" -o "$TMP_DIR/perform_annotamd_service"
 
 current_app_pid() {
   pgrep -nx "$APP_PROCESS" || true
@@ -89,7 +89,7 @@ current_app_pid() {
 
 count_windows() {
   local pid="${1:-$(current_app_pid)}"
-  "$TMP_DIR/count_markmark_windows" "$APP_PROCESS" "$pid" | tail -n 1 | tr -d '[:space:]'
+  "$TMP_DIR/count_annotamd_windows" "$APP_PROCESS" "$pid" | tail -n 1 | tr -d '[:space:]'
 }
 
 kill_app() {
@@ -141,7 +141,7 @@ printf '# Delayed B\n' > "$TMP_DIR/delayed-b.md"
 
 kill_app
 
-if [[ "${MARKMARK_RESET_DEFAULTS:-0}" == "1" ]]; then
+if [[ "${ANNOTAMD_RESET_DEFAULTS:-0}" == "1" ]]; then
   /usr/bin/defaults delete "$BUNDLE_ID" >/dev/null 2>&1 || true
 fi
 
@@ -160,13 +160,13 @@ echo "✅ Services declares file + folder support"
 open "$TMP_DIR/a.md" -a "$APP_PATH"
 sleep 3
 count_after_a=$(count_windows)
-last_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath 2>/dev/null || true)
+last_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath 2>/dev/null || true)
 assert_eq "$(canonical_path "$last_file")" "$(canonical_path "$TMP_DIR/a.md")" "cold external file records A"
 
 open "$TMP_DIR/b.md" -a "$APP_PATH"
 sleep 2
 count_after_b=$(count_windows)
-last_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath 2>/dev/null || true)
+last_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath 2>/dev/null || true)
 assert_eq "$(canonical_path "$last_file")" "$(canonical_path "$TMP_DIR/b.md")" "hot external file records B"
 assert_gt "$count_after_b" "$count_after_a" "different URL opens another visible window"
 
@@ -182,7 +182,7 @@ assert_eq "$count_after_repeat_b" "$count_after_b" "repeat B does not add anothe
 
 open "$TMP_DIR/folder" -a "$APP_PATH"
 sleep 2
-last_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedDirectory 2>/dev/null || true)
+last_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedDirectory 2>/dev/null || true)
 assert_eq "$(canonical_path "$last_dir")" "$(canonical_path "$TMP_DIR/folder")" "external folder records lastOpenedDirectory"
 
 
@@ -193,37 +193,37 @@ assert_eq "$(canonical_path "$last_dir")" "$(canonical_path "$TMP_DIR/folder")" 
 # Cold explicit folder open should not create a transient/default welcome or
 # restored A window. It should leave only the dragged/opened B folder window.
 kill_app
-/usr/bin/defaults write "$BUNDLE_ID" com.markdownreader.reopenLastLocation -bool true
-/usr/bin/defaults write "$BUNDLE_ID" com.markdownreader.lastOpenedDirectory "$(canonical_path "$TMP_DIR/restore-a")"
-/usr/bin/defaults delete "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath >/dev/null 2>&1 || true
+/usr/bin/defaults write "$BUNDLE_ID" com.xielintao.annotamd.reopenLastLocation -bool true
+/usr/bin/defaults write "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedDirectory "$(canonical_path "$TMP_DIR/restore-a")"
+/usr/bin/defaults delete "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath >/dev/null 2>&1 || true
 open "$TMP_DIR/cold-folder-b" -a "$APP_PATH"
 sleep 3
-cold_folder_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedDirectory 2>/dev/null || true)
+cold_folder_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedDirectory 2>/dev/null || true)
 assert_eq "$(canonical_path "$cold_folder_dir")" "$(canonical_path "$TMP_DIR/cold-folder-b")" "cold explicit folder suppresses restore"
 cold_folder_windows=$(count_windows)
 assert_eq "$cold_folder_windows" "1" "cold explicit folder leaves one visible window"
 
 kill_app
-/usr/bin/defaults write "$BUNDLE_ID" com.markdownreader.reopenLastLocation -bool true
-/usr/bin/defaults write "$BUNDLE_ID" com.markdownreader.lastOpenedDirectory "$(canonical_path "$TMP_DIR/restore-a")"
-/usr/bin/defaults delete "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath >/dev/null 2>&1 || true
+/usr/bin/defaults write "$BUNDLE_ID" com.xielintao.annotamd.reopenLastLocation -bool true
+/usr/bin/defaults write "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedDirectory "$(canonical_path "$TMP_DIR/restore-a")"
+/usr/bin/defaults delete "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath >/dev/null 2>&1 || true
 open -a "$APP_PATH"
 sleep 0.6
 open "$TMP_DIR/delayed-b.md" -a "$APP_PATH"
 sleep 2.2
-delayed_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath 2>/dev/null || true)
+delayed_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath 2>/dev/null || true)
 assert_eq "$(canonical_path "$delayed_file")" "$(canonical_path "$TMP_DIR/delayed-b.md")" "delayed explicit open suppresses launch restore"
 
 kill_app
-"$TMP_DIR/perform_markmark_service" "$TMP_DIR/a.md" >/dev/null
+"$TMP_DIR/perform_annotamd_service" "$TMP_DIR/a.md" >/dev/null
 sleep 3
-service_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedFilePath 2>/dev/null || true)
+service_file=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedFilePath 2>/dev/null || true)
 assert_eq "$(canonical_path "$service_file")" "$(canonical_path "$TMP_DIR/a.md")" "NSPerformService opens file"
 
 kill_app
-"$TMP_DIR/perform_markmark_service" "$TMP_DIR/folder" >/dev/null
+"$TMP_DIR/perform_annotamd_service" "$TMP_DIR/folder" >/dev/null
 sleep 3
-service_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.markdownreader.lastOpenedDirectory 2>/dev/null || true)
+service_dir=$(/usr/bin/defaults read "$BUNDLE_ID" com.xielintao.annotamd.lastOpenedDirectory 2>/dev/null || true)
 assert_eq "$(canonical_path "$service_dir")" "$(canonical_path "$TMP_DIR/folder")" "NSPerformService opens folder"
 
 echo "✅ open request command-level regression passed"

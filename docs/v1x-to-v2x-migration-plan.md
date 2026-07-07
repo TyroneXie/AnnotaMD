@@ -2,7 +2,7 @@
 
 > ⚠️ **已废弃**：项目已从双线并行回归单线开发，本文档仅作历史归档。
 > v1.x 不再维护，main 分支直接以 v2.0.0 往前走。
-> Bundle ID 统一为 `com.markdownreader.app`。
+> Bundle ID 统一为 `com.xielintao.annotamd.app`。
 >
 > 废弃日期：2026-06-08
 
@@ -74,10 +74,10 @@ git push origin release/1.x --tags
 | 文件 | 改动 | 原因 |
 |------|------|------|
 | `Package.swift` | `platforms: [.macOS(.v26)]` | 构建必须 |
-| `scripts/Info.plist` | `CFBundleIdentifier` → `com.markdownreader.app.v2`；`LSMinimumSystemVersion` → `26` | 构建必须 |
+| `scripts/Info.plist` | `CFBundleIdentifier` → `com.xielintao.annotamd.app.v2`；`LSMinimumSystemVersion` → `26` | 构建必须 |
 | `build-app.sh` | actool `--minimum-deployment-target` → `26`（第 127 行） | 构建必须 |
-| `release.yml` | `BUNDLE_ID` → `com.markdownreader.app.v2`；actool deployment target → `26`（第 194 行） | 发布必须 |
-| `CLAUDE.md` | 更新：当前版本 2.0.0-dev、最低部署 macOS 26.0、Bundle ID com.markdownreader.app.v2、技术栈描述 | 项目元信息 |
+| `release.yml` | `BUNDLE_ID` → `com.xielintao.annotamd.app.v2`；actool deployment target → `26`（第 194 行） | 发布必须 |
+| `CLAUDE.md` | 更新：当前版本 2.0.0-dev、最低部署 macOS 26.0、Bundle ID com.xielintao.annotamd.app.v2、技术栈描述 | 项目元信息 |
 | `CHANGELOG.md` | 添加 `## [Unreleased]` 占位 | 版本管理惯例 |
 
 提交：
@@ -104,13 +104,13 @@ platforms: [.macOS(.v26)]
 ```xml
 <!-- 改前 -->
 <key>CFBundleIdentifier</key>
-<string>com.markdownreader.app</string>
+<string>com.xielintao.annotamd.app</string>
 <key>LSMinimumSystemVersion</key>
 <string>15.0</string>
 
 <!-- 改后 -->
 <key>CFBundleIdentifier</key>
-<string>com.markdownreader.app.v2</string>
+<string>com.xielintao.annotamd.app.v2</string>
 <key>LSMinimumSystemVersion</key>
 <string>26</string>
 ```
@@ -127,10 +127,10 @@ platforms: [.macOS(.v26)]
 **release.yml**：
 ```yaml
 # 改前
-BUNDLE_ID: com.markdownreader.app
+BUNDLE_ID: com.xielintao.annotamd.app
 
 # 改后
-BUNDLE_ID: com.markdownreader.app.v2
+BUNDLE_ID: com.xielintao.annotamd.app.v2
 ```
 
 以及 CI 中 actool 的 `--minimum-deployment-target 15.0` → `26`。
@@ -138,7 +138,7 @@ BUNDLE_ID: com.markdownreader.app.v2
 **CLAUDE.md**：
 - 当前版本: 1.0.6 → 2.0.0-dev
 - 最低部署: macOS 15.0 (Sequoia) → macOS 26.0
-- Bundle ID: `com.markdownreader.app` → `com.markdownreader.app.v2`
+- Bundle ID: `com.xielintao.annotamd.app` → `com.xielintao.annotamd.app.v2`
 - 渲染引擎描述中增加 v2.x WebView 方向说明
 
 **CHANGELOG.md**：在文件顶部添加：
@@ -149,7 +149,7 @@ BUNDLE_ID: com.markdownreader.app.v2
 
 - 渲染引擎从 Textual 迁移到 cmark-gfm + WebView
 - 最低部署目标从 macOS 15.0 提升到 macOS 26
-- Bundle ID 变更为 com.markdownreader.app.v2（设置隔离）
+- Bundle ID 变更为 com.xielintao.annotamd.app.v2（设置隔离）
 ```
 
 ### Step 5: 清理旧分支
@@ -218,4 +218,4 @@ git push origin --delete feat/outline-view-and-theme-refactor
 
 1. **Step 3 必须在 Step 4 之前完成**：release/1.x 切出并发布 v1.1.0 后，main 才能开始 v2.x 改动。否则如果在 main 上改了 Bundle ID 和部署目标后，v1.* tag 推送时会从 main 构建导致失败。
 2. **Info.plist 模板连锁影响**：`build-app.sh` 和 `release.yml` 中的 CI `ci-build` job 都用 sed 替换 Info.plist，改了 CFBundleIdentifier 后两处都必须同步更新。
-3. **v2.x Bundle ID 隔离**：`com.markdownreader.app.v2` 意味着 macOS 会隔离 UserDefaults、Keychain、应用支持目录，两个版本可以并存安装，方便对比测试。
+3. **v2.x Bundle ID 隔离**：`com.xielintao.annotamd.app.v2` 意味着 macOS 会隔离 UserDefaults、Keychain、应用支持目录，两个版本可以并存安装，方便对比测试。

@@ -1,4 +1,4 @@
-# MarkMark 打开请求路由 — 改造方案
+# AnnotaMD 打开请求路由 — 改造方案
 
 > 创建时间：2026-06-27  
 > 状态：✅ 主路径已接入；默认窗口延迟到无显式 URL 后创建；命令级 LaunchServices + NSPerformService 回归通过  
@@ -8,7 +8,7 @@
 
 ## 1. 问题描述
 
-MarkMark 当前已经支持从 Finder、Dock、菜单、最近打开等多个入口打开文件或目录，但这些入口的路由逻辑分散在 `AppDelegate`、`ContentView`、`WindowRouter` 和 UserDefaults pending 机制中，导致不同入口的产品语义不够统一。
+AnnotaMD 当前已经支持从 Finder、Dock、菜单、最近打开等多个入口打开文件或目录，但这些入口的路由逻辑分散在 `AppDelegate`、`ContentView`、`WindowRouter` 和 UserDefaults pending 机制中，导致不同入口的产品语义不够统一。
 
 核心问题不是“某个入口打不开”，而是：
 
@@ -63,7 +63,7 @@ MarkMark 当前已经支持从 Finder、Dock、菜单、最近打开等多个入
 | 拖拽文件/文件夹到 App 图标 | External Open | 不同 URL 新窗口；同 URL 聚焦 | 每个 URL 独立路由 | ❌ |
 | Finder 双击已注册文件 | External Open | 不同 URL 新窗口；同 URL 聚焦 | 每个 URL 独立路由 | ❌ |
 | 右键文件/文件夹 → 打开方式 | External Open | 不同 URL 新窗口；同 URL 聚焦 | 每个 URL 独立路由 | ❌ |
-| 右键文件/文件夹 → Services → 用 MarkMark 打开 | External Open | 不同 URL 新窗口；同 URL 聚焦 | 每个 URL 独立路由 | ❌ |
+| 右键文件/文件夹 → Services → 用 AnnotaMD 打开 | External Open | 不同 URL 新窗口；同 URL 聚焦 | 每个 URL 独立路由 | ❌ |
 | Cmd+O 打开 | Internal Open | 当前 key window 替换 | 现有 open panel 单选 | 不适用 |
 | 欢迎页最近文件 | Internal Open | 当前窗口替换 | 单个 URL | 不适用 |
 | 菜单“打开最近” | Internal Open | 当前 key window 替换；无窗口则新建 | 单个 URL | 不适用 |
@@ -192,8 +192,8 @@ final class WindowRouter {
 - [x] 拖文件到 App 图标 / 右键“打开方式”的底层 LaunchServices 路径（脚本用指定 app bundle 的 LaunchServices open 覆盖）
 - [x] 拖文件夹到 App 图标的底层 LaunchServices 路径（脚本验证 cold explicit folder 只留下目标目录窗口，并更新 lastOpenedDirectory）
 - [x] 拖文件/文件夹到已打开窗口：窗口拖拽 overlay 走 `WindowRouter.openWindow(for:)` 外部多窗口语义，新窗口会前置
-- [x] 右键 Services 打开文件（脚本用 `NSPerformService("用 MarkMark 打开", pasteboard)` 验证）
-- [x] 右键 Services 打开文件夹（脚本用 `NSPerformService("用 MarkMark 打开", pasteboard)` 验证）
+- [x] 右键 Services 打开文件（脚本用 `NSPerformService("用 AnnotaMD 打开", pasteboard)` 验证）
+- [x] 右键 Services 打开文件夹（脚本用 `NSPerformService("用 AnnotaMD 打开", pasteboard)` 验证）
 - [ ] 直接双击 App 图标恢复上次位置（coordinator 单测覆盖；真实 Finder/Dock 点击建议发布前抽查）
 - [x] 自动化验证：有 pending external open 时不触发恢复
 - [x] 自动化验证：启动后延迟到达的显式 open 会压过 restore，不会先恢复旧 A 再打开 B
@@ -217,7 +217,7 @@ final class WindowRouter {
 
 ## 9. 测试策略
 
-项目已有 `MarkMarkTests` 测试 target。本改造的自动化重点是 coordinator / router / pasteboard 等 seam；AppKit、Finder、Dock 和 Services 的真实系统行为仍需要发布前手工抽查。
+项目已有 `AnnotaMDTests` 测试 target。本改造的自动化重点是 coordinator / router / pasteboard 等 seam；AppKit、Finder、Dock 和 Services 的真实系统行为仍需要发布前手工抽查。
 
 ### 9.1 推荐测试 seam
 

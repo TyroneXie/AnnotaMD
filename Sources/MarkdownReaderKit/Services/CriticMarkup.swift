@@ -495,14 +495,14 @@ public enum CriticMarkup {
 
     ---
 
-    {{MarkMark:content}}
+    {{AnnotaMD:content}}
     """
 
-    /// 提示词模板中的正文占位符（带 MarkMark 前缀避免与正文内容冲突）
-    public static let contentPlaceholder = "{{MarkMark:content}}"
+    /// 提示词模板中的正文占位符（带 AnnotaMD 前缀避免与正文内容冲突）
+    public static let contentPlaceholder = "{{AnnotaMD:content}}"
 
     /// 生成可直接粘贴给 AI 的内容。
-    /// 模板含 `{{MarkMark:content}}` 占位符时替换为正文；否则模板在前、正文在后。
+    /// 模板含 `{{AnnotaMD:content}}` 占位符时替换为正文；否则模板在前、正文在后。
     public static func exportForAI(_ markedSource: String, prompt: String? = nil) -> String {
         let header = prompt ?? defaultAIPrompt
         if header.contains(contentPlaceholder) {

@@ -295,7 +295,7 @@ public enum L10n {
     // MARK: - 翻译字典
 
     private static let en: [Key: String] = [
-        .appName: "MarkMark",
+        .appName: "AnnotaMD",
         .settingsMenuLabel: "Settings\u{2026}",
         .settingsBackToApp: "Back to App",
         .settingsTabGeneral: "General",
@@ -313,9 +313,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "Show hidden files",
         .settingsGeneralShowNonMarkdownFiles: "Show non-Markdown files",
         .settingsGeneralDefaultOpenerTitle: "Default Markdown Opener",
-        .settingsGeneralDefaultOpenerDesc: "Set MarkMark as the default application for opening .md, .markdown, .mdown, .mkd files.",
+        .settingsGeneralDefaultOpenerDesc: "Set AnnotaMD as the default application for opening .md, .markdown, .mdown, .mkd files.",
         .settingsGeneralSetAsDefault: "Set as Default",
-        .settingsGeneralIsDefault: "MarkMark is the default Markdown opener",
+        .settingsGeneralIsDefault: "AnnotaMD is the default Markdown opener",
         .settingsGeneralSetDefaultFailed: "Failed to set as default opener. Please try again.",
         .settingsGeneralCommandLineTitle: "Command Line Tool",
         .settingsGeneralCommandLineDesc: "Install the `mdr` command to open files from Terminal. Example: mdr README.md",
@@ -418,10 +418,10 @@ public enum L10n {
 
         ---
 
-        {{MarkMark:content}}
+        {{AnnotaMD:content}}
         """,
         .settingsAIPromptTitle: "AI Prompt Template",
-        .settingsAIPromptDescription: "Used by \"Copy for AI\" and \"Copy AI Prompt\". {{MarkMark:content}} marks where the document is inserted.",
+        .settingsAIPromptDescription: "Used by \"Copy for AI\" and \"Copy AI Prompt\". {{AnnotaMD:content}} marks where the document is inserted.",
         .settingsAIPromptReset: "Restore Default",
         .criticDelete: "Delete",
         .criticHighlight: "Highlight",
@@ -465,7 +465,7 @@ public enum L10n {
         .updateAvailableTitle: "Update Available",
         .updateAvailableVersion: "Version {version}",
         .updateChecking: "Checking for updates\u{2026}",
-        .updateUpToDate: "MarkMark is up to date.",
+        .updateUpToDate: "AnnotaMD is up to date.",
         .updateDownload: "Download",
         .updateDownloading: "Downloading update\u{2026}",
         .updateDownloadComplete: "Download complete. Click Install to continue.",
@@ -479,7 +479,7 @@ public enum L10n {
         .updateModeAuto: "Auto install & restart",
         .updateModeManual: "Manual install required",
         .updateInstallInstructionsTitle: "Installation",
-        .updateManualInstallInstructions: "1. Download the .dmg file and open it\n2. Drag MarkMark into the Applications folder\n3. On first launch, macOS may say the developer cannot be verified:\n   \u{2022} Open System Settings \u{2192} Privacy & Security\n   \u{2022} Find the blocked app and click Open Anyway\n   \u{2022} Or run in Terminal: xattr -cr /Applications/MarkMark.app\n4. You can also right-click the app and choose Open",
+        .updateManualInstallInstructions: "1. Download the .dmg file and open it\n2. Drag AnnotaMD into the Applications folder\n3. On first launch, macOS may say the developer cannot be verified:\n   \u{2022} Open System Settings \u{2192} Privacy & Security\n   \u{2022} Find the blocked app and click Open Anyway\n   \u{2022} Or run in Terminal: xattr -cr /Applications/AnnotaMD.app\n4. You can also right-click the app and choose Open",
         .updateReleaseNotesTitle: "Release Notes",
         .checkForUpdates: "Check for Updates\u{2026}",
         .findBarSearchPlaceholder: "Search",
@@ -495,12 +495,12 @@ public enum L10n {
         .findBarFind: "Find",
         .findBarFindAndReplace: "Find and Replace",
         .markdownLinkExpandRootTitle: "Open linked location?",
-        .markdownLinkExpandRootMessage: "This link points outside the current folder. MarkMark will switch the sidebar root to:\n{root}\n\nTarget:\n{target}",
+        .markdownLinkExpandRootMessage: "This link points outside the current folder. AnnotaMD will switch the sidebar root to:\n{root}\n\nTarget:\n{target}",
         .markdownLinkOpenCommonRoot: "Open Common Folder",
         .markdownLinkMissingTitle: "Linked item not found",
         .markdownLinkMissingMessage: "The linked file or folder does not exist:\n{target}",
         .markdownLinkUnsupportedTitle: "Unsupported link target",
-        .markdownLinkUnsupportedMessage: "MarkMark can open Markdown files and folders from relative links. This target is not supported:\n{target}",
+        .markdownLinkUnsupportedMessage: "AnnotaMD can open Markdown files and folders from relative links. This target is not supported:\n{target}",
         .exportPDF: "Export PDF\u{2026}",
         .titleBarExportPDF: "Export PDF (⌘⌥E) / HTML (⌘⇧E)",
         .exportPDFSuccess: "PDF exported successfully",
@@ -513,7 +513,7 @@ public enum L10n {
     ]
 
     private static let zhCN: [Key: String] = [
-        .appName: "MarkMark",
+        .appName: "AnnotaMD",
         .settingsMenuLabel: "设置\u{2026}",
         .settingsBackToApp: "返回应用",
         .settingsTabGeneral: "通用",
@@ -531,9 +531,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "显示隐藏文件",
         .settingsGeneralShowNonMarkdownFiles: "显示非 Markdown 文件",
         .settingsGeneralDefaultOpenerTitle: "默认 Markdown 打开程序",
-        .settingsGeneralDefaultOpenerDesc: "将 MarkMark 设置为 .md、.markdown、.mdown、.mkd 文件的默认打开程序。",
+        .settingsGeneralDefaultOpenerDesc: "将 AnnotaMD 设置为 .md、.markdown、.mdown、.mkd 文件的默认打开程序。",
         .settingsGeneralSetAsDefault: "设为默认",
-        .settingsGeneralIsDefault: "MarkMark 已是默认 Markdown 打开程序",
+        .settingsGeneralIsDefault: "AnnotaMD 已是默认 Markdown 打开程序",
         .settingsGeneralSetDefaultFailed: "设置默认打开程序失败，请重试。",
         .settingsGeneralCommandLineTitle: "命令行工具",
         .settingsGeneralCommandLineDesc: "安装 mdr 命令，可在终端中打开文件。例如：mdr README.md",
@@ -636,10 +636,10 @@ public enum L10n {
 
         ---
 
-        {{MarkMark:content}}
+        {{AnnotaMD:content}}
         """,
         .settingsAIPromptTitle: "AI 提示词模板",
-        .settingsAIPromptDescription: "「复制给 AI」与「复制 AI 提示词」共用。{{MarkMark:content}} 为正文插入位置占位符。",
+        .settingsAIPromptDescription: "「复制给 AI」与「复制 AI 提示词」共用。{{AnnotaMD:content}} 为正文插入位置占位符。",
         .settingsAIPromptReset: "恢复默认",
         .criticDelete: "删除",
         .criticHighlight: "高亮",
@@ -683,7 +683,7 @@ public enum L10n {
         .updateAvailableTitle: "发现新版本",
         .updateAvailableVersion: "版本 {version}",
         .updateChecking: "正在检查更新\u{2026}",
-        .updateUpToDate: "MarkMark 已是最新版本。",
+        .updateUpToDate: "AnnotaMD 已是最新版本。",
         .updateDownload: "下载",
         .updateDownloading: "正在下载更新\u{2026}",
         .updateDownloadComplete: "下载完成，点击「安装」继续。",
@@ -697,7 +697,7 @@ public enum L10n {
         .updateModeAuto: "自动安装并重启",
         .updateModeManual: "需手动安装",
         .updateInstallInstructionsTitle: "安装说明",
-        .updateManualInstallInstructions: "1. 下载 .dmg 文件，双击打开\n2. 将 MarkMark 拖入「应用程序」文件夹\n3. 首次打开时，macOS 可能提示「无法验证开发者」：\n   \u{2022} 打开「系统设置 \u{2192} 隐私与安全性」\n   \u{2022} 找到被阻止的 app，点击「仍要打开」\n   \u{2022} 或在终端运行：xattr -cr /Applications/MarkMark.app\n4. 也可以直接右键点击 app \u{2192} 选择「打开」",
+        .updateManualInstallInstructions: "1. 下载 .dmg 文件，双击打开\n2. 将 AnnotaMD 拖入「应用程序」文件夹\n3. 首次打开时，macOS 可能提示「无法验证开发者」：\n   \u{2022} 打开「系统设置 \u{2192} 隐私与安全性」\n   \u{2022} 找到被阻止的 app，点击「仍要打开」\n   \u{2022} 或在终端运行：xattr -cr /Applications/AnnotaMD.app\n4. 也可以直接右键点击 app \u{2192} 选择「打开」",
         .updateReleaseNotesTitle: "更新内容",
         .checkForUpdates: "检查更新\u{2026}",
         .findBarSearchPlaceholder: "搜索",
@@ -713,12 +713,12 @@ public enum L10n {
         .findBarFind: "查找",
         .findBarFindAndReplace: "查找和替换",
         .markdownLinkExpandRootTitle: "打开链接位置？",
-        .markdownLinkExpandRootMessage: "这个链接指向当前文件夹之外。MarkMark 会将左侧目录根切换为：\n{root}\n\n目标：\n{target}",
+        .markdownLinkExpandRootMessage: "这个链接指向当前文件夹之外。AnnotaMD 会将左侧目录根切换为：\n{root}\n\n目标：\n{target}",
         .markdownLinkOpenCommonRoot: "打开共同父目录",
         .markdownLinkMissingTitle: "链接目标不存在",
         .markdownLinkMissingMessage: "链接指向的文件或目录不存在：\n{target}",
         .markdownLinkUnsupportedTitle: "不支持的链接目标",
-        .markdownLinkUnsupportedMessage: "MarkMark 仅支持通过相对链接打开 Markdown 文件和目录。此目标不支持：\n{target}",
+        .markdownLinkUnsupportedMessage: "AnnotaMD 仅支持通过相对链接打开 Markdown 文件和目录。此目标不支持：\n{target}",
         .exportPDF: "导出 PDF\u{2026}",
         .titleBarExportPDF: "导出 PDF (⌘⌥E) / HTML (⌘⇧E)",
         .exportPDFSuccess: "PDF 导出成功",
@@ -731,7 +731,7 @@ public enum L10n {
     ]
 
     private static let zhTW: [Key: String] = [
-        .appName: "MarkMark",
+        .appName: "AnnotaMD",
         .settingsMenuLabel: "設定\u{2026}",
         .settingsBackToApp: "返回應用",
         .settingsTabGeneral: "一般",
@@ -749,9 +749,9 @@ public enum L10n {
         .settingsGeneralShowHiddenFiles: "顯示隱藏檔案",
         .settingsGeneralShowNonMarkdownFiles: "顯示非 Markdown 檔案",
         .settingsGeneralDefaultOpenerTitle: "預設 Markdown 開啟程式",
-        .settingsGeneralDefaultOpenerDesc: "將 MarkMark 設為 .md、.markdown、.mdown、.mkd 檔案的預設開啟程式。",
+        .settingsGeneralDefaultOpenerDesc: "將 AnnotaMD 設為 .md、.markdown、.mdown、.mkd 檔案的預設開啟程式。",
         .settingsGeneralSetAsDefault: "設為預設",
-        .settingsGeneralIsDefault: "MarkMark 已是預設 Markdown 開啟程式",
+        .settingsGeneralIsDefault: "AnnotaMD 已是預設 Markdown 開啟程式",
         .settingsGeneralSetDefaultFailed: "設定預設開啟程式失敗，請重試。",
         .settingsGeneralCommandLineTitle: "命令列工具",
         .settingsGeneralCommandLineDesc: "安裝 mdr 命令，可在終端機中開啟檔案。例如：mdr README.md",
@@ -854,10 +854,10 @@ public enum L10n {
 
         ---
 
-        {{MarkMark:content}}
+        {{AnnotaMD:content}}
         """,
         .settingsAIPromptTitle: "AI 提示詞模板",
-        .settingsAIPromptDescription: "「複製給 AI」與「複製 AI 提示詞」共用。{{MarkMark:content}} 為正文插入位置佔位符。",
+        .settingsAIPromptDescription: "「複製給 AI」與「複製 AI 提示詞」共用。{{AnnotaMD:content}} 為正文插入位置佔位符。",
         .settingsAIPromptReset: "恢復預設",
         .criticDelete: "刪除",
         .criticHighlight: "高亮",
@@ -901,7 +901,7 @@ public enum L10n {
         .updateAvailableTitle: "發現新版本",
         .updateAvailableVersion: "版本 {version}",
         .updateChecking: "正在檢查更新\u{2026}",
-        .updateUpToDate: "MarkMark 已是最新版本。",
+        .updateUpToDate: "AnnotaMD 已是最新版本。",
         .updateDownload: "下載",
         .updateDownloading: "正在下載更新\u{2026}",
         .updateDownloadComplete: "下載完成，點擊「安裝」繼續。",
@@ -915,7 +915,7 @@ public enum L10n {
         .updateModeAuto: "自動安裝並重新啟動",
         .updateModeManual: "需手動安裝",
         .updateInstallInstructionsTitle: "安裝說明",
-        .updateManualInstallInstructions: "1. 下載 .dmg 檔案，雙擊開啟\n2. 將 MarkMark 拖入「應用程式」資料夾\n3. 首次開啟時，macOS 可能提示「無法驗證開發者」：\n   \u{2022} 開啟「系統設定 \u{2192} 隱私權與安全性」\n   \u{2022} 找到被阻擋的 app，點擊「仍要開啟」\n   \u{2022} 或在終端機執行：xattr -cr /Applications/MarkMark.app\n4. 也可以直接右鍵點擊 app \u{2192} 選擇「開啟」",
+        .updateManualInstallInstructions: "1. 下載 .dmg 檔案，雙擊開啟\n2. 將 AnnotaMD 拖入「應用程式」資料夾\n3. 首次開啟時，macOS 可能提示「無法驗證開發者」：\n   \u{2022} 開啟「系統設定 \u{2192} 隱私權與安全性」\n   \u{2022} 找到被阻擋的 app，點擊「仍要開啟」\n   \u{2022} 或在終端機執行：xattr -cr /Applications/AnnotaMD.app\n4. 也可以直接右鍵點擊 app \u{2192} 選擇「開啟」",
         .updateReleaseNotesTitle: "更新內容",
         .checkForUpdates: "檢查更新\u{2026}",
         .findBarSearchPlaceholder: "搜尋",
@@ -931,12 +931,12 @@ public enum L10n {
         .findBarFind: "尋找",
         .findBarFindAndReplace: "尋找和取代",
         .markdownLinkExpandRootTitle: "開啟連結位置？",
-        .markdownLinkExpandRootMessage: "這個連結指向目前資料夾之外。MarkMark 會將左側目錄根切換為：\n{root}\n\n目標：\n{target}",
+        .markdownLinkExpandRootMessage: "這個連結指向目前資料夾之外。AnnotaMD 會將左側目錄根切換為：\n{root}\n\n目標：\n{target}",
         .markdownLinkOpenCommonRoot: "開啟共同父目錄",
         .markdownLinkMissingTitle: "連結目標不存在",
         .markdownLinkMissingMessage: "連結指向的檔案或目錄不存在：\n{target}",
         .markdownLinkUnsupportedTitle: "不支援的連結目標",
-        .markdownLinkUnsupportedMessage: "MarkMark 僅支援透過相對連結開啟 Markdown 檔案和目錄。此目標不支援：\n{target}",
+        .markdownLinkUnsupportedMessage: "AnnotaMD 僅支援透過相對連結開啟 Markdown 檔案和目錄。此目標不支援：\n{target}",
         .exportPDF: "匯出 PDF\u{2026}",
         .titleBarExportPDF: "匯出 PDF (⌘⌥E) / HTML (⌘⇧E)",
         .exportPDFSuccess: "PDF 匯出成功",

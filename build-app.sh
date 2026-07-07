@@ -1,5 +1,5 @@
 #!/bin/bash
-# 构建 MarkMark.app (Universal: arm64 + x86_64)
+# 构建 AnnotaMD.app (Universal: arm64 + x86_64)
 # 用法: ./build-app.sh [-r|--release] [-s|--sign [IDENTITY]] [-d|--distribution]
 #   默认        自动使用可用开发证书签名；找不到证书则 ad-hoc 签名并跳过 Quick Look 扩展
 #   --sign       签名 .app（非分发模式自动使用可用证书，找不到则 ad-hoc）
@@ -9,9 +9,9 @@
 set -euo pipefail
 
 # 内部 SPM target / 可执行文件 / 资源 bundle 名（不可改，与 Package.swift 一致）
-APP_NAME="MarkMark"
-# 面向用户的 .app 包名（显示名 MarkMark；可执行文件仍为 ${APP_NAME}）
-APP_BUNDLE_NAME="MarkMark"
+APP_NAME="AnnotaMD"
+# 面向用户的 .app 包名（显示名 AnnotaMD；可执行文件仍为 ${APP_NAME}）
+APP_BUNDLE_NAME="AnnotaMD"
 
 # 动态读取版本号（优先级：VERSION_OVERRIDE 环境变量 > git tag > CHANGELOG.md > 兜底）
 # VERSION_OVERRIDE 用于本地/测试构建（如 beta 版），避免为此创建 git tag。
@@ -102,11 +102,11 @@ echo "🔪 Strip 主二进制..."
 strip -x "$APP_BUNDLE/Contents/MacOS/${APP_NAME}"
 
 # 复制资源 bundle（Swift Package Manager 编译的资源）
-if [ -d "${PRODUCTS_DIR}/${APP_NAME}_MarkMark.bundle" ]; then
-    cp -R "${PRODUCTS_DIR}/${APP_NAME}_MarkMark.bundle" "$APP_BUNDLE/Contents/Resources/"
+if [ -d "${PRODUCTS_DIR}/${APP_NAME}_AnnotaMD.bundle" ]; then
+    cp -R "${PRODUCTS_DIR}/${APP_NAME}_AnnotaMD.bundle" "$APP_BUNDLE/Contents/Resources/"
 
     # 移除 SPM bundle 中的 AppIcon（已通过 actool 编译到 Assets.car 中提供，无需重复）
-    SPM_BUNDLE="${APP_BUNDLE}/Contents/Resources/${APP_NAME}_MarkMark.bundle"
+    SPM_BUNDLE="${APP_BUNDLE}/Contents/Resources/${APP_NAME}_AnnotaMD.bundle"
     if [ -d "${SPM_BUNDLE}/Assets.xcassets/AppIcon.appiconset" ]; then
         rm -rf "${SPM_BUNDLE}/Assets.xcassets/AppIcon.appiconset"
         # 如果 Assets.xcassets 目录已空（只剩 Contents.json），也一并移除
@@ -121,7 +121,7 @@ fi
 # 复制依赖包的资源 bundle（Textual 的 prism-bundle.js 等）
 for bundle in "${PRODUCTS_DIR}"/*.bundle; do
     bundle_name=$(basename "$bundle")
-    if [[ "$bundle_name" != "${APP_NAME}_MarkMark.bundle" ]]; then
+    if [[ "$bundle_name" != "${APP_NAME}_AnnotaMD.bundle" ]]; then
         cp -R "$bundle" "$APP_BUNDLE/Contents/Resources/"
         echo "📦 复制依赖资源: $bundle_name"
     fi
@@ -138,7 +138,7 @@ if [ -d "$ASSETS_SRC" ]; then
         --minimum-deployment-target 14 \
         --app-icon AppIcon \
         --output-format human-readable-text \
-        --output-partial-info-plist /tmp/markdownreader_partial.plist \
+        --output-partial-info-plist /tmp/annotamd_partial.plist \
         "$ASSETS_SRC" 2>/dev/null || echo "⚠️  actool 编译失败，图标可能不显示（不影响功能）"
 
     # 用 iconutil 生成完整的 AppIcon.icns（actool 偶尔只产出到 256px，这里补全 16~1024）。
@@ -166,8 +166,8 @@ else
     exit 1
 fi
 
-# 复制主 bundle 级本地化资源。SPM 会把 Sources/MarkMark/Resources 放进
-# MarkMark_MarkMark.bundle，但 Finder Services 这类系统入口只读取主 app bundle
+# 复制主 bundle 级本地化资源。SPM 会把 Sources/AnnotaMD/Resources 放进
+# AnnotaMD_AnnotaMD.bundle，但 Finder Services 这类系统入口只读取主 app bundle
 # 的 Contents/Resources/*.lproj/ServicesMenu.strings。
 LOCALIZED_RESOURCES_SRC="${PROJECT_DIR}/Sources/${APP_NAME}/Resources"
 if [ -d "$LOCALIZED_RESOURCES_SRC" ]; then
@@ -219,7 +219,7 @@ if [[ -n "$SIGN_IDENTITY" ]]; then
 fi
 
 INCLUDE_QUICKLOOK=true
-if [[ "$SIGN_IDENTITY" == "-" && "${MARKMARK_INCLUDE_QUICKLOOK_ADHOC:-}" != "1" ]]; then
+if [[ "$SIGN_IDENTITY" == "-" && "${ANNOTAMD_INCLUDE_QUICKLOOK_ADHOC:-}" != "1" ]]; then
     INCLUDE_QUICKLOOK=false
     echo "⚠️  ad-hoc 签名下跳过 Quick Look Extension（避免容器 app 被系统杀掉）"
     /usr/libexec/PlistBuddy -c "Delete :CFBundlePlugIns" "$APP_BUNDLE/Contents/Info.plist" 2>/dev/null || true
@@ -301,11 +301,11 @@ else
 fi
 
 # 复制主应用的资源 bundle 到 Extension（Extension 运行在独立进程中，无法直接访问主 app 的资源）
-if [ -d "${PRODUCTS_DIR}/${APP_NAME}_MarkMark.bundle" ]; then
-    cp -R "${PRODUCTS_DIR}/${APP_NAME}_MarkMark.bundle" "${QL_APPEX}/Contents/Resources/"
+if [ -d "${PRODUCTS_DIR}/${APP_NAME}_AnnotaMD.bundle" ]; then
+    cp -R "${PRODUCTS_DIR}/${APP_NAME}_AnnotaMD.bundle" "${QL_APPEX}/Contents/Resources/"
 
     # QL Extension 不需要 AppIcon（Extension 不显示自己的图标）
-    QL_BUNDLE="${QL_APPEX}/Contents/Resources/${APP_NAME}_MarkMark.bundle"
+    QL_BUNDLE="${QL_APPEX}/Contents/Resources/${APP_NAME}_AnnotaMD.bundle"
     if [ -d "${QL_BUNDLE}/Assets.xcassets/AppIcon.appiconset" ]; then
         rm -rf "${QL_BUNDLE}/Assets.xcassets/AppIcon.appiconset"
         remaining=$(find "${QL_BUNDLE}/Assets.xcassets" -mindepth 1 -not -name "Contents.json" 2>/dev/null | wc -l | tr -d ' ')
@@ -325,7 +325,7 @@ fi
 # 复制依赖包的资源 bundle 到 Extension
 for bundle in "${PRODUCTS_DIR}"/*.bundle; do
     bundle_name=$(basename "$bundle")
-    if [[ "$bundle_name" != "${APP_NAME}_MarkMark.bundle" ]]; then
+    if [[ "$bundle_name" != "${APP_NAME}_AnnotaMD.bundle" ]]; then
         cp -R "$bundle" "${QL_APPEX}/Contents/Resources/"
     fi
 done

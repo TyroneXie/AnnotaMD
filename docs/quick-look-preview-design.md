@@ -35,8 +35,8 @@
 ```swift
 // Extension 中读取主应用设置
 let enabled = CFPreferencesGetAppBooleanValue(
-    "com.markdownreader.enableQuickLookPreview" as CFString,
-    "com.markdownreader.app" as CFString,
+    "com.xielintao.annotamd.enableQuickLookPreview" as CFString,
+    "com.xielintao.annotamd.app" as CFString,
     nil
 )
 ```
@@ -195,7 +195,7 @@ let isDark = NSAppearance.currentDrawing()
 
 ```swift
 // Keys 枚举
-static let enableQuickLookPreview = "com.markdownreader.enableQuickLookPreview"
+static let enableQuickLookPreview = "com.xielintao.annotamd.enableQuickLookPreview"
 
 // 属性
 var enableQuickLookPreview: Bool {
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
 ```xml
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.markdownreader.app.QuickLook</string>
+    <string>com.xielintao.annotamd.app.QuickLook</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
     <key>CFBundleExecutable</key>

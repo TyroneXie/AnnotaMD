@@ -1,8 +1,8 @@
-# MarkMark — 需求文档
+# AnnotaMD — 需求文档
 
 ## 1. 产品概述
 
-MarkMark 是一款 macOS 原生应用，用于浏览和阅读 Markdown 文件。采用 SwiftUI + cmark-gfm + WKWebView 构建，提供三栏布局：左侧目录树导航 + 中间 Markdown 渲染显示 + 右侧大纲导航，遵循 macOS 标准设计风格。灵感源自 Buddy macOS 设计。
+AnnotaMD 是一款 macOS 原生应用，用于浏览和阅读 Markdown 文件。采用 SwiftUI + cmark-gfm + WKWebView 构建，提供三栏布局：左侧目录树导航 + 中间 Markdown 渲染显示 + 右侧大纲导航，遵循 macOS 标准设计风格。灵感源自 Buddy macOS 设计。
 
 ## 2. 目标用户
 

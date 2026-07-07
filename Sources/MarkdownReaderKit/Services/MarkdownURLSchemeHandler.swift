@@ -103,7 +103,7 @@ public final class MarkdownURLSchemeHandler: NSObject, WKURLSchemeHandler {
             // - swift build --arch arm64 --arch x86_64（universal 发布）：Xcode 式 →
             //   <bundle>/Contents/Resources/Resources/css/...
             // 两种都要搜，否则 universal 包内 css/js 全部 404（无样式、无选词菜单）。
-            let spmBundle = Bundle.main.resourceURL?.appendingPathComponent("MarkMark_MarkMark.bundle")
+            let spmBundle = Bundle.main.resourceURL?.appendingPathComponent("AnnotaMD_AnnotaMD.bundle")
             searchPaths = [
                 spmBundle?.appendingPathComponent("Resources").appendingPathComponent(path),
                 spmBundle?.appendingPathComponent("Contents/Resources/Resources").appendingPathComponent(path),

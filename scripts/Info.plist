@@ -5,19 +5,19 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>zh-Hans</string>
 	<key>CFBundleExecutable</key>
-	<string>MarkMark</string>
+	<string>AnnotaMD</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.ft07.markmark</string>
+	<string>com.xielintao.annotamd</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>MarkMark</string>
+	<string>AnnotaMD</string>
 	<key>CFBundleDisplayName</key>
-	<string>MarkMark</string>
+	<string>AnnotaMD</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -40,12 +40,12 @@
 			<key>NSMenuItem</key>
 			<dict>
 				<key>default</key>
-				<string>用 MarkMark 打开</string>
+				<string>用 AnnotaMD 打开</string>
 			</dict>
 			<key>NSMessage</key>
-			<string>openInMarkMark</string>
+			<string>openInAnnotaMD</string>
 			<key>NSPortName</key>
-			<string>MarkMark</string>
+			<string>AnnotaMD</string>
 			<key>NSRequiredContext</key>
 			<dict/>
 			<key>NSReturnTypes</key>

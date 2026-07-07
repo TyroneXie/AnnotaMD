@@ -321,8 +321,8 @@ macOS 惯例：app 菜单中 Settings 下面就是 Check for Updates。
 
 | 属性 | 类型 | UserDefaults Key | 默认值 | 说明 |
 |------|------|-----------------|--------|------|
-| `skippedVersion` | `String?` | `com.markdownreader.skippedVersion` | nil | 用户跳过的版本号 |
-| `lastUpdateCheckTime` | `Date?` | `com.markdownreader.lastUpdateCheckTime` | nil | 上次自动检查时间 |
+| `skippedVersion` | `String?` | `com.xielintao.annotamd.skippedVersion` | nil | 用户跳过的版本号 |
+| `lastUpdateCheckTime` | `Date?` | `com.xielintao.annotamd.lastUpdateCheckTime` | nil | 上次自动检查时间 |
 
 ### 忽略版本行为
 

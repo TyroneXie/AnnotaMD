@@ -1,19 +1,19 @@
-# CLAUDE.md — MarkMark 项目指南
+# CLAUDE.md — AnnotaMD 项目指南
 
 > 本文件为 Claude Code 提供项目上下文，确保代码修改遵循项目规范。
 
 ## 项目简介
 
-MarkMark 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)）。在安静阅读的基础上加入 CriticMarkup 审阅标注与「一键复制给 AI」工作流。三栏布局：左侧目录树 + 中间渲染视图 + 右侧大纲导航。
+AnnotaMD 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)）。在安静阅读的基础上加入 CriticMarkup 审阅标注与「一键复制给 AI」工作流。三栏布局：左侧目录树 + 中间渲染视图 + 右侧大纲导航。
 
-> 命名约定：主可执行 target / 产物 / 源码目录 / Bundle ID 均已改为 MarkMark（`Sources/MarkMark`，可执行文件 `MarkMark`，资源 bundle `MarkMark_MarkMark.bundle`，Bundle ID `com.ft07.markmark`）。
+> 命名约定：主可执行 target / 产物 / 源码目录 / Bundle ID 均已改为 AnnotaMD（`Sources/AnnotaMD`，可执行文件 `AnnotaMD`，资源 bundle `AnnotaMD_AnnotaMD.bundle`，Bundle ID `com.xielintao.annotamd`）。
 > 仍保留 `MarkdownReader` 字样的是：共享库 target `MarkdownReaderKit`、Quick Look 扩展 target/二进制 `MarkdownReaderQL`、以及个别内部 Swift 文件/类型名（如 `MarkdownReaderApp.swift`）——它们是内部模块名，不面向用户，改名会牵动大量 import，故保留。
-> UserDefaults 键与 `Notification.Name` 仍用 `com.markdownreader.*` 前缀（仅作唯一键，改动会清空用户设置）。
+> UserDefaults 键与 `Notification.Name` 仍用 `com.xielintao.annotamd.*` 前缀（仅作唯一键，改动会清空用户设置）。
 
 - **当前版本**: 2.0.18
 - **最低部署**: macOS 14.0（自 fork 起从 macOS 26 → 15 → 14 逐步下调；渲染层由 SwiftUI WebView/WebPage 迁移回 WKWebView）
 - **架构**: Universal binary（arm64 + x86_64），Intel 与 Apple Silicon 均原生运行
-- **Bundle ID**: `com.ft07.markmark`
+- **Bundle ID**: `com.xielintao.annotamd`
 - **许可证**: MIT
 
 ## 技术栈
@@ -31,7 +31,7 @@ MarkMark 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/Mar
 ## 项目结构
 
 ```
-Sources/MarkMark/
+Sources/AnnotaMD/
 ├── App/
 │   ├── MarkdownReaderApp.swift    # @main 入口，WindowGroup，菜单命令，Notification.Name 常量
 │   └── AppDelegate.swift          # NSApplicationDelegate，冷/热启动文件处理
@@ -96,10 +96,10 @@ swift build -c release
 ```
 
 > **正式发布必须用 `./package.sh -d`**（Developer ID 签名 + 公证）。
-> 公证用 notarytool 钥匙串 profile `markmark`（`NOTARY_PROFILE` 可覆盖），签名身份
+> 公证用 notarytool 钥匙串 profile `annotamd`（`NOTARY_PROFILE` 可覆盖），签名身份
 > `Developer ID Application: lijie chen (HUJ6HAE4VU)`，均存在本机钥匙串、**不在仓库**。
-> 公证需联网。验证：`xcrun stapler validate MarkMark.dmg` +
-> `spctl -a -vv MarkMark.app`（应为 `accepted / Notarized Developer ID`）。
+> 公证需联网。验证：`xcrun stapler validate AnnotaMD.dmg` +
+> `spctl -a -vv AnnotaMD.app`（应为 `accepted / Notarized Developer ID`）。
 > 不带 `-d` 时为 ad-hoc 签名，仅供本地试用，**不要用于发布**。
 
 ## 依赖
@@ -141,7 +141,7 @@ Swift Package 依赖：**swift-markdown**（传递依赖 swift-cmark）。
 
 ## 测试
 
-当前项目已有 `MarkdownReaderKitTests` 和 `MarkMarkTests` 两个测试 target，运行：
+当前项目已有 `MarkdownReaderKitTests` 和 `AnnotaMDTests` 两个测试 target，运行：
 
 ```bash
 swift test
@@ -152,9 +152,9 @@ swift test
 GitHub Actions (`.github/workflows/release.yml`)：
 - 触发：版本 tag (`v*`) 或手动 dispatch
 - **默认（推荐）流程**：push tag → CI 仅校验 CHANGELOG 并创建 **draft** release 占位（**不构建**）→
-  本地 `./package.sh -d` 出公证包（universal）→ `gh release upload <tag> MarkMark.dmg MarkMark.zip --clobber`
+  本地 `./package.sh -d` 出公证包（universal）→ `gh release upload <tag> AnnotaMD.dmg AnnotaMD.zip --clobber`
   → `gh release edit <tag> --draft=false` 发布。`release-local.sh` 把后面几步自动化。
-- 资产名固定为 `MarkMark.dmg` / `MarkMark.zip`（不带版本号）。
+- 资产名固定为 `AnnotaMD.dmg` / `AnnotaMD.zip`（不带版本号）。
 - 发布前需确认 CHANGELOG.md 包含对应版本号。
 - ⚠️ **`ci-build` job（`workflow_dispatch` 勾 `use_ci_build`）是不推荐的后备**：它是
   `swift build --arch arm64`（**仅 arm64** + ad-hoc 签名），正是早期「Intel Mac 打不开」的根因，

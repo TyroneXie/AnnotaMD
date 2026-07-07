@@ -193,14 +193,14 @@ final class FindReplaceViewModel {
 
 ### 5.6 Notification 通信
 
-新增 4 个 `Notification.Name`（遵循 `com.markdownreader.xxx` 命名规范）：
+新增 4 个 `Notification.Name`（遵循 `com.xielintao.annotamd.xxx` 命名规范）：
 
 | 名称 | 常量名 | 用途 |
 |------|--------|------|
-| `com.markdownreader.findInDocument` | `.findInDocument` | Cmd+F — 打开查找面板 |
-| `com.markdownreader.findNext` | `.findNext` | Cmd+G — 查找下一个 |
-| `com.markdownreader.findPrevious` | `.findPrevious` | Cmd+Shift+G — 查找上一个 |
-| `com.markdownreader.findAndReplace` | `.findAndReplace` | Cmd+Option+F — 打开查找+替换面板 |
+| `com.xielintao.annotamd.findInDocument` | `.findInDocument` | Cmd+F — 打开查找面板 |
+| `com.xielintao.annotamd.findNext` | `.findNext` | Cmd+G — 查找下一个 |
+| `com.xielintao.annotamd.findPrevious` | `.findPrevious` | Cmd+Shift+G — 查找上一个 |
+| `com.xielintao.annotamd.findAndReplace` | `.findAndReplace` | Cmd+Option+F — 打开查找+替换面板 |
 
 ### 5.7 本地化键
 

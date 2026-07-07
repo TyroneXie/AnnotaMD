@@ -9,7 +9,7 @@
 
 ### 修复
 
-- **从 DMG 覆盖安装后启动出现两个实例、菜单闪一下即卡死**：旧版本仍在运行时用 DMG 覆盖再启动，macOS 会因 bundle 路径变化另起一个进程，导致两个 MarkMark 同时运行；两边的启动收敛逻辑反复抢前台，把刚打开的菜单瞬间关掉，表现为「菜单闪一下就再也打不开、像卡死」。现在加入全局单实例守卫：启动时若已有实例在运行，则激活它并退出本进程（不影响自动更新流程）
+- **从 DMG 覆盖安装后启动出现两个实例、菜单闪一下即卡死**：旧版本仍在运行时用 DMG 覆盖再启动，macOS 会因 bundle 路径变化另起一个进程，导致两个 AnnotaMD 同时运行；两边的启动收敛逻辑反复抢前台，把刚打开的菜单瞬间关掉，表现为「菜单闪一下就再也打不开、像卡死」。现在加入全局单实例守卫：启动时若已有实例在运行，则激活它并退出本进程（不影响自动更新流程）
 - **多显示器 +「显示器具有单独的 Space」下，从全屏 App 的 Space 启动时窗口错位、像卡死**：此前内容窗口可能被建到另一个桌面 Space / 显示器上，且 App 未切到用户当前所在的 Space，导致启动后看不到窗口、菜单点不开（主线程实为健康空闲，并非死锁）。现在内容窗口跟随当前活动 Space 出现，并关闭 SwiftUI 场景级窗口恢复以避免叠加多窗口
 - **单文件模式下点击越界相对链接可能把侧边栏 root 设为整个磁盘**：单文件模式（无当前 root）下点击指向当前位置之外的相对 Markdown 链接时，若来源与目标在文件系统根处分叉，最近公共父目录会塌缩为 `/`，导致侧边栏把整盘当作 workspace 加载，且无确认提示。现在对导航 root 封顶——一旦塌到 `/` 即退回到目标所在目录这一有界范围，并要求弹窗确认（#14 跟进）
 
@@ -27,7 +27,7 @@
 
 ### 改进
 
-- **Finder「用 MarkMark 打开」服务、侧边栏目录懒加载、非 Markdown 文本只读预览**：新增 Finder Services 入口（文件 / 目录，简繁英三语）；统一外部（Finder / Services / 拖到图标 / `open`）与内部打开请求路由（`OpenRequestCoordinator`），修复显式打开被「恢复上次位置」覆盖及冷启动 / 窗口复用问题；侧边栏目录树改为首屏只加载根目录、展开时按需加载且扫描阶段不读文件内容；非 Markdown 的 UTF-8 / UTF-16 文本文件支持只读查看（图片 / 二进制仍不支持）（#12，by @flashsoft）
+- **Finder「用 AnnotaMD 打开」服务、侧边栏目录懒加载、非 Markdown 文本只读预览**：新增 Finder Services 入口（文件 / 目录，简繁英三语）；统一外部（Finder / Services / 拖到图标 / `open`）与内部打开请求路由（`OpenRequestCoordinator`），修复显式打开被「恢复上次位置」覆盖及冷启动 / 窗口复用问题；侧边栏目录树改为首屏只加载根目录、展开时按需加载且扫描阶段不读文件内容；非 Markdown 的 UTF-8 / UTF-16 文本文件支持只读查看（图片 / 二进制仍不支持）（#12，by @flashsoft）
 - **侧边栏切换与标题栏图标反馈**：保留 `⌘\` 切换侧边栏；左上角标题栏图标统一 hover 背景和禁用态反馈
 
 ## [2.0.15] - 2026-06-18
@@ -39,7 +39,7 @@
 
 ### 新增
 
-- **支持把文件或目录拖到 Dock 图标打开**：在 `Info.plist` 的 `CFBundleDocumentTypes` 中补充 `public.folder`，让 Finder / Dock 可将目录作为可打开目标交给 MarkMark；同时明确显式打开目标优先于「恢复上次位置」，并为极早期启动（`openWindow` 尚未注册）补充 pending open 兜底，避免打开请求丢失（#10，by @flashsoft）
+- **支持把文件或目录拖到 Dock 图标打开**：在 `Info.plist` 的 `CFBundleDocumentTypes` 中补充 `public.folder`，让 Finder / Dock 可将目录作为可打开目标交给 AnnotaMD；同时明确显式打开目标优先于「恢复上次位置」，并为极早期启动（`openWindow` 尚未注册）补充 pending open 兜底，避免打开请求丢失（#10，by @flashsoft）
 
 ## [2.0.14] - 2026-06-17
 
@@ -80,7 +80,7 @@
 
 ### 修复
 
-- **应用内更新后仍启动旧版本**：「守夜人」更新脚本在替换完成后校验可执行文件时硬编码了改名前的旧名 `MarkdownReader`，而实际可执行文件为 `MarkMark`，校验恒失败 → 误判为坏包 → 回滚到 `Contents.old` 并重启旧版本。现改为从 `CFBundleExecutable` 动态读取可执行文件名（预检查处过时的兜底名一并修正）。注意：此修复运行在新版本中，已安装的 2.0.9 及更早改名后版本仍带旧脚本，需手动下载 DMG 覆盖安装一次，之后的应用内更新方可正常
+- **应用内更新后仍启动旧版本**：「守夜人」更新脚本在替换完成后校验可执行文件时硬编码了改名前的旧名 `MarkdownReader`，而实际可执行文件为 `AnnotaMD`，校验恒失败 → 误判为坏包 → 回滚到 `Contents.old` 并重启旧版本。现改为从 `CFBundleExecutable` 动态读取可执行文件名（预检查处过时的兜底名一并修正）。注意：此修复运行在新版本中，已安装的 2.0.9 及更早改名后版本仍带旧脚本，需手动下载 DMG 覆盖安装一次，之后的应用内更新方可正常
 
 ## [2.0.9] - 2026-06-12
 
@@ -101,7 +101,7 @@
 - **标注列表面板**：标题栏高亮笔按钮打开（与大纲互斥、共用拖拽调宽），按「本次新增 / 历史标注」分组列出全部 CriticMarkup 标注，支持勾选（默认选中本次新增）、全选 / 只选新增、复制所选片段、点击跳转；定位不到的会话记录置灰显示「已失效」
 - **复制菜单扩展为四项**：复制给 AI（含说明）/ 复制本次新增的标注片段 / 复制 CriticMarkup / 复制 AI 提示词；无本次新增时自动打开标注面板供手动勾选
 - **标注片段提取**：默认取标注所在整段并附最近标题线索，段落超 400 字时以标注为中心逐句扩展，单句超长按字符截断；片段间以 `[...]` 标示省略
-- **AI 提示词模板进设置**：可自定义「复制给 AI」的引导文案，支持 `{{MarkMark:content}}` 正文占位符，一键恢复默认；默认模板改为说明性文案（解释 CriticMarkup 标记含义）
+- **AI 提示词模板进设置**：可自定义「复制给 AI」的引导文案，支持 `{{AnnotaMD:content}}` 正文占位符，一键恢复默认；默认模板改为说明性文案（解释 CriticMarkup 标记含义）
 - **应用 / 放弃所有标注**：标题栏一级按钮与文件菜单双入口，各带确认弹窗——应用执行删除/替换并去除高亮评论，放弃还原标注前原文
 - **「已复制」轻提示**：所有复制操作成功后内容区底部弹出提示
 
@@ -125,13 +125,13 @@
 
 ### 修复
 
-- **检查更新指向错误仓库**：`UpdateService` 的 GitHub Releases 仓库从遗留的 `davidhoo/MarkdownReader` 修正为 `easychen/markmark`，不再误提示升级到上游 Markdown Reader 版本（#2，by @NicCraver）
+- **检查更新指向错误仓库**：`UpdateService` 的 GitHub Releases 仓库从遗留的 `davidhoo/MarkdownReader` 修正为 `easychen/annotamd`，不再误提示升级到上游 Markdown Reader 版本（#2，by @NicCraver）
 - **更新弹窗不跟随界面语言**：更新 sheet 挂在 WindowGroup 层、不在 ContentView 注入语言的子树内，导致弹窗恒为英文；现为 sheet 显式注入 `.environment(\.language)`（#2）
 
 ### 变更
 
 - **DMG 手动安装弹窗优化**：使用本地化「安装说明」（简中/繁中/英文），从 Release body 提取 changelog 单独展示为「更新内容」，并替换遗留的 Markdown Reader 产品名（#2）
-- `release-local.sh` release notes 模板中的产品名更正为 MarkMark
+- `release-local.sh` release notes 模板中的产品名更正为 AnnotaMD
 
 ## [2.0.5] - 2026-06-09
 
@@ -215,7 +215,7 @@
 
 - **渲染引擎迁移**：从 Textual (StructuredText) 迁移到 cmark-gfm + WKWebView
 - **最低部署目标**：从 macOS 15.0 提升到 macOS 26
-- **Bundle ID**：保持 `com.markdownreader.app`（单线发布，回归统一标识）
+- **Bundle ID**：保持 `com.xielintao.annotamd.app`（单线发布，回归统一标识）
 - **JS/CSS 资源本地化**：Mermaid、KaTeX、Prism.js 及字体文件全部本地打包，无需网络
 - **移除 x86_64 支持**：回归 arm64 单架构构建
 

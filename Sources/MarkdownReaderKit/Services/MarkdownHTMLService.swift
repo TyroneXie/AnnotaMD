@@ -4,7 +4,7 @@ import os.log
 
 public enum MarkdownHTMLService {
 
-    static let logger = Logger(subsystem: "com.ft07.markmark.QuickLook", category: "MarkdownHTMLService")
+    static let logger = Logger(subsystem: "com.xielintao.annotamd.QuickLook", category: "MarkdownHTMLService")
 
     public struct RenderResult {
         public let html: String

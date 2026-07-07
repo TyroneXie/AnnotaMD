@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "MarkMark",
+    name: "AnnotaMD",
     platforms: [
         .macOS(.v14)
     ],
     products: [
         .executable(
-            name: "MarkMark",
-            targets: ["MarkMark"]
+            name: "AnnotaMD",
+            targets: ["AnnotaMD"]
         )
     ],
     dependencies: [
@@ -27,14 +27,14 @@ let package = Package(
             ],
             path: "Sources/MarkdownReaderKit"
         ),
-        // Main application（可执行文件名 = MarkMark；源码目录 Sources/MarkMark）
+        // Main application（可执行文件名 = AnnotaMD；源码目录 Sources/AnnotaMD）
         .executableTarget(
-            name: "MarkMark",
+            name: "AnnotaMD",
             dependencies: [
                 "MarkdownReaderKit",
                 .product(name: "Markdown", package: "swift-markdown")
             ],
-            path: "Sources/MarkMark",
+            path: "Sources/AnnotaMD",
             resources: [
                 .process("Assets.xcassets"),
                 .copy("Resources")
@@ -60,11 +60,11 @@ let package = Package(
             path: "Tests/MarkdownReaderKitTests"
         ),
         .testTarget(
-            name: "MarkMarkTests",
+            name: "AnnotaMDTests",
             dependencies: [
-                "MarkMark"
+                "AnnotaMD"
             ],
-            path: "Tests/MarkMarkTests"
+            path: "Tests/AnnotaMDTests"
         )
     ]
 )

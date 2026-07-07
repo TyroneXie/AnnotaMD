@@ -1,17 +1,17 @@
 #!/bin/bash
-# 一键构建 + 打包 MarkMark.dmg (Universal: arm64 + x86_64)
+# 一键构建 + 打包 AnnotaMD.dmg (Universal: arm64 + x86_64)
 # 用法: ./package.sh [-d|--distribution]
 #   --distribution  启用分发模式签名（需 Developer ID 证书 + 公证）
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP_NAME="MarkMark"        # 内部可执行文件名（与 Package.swift 一致）
-APP_BUNDLE_NAME="MarkMark"       # 面向用户的 .app 包名
+APP_NAME="AnnotaMD"        # 内部可执行文件名（与 Package.swift 一致）
+APP_BUNDLE_NAME="AnnotaMD"       # 面向用户的 .app 包名
 DISTRIBUTION=false
 ARCH="arm64"
 
 build_dmg() {
-    local DMG_NAME="MarkMark.dmg"
+    local DMG_NAME="AnnotaMD.dmg"
 
     echo ""
     echo "=========================================="
@@ -30,7 +30,7 @@ build_dmg() {
     #       xcrun notarytool store-credentials "$NOTARY_PROFILE" \
     #           --apple-id <你的 Apple ID> --team-id HUJ6HAE4VU --password <App 专用密码>
     if $DISTRIBUTION; then
-        local PROFILE="${NOTARY_PROFILE:-markmark}"
+        local PROFILE="${NOTARY_PROFILE:-annotamd}"
         echo "🍎 公证 ${APP_BUNDLE_NAME}.app（profile: ${PROFILE}）..."
         ditto -c -k --keepParent "${APP_BUNDLE_NAME}.app" "/tmp/${APP_BUNDLE_NAME}-notarize.zip"
         xcrun notarytool submit "/tmp/${APP_BUNDLE_NAME}-notarize.zip" \
@@ -55,7 +55,7 @@ build_dmg() {
     if command -v create-dmg &>/dev/null; then
         echo "📦 使用 create-dmg 打包 DMG..."
         CREATE_DMG_ARGS=(
-            --volname "MarkMark"
+            --volname "AnnotaMD"
             --window-pos 200 120
             --window-size 600 400
             --icon-size 100
@@ -73,7 +73,7 @@ build_dmg() {
         trap "rm -rf '$STAGING'" EXIT
         cp -R "${APP_BUNDLE_NAME}.app" "$STAGING/"
         ln -s /Applications "$STAGING/Applications"
-        hdiutil create -volname "MarkMark" -srcfolder "$STAGING" -ov -format UDZO "$DMG_NAME"
+        hdiutil create -volname "AnnotaMD" -srcfolder "$STAGING" -ov -format UDZO "$DMG_NAME"
         rm -rf "$STAGING"
         trap - EXIT
     fi
@@ -95,7 +95,7 @@ build_dmg() {
 
     # 5.5 分发模式：公证 DMG 本身并 staple（用户下载 DMG 即可零警告打开）
     if $DISTRIBUTION; then
-        local PROFILE="${NOTARY_PROFILE:-markmark}"
+        local PROFILE="${NOTARY_PROFILE:-annotamd}"
         echo "🍎 公证 ${DMG_NAME}（profile: ${PROFILE}）..."
         xcrun notarytool submit "$DMG_NAME" --keychain-profile "$PROFILE" --wait
         xcrun stapler staple "$DMG_NAME"
@@ -132,4 +132,4 @@ build_dmg
 
 echo ""
 echo "🎉 所有 DMG 打包完成！"
-ls -lh MarkMark.dmg 2>/dev/null
+ls -lh AnnotaMD.dmg 2>/dev/null
