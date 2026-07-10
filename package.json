@@ -1,6 +1,6 @@
 {
   "name": "annotamd-monorepo",
-  "version": "0.20.0-dev",
+  "version": "2.0.0",
   "description": "AnnotaMD desktop Markdown editor monorepo",
   "private": true,
   "homepage": "https://github.com/TyroneXie/AnnotaMD",
