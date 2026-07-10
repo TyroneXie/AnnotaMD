@@ -1,0 +1,411 @@
+.mu-float-wrapper.mu-format-picker-container {
+    overflow: visible;
+    width: max-content !important;
+    height: auto !important;
+
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.mu-format-picker {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 0;
+    height: 34px;
+    border: 1px solid #dee0e3;
+    border-radius: 7px;
+    background: rgb(255 255 255 / 98%);
+    box-shadow: 0 8px 20px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 7%);
+    backdrop-filter: blur(12px);
+}
+
+.mu-format-picker ul,
+.mu-format-picker li {
+    margin: 0;
+    padding: 0;
+}
+
+.mu-format-picker ul {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 1px;
+    height: 100%;
+    padding: 3px 4px;
+}
+
+.mu-format-picker li.item {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    border-radius: 5px;
+
+    color: #2f3437;
+    list-style: none;
+    cursor: pointer;
+
+    transition: background-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.mu-format-picker li.item:hover {
+    background: #f5f7fa;
+}
+
+.mu-format-picker li.item[data-tooltip]::after {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    z-index: 20;
+
+    content: attr(data-tooltip);
+
+    padding: 3px 7px;
+
+    color: #fff;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 18px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+    transform: translate(-50%, -2px);
+    visibility: hidden;
+    opacity: 0;
+
+    transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+
+    pointer-events: none;
+}
+
+.mu-format-picker li.item[data-tooltip]:hover::after {
+    transform: translate(-50%, 0);
+    visibility: visible;
+    opacity: 1;
+}
+
+.mu-format-picker li.item.palette-open[data-tooltip]::after {
+    display: none;
+}
+
+.mu-format-picker li.item.text-style-open[data-tooltip]::after {
+    display: none;
+}
+
+.mu-format-picker li.item.group-break-before {
+    margin-left: 7px;
+}
+
+.mu-format-picker li.item.group-break-before::before {
+    position: absolute;
+    top: 4px;
+    left: -5px;
+
+    width: 1px;
+    height: 18px;
+
+    background: #dee0e3;
+
+    content: '';
+}
+
+.mu-format-picker li.item .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 20px;
+    height: 22px;
+}
+
+.mu-format-picker li.item.text_style {
+    width: 40px;
+    padding: 0 4px;
+}
+
+.mu-format-picker li.item.text_style .icon-wrapper {
+    gap: 3px;
+}
+
+.mu-text-style-chevron {
+    position: relative;
+    top: -1px;
+    color: #8f959e;
+    font-size: 10px;
+    line-height: 1;
+}
+
+.mu-format-picker li.item .text-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-width: 20px;
+    color: currentColor;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.mu-format-picker li.item .text-icon::before,
+.mu-format-picker li.item .text-icon::after {
+    content: none !important;
+}
+
+.mu-format-picker li.item.strong .text-icon {
+    font-weight: 800;
+}
+
+.mu-format-picker li.item.em .text-icon {
+    font-style: italic;
+}
+
+.mu-format-picker li.item.u .text-icon {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.mu-format-picker li.item.inline_code .text-icon {
+    width: 20px;
+    min-width: 20px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: -1.5px;
+}
+
+.mu-format-picker li.item.inline_code {
+    width: 28px;
+    padding: 0;
+}
+
+.mu-format-picker li.item.del .text-icon {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+
+.mu-format-picker li.item.text_color .text-icon,
+.mu-format-picker li.item.background_color .text-icon {
+    color: #3370ff;
+    font-weight: 650;
+}
+
+.mu-format-picker li.item.text_color .text-icon::after {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    left: 2px;
+    height: 2px;
+    border-radius: 999px;
+    background: #3370ff;
+    content: '' !important;
+}
+
+.mu-format-picker li.item.background_color .text-icon {
+    border-radius: 4px;
+    background: #dbeafe;
+}
+
+.mu-format-picker li.item.annotamd_comment .text-icon {
+    position: relative;
+
+    box-sizing: border-box;
+    width: 16px;
+    min-width: 16px;
+    height: 13px;
+
+    border: 1.5px solid currentcolor;
+    border-radius: 5px;
+    color: #646a73;
+}
+
+.mu-format-picker li.item.annotamd_comment .text-icon::before {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+
+    width: 7px;
+    height: 1.5px;
+
+    border-radius: 999px;
+    background: currentcolor;
+    box-shadow: 0 3px 0 currentcolor;
+
+    content: '' !important;
+}
+
+.mu-format-picker li.item.annotamd_comment .text-icon::after {
+    position: absolute;
+    bottom: -3px;
+    left: 2px;
+
+    width: 5px;
+    height: 4px;
+
+    background: currentcolor;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+
+    content: '' !important;
+}
+
+.mu-color-palette {
+    position: absolute;
+    top: 35px;
+    right: 0;
+    z-index: 10;
+    width: 178px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #dee0e3;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(31 35 41 / 15%), 0 2px 8px rgb(31 35 41 / 8%);
+}
+
+.mu-text-style-menu {
+    position: absolute;
+    top: 35px;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    width: 168px;
+    padding: 5px;
+    border: 1px solid #dee0e3;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(31 35 41 / 15%), 0 2px 8px rgb(31 35 41 / 8%);
+}
+
+.mu-text-style-option {
+    display: grid;
+    box-sizing: border-box;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    width: 100%;
+    height: 30px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #2f3437;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mu-text-style-option:hover {
+    background: #f5f7fa;
+}
+
+.mu-text-style-option.active {
+    background: #eef3ff;
+    color: #3370ff;
+}
+
+.mu-text-style-option-mark {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.mu-text-style-option-title {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.mu-text-style-option-shortcut {
+    color: #8f959e;
+    font-size: 10px;
+}
+
+.mu-color-palette-title {
+    margin-bottom: 8px;
+    color: #646a73;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.mu-color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 24px);
+    gap: 7px;
+}
+
+.mu-color-swatch {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    box-sizing: border-box;
+    border: 1px solid #dee0e3;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px #fff;
+}
+
+.mu-color-swatch:hover {
+    border-color: #3370ff;
+    transform: scale(1.06);
+}
+
+.mu-color-swatch.default {
+    background: #fff;
+}
+
+.mu-color-swatch.default::after {
+    position: absolute;
+    top: 11px;
+    left: 3px;
+    width: 17px;
+    height: 1.5px;
+    background: #d83931;
+    content: '';
+    transform: rotate(-45deg);
+}
+
+.mu-format-picker li.item .icon-wrapper i.icon {
+    position: relative;
+
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+
+    color: var(--icon-color);
+
+    transition: all 0.25s ease-in-out;
+}
+
+.mu-format-picker li.item .icon-wrapper i.icon > i[class^='icon-'] {
+    position: relative;
+    left: -16px;
+
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+
+    filter: drop-shadow(16px 0 currentcolor);
+}
+
+.mu-format-picker li.item.active .icon-wrapper i.icon {
+    color: #3370ff;
+}
+
+.mu-format-picker li.item.active {
+    background: #eef3ff;
+    color: #3370ff;
+    box-shadow: inset 0 0 0 1px rgb(51 112 255 / 8%);
+}

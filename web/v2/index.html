@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AnnotaMD V2 Preview</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="traffic">
+        <span class="traffic-dot red"></span>
+        <span class="traffic-dot yellow"></span>
+        <span class="traffic-dot green"></span>
+      </div>
+
+      <div class="brand">
+        <span class="brand-mark">M</span>
+        <span>AnnotaMD</span>
+        <span class="version">V2.0.0</span>
+      </div>
+
+      <div class="file-path">/项目开发/design.md</div>
+
+      <div class="mode-switch" aria-label="编辑模式">
+        <button class="active">块编辑</button>
+        <button>源码</button>
+      </div>
+
+      <button class="icon-button" title="保存">⌘S</button>
+      <button class="icon-button" title="导出">⇧</button>
+      <button class="icon-button active" title="评论">□</button>
+    </header>
+
+    <aside class="left-pane">
+      <div class="pane-tabs">
+        <button class="active" data-tab="outline">大纲</button>
+        <button data-tab="files">文件</button>
+      </div>
+
+      <div class="outline-list side-section" data-panel="outline">
+        <div class="outline-item level-1 active">AI 自动创建 Dify 应用集成技术方案</div>
+        <div class="outline-item level-2">0. 本版关键变化</div>
+        <div class="outline-item level-2">第一部分：整体概要设计</div>
+        <div class="outline-item level-3">1.1 术语表</div>
+        <div class="outline-item level-3">1.2 功能范围</div>
+        <div class="outline-item level-3">1.3 技术选型</div>
+        <div class="outline-item level-2">第二部分：约束规范</div>
+      </div>
+
+      <div class="file-list side-section hidden" data-panel="files">
+        <div class="file-item active">design.md</div>
+        <div class="file-item">review.md</div>
+        <div class="file-item">dify-management-mcp-tool-permissions.md</div>
+        <div class="file-item">release-notes-v2.0.0.md</div>
+      </div>
+    </aside>
+
+    <main class="editor-scroll">
+      <div class="selection-toolbar">
+        <button title="正文/标题">T</button>
+        <span class="split"></span>
+        <button title="加粗"><strong>B</strong></button>
+        <button title="斜体"><em>I</em></button>
+        <button title="下划线"><u>U</u></button>
+        <button title="行内代码">&lt;/&gt;</button>
+        <span class="split"></span>
+        <button title="删除线"><s>S</s></button>
+        <button class="active" title="高亮">A</button>
+        <button class="active" title="评论">□</button>
+      </div>
+
+      <article class="editor-page">
+        <section class="doc-block title-block">
+          <div class="block-controls">
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <h1 contenteditable="true">AI 自动创建 Dify 应用集成技术方案</h1>
+        </section>
+
+        <section class="doc-block quote-block">
+          <div class="block-controls">
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <p contenteditable="true">版本：v2026-07-07 项目开发版。基于现有产品原型、后端源码和 DSL 生成 Skills 的统一评审稿。</p>
+        </section>
+
+        <section class="doc-block heading-block">
+          <div class="block-controls type-controls">
+            <button class="block-type type-heading" title="标题级别">H2 <span>⌄</span></button>
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+            <div class="type-menu">
+              <button class="selected">H2 二级标题</button>
+              <button>H1 一级标题</button>
+              <button>H3 三级标题</button>
+              <button>正文</button>
+            </div>
+          </div>
+          <h2 contenteditable="true">0. 本版关键变化</h2>
+        </section>
+
+        <section class="doc-block paragraph-block">
+          <div class="block-controls">
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <p contenteditable="true">1. 产品形态从“独立 AI 创建页面 / 二期 AI 编辑入口”调整为 <mark>Dify 主页内的悬浮 AI 对话框</mark><span class="comment-anchor">1</span>，让 Agent 能在当前页面上下文内完成方案生成、DSL 生成和应用创建。</p>
+        </section>
+
+        <section class="doc-block paragraph-block">
+          <div class="block-controls">
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <p contenteditable="true">2. 对话框中需要展示生成文件，并支持预览 <code>dsl.yml</code>、验证报告、导入/同步结果等 artifact。</p>
+        </section>
+
+        <div class="block-insert-row">
+          <button class="inline-insert" title="在此插入块">＋</button>
+          <div class="insert-line"></div>
+          <div class="insert-popover">
+            <button>正文</button>
+            <button>标题</button>
+            <button>表格</button>
+            <button>代码块</button>
+            <button>引用</button>
+            <button>图片</button>
+            <button>评论锚点</button>
+          </div>
+        </div>
+
+        <section class="doc-block heading-block">
+          <div class="block-controls type-controls">
+            <button class="block-type type-heading" title="标题级别">H2 <span>⌄</span></button>
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <h2 contenteditable="true">1.1 术语表</h2>
+        </section>
+
+        <section class="doc-block table-block">
+          <div class="block-controls">
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>术语</th>
+                  <th>英文标识</th>
+                  <th>定义</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>AI DSL</td>
+                  <td><code>ai_dsl</code></td>
+                  <td>面向 Dify 应用自动创建/编辑的 Agent 业务模块</td>
+                </tr>
+                <tr>
+                  <td>悬浮对话框</td>
+                  <td><code>AiDslFloatingPanel</code></td>
+                  <td>位于左侧菜单栏和右侧 Dify 页面之间的 AI 对话容器，可折叠、可保留上下文。</td>
+                </tr>
+                <tr>
+                  <td>工具审批</td>
+                  <td><code>AiDslToolApproval</code></td>
+                  <td>高风险工具执行前的用户或管理员确认记录，后续会进入评论和 agent 协作流程。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-block todo-block">
+          <div class="block-controls type-controls">
+            <button class="block-type type-task" title="待办类型">☑ <span>⌄</span></button>
+            <button class="block-grip" title="块菜单"><span class="six-dot"></span></button>
+            <div class="type-menu task-menu">
+              <button class="selected">☑ 任务</button>
+              <button>• 无序列表</button>
+              <button>1. 有序列表</button>
+              <button>正文</button>
+            </div>
+          </div>
+          <label>
+            <input type="checkbox" checked>
+            <span contenteditable="true">接口、表结构、状态机一致。</span>
+          </label>
+        </section>
+
+        <div class="block-insert-row end-insert">
+          <button class="inline-insert" title="在末尾插入块">＋</button>
+          <div class="insert-line"></div>
+          <div class="insert-popover">
+            <button>正文</button>
+            <button>标题</button>
+            <button>表格</button>
+            <button>代码块</button>
+            <button>引用</button>
+            <button>图片</button>
+            <button>评论锚点</button>
+          </div>
+        </div>
+
+        <section class="document-comments" aria-label="全文评论">
+          <div class="document-comments-header">
+            <h3>全文评论</h3>
+            <button title="新增全文评论">＋</button>
+          </div>
+          <div class="document-comment">
+            <div class="document-comment-meta">
+              <span>全文评论</span>
+              <span>刚刚</span>
+              <span>Agent 可读</span>
+            </div>
+            <p>这里可以记录不绑定具体片段的整体修改意见，agent 读取时作为全文级评论处理。</p>
+            <div class="comment-action-row">
+              <button>回复</button>
+              <button>编辑</button>
+              <button>删除</button>
+              <button>···</button>
+            </div>
+          </div>
+          <div class="document-comment-input">
+            <div class="comment-box" contenteditable="true" data-placeholder="输入评论"></div>
+            <div class="comment-tools" aria-hidden="true">
+              <button title="图片">▧</button>
+              <button title="更多">···</button>
+            </div>
+          </div>
+        </section>
+      </article>
+    </main>
+
+    <aside class="comment-pane">
+      <div class="comment-header">
+        <div>
+          <div class="comment-title">评论</div>
+          <div class="comment-subtitle">2 条未解决，已允许 agent 读取</div>
+        </div>
+        <button class="add-comment">＋</button>
+      </div>
+
+      <label class="agent-card">
+        <span class="toggle on"></span>
+        <span>
+          <strong>接入本地 agent</strong>
+          <small>评论会写入 AnnotaMD block，agent 可按需读取</small>
+        </span>
+      </label>
+
+      <div class="comment-list">
+        <section class="comment-card active">
+          <div class="comment-row">
+            <span class="comment-scope">片段评论</span>
+            <div class="comment-card-actions">
+              <button>标识已解决</button>
+              <button title="更多">···</button>
+            </div>
+          </div>
+          <blockquote>Dify 主页内的悬浮 AI 对话框</blockquote>
+          <p>这里要补充为什么不单独做 AI 编辑入口，以及它和右侧 Dify 页面上下文之间的关系。</p>
+          <div class="comment-action-row">
+            <button>回复</button>
+            <button>编辑</button>
+            <button>删除</button>
+          </div>
+          <div class="comment-reply">
+            <span>回复</span>
+            <p>可以补充成“复用右侧页面上下文，不再引入单独工作流入口”。</p>
+          </div>
+          <div class="comment-meta">第 0 节 · Agent 可读</div>
+        </section>
+
+        <section class="comment-card">
+          <div class="comment-row">
+            <span class="comment-scope">片段评论</span>
+            <div class="comment-card-actions">
+              <button>标识已解决</button>
+              <button title="更多">···</button>
+            </div>
+          </div>
+          <blockquote>工具审批</blockquote>
+          <p>确认审批记录是否落库，以及是否包含 tool input 的脱敏快照。</p>
+          <div class="comment-action-row">
+            <button>回复</button>
+            <button>编辑</button>
+            <button>删除</button>
+          </div>
+          <div class="comment-meta">术语表 · Agent 可读</div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

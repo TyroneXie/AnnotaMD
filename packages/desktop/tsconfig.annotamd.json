@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/types/**/*.d.ts",
+    "src/shared/**/*.ts",
+    "src/common/**/*.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/renderer/**/*.ts",
+    "electron.vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "out",
+    "dist",
+    "test",
+    "../muyajs/**/*",
+    "src/renderer/src/assets/symbolIcon/index.js",
+    "**/*.min.json"
+  ]
+}

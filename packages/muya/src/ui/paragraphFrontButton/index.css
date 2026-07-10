@@ -1,0 +1,307 @@
+.mu-front-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 24px;
+}
+
+.mu-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 48px;
+    height: 24px;
+    overflow: hidden;
+
+    border: 1px solid #dee0e3;
+    border-radius: 7px;
+    background: #fff;
+    cursor: grab;
+
+    transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.mu-icon-wrapper:hover {
+    border-color: #d5d9e0;
+    background: #fff;
+}
+
+.mu-block-label {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    min-width: 30px;
+    height: 22px;
+    padding: 0;
+    box-sizing: border-box;
+    border-radius: 7px 0 0 7px;
+    color: #3370ff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-weight: 650;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.mu-block-label-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+    text-shadow: none;
+    filter: none;
+}
+
+.mu-block-label::before,
+.mu-block-label::after {
+    content: none !important;
+}
+
+.mu-block-label.heading .mu-block-label-glyph {
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+}
+
+.mu-block-label.text .mu-block-label-glyph {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mu-block-label.code .mu-block-label-glyph {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: -0.04em;
+}
+
+.mu-block-label.quote .mu-block-label-glyph {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mu-block-label.task-list .mu-block-label-glyph {
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.mu-list-icon {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1px;
+    height: 16px;
+}
+
+.mu-list-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 3.6px;
+}
+
+.mu-list-icon-marker {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 6px;
+    color: #3370ff;
+    font-size: 6px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.mu-block-label.bullet-list .mu-list-icon-marker {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: #3370ff;
+}
+
+.mu-list-icon-line {
+    display: block;
+    flex: 1;
+    height: 1.3px;
+    border-radius: 999px;
+    background: #3370ff;
+}
+
+.mu-table-icon {
+    display: grid;
+    grid-template-columns: repeat(3, 3px);
+    grid-template-rows: repeat(3, 3px);
+    gap: 1px;
+    align-content: center;
+    justify-content: center;
+}
+
+.mu-table-icon i {
+    width: 3px;
+    height: 3px;
+    box-sizing: border-box;
+    border: 1px solid #25b99a;
+    border-radius: 0.8px;
+}
+
+.mu-block-label.diagram {
+    color: #8b5cf6;
+}
+
+.mu-diagram-icon {
+    position: relative;
+    width: 16px;
+    height: 16px;
+}
+
+.mu-block-label.diagram .node {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    box-sizing: border-box;
+    border: 1px solid #8b5cf6;
+    border-radius: 1px;
+    background: #fff;
+}
+
+.mu-block-label.diagram .node.root {
+    top: 1px;
+    left: 6px;
+}
+
+.mu-block-label.diagram .node.left {
+    bottom: 1px;
+    left: 0;
+}
+
+.mu-block-label.diagram .node.right {
+    right: 0;
+    bottom: 1px;
+}
+
+.mu-block-label.diagram .link {
+    position: absolute;
+    background: #8b5cf6;
+}
+
+.mu-block-label.diagram .link.stem {
+    top: 5px;
+    left: 8px;
+    width: 1px;
+    height: 5px;
+}
+
+.mu-block-label.diagram .link.branch {
+    top: 9px;
+    left: 2px;
+    width: 12px;
+    height: 1px;
+}
+
+.mu-block-label.diagram .link.branch::before,
+.mu-block-label.diagram .link.branch::after {
+    position: absolute;
+    top: 0;
+
+    width: 1px;
+    height: 4px;
+
+    background: #8b5cf6;
+
+    content: '';
+}
+
+.mu-block-label.diagram .link.branch::before {
+    left: 0;
+}
+
+.mu-block-label.diagram .link.branch::after {
+    right: 0;
+}
+
+.mu-block-grip {
+    display: grid;
+    box-sizing: border-box;
+    grid-template-columns: repeat(2, 2.5px);
+    grid-auto-rows: 2.5px;
+    gap: 2.5px 3px;
+    align-content: center;
+    justify-content: center;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 22px;
+    border-left: 1px solid #eceff3;
+    background: #fff;
+}
+
+.mu-block-grip i {
+    display: block;
+    width: 2.5px;
+    height: 2.5px;
+    border-radius: 999px;
+    background: #a8afb8;
+}
+
+.mu-icon-wrapper:hover .mu-block-grip i {
+    background: #8f959e;
+}
+
+.mu-icon-wrapper:hover .mu-block-label.heading,
+.mu-icon-wrapper:hover .mu-block-label.text,
+.mu-icon-wrapper:hover .mu-block-label.order-list,
+.mu-icon-wrapper:hover .mu-block-label.bullet-list,
+.mu-icon-wrapper:hover .mu-block-label.task-list,
+.mu-icon-wrapper:hover .mu-block-label.code,
+.mu-icon-wrapper:hover .mu-block-label.quote {
+    background-color: #f5f9ff;
+}
+
+.mu-icon-wrapper:hover .mu-block-label.table {
+    background-color: #f0fdfa;
+}
+
+.mu-icon-wrapper:hover .mu-block-label.diagram {
+    background-color: #f5f3ff;
+}
+
+.mu-line-ghost {
+    position: absolute;
+
+    height: 1.6px;
+
+    background: #3370ff;
+    box-shadow: 0 0 0 2px rgb(51 112 255 / 12%);
+}
+
+.mu-shadow {
+    position: absolute;
+    z-index: 1;
+
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 16px 42px rgb(31 35 41 / 14%);
+    transform: translateX(-30px);
+    opacity: 0.92;
+}
+
+.mu-shadow > * {
+    margin: 10px 0;
+}
+
+.mu-front-button-wrapper {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    z-index: 1002;
+
+    opacity: 0;
+
+    transition: opacity 0.2s ease-in-out;
+}

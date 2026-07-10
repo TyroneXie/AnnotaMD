@@ -1,175 +1,302 @@
-# CLAUDE.md — AnnotaMD 项目指南
+# CLAUDE.md
 
-> 本文件为 Claude Code 提供项目上下文，确保代码修改遵循项目规范。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目简介
+# MarkText
 
-AnnotaMD 是一个原生 macOS Markdown 阅读器应用（fork 自 [davidhoo/MarkdownReader](https://github.com/davidhoo/MarkdownReader)）。在安静阅读的基础上加入 CriticMarkup 审阅标注与「一键复制给 AI」工作流。三栏布局：左侧目录树 + 中间渲染视图 + 右侧大纲导航。
+## Project Overview
 
-> 命名约定：主可执行 target / 产物 / 源码目录 / Bundle ID 均已改为 AnnotaMD（`Sources/AnnotaMD`，可执行文件 `AnnotaMD`，资源 bundle `AnnotaMD_AnnotaMD.bundle`，Bundle ID `com.xielintao.annotamd`）。
-> 仍保留 `MarkdownReader` 字样的是：共享库 target `MarkdownReaderKit`、Quick Look 扩展 target/二进制 `MarkdownReaderQL`、以及个别内部 Swift 文件/类型名（如 `MarkdownReaderApp.swift`）——它们是内部模块名，不面向用户，改名会牵动大量 import，故保留。
-> UserDefaults 键与 `Notification.Name` 仍用 `com.xielintao.annotamd.*` 前缀（仅作唯一键，改动会清空用户设置）。
+MarkText is a WYSIWYG markdown editor built on Electron + Vue 3. It supports CommonMark, GitHub Flavored Markdown, math (KaTeX), Mermaid diagrams, PlantUML, and multiple editing modes (focus, typewriter, source-code).
 
-- **当前版本**: 2.0.18
-- **最低部署**: macOS 14.0（自 fork 起从 macOS 26 → 15 → 14 逐步下调；渲染层由 SwiftUI WebView/WebPage 迁移回 WKWebView）
-- **架构**: Universal binary（arm64 + x86_64），Intel 与 Apple Silicon 均原生运行
-- **Bundle ID**: `com.xielintao.annotamd`
-- **许可证**: MIT
+- **Version**: see `package.json`
+- **License**: MIT
+- **Repository**: https://github.com/marktext/marktext
 
-## 技术栈
+## Tech Stack
 
-| 组件 | 选择 |
-|------|------|
-| 语言 | Swift 6.0（严格并发） |
-| UI 框架 | SwiftUI |
-| Markdown 渲染 | cmark-gfm + WKWebView（v2.x 已从 Textual 迁移） |
-| 状态管理 | `@Observable`（非 ObservableObject） |
-| 并发 | Swift Concurrency（async/await, `@MainActor`） |
-| 构建系统 | Swift Package Manager |
-| 本地化 | 自定义字典方案（L10n），非 Apple String Catalog |
+| Layer | Technology |
+|---|---|
+| Language | TypeScript 5.9 (strict mode) — `packages/muyajs/` retained as JS via ambient shim |
+| Desktop shell | Electron 42 |
+| Build system | electron-vite 5 |
+| Packaging | electron-builder 26 |
+| Frontend framework | Vue 3 |
+| State management | Pinia 3 |
+| Routing | Vue Router 4 |
+| UI library | Element Plus |
+| Unit tests | Vitest 4 |
+| E2E tests | Playwright |
+| Package manager | pnpm >=10 workspace (`packageManager: pnpm@10.33.4`) |
+| Repo layout | pnpm monorepo — see Directory Structure |
+| Node.js minimum | >=20.19.0 (PR CI: Node 22.21.1 · release CI: Node 24.14.1) |
 
-## 项目结构
+## Directory Structure
+
+This is a pnpm workspace. Three packages live under `packages/`, and the
+root holds only shared tooling and CI-facing scripts.
 
 ```
-Sources/AnnotaMD/
-├── App/
-│   ├── MarkdownReaderApp.swift    # @main 入口，WindowGroup，菜单命令，Notification.Name 常量
-│   └── AppDelegate.swift          # NSApplicationDelegate，冷/热启动文件处理
-├── Models/
-│   ├── FileNode.swift             # 目录树节点
-│   ├── Document.swift             # 文档模型
-│   ├── FileError.swift            # 错误类型枚举
-│   ├── OutlineItem.swift          # 大纲标题模型（level, title, lineNumber）
-│   ├── DisplayMode.swift          # 枚举：.rendered / .raw
-│   ├── ThemeDefinition.swift      # 5 色主题 + 33 预设 + 自定义覆盖
-│   └── SettingsModel.swift        # 设置单例（@Observable + UserDefaults）
-├── ViewModels/
-│   ├── AppViewModel.swift         # 全局 UI 状态（侧边栏、大纲、设置、窗口标题）
-│   ├── DocumentViewModel.swift    # 文档加载/保存/脏跟踪/文件监控（最复杂，~568 行）
-│   └── FileTreeViewModel.swift    # 目录树管理/键盘导航/文件操作
-├── Views/
-│   ├── ContentView.swift          # 主布局（~885 行），ViewModifier 事件处理模式
-│   ├── SidebarView.swift          # 左侧目录树
-│   ├── DetailView.swift           # 右侧主体区容器
-│   ├── RenderedMarkdownView.swift  # WKWebView + cmark-gfm 渲染
-│   ├── RawMarkdownView.swift      # 原文编辑包装
-│   ├── SyntaxHighlightedEditor.swift  # NSTextView 编辑器（~534 行），per-file undo
-│   ├── OutlineView.swift          # 右侧大纲面板
-│   ├── SettingsView.swift         # 设置视图
-│   ├── ResizeHandle.swift         # 侧边栏拖拽（NSViewRepresentable）
-│   ├── OutlineResizeHandle.swift  # 大纲面板拖拽
-│   ├── TrafficLightButtons.swift  # 自定义窗口控制按钮
-│   ├── FileRowView.swift          # 文件/目录行
-│   ├── WelcomeView.swift          # 空状态占位
-│   └── ErrorView.swift            # 错误提示
-└── Services/
-    ├── FileService.swift          # 文件系统操作
-    ├── OutlineService.swift       # Markdown 标题解析
-    ├── ThemeColors.swift          # 主题色彩派生（5 色 → 12+ 语义 token）
-    ├── MarkdownSyntaxHighlighter.swift  # 正则语法高亮（~729 行）
-    ├── LanguageService.swift      # 系统语言检测
-    ├── LocalizationService.swift  # L10n 字典（80+ 键，3 语言）
-    ├── OpenPanelHelper.swift      # NSOpenPanel/NSSavePanel 工具
-    └── FileSystemWatcher.swift    # FSEventStream 包装
+<repo-root>/
+  package.json              Workspace orchestrator — every CI-facing script
+                            proxies to packages/desktop via `pnpm --filter
+                            marktext ...`. CI invocations are unchanged.
+  pnpm-workspace.yaml       `packages: ['packages/*']` plus allowBuilds.
+  pnpm-lock.yaml            Single lockfile, shared across all packages.
+  eslint.config.js          Root ESLint v9 flat config (covers desktop +
+                            muyajs; website has its own ESLint v8 config
+                            and is ignored here).
+  scripts/                  Workspace-level scripts. postinstall.ts,
+                            minify-locales.ts, generateThirdPartyLicense.ts,
+                            validateLicenses.ts, thirdPartyChecker.ts all
+                            target packages/desktop internally.
+  docs/                     Long-form developer docs.
+  dist/                     Packaged installers from electron-builder
+                            (git-ignored; electron-builder writes here via
+                            `directories.output: ../../dist` so CI artifact
+                            globs `dist/*` still apply).
+  packages/
+    desktop/                The Electron app (name: "marktext").
+      package.json          Holds all Electron / Vue / build-time deps and
+                            the dev/build/test/typecheck scripts. Depends on
+                            @marktext/muyajs via workspace:*.
+      electron.vite.config.ts
+      electron-builder.yml  directories.output points at ../../dist.
+      tsconfig.json / tsconfig.base.json
+      vitest.config.ts
+      patches/              pnpm patches consumed by patch-package.
+      build/                electron-builder resources (icons, entitlements,
+                            NSIS scripts).
+      static/               Static assets bundled into the app
+                            (icons, themes, locales).
+      out/                  electron-vite output (git-ignored).
+      test/
+        unit/               Vitest specs → pnpm test / pnpm test:unit
+        e2e/                Playwright specs + playwright.config.ts
+                            → pnpm test:e2e
+      src/
+        common/             Pure Node.js utilities usable from main, preload,
+                            and renderer.
+        main/               Electron main process (IO, native dialogs, window
+                            management, auto-updater).
+        preload/            Electron preload scripts. The renderer runs
+                            sandboxed (contextIsolation: true,
+                            nodeIntegration: false, sandbox: true since
+                            #4244) — all Node access flows through the typed
+                            contextBridge surface in
+                            packages/desktop/src/preload/index.ts.
+        renderer/           Vue 3 application (editor UI, Pinia stores).
+          src/
+            components/     Vue single-file components.
+            store/          Pinia stores (editor.ts, preferences.ts,
+                            layout.ts, …).
+            pages/          Top-level Vue pages / routes.
+            router/         Vue Router configuration.
+        shared/             Cross-process types (`shared/types/`) and the
+                            IPC contract (`shared/types/ipc.ts`).
+        types/              Ambient .d.ts declarations.
+    muyajs/                 Legacy markdown editor engine
+                            (name: "@marktext/muyajs"). Primarily JS + DOM,
+                            avoids Electron APIs. Exception:
+                            packages/muyajs/lib/parser/render/plantuml.js
+                            imports Node's `zlib`. Being retired: the
+                            desktop renderer now consumes @muyajs/core
+                            (packages/muya) as its editor engine; only a
+                            handful of legacy `muya/` alias call sites
+                            remain (see #4244 era sandbox work for the
+                            boundary tightening).
+      lib/
+        contentState/       Block structure and document transformations.
+        parser/             Markdown parser.
+        renderers/          WYSIWYG renderer.
+        ui/                 Inline toolbar, emoji picker, etc.
+        utils/              Internal utilities.
+      themes/               Editor themes (Prism + fonts).
+    muya/                   TypeScript rewrite of muya
+                            (name: "@muyajs/core"; upstream:
+                            https://github.com/marktext/muya). Built on
+                            ot-json1 + ot-text-unicode + snabbdom + marked@16
+                            + rxjs. Self-contained: own eslint config
+                            (antfu), own stylelint, own madge, own vitest
+                            spec suites (CommonMark + GFM). Now the editor
+                            engine the desktop renderer consumes; legacy
+                            packages/muyajs is being retired. See
+                            packages/muya/CLAUDE.md for layout and commands.
+      src/                  TS source. Public entrypoint src/index.ts.
+      test/spec/            CommonMark 0.31 + GFM 0.29-gfm conformance.
+      examples/             muya-examples — vite vanilla-TS dev demo
+                            (listed in pnpm-workspace.yaml).
+      e2e/                  muya-e2e — Playwright suite. CI runs Chromium
+                            only via muya-e2e.yml; Firefox + WebKit are
+                            wired in playwright.config.ts but deferred
+                            until BACKLOG Phase 3 lands engine-independent
+                            specs.
+    website/                marktext-website (Vite + React 18). Standalone
+                            toolchain; depends on @muyajs/core from npm,
+                            not on the local muyajs package. Not part of
+                            desktop CI today.
+      src/ / public/ / build/ / vite.config.ts / tsconfig.json
 ```
 
-## 构建与运行
+The root has no `src/`, `test/`, `static/`, or `build/` of its own anymore — they all live in `packages/desktop/`.
+
+## Development Workflow
+
+All commands run from the repo root. The root `package.json` proxies every
+desktop-specific script to `packages/desktop` via `pnpm --filter marktext`,
+so the names and behavior are unchanged from the pre-monorepo layout.
 
 ```bash
-# 构建（调试）
-swift build
+# Install dependencies (runs scripts/postinstall.ts automatically — patches
+# native-keymap, downloads Electron, rebuilds native modules, minifies locales)
+pnpm install
 
-# 构建（发布）
-swift build -c release
+# Run in development mode
+# Renderer hot-reloads automatically. Pressing Ctrl+R in the dev window reloads
+# the renderer (which re-runs the preload script); changes to the main process
+# require restarting `pnpm run dev`.
+pnpm run dev
 
-# 构建 .app 包（含签名）— Universal (arm64 + x86_64)
-./build-app.sh --release --sign
+# Preview the last electron-vite build (no rebuild). PERF_TESTING=true is set automatically.
+pnpm run start
 
-# 打包 DMG（本地分享，ad-hoc 签名）— Universal (arm64 + x86_64)
-./package.sh
+# Build without packaging — fast path for verifying the renderer/main compile
+pnpm run build:unpack
 
-# 打包 DMG（正式分发，Developer ID 签名 + 公证 + staple）★ 正式发布用这个
-./package.sh -d
+# Auto-format the repo with Prettier (separate from `lint`, which only checks)
+pnpm run format
 
-# 本地发布到 GitHub（构建 + 公证 + 上传）
-./release-local.sh
+# Minify locale files (required for production builds, skip during dev)
+pnpm run minify-locales
+
+# Performance debugging — exposes a Node inspector on :5858 against the previewed build
+pnpm run perf:inspect       # attach when ready
+pnpm run perf:inspect-brk   # break on first line
+
+# Website (not yet wired into CI)
+pnpm --filter marktext-website dev      # Vite dev server
+pnpm --filter marktext-website build    # static build → packages/website/build/
 ```
 
-> **正式发布必须用 `./package.sh -d`**（Developer ID 签名 + 公证）。
-> 公证用 notarytool 钥匙串 profile `annotamd`（`NOTARY_PROFILE` 可覆盖），签名身份
-> `Developer ID Application: lijie chen (HUJ6HAE4VU)`，均存在本机钥匙串、**不在仓库**。
-> 公证需联网。验证：`xcrun stapler validate AnnotaMD.dmg` +
-> `spctl -a -vv AnnotaMD.app`（应为 `accepted / Notarized Developer ID`）。
-> 不带 `-d` 时为 ad-hoc 签名，仅供本地试用，**不要用于发布**。
+If you need to invoke a script directly inside a package, use
+`pnpm --filter <name> <script>` or `pnpm -C packages/<name> <script>`.
 
-## 依赖
-
-Swift Package 依赖：**swift-markdown**（传递依赖 swift-cmark）。
-
-仓库内还随 app bundle 打包 Mermaid.js、KaTeX、Prism.js、CSS 等前端资源；Quick Look 扩展由 `build-app.sh` 手动链接并放入 `Contents/PlugIns/`。
-
-## 架构模式 (MVVM)
-
-```
-用户操作 → View → ViewModel → Service → 文件系统
-                ↑
-                └── State 更新 → View 刷新
-```
-
-- **ViewModels**: 全部 `@MainActor @Observable`
-- **Services**: 纯逻辑层，无 UI 依赖
-- **通信**: ViewModel → View 通过状态绑定；App 菜单 → ViewModel 通过 `Notification.Name`
-
-## 关键设计决策
-
-1. **自定义 HStack 三栏布局**（非 NavigationSplitView）— 支持拖拽阈值、单文件模式、圆角 Detail 区域
-2. **`.windowStyle(.hiddenTitleBar)`** + 自定义 TitleBar — Buddy 风格布局
-3. **NSViewRepresentable ResizeHandle** — SwiftUI `DragGesture` 在 macOS 上不可靠
-4. **`@Observable` + 手动 UserDefaults** — `@AppStorage` 与 `@Observable` 不兼容
-5. **Per-file undo** — 通过 ObjC runtime swizzling `NSWindow.undoManager`
-6. **Notification 通信** — 10 个 `Notification.Name` 常量连接 App 菜单和 ViewModel
-7. **SettingsModel.shared 单例** — 跨视图共享设置状态
-
-## 编码规范
-
-- **Swift 6 严格并发**：ViewModel 必须标注 `@MainActor`，注意 Sendable 合规性
-- **命名**：ViewModel 用 `XxxViewModel`，Service 用 `XxxService`，Model 用名词
-- **视图事件处理**：使用 ViewModifier 模式（参见 ContentView 中的各种 ViewModifier）
-- **本地化**：所有面向用户的字符串必须通过 `L10n` 枚举，支持简中/繁中/英文
-- **主题**：颜色必须通过 `ThemeColors` Environment 获取，不硬编码色值
-- **文件操作**：统一通过 `FileService`，不直接调用 FileManager
-
-## 测试
-
-当前项目已有 `MarkdownReaderKitTests` 和 `AnnotaMDTests` 两个测试 target，运行：
+## Build Commands
 
 ```bash
-swift test
+pnpm run build:win    # Windows x64 — NSIS installer + zip
+pnpm run build:mac    # macOS x64 + arm64 — DMG + zip
+pnpm run build:linux  # Linux — AppImage, snap, deb, rpm, tar.gz
 ```
 
-## CI/CD
+All platform build scripts automatically run `minify-locales` and `electron-rebuild` before packaging.
 
-GitHub Actions (`.github/workflows/release.yml`)：
-- 触发：版本 tag (`v*`) 或手动 dispatch
-- **默认（推荐）流程**：push tag → CI 仅校验 CHANGELOG 并创建 **draft** release 占位（**不构建**）→
-  本地 `./package.sh -d` 出公证包（universal）→ `gh release upload <tag> AnnotaMD.dmg AnnotaMD.zip --clobber`
-  → `gh release edit <tag> --draft=false` 发布。`release-local.sh` 把后面几步自动化。
-- 资产名固定为 `AnnotaMD.dmg` / `AnnotaMD.zip`（不带版本号）。
-- 发布前需确认 CHANGELOG.md 包含对应版本号。
-- ⚠️ **`ci-build` job（`workflow_dispatch` 勾 `use_ci_build`）是不推荐的后备**：它是
-  `swift build --arch arm64`（**仅 arm64** + ad-hoc 签名），正是早期「Intel Mac 打不开」的根因，
-  且有编辑模式文字不可见的已知 bug。正式发布**勿用**，务必走上面的本地公证包路径。
+## Testing
 
-## 已知注意事项
+```bash
+pnpm run test          # All unit tests (Vitest)
+pnpm run test:unit     # Unit tests only
+pnpm run test:e2e      # End-to-end tests (Playwright)
+pnpm run lint          # ESLint (run before committing; CI enforces)
+pnpm run typecheck     # vue-tsc --noEmit (CI enforces)
 
-- 同类型视图替换内容时 SwiftUI 可能不触发 `.onAppear`，需用 `.id(fileURL)` 强制重建
-- `SyntaxHighlightedEditor` 使用 ObjC runtime swizzling，修改需谨慎
-- `.hiddenTitleBar` 模式下全屏时红绿灯行为需特殊处理（76px → 32px）
-- 全局设置单例 `SettingsModel.shared` 不适合多窗口场景
+# Run a single spec — paths are relative to packages/desktop. Use `-C` so
+# pnpm resolves the spec path inside the desktop package's vitest config.
+pnpm -C packages/desktop exec vitest run test/unit/specs/markdown-basic.spec.ts
+pnpm -C packages/desktop exec vitest run -t 'partial test name'
 
-## 文档
+# Single Playwright spec (playwright.config.ts lives in test/e2e/)
+pnpm -C packages/desktop exec playwright test test/e2e/launch.spec.ts
+pnpm -C packages/desktop exec playwright test -g 'partial test name'
+```
 
-- `docs/architecture.md` — 详细架构文档
-- `docs/design.md` — UI/UX 设计文档
-- `docs/requirements.md` — 需求追踪（P0/P1/P2）
-- `CHANGELOG.md` — 版本变更记录
+## Code Style
+
+Enforced by ESLint + Prettier. Run `pnpm run lint` and `pnpm run typecheck` before committing.
+
+- 2-space indentation
+- No semicolons
+- Single quotes
+- TypeScript with `strict: true`; see `packages/website/content/docs/dev/TYPESCRIPT.md`
+- Cross-process types live in `packages/desktop/src/shared/types/`; ambient declarations in `packages/desktop/src/types/`
+- IPC channels are typed via the contract in `packages/desktop/src/shared/types/ipc.ts`
+- The renderer is fully sandboxed — every IPC and Node access goes through `window.electron.*` / `window.fileUtils.*` etc. (typed in `packages/desktop/src/types/global.d.ts`)
+
+### Comments
+
+Follow `.github/COMMENTING-GUIDELINES.md` for every comment you write. The core rule: a comment must describe what isn't obvious from the code — rationale, units, invariants, ownership, the abstraction a caller needs — never restate the code or echo the words already in the name. Before finishing any change, review the comments you added or touched against that document, and delete any that only repeat the code. Prefer self-explanatory names over comments; when a comment is genuinely needed, keep it short and complete and place it next to the code it describes.
+
+## Architecture: Three-Process Electron Model
+
+All Electron processes live in `packages/desktop/`. Muya is a separate
+workspace package that the renderer (and tests) consume via the `muya`
+alias / `@marktext/muyajs` workspace dep.
+
+```
+main process  (packages/desktop/src/main/)
+  ├── Full Node.js + Electron API access
+  ├── IO, file system, native dialogs, auto-updater, spell checker
+  ├── One instance per application launch
+  └── Controls editor windows via IPC
+
+preload  (packages/desktop/src/preload/)
+  ├── Bridge between main and renderer
+  ├── Note: editor and preferences windows use contextIsolation: false +
+  │   nodeIntegration: true (see packages/desktop/src/main/config.js)
+  └── Compiled to CommonJS
+
+renderer  (packages/desktop/src/renderer/)
+  ├── One process per editor window (spawned by main)
+  ├── Vue 3 + Pinia — all UI state and editor interaction
+  ├── Hosts both Muya (WYSIWYG) and CodeMirror (source-code mode)
+  └── Compiled to ES Modules only
+
+Muya  (packages/muyajs/)            ← workspace package @marktext/muyajs
+  ├── Self-contained editor backend
+  ├── Primarily avoids Electron APIs; uses Node's zlib for PlantUML encoding
+  ├── Handles markdown parsing, block data structure, document export, rendering
+  └── packages/muya/ (@muyajs/core, the TS rewrite from
+      https://github.com/marktext/muya) has landed and is now the engine
+      the desktop renderer consumes; muyajs is being retired.
+```
+
+## IPC Conventions
+
+Most IPC channels between main and renderer use the `mt::` prefix (e.g. `mt::open-new-tab`, `mt::file-saved`). Some internal channels do not follow this convention (e.g. `language-changed`).
+
+See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
+
+## Further Reading
+
+`packages/website/content/docs/dev/` contains the deeper developer documentation referenced by this guide. Same files are published as the developer docs section on https://marktext.me/docs/dev/overview:
+
+- `ARCHITECTURE.md` — process/module layering beyond the summary above
+- `BUILD.md` — full platform build prerequisites (including the Arch Linux deps added recently)
+- `DEBUGGING.md` — attaching debuggers to main/renderer processes
+- `INTERFACE.md` — Muya and renderer public interfaces
+- `IPC.md` — full IPC channel catalog and `mt::` conventions
+- `LINUX_DEV.md` — Linux-specific dev environment setup
+- `PERFORMANCE.md` — perf measurement workflow (pairs with `pnpm run perf:inspect`)
+- `RELEASE.md` / `RELEASE_HOTFIX.md` — release process
+
+## Important Build Notes
+
+- **CommonJS vs ESM**: `main` and `preload` compile to CommonJS; `renderer` is ESM-only. Do not use `require()` in renderer code.
+- **Minify locales**: `pnpm run minify-locales` must run before production builds. It is included in `build:win/mac/linux` but not in `dev`.
+- **Native modules**: After changing Electron version, run `pnpm run rebuild-native` (`electron-rebuild -f`).
+- **Hot reload**: The renderer hot-reloads via Vite HMR. `Ctrl+R` in the dev window reloads the renderer and re-runs the preload script. Changes to `main/` source are NOT picked up by a window reload — restart `pnpm run dev` to pick them up.
+- **electron-builder output**: `directories.output` in `packages/desktop/electron-builder.yml` is set to `../../dist` so installers land in the repo-root `dist/` (where CI artifact globs look for them). `out/` from electron-vite stays inside `packages/desktop/`.
+- **Path aliases** (defined in `packages/desktop/electron.vite.config.ts`, mirrored in `vitest.config.ts` and `tsconfig.base.json`):
+  - `@` → `packages/desktop/src/renderer/src`
+  - `common` → `packages/desktop/src/common`
+  - `@shared` → `packages/desktop/src/shared`
+  - `muya` → `../muyajs` (i.e. `packages/muyajs`). Renderer-side imports therefore look like `muya/lib/...` (the alias) — the workspace dep `@marktext/muyajs` is declared in `packages/desktop/package.json` so module resolution stays inside the workspace.
+- **Workspace deps**: muya's own npm runtime deps (`github-markdown-css`, `katex`, `dompurify`, `snabbdom`, …) are declared in `packages/muyajs/package.json` so Node module resolution from `packages/muyajs/lib/*.js` finds them inside the workspace rather than walking out to a parent directory.
+- **Patches**: `patch-package` patches live at `packages/desktop/patches/`. The root `postinstall` calls patch-package with `cwd=packages/desktop` so the path resolves correctly.
+
+## Contribution
+
+- Submit PRs to the **`develop`** branch (not `main`).
+- Reference the related issue in the PR description.
+- Run `pnpm run lint` before submitting.
+- All PRs must pass CI before merge.
+- See `.github/CONTRIBUTING.md` for the full contributing guide.

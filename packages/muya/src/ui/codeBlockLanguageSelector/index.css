@@ -1,0 +1,146 @@
+.mu-list-picker {
+    box-sizing: border-box;
+    width: 220px;
+    padding: 8px;
+
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(31 35 41 / 13%), 0 2px 8px rgb(31 35 41 / 7%);
+    font-size: 12px;
+}
+
+.mu-language-list-shell > ul {
+    max-height: 196px;
+    overflow-y: auto;
+}
+
+.mu-language-search {
+    box-sizing: border-box;
+    width: 100%;
+    height: 28px;
+    margin-bottom: 6px;
+    padding: 0 9px;
+
+    border: 1px solid #dfe3e8;
+    border-radius: 6px;
+    outline: none;
+    background: #fff;
+    color: #1f2329;
+    font-size: 12px;
+}
+
+.mu-language-search:focus {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 2px rgb(51 112 255 / 10%);
+}
+
+.mu-list-picker ul,
+.mu-list-picker li {
+    margin: 0;
+    padding: 0;
+}
+
+.mu-list-picker .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 5px;
+
+    list-style: none;
+}
+
+.mu-list-picker:hover .active {
+    background: transparent;
+}
+
+.mu-list-picker .item:hover,
+.mu-list-picker .item.active {
+    background-color: var(--float-hover-color);
+}
+
+.mu-list-picker .item .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.mu-list-picker .item .icon-wrapper span::before {
+    font-size: 14px;
+}
+
+.mu-list-picker .mu-language-generic-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 3px;
+    border-radius: 4px;
+    font-family: var(--font-monospace);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.mu-list-picker .mu-language-generic-icon.plain {
+    background: #f2f3f5;
+    color: #646a73;
+}
+
+.mu-list-picker .mu-language-generic-icon.markup {
+    background: #e8f3ff;
+    color: #3370ff;
+}
+
+.mu-list-picker .mu-language-generic-icon.query {
+    background: #e8ffea;
+    color: #1f9d55;
+}
+
+.mu-list-picker .mu-language-generic-icon.config {
+    background: #fff3e8;
+    color: #d46b08;
+}
+
+.mu-list-picker .mu-language-generic-icon.code {
+    background: #f3f0ff;
+    color: #7c4dff;
+}
+
+.mu-list-picker .mu-language-more-chevron {
+    width: 28px;
+    color: #8f959e;
+    font-size: 13px;
+    line-height: 1;
+    text-align: center;
+}
+
+.mu-list-picker .mu-language-more-footer {
+    margin-top: 4px;
+    padding-top: 1px;
+    border-top: 1px solid #eff0f1;
+    border-radius: 0 0 5px 5px;
+    color: #646a73;
+    cursor: pointer;
+}
+
+.mu-list-picker .no-result {
+    padding: 14px 8px;
+    color: #8f959e;
+    font-size: 12px;
+    text-align: center;
+}
+
+.mu-list-picker .item .language {
+    flex: 1;
+
+    color: var(--editor-color);
+    font-size: 12px;
+    line-height: 28px;
+}

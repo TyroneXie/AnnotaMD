@@ -1,0 +1,1320 @@
+.mu-editor {
+    font-size: var(--mu-font-size, 16px);
+    font-family: var(--mu-font-family, 'Open Sans', 'Clear Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif);
+    line-height: var(--mu-line-height, 1.6);
+
+    outline: none;
+}
+
+/* Hide the native spelling squiggle while keeping `spellcheck="true"`, so the
+   native checker and its right-click suggestions stay active. Toggled by the
+   `spellcheckHideMarks` option. */
+.mu-hide-spelling-marks ::spelling-error {
+    text-decoration: none !important;
+}
+
+.mu-container {
+    box-sizing: border-box;
+    max-width: var(--editor-area-width, 800px);
+    min-height: 100%;
+    margin: 0 auto;
+    padding: 0 50px 100px;
+
+    color: var(--editor-color);
+}
+
+.mu-container p,
+.mu-container blockquote,
+.mu-container ul,
+.mu-container ol,
+.mu-container dl,
+.mu-container table,
+.mu-container figure:not(.mu-table) {
+    margin: 0.5em 0;
+    padding: 0;
+}
+
+.mu-container h1,
+.mu-container h2,
+.mu-container h3,
+.mu-container h4,
+.mu-container h5,
+.mu-container h6 {
+    position: relative;
+
+    margin: 1rem 0;
+    padding: 0;
+
+    color: var(--editor-color-80);
+    font-weight: bold;
+    line-height: 1.4;
+
+    cursor: text;
+}
+
+.mu-container h1 {
+    color: var(--h1-color, var(--editor-color-80));
+    font-size: 1.875em;
+}
+
+.mu-container h2 {
+    color: var(--h2-color, var(--editor-color-80));
+    font-size: 1.5em;
+}
+
+.mu-container h3 {
+    color: var(--h3-color, var(--editor-color-80));
+    font-size: 1.375em;
+}
+
+.mu-container h4 {
+    color: var(--h4-color, var(--editor-color-80));
+    font-size: 1.25em;
+}
+
+.mu-container h5 {
+    color: var(--h5-color, var(--editor-color-80));
+    font-size: 1.125em;
+}
+
+.mu-container h6 {
+    color: var(--h6-color, var(--editor-color-80));
+    font-size: 1em;
+}
+
+/* heading copy-anchor affordance — revealed on heading hover, sits in the
+   left gutter (matches the legacy `ag-copy-header-link` placement). */
+.mu-container h1 > .mu-copy-header-link,
+.mu-container h2 > .mu-copy-header-link,
+.mu-container h3 > .mu-copy-header-link,
+.mu-container h4 > .mu-copy-header-link,
+.mu-container h5 > .mu-copy-header-link,
+.mu-container h6 > .mu-copy-header-link {
+    position: absolute;
+    top: 0;
+    left: -40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+
+    cursor: pointer;
+
+    transform: translateY(calc(0.7em - 9px));
+    opacity: 0;
+
+    transition: opacity 0.2s ease;
+
+    user-select: none;
+}
+
+.mu-container h1:hover > .mu-copy-header-link,
+.mu-container h2:hover > .mu-copy-header-link,
+.mu-container h3:hover > .mu-copy-header-link,
+.mu-container h4:hover > .mu-copy-header-link,
+.mu-container h5:hover > .mu-copy-header-link,
+.mu-container h6:hover > .mu-copy-header-link {
+    opacity: 0.6;
+}
+
+.mu-container h1 > .mu-copy-header-link:hover,
+.mu-container h2 > .mu-copy-header-link:hover,
+.mu-container h3 > .mu-copy-header-link:hover,
+.mu-container h4 > .mu-copy-header-link:hover,
+.mu-container h5 > .mu-copy-header-link:hover,
+.mu-container h6 > .mu-copy-header-link:hover {
+    opacity: 1;
+}
+
+.mu-container .mu-copy-header-link > .mu-icon-inner {
+    width: 14px;
+    height: 14px;
+}
+
+/* block quote */
+.mu-container blockquote {
+    position: relative;
+
+    margin-right: 0;
+    margin-left: 0;
+    padding: 0 30px;
+
+    color: var(--blockquote-text-color, var(--editor-color-50));
+
+    font-size: 1em;
+}
+
+.mu-container blockquote::before {
+    position: absolute;
+    top: 0;
+    left: 15px;
+
+    display: block;
+    width: 2px;
+    height: 100%;
+
+    background: var(--blockquote-border-color, var(--editor-color-30));
+
+    content: '';
+}
+
+.mu-container blockquote blockquote {
+    padding-right: 0;
+}
+
+/* thematic break */
+.mu-thematic-break {
+    position: relative;
+}
+
+.mu-thematic-break:not(.mu-active)::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+
+    display: block;
+    width: 100%;
+    height: 2px;
+
+    background: none;
+    border-top: 2px dashed var(--hr-color, var(--editor-color-10));
+    transform: translateY(-50%);
+
+    content: '';
+}
+
+.mu-thematic-break.mu-active::before {
+    content: none;
+}
+
+.mu-thematic-break:not(.mu-active) > .mu-thematic-break-content {
+    opacity: 0;
+}
+
+/* code block */
+.mu-code-block,
+.mu-frontmatter,
+.mu-html-container,
+.mu-math-container,
+.mu-diagram-container {
+    position: relative;
+
+    margin-top: 1.5em;
+    padding: 1em;
+
+    color: var(--editor-color-50);
+    font-size: 90%;
+    font-family: 'DejaVu Sans Mono', 'Source Code Pro', 'Droid Sans Mono', Consolas, monospace;
+    line-height: 1.6;
+
+    background: var(--code-block-bg-color);
+    border: 1px solid var(--editor-color-10);
+    border-radius: 3px;
+}
+
+/* Code-block font via `--mu-code-*`; code blocks only (inline code untouched). */
+.mu-code-block {
+    padding: 40px 14px 14px;
+    font-size: var(--mu-code-font-size, 90%);
+    font-family: var(
+        --mu-code-font-family,
+        'DejaVu Sans Mono',
+        'Source Code Pro',
+        'Droid Sans Mono',
+        Consolas,
+        monospace
+    );
+}
+
+.mu-code-block .mu-code {
+    display: block;
+    overflow: auto;
+
+    /* Override the <code> UA monospace so the block's code font reaches the text. */
+    font-family: inherit;
+}
+
+/* wrapCodeBlocks → `.mu-code-wrap`; wraps long lines (overrides prism's `pre`). */
+.mu-code-wrap .mu-code-block .mu-code {
+    overflow: hidden;
+
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+.mu-code-block .mu-code::-webkit-scrollbar {
+    display: block;
+    height: 6px;
+    width: 3px;
+}
+
+.mu-code-block .mu-content {
+    white-space: inherit;
+}
+
+.mu-code-actions {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    height: 26px;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 0.16s ease;
+}
+
+.mu-code-block:hover .mu-code-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mu-code-actions button,
+.mu-code-actions a {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
+
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #646a73;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 12px;
+    line-height: 24px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.mu-code-actions button + button,
+.mu-code-actions button + a {
+    border-left: 1px solid #eceff3;
+}
+
+.mu-code-actions button:hover,
+.mu-code-actions a:hover {
+    background: #f5f7fa;
+    color: #646a73;
+}
+
+.mu-code-action-icon {
+    color: #8f959e;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.mu-code-language-label {
+    max-width: 96px;
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+.mu-code-language-chevron {
+    color: #8f959e;
+    font-size: 10px;
+    line-height: 1;
+}
+
+.mu-code-copy i.icon {
+    position: relative;
+
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    overflow: hidden;
+}
+
+.mu-code-copy i.icon > i[class^='icon-'] {
+    position: absolute;
+    left: -14px;
+
+    width: 100%;
+    height: 100%;
+
+    filter: drop-shadow(14px 0 #8f959e);
+}
+
+/* code block line numbers (option: codeBlockLineNumbers) */
+.mu-code-block:has(.mu-line-numbers-rows) {
+    padding-left: 2.5em;
+}
+
+.mu-line-numbers-rows {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    z-index: 0;
+
+    width: 2.5em;
+
+    font-size: 100%;
+    letter-spacing: -1px;
+
+    counter-reset: mu-linenumber;
+
+    user-select: none;
+
+    pointer-events: none;
+}
+
+.mu-line-numbers-rows > span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+
+    counter-increment: mu-linenumber;
+    pointer-events: none;
+}
+
+.mu-line-numbers-rows > span::before {
+    position: relative;
+    top: 0.05em;
+
+    display: block;
+    padding-right: 0.8em;
+
+    color: var(--editor-color-30);
+    text-align: right;
+
+    transform: scale(0.8);
+
+    content: counter(mu-linenumber);
+}
+
+span.mu-language-input {
+    display: none;
+}
+
+input.mu-code-caption {
+    position: absolute;
+    top: 7px;
+    left: 10px;
+    z-index: 2;
+
+    display: inline-flex;
+    align-items: center;
+    min-width: 52px;
+    max-width: 180px;
+    height: 26px;
+    padding: 0 5px;
+    overflow: hidden;
+
+    color: #646a73;
+    font-weight: 400;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    line-height: 26px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    outline: none;
+    cursor: text;
+}
+
+input.mu-code-caption:hover,
+input.mu-code-caption:focus {
+    background: transparent;
+}
+
+input.mu-code-caption::placeholder {
+    color: #8f959e;
+    font-size: 12px;
+}
+
+/* loose tight list */
+.mu-tight-list > li > p {
+    margin: 0;
+    padding: 0;
+}
+
+/* order list and bullet list — logical `inline-start` so nested-list
+   indentation mirrors correctly under `dir="rtl"` (#4673) */
+ol.mu-order-list,
+ul.mu-bullet-list {
+    /* Keep the marker itself on the document text column; the item text stays
+       indented after it, matching Feishu's list rhythm. */
+    padding-inline-start: 22px;
+}
+
+ol.mu-order-list > li + li,
+ul.mu-bullet-list > li + li,
+ul.mu-task-list > li + li {
+    margin-top: 4px;
+}
+
+ol.mu-order-list {
+    list-style: decimal outside none;
+}
+
+ul.mu-bullet-list {
+    list-style: disc outside none;
+}
+
+/* nested lists carry no vertical margin (muyajs `li > ol, li > ul`) */
+li > ol.mu-order-list,
+li > ul.mu-bullet-list {
+    margin: 0;
+}
+
+/* list markers — default to `inherit` (current text color) so the bundled
+   light theme is unchanged; themes can recolor the bullets / numbers. */
+ol.mu-order-list > li::marker,
+ul.mu-bullet-list > li::marker {
+    color: var(--list-marker-color, inherit);
+}
+
+ul.mu-bullet-list:first-child,
+ol.mu-order-list:first-child {
+    margin-top: 0;
+}
+
+ul.mu-bullet-list:last-child,
+ol.mu-order-list:last-child {
+    margin-bottom: 0;
+}
+
+/* nested bullet markers follow the browser default cascade
+   (disc → circle → square), matching muyajs */
+ul.mu-bullet-list ul.mu-bullet-list,
+ol.mu-order-list ul.mu-bullet-list {
+    list-style-type: circle;
+}
+
+ul.mu-bullet-list ul.mu-bullet-list ul.mu-bullet-list,
+ul.mu-bullet-list ol.mu-order-list ul.mu-bullet-list,
+ol.mu-order-list ul.mu-bullet-list ul.mu-bullet-list,
+ol.mu-order-list ol.mu-order-list ul.mu-bullet-list {
+    list-style-type: square;
+}
+
+/* Focus mode (mirrors marktext muyajs `.ag-focus-mode`): when the editor
+   container carries `mu-focus-mode`, dim every top-level block and restore full
+   opacity on the active one. `mu-active` is applied to the whole ancestor chain
+   of the focused content block, so the top-level block containing the cursor
+   keeps `opacity: 1`. The class is toggled by `Muya#setFocusMode`.
+
+   Placed ahead of the task-list rules so the low-specificity
+   `.mu-focus-mode .mu-container > *` selector precedes the higher-specificity
+   `li.mu-task-list-item > … ~ *` rule below (stylelint no-descending-specificity).
+   They target disjoint elements and set different properties, so order has
+   no visual effect. */
+.mu-focus-mode .mu-container > * {
+    opacity: 0.25;
+
+    transition: opacity 0.2s ease-in-out;
+}
+
+.mu-focus-mode .mu-container > .mu-active {
+    opacity: 1;
+}
+
+/* task list */
+ul.mu-task-list {
+    padding-inline-start: 30px;
+}
+
+li.mu-task-list-item {
+    position: relative;
+
+    list-style-type: none;
+}
+
+li.mu-task-list-item > input[type='checkbox'],
+li.mu-task-list-item > span.mu-task-list-checkbox {
+    position: absolute;
+
+    /* Center the 18px circle (drawn by ::before at top:-2px, so its center sits
+       7px below this box's top) on the first text line, whose vertical midpoint
+       is `0.5 * line-height * font-size`. The editor font is read from
+       `--mu-font-size` rather than `em` on purpose: on Chromium the checkbox is
+       a real <input>, which keeps the UA form-control font size and ignores
+       `font-size: inherit`, so `em` here would be frozen and the marker would
+       stop tracking the editor font. Custom properties still inherit into the
+       input, so this stays aligned at every font size. */
+    top: calc(var(--mu-line-height, 1.6) * 0.5 * var(--mu-font-size, 16px) - 7px);
+
+    width: 12px;
+    height: 12px;
+
+    /* Drop the UA <input> margin (3px top), which otherwise pushes the
+       absolutely-positioned marker below the computed `top`. */
+    margin: 0;
+
+    transform-origin: center;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+
+    appearance: none;
+    inset-inline-start: -23px;
+}
+
+li.mu-task-list-item > input.mu-checkbox-checked ~ *,
+li.mu-task-list-item > span.mu-checkbox-checked ~ * {
+    color: var(--editor-color-50);
+}
+
+li.mu-task-list-item > input.mu-checkbox-checked ~ .mu-paragraph,
+li.mu-task-list-item > span.mu-checkbox-checked ~ .mu-paragraph {
+    text-decoration-line: line-through;
+    text-decoration-thickness: 1px;
+    text-decoration-color: currentcolor;
+}
+
+li.mu-task-list-item > input[type='checkbox']::before,
+li.mu-task-list-item > span.mu-task-list-checkbox::before {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+
+    display: inline-block;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+
+    background-color: var(--editor-bg-color);
+    border: 2px solid var(--editor-color-50);
+    border-radius: 50%;
+
+    transition: all 0.2s ease;
+
+    content: '';
+}
+
+li.mu-task-list-item > input::after,
+li.mu-task-list-item > span.mu-task-list-checkbox::after {
+    position: absolute;
+    top: 1px;
+    left: 4px;
+
+    display: inline-block;
+    box-sizing: content-box;
+    width: 8px;
+    height: 4px;
+
+    border: 2px solid var(--editor-bg-color);
+    border-top: none;
+    border-right: none;
+    transform: rotate(-45deg) scale(0);
+    transform-origin: bottom;
+
+    transition: all 0.2s ease;
+
+    content: '';
+}
+
+li.mu-task-list-item > input.mu-checkbox-checked::after,
+li.mu-task-list-item > span.mu-checkbox-checked::after {
+    transform: rotate(-45deg) scale(1);
+}
+
+li.mu-task-list-item > input.mu-checkbox-checked::before,
+li.mu-task-list-item > span.mu-checkbox-checked::before {
+    background: var(--theme-color);
+    border-color: var(--theme-color);
+    box-shadow: 0 3px 12px 0 var(--selection-color);
+}
+
+/* table */
+.mu-table {
+    margin: 0.5em 0 0;
+    padding: 0.5em 0;
+}
+
+.mu-table-inner {
+    padding: 0;
+
+    word-break: initial;
+
+    border-collapse: collapse;
+}
+
+.mu-table-inner tr {
+    margin: 0;
+    padding: 0;
+}
+
+.mu-table-inner tr th {
+    position: relative;
+
+    margin: 0;
+    padding: 6px 13px;
+
+    font-weight: bold;
+    text-align: left;
+}
+
+.mu-table-inner tr td {
+    position: relative;
+
+    margin: 0;
+    padding: 6px 13px;
+
+    text-align: left;
+}
+
+.mu-table-inner tr:first-child td {
+    font-weight: bold;
+    background: var(--code-block-bg-color);
+}
+
+.mu-table-inner tr th::before,
+.mu-table-inner tr td::before {
+    position: absolute;
+    inset: 0;
+
+    box-sizing: border-box;
+    width: calc(100% + 1px);
+    height: calc(100% + 1px);
+
+    border: 1px solid var(--table-border-color);
+
+    content: '';
+    pointer-events: none;
+}
+
+.mu-table-inner tr th:first-child,
+.mu-table-inner tr td:first-child {
+    margin-top: 0;
+}
+
+.mu-table-inner tr th:last-child,
+.mu-table-inner tr td:last-child {
+    margin-bottom: 0;
+}
+
+/* Cross-cell drag selection (port of marktext's `.ag-cell-selected`): the
+   rectangle of cells the user dragged across is tinted via the per-cell
+   `::before` overlay so it reads as one contiguous selection. Every cell
+   (header included) renders as a `td`, and the overlay already paints the cell
+   border, so a translucent accent fill is enough. */
+.mu-table-inner tr td.mu-table-cell-selected::before {
+    z-index: 1;
+
+    background: var(--editor-color-04);
+}
+
+.mu-table-inner tr td.mu-table-cell-border-top::before {
+    border-top-color: var(--theme-color);
+}
+
+.mu-table-inner tr td.mu-table-cell-border-right::before {
+    border-right-color: var(--theme-color);
+}
+
+.mu-table-inner tr td.mu-table-cell-border-bottom::before {
+    border-bottom-color: var(--theme-color);
+}
+
+.mu-table-inner tr td.mu-table-cell-border-left::before {
+    border-left-color: var(--theme-color);
+}
+
+.mu-table-inner td[data-align='left'] {
+    text-align: left;
+}
+
+.mu-table-inner td[data-align='center'] {
+    text-align: center;
+}
+
+.mu-table-inner td[data-align='right'] {
+    text-align: right;
+}
+
+/* html block and math block, diagram block */
+figure.mu-html-block > .mu-html-container,
+figure.mu-math-block > .mu-math-container {
+    position: absolute;
+    z-index: -1;
+
+    width: 0;
+    height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: visible;
+
+    opacity: 0;
+}
+
+figure.mu-active.mu-html-block .mu-html-container,
+figure.mu-disable-html-render.mu-html-block .mu-html-container,
+figure.mu-active.mu-math-block .mu-math-container {
+    position: relative;
+    z-index: 1;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+
+    opacity: 1;
+}
+
+figure:not(.mu-active, .mu-disable-html-render).mu-html-block .mu-html-container,
+figure:not(.mu-active).mu-math-block .mu-math-container {
+    overflow: hidden;
+}
+
+figure.mu-html-block .mu-html-preview,
+figure.mu-math-block .mu-math-preview,
+figure.mu-diagram-block .mu-diagram-preview {
+    display: block;
+    width: 100%;
+}
+
+figure.mu-math-block .mu-math-preview .katex-display {
+    margin: 0;
+    padding: 1em 0;
+
+    overflow: auto hidden;
+}
+
+figure.mu-math-block .mu-math-preview .katex-display::-webkit-scrollbar {
+    display: block;
+    width: 3px;
+    height: 6px;
+}
+
+/* to prevent plantuml img overflow */
+figure.mu-diagram-block .mu-diagram-preview img {
+    max-width: 100%;
+}
+
+/* to prevent rendered diagram <svg> (e.g. a wide sequence diagram) overflowing
+   and getting clipped by the block */
+figure.mu-diagram-block .mu-diagram-preview > svg {
+    max-width: 100%;
+    height: auto;
+}
+
+figure.mu-html-block .mu-html-preview > pre {
+    padding: 0 1rem;
+
+    white-space: pre-wrap;
+
+    background: inherit;
+    border: 0;
+    border-radius: 0.3em;
+}
+
+figure.mu-html-block.mu-active .mu-html-preview,
+figure.mu-html-block.mu-disable-html-render .mu-html-preview {
+    display: none;
+}
+
+/* math block and diagram */
+figure.mu-math-block,
+figure.mu-diagram-block {
+    position: relative;
+}
+
+figure.mu-html-block:not(.mu-active, .mu-disable-html-render):hover,
+figure.mu-math-block:not(.mu-active):hover {
+    background: var(--editor-color-04);
+}
+
+figure.mu-math-block div.mu-math-preview,
+figure.mu-diagram-block div.mu-diagram-preview {
+    width: 100%;
+
+    text-align: center;
+}
+
+figure.mu-math-block div.mu-math-preview > svg {
+    width: 100%;
+}
+
+/* Diagram SVG recoloring — port of marktext's legacy theme block
+   (packages/muyajs/themes/default.css `figure[data-role] svg …`, ~lines
+   689-720) adapted to muya's DOM and kebab-cased vars. Mermaid and
+   vega-lite render an inline <svg> inside `.mu-diagram-preview`; these
+   rules rewrite the renderer's default black-on-white fills/strokes to the
+   editor's theme colors so diagrams follow the active theme (including
+   dark themes that override `--editor-bg-color` / `--editor-color`).
+   Additive and entirely theme-driven — on the bundled light theme
+   `--editor-bg-color` is white and `--editor-color` is the editor text
+   color, matching the diagrams' original look. */
+figure.mu-diagram-block .mu-diagram-preview svg rect[fill='#ffffff'],
+figure.mu-diagram-block .mu-diagram-preview svg path[fill='#ffffff'] {
+    fill: var(--editor-bg-color);
+}
+
+figure.mu-diagram-block .mu-diagram-preview svg text[fill='#000000'],
+figure.mu-diagram-block .mu-diagram-preview svg path[fill='#000000'],
+figure.mu-diagram-block .mu-diagram-preview svg use[fill='black'],
+figure.mu-diagram-block .mu-diagram-preview svg use[fill='#000000'] {
+    fill: var(--editor-color);
+}
+
+figure.mu-diagram-block .mu-diagram-preview svg rect[stroke='#000000'],
+figure.mu-diagram-block .mu-diagram-preview svg path[stroke='#000000'] {
+    stroke: var(--editor-color);
+}
+
+/* js-sequence-diagrams creates its <text> with no fill attribute and its
+   note/actor boxes with the 3-char `#fff`, so the attribute-keyed rules above
+   miss them and the labels/boxes stay black-on-white on dark themes (#3047).
+   Recolor the sequence SVG by element, scoped to `svg.sequence` so mermaid /
+   vega / flowchart (which set fills via attributes) are untouched. */
+figure.mu-diagram-block .mu-diagram-preview svg.sequence text {
+    fill: var(--editor-color);
+}
+
+figure.mu-diagram-block .mu-diagram-preview svg.sequence rect[fill='#fff'],
+figure.mu-diagram-block .mu-diagram-preview svg.sequence path[fill='#fff'] {
+    fill: var(--editor-bg-color);
+}
+
+figure.mu-active.mu-math-block > div.mu-math-preview {
+    position: absolute;
+    top: calc(100% + 20px);
+    left: 50%;
+    z-index: 10000;
+
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem;
+
+    background: var(--float-bg-color);
+    border: 1px solid var(--float-border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px 0 rgb(0 0 0 / 10%);
+    transform: translateX(-50%);
+}
+
+/* Feishu-style diagram surface and hover controls. Diagram source visibility
+   is explicit (`chart`, `code`, `both`) instead of being tied to focus. */
+figure.mu-diagram-block {
+    position: relative;
+
+    box-sizing: border-box;
+    width: 100%;
+    margin: 1.5em 0;
+    padding: 40px 16px 16px;
+
+    background: var(--mu-diagram-background, #fff);
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+}
+
+figure.mu-diagram-block > .mu-diagram-preview {
+    box-sizing: border-box;
+    min-height: 88px;
+
+    background: var(--mu-diagram-background, #fff);
+}
+
+figure.mu-diagram-block > .mu-diagram-container {
+    position: absolute;
+    z-index: -1;
+
+    width: 0;
+    height: 0;
+    margin: 0;
+    overflow: hidden;
+
+    opacity: 0;
+}
+
+figure.mu-diagram-block.mu-diagram-view-code > .mu-diagram-preview {
+    display: none;
+}
+
+figure.mu-diagram-block.mu-diagram-view-code > .mu-diagram-container,
+figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-container {
+    position: relative;
+    z-index: 1;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    overflow: auto;
+
+    opacity: 1;
+}
+
+figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-container {
+    margin-top: 14px;
+}
+
+.mu-diagram-toolbar {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 5;
+
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    height: 28px;
+
+    border: 1px solid #e5e6eb;
+    border-radius: 6px;
+    background: rgb(255 255 255 / 98%);
+    box-shadow: 0 2px 6px rgb(31 35 41 / 6%);
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 0.16s ease;
+}
+
+figure.mu-diagram-block:hover > .mu-diagram-toolbar,
+.mu-diagram-toolbar.menu-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.mu-diagram-control {
+    position: relative;
+}
+
+.mu-diagram-toolbar button {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 26px;
+    padding: 0 6px;
+
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #646a73;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 12px;
+    line-height: 26px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mu-diagram-toolbar button:hover {
+    background: #f2f3f5;
+    color: #1f2329;
+}
+
+.mu-diagram-fullscreen,
+.mu-diagram-color-toggle {
+    width: 28px;
+    padding: 0;
+}
+
+.mu-diagram-control-svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    color: #8f959e;
+}
+
+.mu-diagram-control-icon {
+    color: #8f959e;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.mu-diagram-control-chevron {
+    color: #8f959e;
+    font-size: 10px;
+}
+
+.mu-diagram-tooltip {
+    position: fixed;
+    z-index: 2147483000;
+
+    box-sizing: border-box;
+    padding: 3px 7px;
+
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-size: 11px;
+    line-height: 18px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+
+    pointer-events: none;
+}
+
+.mu-diagram-popover {
+    position: absolute;
+    top: 32px;
+    right: 0;
+    z-index: 7;
+
+    display: none;
+    box-sizing: border-box;
+    padding: 6px;
+
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 14%);
+}
+
+.mu-diagram-control.open > .mu-diagram-popover {
+    display: block;
+}
+
+.mu-diagram-view-menu {
+    width: 142px;
+}
+
+.mu-diagram-toolbar .mu-diagram-menu-item {
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 8px;
+}
+
+.mu-diagram-menu-check {
+    color: #3370ff;
+    opacity: 0;
+}
+
+.mu-diagram-menu-item.active {
+    color: #3370ff;
+}
+
+.mu-diagram-menu-item.active .mu-diagram-menu-check {
+    opacity: 1;
+}
+
+.mu-diagram-color-menu {
+    width: 154px;
+    padding: 10px;
+}
+
+.mu-diagram-color-title {
+    display: block;
+    margin-bottom: 8px;
+
+    color: #646a73;
+    font-size: 12px;
+    text-align: left;
+}
+
+.mu-diagram-color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 20px);
+    gap: 4px;
+}
+
+.mu-diagram-toolbar .mu-diagram-color-swatch {
+    box-sizing: border-box;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+
+    border: 1px solid #d5d8dc;
+    border-radius: 5px;
+}
+
+.mu-diagram-toolbar .mu-diagram-color-swatch:hover,
+.mu-diagram-toolbar .mu-diagram-color-swatch.active {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 2px rgb(51 112 255 / 12%);
+}
+
+figure.mu-math-block span.mu-codeblock-content:first-of-type:empty::after {
+    color: var(--editor-color-30);
+
+    content: attr(math);
+}
+
+pre.mu-frontmatter span.mu-codeblock-content:first-of-type:empty::after {
+    color: var(--editor-color-30);
+
+    content: attr(frontMatter);
+}
+
+/* Source delimiters stay internal. Focusing a rich block must not reveal raw
+   Markdown fences; block menus and dedicated controls own those interactions. */
+pre.mu-fenced-code::before,
+pre.mu-fenced-code::after,
+pre.mu-frontmatter::before,
+pre.mu-frontmatter::after,
+pre.mu-math-container::before,
+pre.mu-math-container::after,
+pre[data-role='mermaid']::before,
+pre[data-role='mermaid']::after,
+pre[data-role='vega-lite']::before,
+pre[data-role='vega-lite']::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* empty */
+
+.mu-empty,
+.mu-diagram-error {
+    color: var(--editor-color-50);
+    font-size: 14px;
+    font-family: monospace;
+    font-style: italic;
+    text-align: center;
+}
+
+.mu-diagram-error-detail {
+    margin-top: 6px;
+
+    font-size: 12px;
+    overflow-wrap: break-word;
+
+    opacity: 0.7;
+}
+
+/* content */
+.mu-content {
+    display: block;
+
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+
+    outline: none;
+}
+
+.mu-content:empty::after {
+    content: '\200B';
+}
+
+.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type::after {
+    padding-left: 8px;
+
+    color: var(--editor-color-30);
+
+    content: attr(placeholder);
+}
+
+.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type:empty::after {
+    color: var(--editor-color-30);
+
+    content: attr(empty-hint);
+}
+
+.mu-table-cell-content {
+    min-width: 10em;
+}
+
+/* Footnote definition block — port of marktext's `figure[data-role='FOOTNOTE']`
+   styling (src/muya/lib/assets/styles/index.css:194-246) with class prefix
+   `ag-` → `mu-` and CSS-var names rebound to the new repo's kebab-case set.
+   Layout: tinted figure with the `[^id]:` label absolutely positioned at the
+   top-left corner of the padding area, so the body text starts below it and
+   doesn't collide. */
+
+/* The top-of-file `.mu-container figure:not(.mu-table)` rule sets `padding:
+   0.5em 0; margin: 0` at specificity 0,2,1 and would otherwise win over a
+   plain `figure.mu-footnote`. Use `.mu-container figure.mu-footnote` to
+   match the same specificity, then source order wins. */
+.mu-container figure.mu-footnote {
+    position: relative;
+
+    /* Vertical separation between consecutive footnotes; 0 horizontal so the
+       block sits flush with the surrounding paragraphs. */
+    margin: 1.4em 0;
+    padding: 1.2em 2em 0.05em 1em;
+
+    font-size: 0.8em;
+
+    background: var(--editor-color-04);
+    opacity: 0.8;
+}
+
+.mu-container figure.mu-footnote pre {
+    font-size: 0.8em;
+}
+
+.mu-container figure.mu-footnote span code,
+.mu-container figure.mu-footnote td code,
+.mu-container figure.mu-footnote th code {
+    font-size: 0.8em;
+}
+
+.mu-container figure.mu-footnote > .mu-footnote-input {
+    position: absolute;
+    top: 0.2em;
+    left: 0;
+    z-index: 1;
+
+    min-width: 80px;
+    padding: 0 1em;
+
+    color: var(--editor-color);
+    font-weight: 600;
+    font-size: 14px;
+
+    font-family: monospace;
+
+    background: transparent;
+}
+
+.mu-container figure.mu-footnote > .mu-footnote-input::before {
+    content: '[^';
+}
+
+.mu-container figure.mu-footnote > .mu-footnote-input::after {
+    content: ']:';
+}
+
+/* The lowercase "footnote" badge in the top-right corner, only when the
+   block is active (focus inside its body) — same hint marktext shows via
+   `figure[data-role='FOOTNOTE'].ag-active::before`. */
+.mu-container figure.mu-footnote.mu-active::before {
+    position: absolute;
+    top: 0.2em;
+    right: 1em;
+
+    color: var(--editor-color-30);
+
+    font-size: 12px;
+
+    content: 'footnote';
+}
+
+/* Bottom-right ↩︎ backlink — clicking it jumps to the first
+   `<sup id="noteref-{id}">` reference. The `<i>` is appended to the figure
+   by `Footnote.create` and carries its own click listener. */
+.mu-container figure.mu-footnote > i.mu-footnote-backlink {
+    position: absolute;
+    right: 0.5em;
+    bottom: 0.5em;
+    z-index: 100;
+
+    display: block;
+    width: 20px;
+    height: 20px;
+
+    color: var(--editor-color-50);
+    font-family: sans-serif;
+    font-style: normal;
+    line-height: 20px;
+    text-align: center;
+
+    cursor: pointer;
+}
+
+.mu-container figure.mu-footnote > i.mu-footnote-backlink:hover {
+    color: var(--theme-color);
+}

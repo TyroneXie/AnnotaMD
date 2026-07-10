@@ -1,0 +1,150 @@
+.mu-front-menu {
+    box-sizing: border-box;
+    width: 176px;
+
+    overflow: hidden;
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 1px 4px rgb(31 35 41 / 6%);
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.mu-front-menu ul,
+.mu-front-menu li {
+    margin: 0;
+    padding: 0;
+
+    list-style: none;
+}
+
+.mu-front-menu > ul {
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+
+.mu-front-menu > ul li.item {
+    position: relative;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    padding: 0 5px;
+    border-radius: 5px;
+
+    cursor: pointer;
+
+    user-select: none;
+}
+
+.mu-front-menu li .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+
+    color: var(--icon-color);
+
+    border-radius: 4px;
+}
+
+.mu-front-menu li.item .text {
+    flex: 0 1 auto;
+    max-width: 80px;
+    min-width: 0;
+    margin-left: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mu-front-menu li .icon-wrapper i.icon {
+    position: relative;
+
+    display: flex;
+    width: 16px;
+    height: 16px;
+    overflow: hidden;
+
+    color: var(--icon-color);
+}
+
+.mu-front-menu li .icon-wrapper i.icon > i[class^='icon-'] {
+    position: relative;
+    left: -16px;
+
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+
+    filter: drop-shadow(16px 0 currentcolor);
+}
+
+.mu-front-menu > ul li.item > span {
+    display: inline-block;
+
+    color: #2f3437;
+}
+
+.mu-front-menu > ul li > .short-cut {
+    flex: none;
+    margin-left: 8px;
+    color: #8f959e;
+    font-size: 11px;
+}
+
+.mu-front-menu > ul li.item:hover {
+    background: #f5f7fa;
+}
+
+.mu-front-menu > ul li.item.delete:hover span {
+    color: var(--delete-color);
+}
+
+.mu-front-menu > ul li.divider {
+    width: auto;
+    height: 1px;
+    margin: 4px;
+
+    background: #eceff3;
+}
+
+.mu-front-menu li.turn-into-menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 22px);
+    justify-content: center;
+    gap: 1px;
+    padding: 2px 1px 5px;
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+
+    cursor: pointer;
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item:hover,
+.mu-front-menu li.turn-into-menu .turn-into-item.active {
+    background: #eef3ff;
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item.active i.icon {
+    color: #3370ff;
+}
+
+.mu-front-menu > ul li.item.delete:hover .icon-wrapper i.icon {
+    color: var(--delete-color);
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item .icon-wrapper:hover {
+    background: transparent;
+}

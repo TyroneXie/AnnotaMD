@@ -1,53 +1,26 @@
-# macOS
+node_modules
+packages/*/node_modules
+dist
+out
+packages/*/out
+packages/*/dist
 .DS_Store
-.AppleDouble
-.LSOverride
-Thumbs.db
-ehthumbs.db
-
-# Xcode
-*.xcuserdata
-*.xcworkspace/xcuserdata/
-*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-DerivedData/
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
-*.moved-aside
-*.xccheckout
-*.xcscmblueprint
-
-# Swift Package Manager
-.build/
-.swiftpm/
-
-# Build output
-*.app
-*.dmg
-
-# CocoaPods
-Pods/
-
-# Carthage
-Carthage/Build/
-
-# Sisyphus
-.sisyphus/
-
-# Claude Code
+.eslintcache
+*.log*
+.trae/
+.cursor/
+doc/
+# Ignore temp artifacts
+temp/
+logs/
+test-results/
+playwright-report/
+*.min.json
+.claude/settings.local.json
 .claude/
+.agents/
+.agent/
 
-# Build artifacts
-docs/plan.html
-scripts/.seticon-bin
-*.icns
-*.zip
-
-QLMarkdown/
+# Local design/research and agent state
+.local-research/
+.codex/

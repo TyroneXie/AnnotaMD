@@ -1,286 +1,226 @@
-name: Release
+name: Release AnnotaMD
 
 on:
   push:
+    # Broad trigger so the validate job can reject malformed v-tags
+    # (e.g. `vbad.tag`) instead of them silently not triggering anything.
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (e.g. v1.0.0)'
-        required: true
-        type: string
-      use_ci_build:
-        description: 'Use CI build instead of local build upload (NOT recommended: CI builds have invisible text bug)'
-        required: false
-        type: boolean
-        default: false
 
-env:
-  SCHEME: AnnotaMD
-  PRODUCT_NAME: AnnotaMD
-  BUNDLE_ID: com.xielintao.annotamd
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  # 默认模式：CI 仅创建 draft release 占位，等待本地 release-local.sh 上传产物
-  # 推送 tag 后执行: ./release-local.sh 构建并上传，然后 gh release edit --draft=false 发布
-  create-release:
-    name: Create Release (await local upload)
-    if: ${{ !inputs.use_ci_build }}
+  validate:
+    name: Validate tag
     runs-on: ubuntu-latest
+    steps:
+      - name: Validate semver tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          # SemVer 2.0.0 with leading "v"
+          if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a valid semver (expected vX.Y.Z[-prerelease][+build])"
+            exit 1
+          fi
+          echo "Tag '$tag' is valid."
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-22.04
+            platform: linux
+          - name: windows-x64
+            os: windows-latest
+            platform: windows
+            arch: x64
+          - name: windows-arm64
+            os: windows-11-arm
+            platform: windows
+            arch: arm64
+          - name: macos-x64
+            os: macos-15-intel
+            platform: macos
+            arch: x64
+          - name: macos-arm64
+            os: macos-15
+            platform: macos
+            arch: arm64
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Check out Git repository
+        uses: actions/checkout@v4.3.1
 
-      - name: Determine version
-        id: version
+      - name: Enable Git long paths on Windows
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: git config --global core.longpaths true
+
+      - name: Install Linux Build Dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Setup pnpm + Node + dependencies
+        uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      # Cache Electron binary; key on package.json so it busts when Electron version changes.
+      - name: Cache Electron binary
+        uses: actions/cache@v4.3.0
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key: electron-${{ matrix.os }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            electron-${{ matrix.os }}-
+
+      # Must be set before postinstall runs electron-rebuild
+      - name: Set C++20 for MacOS
+        if: matrix.platform == 'macos'
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="${{ inputs.version }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "CXXFLAGS=-std=gnu++20 -stdlib=libc++" >> $GITHUB_ENV
 
-      - name: Validate CHANGELOG
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          if [ ! -f CHANGELOG.md ]; then
-            echo "❌ CHANGELOG.md not found!"
-            exit 1
-          fi
-          if ! grep -q "\\[$VERSION\\]" CHANGELOG.md && ! grep -q "\\[$TAG\\]" CHANGELOG.md; then
-            echo "❌ CHANGELOG.md does not contain version $VERSION or $TAG"
-            exit 1
-          fi
-          echo "✅ CHANGELOG.md validated for version $VERSION"
-
-      - name: Create draft release
+      # Run the full postinstall: Electron binary download, patch-package,
+      # electron-rebuild, and minify-locales.
+      - name: Run postinstall
+        run: pnpm tsx scripts/postinstall.ts
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm_config_user_agent: 'pnpm'
+          USE_ELECTRON_CLANG: ${{ matrix.platform == 'linux' && '0' || '' }}
 
-          cat > /tmp/release-body.md << 'BODY'
-          ## 安装说明
+      - name: build-linux
+        if: matrix.platform == 'linux'
+        run: pnpm run build:linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          1. 下载 `.dmg` 文件，双击打开
-          2. 将 **AnnotaMD** 拖入 **Applications** 文件夹
-          3. 首次打开时，macOS 可能提示「无法验证开发者」：
-             - 打开 **系统设置 > 隐私与安全性**
-             - 找到被阻止的 app，点击 **仍要打开**
-             - 或在终端运行：`xattr -cr /Applications/AnnotaMD.app`
-          4. 也可以直接右键点击 app → 选择 **打开**
+      # Mac builds are unsigned (no Developer ID); see release notes for the
+      # user-side xattr/codesign workaround. Per-arch script: electron-builder's
+      # --arm64/--x64 flags are additive over the config's arch list, so
+      # electron-builder.yml must not pin mac.target arches for the flag to
+      # actually restrict the build to a single arch.
+      - name: build-mac
+        if: matrix.platform == 'macos'
+        run: pnpm run build:mac:${{ matrix.arch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          ---
+      - name: build-win
+        if: matrix.platform == 'windows'
+        run: pnpm run build:win:${{ matrix.arch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          BODY
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: annotamd-${{ matrix.name }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.blockmap
+            dist/*.yml
+            dist/*.AppImage
+            dist/*.snap
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
 
-          if [ -f "docs/releases/release-notes-${TAG}.md" ]; then
-            cat "docs/releases/release-notes-${TAG}.md" >> /tmp/release-body.md
-          elif [ -f "CHANGELOG.md" ]; then
-            awk -v ver="$VERSION" '
-              /^## \[/ && section { exit }
-              /^## \[/ && $0 ~ "\\[" ver "\\]" { section = 1 }
-              section { print }
-            ' CHANGELOG.md >> /tmp/release-body.md
-          fi
-
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --draft \
-            --notes-file /tmp/release-body.md
-
-          echo "✅ Draft release $TAG created"
-          echo "   上传本地构建: ./release-local.sh $VERSION"
-          echo "   发布: gh release edit $TAG --draft=false"
-
-  # CI 构建作为后备（已知问题：CI 构建的编辑模式文字可能不可见）
-  ci-build:
-    name: Build & Release (CI fallback)
-    if: ${{ inputs.use_ci_build }}
-    runs-on: macos-15
-
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # Per-job permissions REPLACE workflow-level ones, so re-declare
+    # both: contents:write to publish the release, actions:read for
+    # download-artifact's Actions API calls.
+    permissions:
+      contents: write
+      actions: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # upload-artifact@v4 treats `dist/` as the common-ancestor root and
+      # stores files flat inside each artifact (no `dist/` prefix). Downloading
+      # with `path: dist` + `merge-multiple` recreates `./dist/<file>` across
+      # all platforms.
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
 
-      - name: Determine version
-        id: version
+      - name: Generate SHA256SUMS.txt
+        working-directory: dist
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            TAG="${{ inputs.version }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Deterministic ordering so identical inputs always produce identical output
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -printf '%f\n' \
+            | LC_ALL=C sort \
+            | xargs -I{} sha256sum "{}" > SHA256SUMS.txt
+          echo "---"
+          cat SHA256SUMS.txt
 
-      - name: Validate CHANGELOG
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-          if [ ! -f CHANGELOG.md ]; then
-            echo "❌ CHANGELOG.md not found!"
-            exit 1
-          fi
-          if ! grep -q "\\[$VERSION\\]" CHANGELOG.md && ! grep -q "\\[$TAG\\]" CHANGELOG.md; then
-            echo "❌ CHANGELOG.md does not contain version $VERSION or $TAG"
-            exit 1
-          fi
-          echo "✅ CHANGELOG.md validated for version $VERSION"
-
-      - name: Install create-dmg
-        run: brew install create-dmg
-
-      - name: Build
-        run: swift build -c release --arch arm64
-
-      - name: Patch Bundle.module resource paths
-        run: |
-          PATCHED=0
-          while IFS= read -r accessor; do
-            if grep -q 'Bundle\.main\.bundleURL\.appendingPathComponent' "$accessor"; then
-              sed -i '' 's/Bundle\.main\.bundleURL\.appendingPathComponent/(Bundle.main.resourceURL ?? Bundle.main.bundleURL).appendingPathComponent/g' "$accessor"
-              PATCHED=$((PATCHED + 1))
-              echo "📝 Patched Bundle.module path: $accessor"
-            fi
-          done < <(find .build -name "resource_bundle_accessor.swift" -type f)
-
-          if [[ "$PATCHED" -gt 0 ]]; then
-            echo "🔨 Rebuilding with patched Bundle.module paths..."
-            swift build -c release --arch arm64
-          else
-            echo "✅ No patches needed (accessors already use resourceURL)"
-          fi
-
-      - name: Assemble .app bundle
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          APP_DIR="${{ env.PRODUCT_NAME }}.app"
-          RESOURCES_DIR="$APP_DIR/Contents/Resources"
-          MACOS_DIR="$APP_DIR/Contents/MacOS"
-
-          mkdir -p "$MACOS_DIR"
-          mkdir -p "$RESOURCES_DIR"
-
-          BUILD_DIR=".build/arm64-apple-macosx/release"
-          cp "$BUILD_DIR/${{ env.PRODUCT_NAME }}" "$MACOS_DIR/"
-          sed "s/__VERSION__/$VERSION/g" scripts/Info.plist > "$APP_DIR/Contents/Info.plist"
-
-          RESOURCE_BUNDLE="$BUILD_DIR/${{ env.PRODUCT_NAME }}_AnnotaMD.bundle"
-          if [ -d "$RESOURCE_BUNDLE" ]; then
-            cp -R "$RESOURCE_BUNDLE/" "$RESOURCES_DIR/"
-            echo "✅ Copied SPM resource bundle"
-          fi
-
-          for bundle in "$BUILD_DIR"/*.bundle; do
-            bundle_name=$(basename "$bundle")
-            if [[ "$bundle_name" != "${{ env.PRODUCT_NAME }}_AnnotaMD.bundle" ]]; then
-              cp -R "$bundle" "$RESOURCES_DIR/"
-              echo "📦 Copied dependency bundle: $bundle_name"
-            fi
-          done
-
-          echo "📦 Compiling Assets.xcassets with actool..."
-          actool \
-            --compile "$RESOURCES_DIR" \
-            --platform macosx \
-            --minimum-deployment-target 15 \
-            --app-icon AppIcon \
-            --output-format human-readable-text \
-            --output-partial-info-plist /tmp/partial.plist \
-            "Sources/${{ env.PRODUCT_NAME }}/Assets.xcassets"
-
-          echo -n "APPL????" > "$APP_DIR/Contents/PkgInfo"
-          echo "✅ .app bundle assembled"
-
-      - name: Code sign .app
-        run: |
-          # 不使用 --deep（Apple 已弃用），分别签名 bundle 和主 app
-          find "${{ env.PRODUCT_NAME }}.app/Contents/Resources" -name "*.bundle" -exec codesign --force --sign - {} \; 2>/dev/null || true
-          codesign --force --sign - "${{ env.PRODUCT_NAME }}.app"
-          echo "✅ App signed (ad-hoc)"
-
-      - name: Create DMG
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          DMG_NAME="${{ env.PRODUCT_NAME }}-$VERSION.dmg"
-          rm -f "$DMG_NAME"
-
-          create-dmg \
-            --volname "${{ env.PRODUCT_NAME }} $VERSION" \
-            --volicon "${{ env.PRODUCT_NAME }}.app/Contents/Resources/AppIcon.icns" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --icon "${{ env.PRODUCT_NAME }}.app" 175 190 \
-            --app-drop-link 425 190 \
-            "$DMG_NAME" \
-            "${{ env.PRODUCT_NAME }}.app"
-
-          VOLICON="${{ env.PRODUCT_NAME }}.app/Contents/Resources/AppIcon.icns"
-          if [ -f "$VOLICON" ]; then
-            swiftc scripts/seticon.swift -o /tmp/seticon
-            /tmp/seticon "$VOLICON" "$DMG_NAME"
-          fi
-
-          echo "dmg_name=$DMG_NAME" >> "$GITHUB_ENV"
-
-      - name: Create ZIP
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          ZIP_NAME="${{ env.PRODUCT_NAME }}-$VERSION.zip"
-          zip -r "$ZIP_NAME" "${{ env.PRODUCT_NAME }}.app"
-          echo "zip_name=$ZIP_NAME" >> "$GITHUB_ENV"
-
-      - name: Create GitHub Release
+      - name: Compose release notes body
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
-          DMG_NAME="${{ env.PRODUCT_NAME }}-$VERSION.dmg"
-          ZIP_NAME="${{ env.PRODUCT_NAME }}-$VERSION.zip"
+          {
+            if [[ "$IS_PRERELEASE" == "true" ]]; then
+              echo "## ❗ This is a pre-release"
+              echo "- May contain bugs and unfinished features."
+              echo ""
+            fi
+            echo "## ⚠️ Note for macOS users"
+            echo "Builds are unsigned (no Apple Developer ID). After dragging AnnotaMD into Applications, clear the quarantine flag once:"
+            echo '```'
+            echo 'xattr -cr /Applications/AnnotaMD.app'
+            echo '```'
+            echo ""
+            echo "## Verifying downloads"
+            echo "All artifacts are listed with their SHA-256 in \`SHA256SUMS.txt\`. Verify with:"
+            echo '```'
+            echo 'sha256sum -c SHA256SUMS.txt --ignore-missing'
+            echo '```'
+          } > release_body.md
 
-          cat > /tmp/release-body.md << 'BODY'
-          ## 安装说明
+      # Immutable-release repos forbid adding assets to an already-published
+      # release, and action-gh-release publishes before uploading the assets.
+      # Create the release as a draft (assets allowed), then promote it to a
+      # published release in the next step.
+      - name: Create draft release with assets
+        uses: softprops/action-gh-release@v2.6.2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          name: ${{ github.ref_name }}
+          body_path: release_body.md
+          fail_on_unmatched_files: true
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          1. 下载 `.dmg` 文件，双击打开
-          2. 将 **AnnotaMD** 拖入 **Applications** 文件夹
-          3. 首次打开时，macOS 可能提示「无法验证开发者」：
-             - 打开 **系统设置 > 隐私与安全性**
-             - 找到被阻止的 app，点击 **仍要打开**
-             - 或在终端运行：`xattr -cr /Applications/AnnotaMD.app`
-          4. 也可以直接右键点击 app → 选择 **打开**
-
-          ---
-
-          BODY
-
-          if [ -f "docs/releases/release-notes-${TAG}.md" ]; then
-            cat "docs/releases/release-notes-${TAG}.md" >> /tmp/release-body.md
-          elif [ -f "CHANGELOG.md" ]; then
-            awk -v ver="$VERSION" '
-              /^## \[/ && section { exit }
-              /^## \[/ && $0 ~ "\\[" ver "\\]" { section = 1 }
-              section { print }
-            ' CHANGELOG.md >> /tmp/release-body.md
-          fi
-
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes-file /tmp/release-body.md \
-            "$DMG_NAME" \
-            "$ZIP_NAME"
-
-          echo "✅ GitHub Release $TAG created"
+      - name: Promote draft to published release
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --repo "${GITHUB_REPOSITORY}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
