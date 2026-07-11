@@ -22,6 +22,9 @@ process.env.MARKTEXT_VERSION_STRING = MARKTEXT_VERSION_STRING
 // Exception handling and logging setup
 setupExceptionHandler()
 const args = cli()
+// Resolve preferences, editor buffers, and Chromium storage under AnnotaMD
+// instead of inheriting stale MarkText state (for example a hidden sidebar).
+app.setName('AnnotaMD')
 const appEnvironment = setupEnvironment(args as Record<string, unknown>)
 
 const initializeLogger = (env: AppEnvironment): void => {

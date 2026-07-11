@@ -29,4 +29,13 @@ describe('AnnotaMD user-visible branding', () => {
     expect(builder).toContain("artifactName: 'annotamd-mac-${arch}-${version}.${ext}'")
     expect(packageJson.description).toBe('AnnotaMD')
   })
+
+  it('sets the Electron application name before resolving the user data directory', () => {
+    const main = read('packages/desktop/src/main/index.ts')
+    const setNameIndex = main.indexOf("app.setName('AnnotaMD')")
+    const setupEnvironmentIndex = main.indexOf('setupEnvironment(')
+
+    expect(setNameIndex).toBeGreaterThan(-1)
+    expect(setNameIndex).toBeLessThan(setupEnvironmentIndex)
+  })
 })
