@@ -114,8 +114,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Mac builds are unsigned (no Developer ID); see release notes for the
-      # user-side xattr/codesign workaround. Per-arch script: electron-builder's
+      # Mac builds use ad-hoc signing (no paid Developer ID); see the release
+      # notes for the one-time Gatekeeper approval steps. Per-arch script: electron-builder's
       # --arm64/--x64 flags are additive over the config's arch list, so
       # electron-builder.yml must not pin mac.target arches for the flag to
       # actually restrict the build to a single arch.

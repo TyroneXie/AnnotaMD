@@ -21,11 +21,14 @@
 
 ### macOS 提示
 
-当前 GitHub Release 为未公证构建。首次拖入“应用程序”后，如 macOS 阻止打开，可执行：
+当前 GitHub Release 使用免费 ad-hoc 签名，未经过 Apple 公证。首次拖入“应用程序”并尝试打开后，如 macOS 阻止启动：
 
-```bash
-xattr -cr /Applications/AnnotaMD.app
-```
+1. 打开“系统设置 → 隐私与安全性”；
+2. 向下滚动到“安全性”；
+3. 找到被阻止的 AnnotaMD，点击“仍要打开”；
+4. 在确认窗口中再次点击“打开”。
+
+完成一次后，后续可以像普通应用一样双击启动。
 
 ## 批注与 Agent 协作
 
