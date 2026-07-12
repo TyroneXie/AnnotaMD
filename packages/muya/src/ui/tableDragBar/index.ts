@@ -10,6 +10,7 @@ import BaseFloat from '../baseFloat';
 import './index.css';
 
 type BarType = 'bottom' | 'right';
+type InsertSide = 'before' | 'after' | null;
 
 interface IDragInfo {
     table: Table;
@@ -79,9 +80,29 @@ function getDragCells(tableBlock: Table, barType: BarType, index: number) {
 }
 
 const OFFSET = 20;
+const INSERT_HIT_AREA = 12;
+
+export function getInsertionSide(
+    barType: BarType,
+    rect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
+    x: number,
+    y: number,
+): InsertSide {
+    const startDistance = barType === 'bottom' ? x - rect.left : y - rect.top;
+    const endDistance = barType === 'bottom' ? rect.right - x : rect.bottom - y;
+    if (startDistance <= INSERT_HIT_AREA)
+        return 'before';
+    if (endDistance <= INSERT_HIT_AREA)
+        return 'after';
+    return null;
+}
+
+export function shouldContinueTableDrag(buttons: number): boolean {
+    return (buttons & 1) === 1;
+}
 
 const rightOptions = {
-    placement: 'right' as const,
+    placement: 'left' as const,
     offsetOptions: {
         mainAxis: 0,
         crossAxis: 0,
@@ -91,7 +112,7 @@ const rightOptions = {
 };
 
 const bottomOptions = {
-    placement: 'bottom' as const,
+    placement: 'top' as const,
     offsetOptions: {
         mainAxis: 0,
         crossAxis: 0,
@@ -163,7 +184,9 @@ export class TableDragBar extends BaseFloat {
     private _dragEventIds: string[] = [];
     private _isDragTableBar: boolean = false;
     private _barType: 'bottom' | 'right' | null = null;
+    private _insertSide: InsertSide = null;
     private _dragInfo: IDragInfo | null = null;
+    private _hoverCells: HTMLElement[] = [];
 
     constructor(muya: Muya, options = {}) {
         const name = 'mu-table-drag-bar';
@@ -185,8 +208,8 @@ export class TableDragBar extends BaseFloat {
 
             const { x, y } = event;
             const els = [...document.elementsFromPoint(x, y)];
-            const aboveEls = [...document.elementsFromPoint(x, y - OFFSET)];
-            const leftEls = [...document.elementsFromPoint(x - OFFSET, y)];
+            const belowEls = [...document.elementsFromPoint(x, y + OFFSET)];
+            const rightEls = [...document.elementsFromPoint(x + OFFSET, y)];
 
             const hasTableCell = (els: Element[]) =>
                 els.some(
@@ -198,15 +221,15 @@ export class TableDragBar extends BaseFloat {
             if (
                 !this._isDragTableBar
                 && !hasTableCell(els)
-                && (hasTableCell(aboveEls) || hasTableCell(leftEls))
+                && (hasTableCell(belowEls) || hasTableCell(rightEls))
             ) {
-                const tableCellEl = [...aboveEls, ...leftEls].find(
+                const tableCellEl = [...belowEls, ...rightEls].find(
                     ele =>
                         ele[BLOCK_DOM_PROPERTY]
                         && ele[BLOCK_DOM_PROPERTY].blockName === 'table.cell',
                 );
                 const cellBlock = tableCellEl![BLOCK_DOM_PROPERTY] as TableBodyCell;
-                const barType = hasTableCell(aboveEls) ? 'bottom' : 'right';
+                const barType = hasTableCell(belowEls) ? 'bottom' : 'right';
 
                 this.options = Object.assign(
                     {},
@@ -214,8 +237,9 @@ export class TableDragBar extends BaseFloat {
                 );
                 this._barType = barType;
                 this._block = cellBlock;
+                this._highlightHover(barType, cellBlock);
                 this.show(tableCellEl!);
-                this._render(barType);
+                this._render(barType, x, y);
             }
             else {
                 this.hide();
@@ -227,9 +251,36 @@ export class TableDragBar extends BaseFloat {
         eventCenter.attachDOMEvent(container!, 'mouseup', this._mouseup);
     }
 
+    override hide() {
+        this._clearHover();
+        super.hide();
+    }
+
+    private _highlightHover(barType: BarType, block: TableBodyCell) {
+        this._clearHover();
+        this._hoverCells = getDragCells(block.table, barType, getIndex(barType, block));
+        this._hoverCells.forEach(cell => cell.classList.add('mu-table-axis-hovered'));
+        this._hoverCells[0]?.classList.add(
+            barType === 'right'
+                ? 'mu-table-axis-hover-edge-row'
+                : 'mu-table-axis-hover-edge-column',
+        );
+    }
+
+    private _clearHover() {
+        this._hoverCells.forEach(cell => cell.classList.remove(
+            'mu-table-axis-hovered',
+            'mu-table-axis-hover-edge-row',
+            'mu-table-axis-hover-edge-column',
+        ));
+        this._hoverCells = [];
+    }
+
     private _mousedown = (event: Event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (this._insertSide)
+            return;
         this._mouseTimer = setTimeout(() => {
             this._startDrag(event);
             this._mouseTimer = null;
@@ -242,19 +293,32 @@ export class TableDragBar extends BaseFloat {
         const { container, _barType: barType } = this;
         const { eventCenter } = this.muya;
 
+        if (this._insertSide && this._block && barType) {
+            const index = getIndex(barType, this._block);
+            const offset = index + (this._insertSide === 'after' ? 1 : 0);
+            const cursor = barType === 'bottom'
+                ? this._block.table.insertColumn(offset)
+                : this._block.table.insertRow(offset);
+            cursor?.setCursor(0, 0, true);
+            this._insertSide = null;
+            return this.hide();
+        }
+
         if (this._mouseTimer) {
             clearTimeout(this._mouseTimer);
             this._mouseTimer = null;
-            if (barType === 'right') {
+            if (barType) {
+                const rect = container!.getBoundingClientRect();
                 eventCenter.emit('muya-table-bar', {
                     reference: {
-                        getBoundingClientRect: () => container!.getBoundingClientRect(),
+                        getBoundingClientRect: () => rect,
                     },
                     tableInfo: {
                         barType,
                     },
                     block: this._block,
                 });
+                this.hide();
             }
         }
     };
@@ -300,6 +364,11 @@ export class TableDragBar extends BaseFloat {
         if (!this._dragInfo || !isMouseEvent(event))
             return;
 
+        if (!shouldContinueTableDrag(event.buttons)) {
+            this._cancelDrag();
+            return;
+        }
+
         const { barType } = this._dragInfo;
         const attrName = barType === 'bottom' ? 'clientX' : 'clientY';
         const offset = (this._dragInfo.offset
@@ -322,8 +391,10 @@ export class TableDragBar extends BaseFloat {
             eventCenter.detachDOMEvent(id);
 
         this._dragEventIds = [];
-        if (!this._isDragTableBar)
+        if (!this._isDragTableBar) {
+            this._resetDragTableBar();
             return;
+        }
 
         this._setDropTargetStyle();
 
@@ -525,7 +596,41 @@ export class TableDragBar extends BaseFloat {
         this._isDragTableBar = false;
     };
 
-    private _render(barType: BarType) {
+    private _cancelDrag = () => {
+        const { eventCenter } = this.muya;
+        this._dragEventIds.forEach(id => eventCenter.detachDOMEvent(id));
+        this._dragEventIds = [];
+
+        this._dragInfo?.cells.flat().forEach((cell) => {
+            cell.classList.remove(
+                'mu-cell-transform',
+                'mu-drag-cell',
+                'mu-drag-bottom',
+                'mu-drag-right',
+            );
+            cell.style.removeProperty('transform');
+        });
+        this._resetDragTableBar();
+        this.hide();
+    };
+
+    private _render(barType: BarType, x: number, y: number) {
         this.container!.dataset.drag = barType;
+        const rect = this._block?.domNode?.getBoundingClientRect();
+        if (rect) {
+            this._insertSide = getInsertionSide(barType, rect, x, y);
+            if (this._insertSide)
+                this.container!.dataset.insert = this._insertSide;
+            else delete this.container!.dataset.insert;
+            this.container!.style.setProperty(
+                '--table-axis-length',
+                `${barType === 'bottom' ? rect.width : rect.height}px`,
+            );
+            const tableRect = this._block!.table.firstChild!.domNode!.getBoundingClientRect();
+            this.container!.style.setProperty(
+                '--table-cross-length',
+                `${barType === 'bottom' ? tableRect.height : tableRect.width}px`,
+            );
+        }
     }
 }

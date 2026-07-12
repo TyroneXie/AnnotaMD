@@ -1,49 +1,218 @@
-.mu-table-bar-tools {
-    min-width: 120px;
+.mu-float-wrapper.mu-table-bar-tools {
+    overflow: visible;
+
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.mu-float-container.mu-table-bar-tools {
+    width: max-content;
+    min-width: 0;
+
+    overflow: visible;
+
+    background: #fff;
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
 }
 
 .mu-table-bar-tools ul,
 .mu-table-bar-tools li {
     margin: 0;
     padding: 0;
+
+    list-style: none;
 }
 
 .mu-table-bar-tools ul {
-    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    padding: 4px;
 }
 
 .mu-table-bar-tools li.item {
     position: relative;
 
-    height: 25px;
-    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 
-    color: var(--editor-color);
-    font-size: 13px;
-    line-height: 25px;
-    white-space: nowrap;
+    color: #646a73;
+    border-radius: 6px;
 
     cursor: pointer;
+    user-select: none;
 }
 
-.mu-table-bar-tools li.item[data-label='remove'] {
-    margin-top: 10px;
+.mu-table-bar-tools li.item:hover {
+    color: #1f2329;
+    background: #f2f3f5;
 }
 
-.mu-table-bar-tools li.item[data-label='remove']::before {
+.mu-table-bar-tools li.item.active {
+    color: #3370ff;
+    background: #eef3ff;
+}
+
+.mu-table-bar-tools li.item.disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.mu-table-bar-tools li.item.disabled:hover {
+    background: transparent;
+}
+
+.mu-table-bar-tools li.item[data-tooltip]::after {
     position: absolute;
-    top: -5px;
-    left: 8px;
+    top: calc(100% + 6px);
+    left: 50%;
+    z-index: 30;
 
-    display: block;
-    width: calc(100% - 16px);
-    height: 1px;
+    padding: 3px 7px;
 
-    background: var(--editor-color-04);
+    color: #fff;
+    font-weight: 400;
+    font-size: 11px;
+    line-height: 18px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+    transform: translate(-50%, -2px);
+    content: attr(data-tooltip);
+    visibility: hidden;
+    opacity: 0;
+
+    transition: opacity 50ms linear, transform 50ms linear;
+    pointer-events: none;
+}
+
+.mu-table-bar-tools li.item[data-tooltip]:hover::after {
+    transform: translate(-50%);
+    visibility: visible;
+    opacity: 1;
+}
+
+.mu-table-bar-tools li.item.palette-open[data-tooltip]::after {
+    display: none;
+}
+
+.mu-table-bar-tools li.item.group-start {
+    margin-left: 9px;
+}
+
+.mu-table-bar-tools li.item.group-start::before {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: -5px;
+
+    width: 1px;
+
+    background: #e5e6eb;
 
     content: '';
 }
 
-.mu-table-bar-tools li.item:hover {
-    background-color: var(--float-hover-color);
+.mu-table-bar-tools .axis-color-palette {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 31;
+
+    width: 196px;
+    padding: 10px;
+
+    color: #1f2329;
+    background: #fff;
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 14%);
+}
+
+.mu-table-bar-tools .axis-color-group + .axis-color-group {
+    margin-top: 10px;
+}
+
+.mu-table-bar-tools .axis-color-title {
+    margin-bottom: 7px;
+
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.mu-table-bar-tools .axis-color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.mu-table-bar-tools .axis-color-swatch {
+    position: relative;
+
+    width: 28px;
+    height: 24px;
+    padding: 0;
+
+    border: 1px solid rgb(31 35 41 / 12%);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+
+.mu-table-bar-tools .axis-color-swatch:hover {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 1px #3370ff;
+}
+
+.mu-table-bar-tools .axis-color-swatch.default {
+    background: linear-gradient(
+        to bottom right,
+        transparent 47%,
+        #f54a45 48%,
+        #f54a45 52%,
+        transparent 53%
+    );
+}
+
+.mu-table-bar-tools li.remove {
+    color: #d14343;
+}
+
+.mu-table-bar-tools li.remove .axis-symbol {
+    position: relative;
+
+    font-size: 0;
+}
+
+.mu-table-bar-tools li.remove .axis-symbol::before {
+    position: absolute;
+    inset: 5px 3px 1px;
+
+    border: 1.6px solid #d14343;
+    border-top: 0;
+    border-radius: 0 0 3px 3px;
+
+    content: '';
+}
+
+.mu-table-bar-tools li.remove .axis-symbol::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+
+    width: 14px;
+    height: 4px;
+
+    border-top: 1.6px solid #d14343;
+    border-bottom: 1.6px solid #d14343;
+
+    content: '';
 }

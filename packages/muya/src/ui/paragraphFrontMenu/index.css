@@ -1,14 +1,38 @@
 .mu-front-menu {
     box-sizing: border-box;
-    width: 176px;
+    width: 208px;
 
-    overflow: hidden;
-    border: 1px solid #dee0e3;
-    border-radius: 8px;
+    max-height: calc(100vh - 16px);
+    overflow: hidden auto;
+
+    font-weight: 400;
+    font-size: 13px;
+
     background: #fff;
-    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 1px 4px rgb(31 35 41 / 6%);
-    font-weight: 500;
-    font-size: 12px;
+    border: 1px solid #dee0e3;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 10%), 0 2px 6px rgb(31 35 41 / 6%);
+}
+
+.mu-front-menu-type-tooltip {
+    position: fixed;
+    z-index: 2147483000;
+
+    box-sizing: border-box;
+    padding: 3px 7px;
+
+    color: #fff;
+    font-weight: 400;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
+    line-height: 18px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+
+    pointer-events: none;
 }
 
 .mu-front-menu ul,
@@ -22,7 +46,7 @@
 .mu-front-menu > ul {
     display: flex;
     flex-direction: column;
-    padding: 5px;
+    padding: 6px;
 }
 
 .mu-front-menu > ul li.item {
@@ -31,9 +55,10 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    height: 28px;
-    padding: 0 5px;
-    border-radius: 5px;
+    height: 32px;
+    padding: 0 8px;
+
+    border-radius: 6px;
 
     cursor: pointer;
 
@@ -44,8 +69,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
 
     color: var(--icon-color);
 
@@ -54,12 +79,13 @@
 
 .mu-front-menu li.item .text {
     flex: 0 1 auto;
-    max-width: 80px;
     min-width: 0;
-    margin-left: 6px;
+    max-width: 112px;
+    margin-left: 8px;
     overflow: hidden;
-    text-overflow: ellipsis;
+
     white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .mu-front-menu li .icon-wrapper i.icon {
@@ -71,6 +97,158 @@
     overflow: hidden;
 
     color: var(--icon-color);
+}
+
+.mu-front-menu li .icon-wrapper .mu-quote-turn-into-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.mu-front-menu li .icon-wrapper .menu-symbol {
+    position: relative;
+
+    display: block;
+    width: 16px;
+    height: 16px;
+
+    color: #646a73;
+}
+
+.mu-front-menu li .icon-wrapper .menu-symbol::before,
+.mu-front-menu li .icon-wrapper .menu-symbol::after {
+    position: absolute;
+
+    box-sizing: border-box;
+
+    content: '';
+}
+
+.mu-front-menu li .menu-symbol.copy-plain-text::before,
+.mu-front-menu li .menu-symbol.copy-markdown::before,
+.mu-front-menu li .menu-symbol.copy-section::before,
+.mu-front-menu li .menu-symbol.cut::before,
+.mu-front-menu li .menu-symbol.cut-section::before,
+.mu-front-menu li .menu-symbol.promote-section::before,
+.mu-front-menu li .menu-symbol.demote-section::before {
+    position: static;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+
+    color: currentcolor;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.mu-front-menu li .menu-symbol.copy-plain-text::before {
+    font-size: 14px;
+
+    content: 'T';
+}
+
+.mu-front-menu li .menu-symbol.copy-markdown::before {
+    font-size: 12px;
+    letter-spacing: -0.06em;
+
+    content: 'M↓';
+}
+
+.mu-front-menu li .menu-symbol.copy-section::before {
+    font-size: 15px;
+
+    content: '¶';
+}
+
+.mu-front-menu li .menu-symbol.cut::before,
+.mu-front-menu li .menu-symbol.cut-section::before {
+    font-size: 15px;
+
+    content: '✂';
+}
+
+.mu-front-menu li .menu-symbol.duplicate::before,
+.mu-front-menu li .menu-symbol.duplicate::after,
+.mu-front-menu li .menu-symbol.duplicate-section::before,
+.mu-front-menu li .menu-symbol.duplicate-section::after {
+    width: 10px;
+    height: 10px;
+
+    border: 1.6px solid currentcolor;
+    border-radius: 3px;
+}
+
+.mu-front-menu li .menu-symbol.duplicate::before,
+.mu-front-menu li .menu-symbol.duplicate-section::before {
+    top: 1px;
+    left: 5px;
+}
+
+.mu-front-menu li .menu-symbol.duplicate::after,
+.mu-front-menu li .menu-symbol.duplicate-section::after {
+    top: 5px;
+    left: 1px;
+
+    background: #fff;
+}
+
+
+.mu-front-menu li .menu-symbol.insert-before::before,
+.mu-front-menu li .menu-symbol.insert-after::before {
+    top: 7.2px;
+    left: 1px;
+
+    width: 14px;
+    height: 1.6px;
+
+    background: currentcolor;
+    border-radius: 1px;
+}
+
+.mu-front-menu li .menu-symbol.insert-before::after,
+.mu-front-menu li .menu-symbol.insert-after::after {
+    left: 7.2px;
+
+    width: 1.6px;
+    height: 7px;
+
+    background: currentcolor;
+    border-radius: 1px;
+}
+
+.mu-front-menu li .menu-symbol.insert-before::after {
+    top: 0;
+}
+
+.mu-front-menu li .menu-symbol.insert-after::after {
+    bottom: 0;
+}
+
+.mu-front-menu li .menu-symbol.promote-section::before {
+    font-size: 12px;
+
+    content: 'H↑';
+}
+
+.mu-front-menu li .menu-symbol.demote-section::before {
+    font-size: 12px;
+
+    content: 'H↓';
+}
+
+.mu-front-menu li .menu-symbol.collapse-section::before {
+    top: 4px;
+    left: 4px;
+
+    width: 8px;
+    height: 8px;
+
+    border-right: 1.6px solid currentcolor;
+    border-bottom: 1.6px solid currentcolor;
+    transform: rotate(45deg);
 }
 
 .mu-front-menu li .icon-wrapper i.icon > i[class^='icon-'] {
@@ -92,7 +270,9 @@
 
 .mu-front-menu > ul li > .short-cut {
     flex: none;
-    margin-left: 8px;
+    margin-left: auto;
+    padding-left: 10px;
+
     color: #8f959e;
     font-size: 11px;
 }
@@ -101,32 +281,52 @@
     background: #f5f7fa;
 }
 
-.mu-front-menu > ul li.item.delete:hover span {
+.mu-front-menu > ul li.item.disabled {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.mu-front-menu > ul li.item.disabled:hover {
+    background: transparent;
+}
+
+.mu-front-menu > ul li.item.delete:hover span,
+.mu-front-menu > ul li.item.delete-section:hover span {
+    color: var(--delete-color);
+}
+
+.mu-front-menu > ul li.item.delete-section.confirming {
+    background: color-mix(in srgb, var(--delete-color) 10%, white);
+}
+
+.mu-front-menu > ul li.item.delete-section.confirming span,
+.mu-front-menu > ul li.item.delete-section.confirming .menu-symbol {
     color: var(--delete-color);
 }
 
 .mu-front-menu > ul li.divider {
     width: auto;
     height: 1px;
-    margin: 4px;
+    margin: 5px 6px;
 
     background: #eceff3;
 }
 
 .mu-front-menu li.turn-into-menu {
     display: grid;
-    grid-template-columns: repeat(auto-fit, 22px);
-    justify-content: center;
-    gap: 1px;
-    padding: 2px 1px 5px;
+    grid-template-columns: repeat(7, 24px);
+    gap: 2px;
+    justify-content: start;
+    padding: 2px 4px 6px;
 }
 
 .mu-front-menu li.turn-into-menu .turn-into-item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
+
     border-radius: 5px;
 
     cursor: pointer;
@@ -141,7 +341,8 @@
     color: #3370ff;
 }
 
-.mu-front-menu > ul li.item.delete:hover .icon-wrapper i.icon {
+.mu-front-menu > ul li.item.delete:hover .icon-wrapper i.icon,
+.mu-front-menu > ul li.item.delete-section:hover .icon-wrapper i.icon {
     color: var(--delete-color);
 }
 

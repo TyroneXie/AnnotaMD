@@ -301,12 +301,15 @@ export function canTurnInto(block: Parent, label: string): boolean {
         case 'atx-heading':
             return /atx-heading|paragraph/.test(label);
 
+        case 'block-quote':
+            return label === 'paragraph';
+
         case 'order-list':
             // fall through
         case 'bullet-list':
             // fall through
         case 'task-list':
-            return /order-list|bullet-list|task-list/.test(label);
+            return /paragraph|order-list|bullet-list|task-list/.test(label);
 
         default:
             return false;

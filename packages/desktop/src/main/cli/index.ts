@@ -4,6 +4,7 @@ import os from 'os'
 import { isDirectory } from 'common/filesystem'
 import parseArgs, { type ParsedArgs } from './parser'
 import { getPath } from '../utils'
+import { getAnnotaMDDevUserDataPath } from '../app/userDataBranding'
 
 const write = (s: string): boolean => process.stdout.write(s)
 const writeLine = (s: string): boolean => write(s + '\n')
@@ -11,8 +12,9 @@ const writeLine = (s: string): boolean => write(s + '\n')
 const cli = (): ParsedArgs => {
   let argv = process.argv.slice(1)
   if (process.env.NODE_ENV === 'development') {
-    // Don't pass electron development arguments to MarkText and change user data path.
-    argv = ['--user-data-dir', path.join(getPath('appData'), 'marktext-dev')]
+    // Keep development data separate while preserving profiles created before
+    // the AnnotaMD rename.
+    argv = ['--user-data-dir', getAnnotaMDDevUserDataPath(getPath('appData'))]
   }
 
   if (process.env.ANNOTAMD_OPEN_FILE) {

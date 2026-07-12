@@ -1,7 +1,7 @@
 import type { Placement, ReferenceElement } from '@floating-ui/dom';
 import type { Muya } from '../../index';
 import type { IBaseOptions } from '../types';
-import { autoUpdate, computePosition, flip, offset } from '@floating-ui/dom';
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 import { EVENT_KEYS } from '../../config';
 
 import { isHTMLElement, isKeyboardEvent, noop } from '../../utils';
@@ -169,7 +169,7 @@ abstract class BaseFloat {
         const cleanup = autoUpdate(reference, floatBox, () => {
             computePosition(reference, floatBox, {
                 placement,
-                middleware: [offset(offsetOptions), flip()],
+                middleware: [offset(offsetOptions), flip(), shift({ padding: 8 })],
             }).then(({ x, y }) => {
                 // `computePosition` is async: a `hide()` (or a newer `show()`)
                 // can land before this resolves. Applying it then would set
@@ -178,9 +178,15 @@ abstract class BaseFloat {
                 // stuck visible. Bail unless this pass is still the active one.
                 if (this._cleanup !== cleanup)
                     return;
+                // Keep oversized/late-resized menus inside the viewport even
+                // when their body-level float wrapper temporarily expands the
+                // document's clipping rect. This is especially noticeable on
+                // the richer heading menu near the middle of a short window.
+                const safeX = Math.max(8, Math.min(x, window.innerWidth - floatBox.offsetWidth - 8));
+                const safeY = Math.max(8, Math.min(y, window.innerHeight - floatBox.offsetHeight - 8));
                 Object.assign(floatBox.style, {
-                    left: `${x}px`,
-                    top: `${y}px`,
+                    left: `${safeX}px`,
+                    top: `${safeY}px`,
                     opacity: 1,
                 });
             });

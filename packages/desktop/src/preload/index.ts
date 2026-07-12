@@ -75,6 +75,7 @@ const shellAPI = {
 
 const clipboardAPI = {
   writeText: (text: string) => send('mt::clipboard::write-text', text),
+  writeImage: (dataUrl: string) => send('mt::clipboard::write-image', dataUrl),
   readText: () => invoke('mt::clipboard::read-text'),
   guessFilePath: () => invoke('mt::clipboard::guess-file-path')
 }

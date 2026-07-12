@@ -1,4 +1,5 @@
 import type { Muya } from '../muya';
+import type { ISelection } from '../selection/types';
 import type { IClipboardPayload } from './copyData';
 import Format from '../block/base/format';
 import { isClipboardEvent, isKeyboardEvent } from '../utils';
@@ -120,8 +121,8 @@ class Clipboard {
         writeClipboardData(this, event);
     }
 
-    cutHandler(): void {
-        cutSelection(this);
+    cutHandler(selectionOverride?: Pick<ISelection, 'anchor' | 'focus' | 'isSelectionInSameBlock' | 'direction'>): void {
+        cutSelection(this, selectionOverride);
     }
 
     pasteHandler(

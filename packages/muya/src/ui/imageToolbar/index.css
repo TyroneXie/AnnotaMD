@@ -1,12 +1,19 @@
 .mu-float-wrapper.mu-image-toolbar-container {
     overflow: visible;
 
-    border-radius: 2px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
 }
 
 .mu-image-toolbar {
-    width: 240px;
-    height: 30px;
+    width: max-content;
+    height: 40px;
+
+    background: #fff;
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
 }
 
 .mu-image-toolbar ul,
@@ -17,7 +24,7 @@
 
 .mu-image-toolbar ul {
     display: flex;
-    padding: 0 7px;
+    padding: 4px;
 }
 
 .mu-image-toolbar li.item {
@@ -25,31 +32,27 @@
 
     display: flex;
     align-items: center;
-    justify-content: space-around;
-    width: 28px;
-    height: 30px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 
     list-style: none;
+    border-radius: 6px;
     cursor: pointer;
 }
 
 .mu-image-toolbar li.item:hover {
-    background: var(--float-hover-color);
+    background: #f2f3f5;
 }
 
 .mu-image-toolbar li.item.edit {
-    margin-right: 21px;
-    margin-left: 10px;
-}
-
-.mu-image-toolbar li.item.inline {
-    margin-right: 8px;
+    margin-right: 9px;
 }
 
 .mu-image-toolbar li.item:first-of-type::before {
     position: absolute;
-    top: 7px;
-    right: -10px;
+    top: 6px;
+    right: -5px;
 
     width: 1px;
     height: 16px;
@@ -60,14 +63,13 @@
 }
 
 .mu-image-toolbar li.item.delete {
-    margin-right: 10px;
-    margin-left: 21px;
+    margin-left: 9px;
 }
 
 .mu-image-toolbar li.item:last-of-type::before {
     position: absolute;
-    top: 7px;
-    left: -10px;
+    top: 6px;
+    left: -5px;
 
     width: 1px;
     height: 16px;

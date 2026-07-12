@@ -338,6 +338,11 @@
     }
   },
   "recent": {
+    "startTitle": "AnnotaMD 시작하기",
+    "startDescription": "Markdown 파일을 열어 읽고 편집하고 주석을 추가하세요.",
+    "openFile": "파일 열기",
+    "newBlankFile": "빈 문서 만들기",
+    "dragHint": "Markdown 파일을 여기로 끌어다 놓을 수도 있습니다",
     "noTabsOpen": "열린 탭이 없습니다.",
     "newFile": "새 파일"
   },

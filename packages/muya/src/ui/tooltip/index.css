@@ -17,6 +17,46 @@
     transition: opacity 0.2s ease-in;
 }
 
+/* Shared immediate tooltip for icon-only block controls. Components opt in
+   with `mu-icon-tooltip` so native delayed `title` bubbles are never used. */
+.mu-icon-tooltip {
+    position: relative;
+}
+
+.mu-icon-tooltip::after {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    z-index: 2147483000;
+
+    padding: 3px 7px;
+
+    color: #fff;
+    font-weight: 400;
+    font-size: 11px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
+    line-height: 18px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 4px;
+    box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+    transform: translate(-50%, -1px);
+    visibility: hidden;
+    opacity: 0;
+
+    transition: opacity 50ms linear, transform 50ms linear;
+    content: attr(data-tooltip);
+    pointer-events: none;
+}
+
+.mu-icon-tooltip:hover::after,
+.mu-icon-tooltip:focus-visible::after {
+    transform: translate(-50%);
+    visibility: visible;
+    opacity: 1;
+}
+
 .mu-tooltip.active {
     transform: translateY(-5px);
     opacity: 1;

@@ -271,6 +271,43 @@ class Table extends Parent {
         });
     }
 
+    moveRow(from: number, to: number): Nullable<Content> {
+        if (from < 0 || from >= this.rowCount || to < 0 || to >= this.rowCount || from === to)
+            return this.cellAt(from, 0)?.firstContentInDescendant() ?? null;
+
+        const state = this.getState();
+        const [row] = state.children.splice(from, 1);
+        state.children.splice(to, 0, row);
+        const replacement = ScrollPage.loadBlock('table').create(this.muya, state) as Table;
+        this.replaceWith(replacement);
+        return replacement.cellAt(to, 0)?.firstContentInDescendant() ?? null;
+    }
+
+    moveColumn(from: number, to: number): Nullable<Content> {
+        if (from < 0 || from >= this.columnCount || to < 0 || to >= this.columnCount || from === to)
+            return this.cellAt(0, from)?.firstContentInDescendant() ?? null;
+
+        const state = this.getState();
+        state.children.forEach((row) => {
+            const [cell] = row.children.splice(from, 1);
+            row.children.splice(to, 0, cell);
+        });
+        const replacement = ScrollPage.loadBlock('table').create(this.muya, state) as Table;
+        this.replaceWith(replacement);
+        return replacement.cellAt(0, to)?.firstContentInDescendant() ?? null;
+    }
+
+    resetColumnWidths() {
+        this.domNode?.querySelectorAll<HTMLElement>('.mu-table-cell').forEach((cell) => {
+            cell.style.removeProperty('width');
+            cell.style.removeProperty('min-width');
+            cell.style.removeProperty('max-width');
+        });
+        const inner = this.domNode?.querySelector<HTMLElement>('.mu-table-inner');
+        inner?.style.removeProperty('width');
+        inner?.style.removeProperty('table-layout');
+    }
+
     /**
      * Resolve a body cell by its (row, column) offsets, both zero-based. Returns
      * `null` when either index is out of range. Used by the cross-cell selection

@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../../muya';
+import type { IMuyaOptions } from '../../../../types';
 
 const loadRendererMock = vi.fn();
 vi.mock('../../../../utils/diagram', () => ({
@@ -27,11 +28,12 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-function bootDiagram() {
+function bootDiagram(options: Partial<IMuyaOptions> = {}) {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const muya = new Muya(host, {
         markdown: '```mermaid\ngraph TD; A-->B\n```\n',
+        ...options,
     });
     muya.init();
     hosts.push(muya.domNode);
@@ -50,11 +52,15 @@ describe('diagram block controls', () => {
         expect(figure.querySelector('.mu-diagram-color-toggle')).not.toBeNull();
         expect(figure.querySelector('.mu-diagram-fullscreen-icon')).not.toBeNull();
         expect(figure.querySelector('.mu-diagram-palette-icon')).not.toBeNull();
+        expect(figure.querySelector('.mu-diagram-copy')).not.toBeNull();
+        expect(figure.querySelector('.mu-diagram-download')).not.toBeNull();
         // The view control already has a visible label, so unlike icon-only
         // controls it should not show a redundant hover tooltip.
         expect(figure.querySelector('.mu-diagram-view-toggle')?.getAttribute('data-tooltip')).toBeNull();
         expect(figure.querySelector('.mu-diagram-fullscreen')?.getAttribute('data-tooltip')).toBeTruthy();
         expect(figure.querySelector('.mu-diagram-color-toggle')?.getAttribute('data-tooltip')).toBeTruthy();
+        expect(figure.querySelector('.mu-diagram-copy')?.getAttribute('data-tooltip')).toBeTruthy();
+        expect(figure.querySelector('.mu-diagram-download')?.getAttribute('data-tooltip')).toBeTruthy();
         expect(figure.querySelectorAll('[data-diagram-view]')).toHaveLength(3);
     });
 
@@ -99,5 +105,29 @@ describe('diagram block controls', () => {
 
         expect(figure.style.getPropertyValue('--mu-diagram-background')).toBe('#eef4ff');
         expect(figure.dataset.diagramBackground).toBe('#eef4ff');
+    });
+
+    it('copies the rendered diagram through the host image clipboard bridge', async () => {
+        const clipboardWriteImage = vi.fn();
+        const { figure } = bootDiagram({ clipboardWriteImage });
+        await vi.waitFor(() => expect(figure.querySelector('.mu-diagram-preview svg')).not.toBeNull());
+
+        figure.querySelector<HTMLElement>('.mu-diagram-copy')!.click();
+
+        expect(clipboardWriteImage).toHaveBeenCalledOnce();
+        expect(clipboardWriteImage.mock.calls[0][0]).toMatch(/^data:image\/svg\+xml/);
+    });
+
+    it('downloads the rendered diagram with a meaningful SVG filename', async () => {
+        const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+        const { figure } = bootDiagram();
+        await vi.waitFor(() => expect(figure.querySelector('.mu-diagram-preview svg')).not.toBeNull());
+
+        figure.querySelector<HTMLElement>('.mu-diagram-download')!.click();
+
+        expect(click).toHaveBeenCalledOnce();
+        const anchor = click.mock.instances[0] as HTMLAnchorElement;
+        expect(anchor.download).toBe('mermaid-diagram.svg');
+        expect(anchor.href).toMatch(/^data:image\/svg\+xml/);
     });
 });

@@ -18,9 +18,13 @@
     border: 1px solid #dee0e3;
     border-radius: 7px;
     background: #fff;
-    cursor: grab;
+    cursor: pointer;
 
     transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.mu-icon-wrapper:active {
+    cursor: grabbing;
 }
 
 .mu-icon-wrapper:hover {
@@ -83,8 +87,10 @@
 }
 
 .mu-block-label.quote .mu-block-label-glyph {
-    font-size: 14px;
-    font-weight: 600;
+    width: 17px;
+    height: 17px;
+
+    color: #3370ff;
 }
 
 .mu-block-label.task-list .mu-block-label-glyph {

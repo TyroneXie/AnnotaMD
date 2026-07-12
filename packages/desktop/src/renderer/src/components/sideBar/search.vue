@@ -11,7 +11,8 @@
       >
       <div class="controls">
         <span
-          :title="t('search.caseSensitive')"
+          :aria-label="t('search.caseSensitive')"
+          :data-tooltip="t('search.caseSensitive')"
           class="is-case-sensitive"
           :class="{ active: isCaseSensitive }"
           @click.stop="caseSensitiveClicked()"
@@ -19,7 +20,8 @@
           <FindCaseIcon aria-hidden="true" />
         </span>
         <span
-          :title="t('search.wholeWord')"
+          :aria-label="t('search.wholeWord')"
+          :data-tooltip="t('search.wholeWord')"
           class="is-whole-word"
           :class="{ active: isWholeWord }"
           @click.stop="wholeWordClicked()"
@@ -27,7 +29,8 @@
           <FindWordIcon aria-hidden="true" />
         </span>
         <span
-          :title="t('search.useRegex')"
+          :aria-label="t('search.useRegex')"
+          :data-tooltip="t('search.useRegex')"
           class="is-regex"
           :class="{ active: isRegexp }"
           @click.stop="regexpClicked()"
@@ -83,22 +86,6 @@
         :key="index"
         :search-result="item"
       />
-    </div>
-    <div
-      v-else
-      class="empty"
-    >
-      <div class="no-data">
-        <el-button
-          v-if="showNoFolderOpenedMessage"
-          text
-          bg
-          type="primary"
-          @click="openFolder"
-        >
-          {{ t('sideBar.search.openFolder') }}
-        </el-button>
-      </div>
     </div>
   </div>
 </template>
@@ -268,10 +255,6 @@ const handleFindInFolder = (executeSearch: boolean | unknown = true): void => {
   })
 }
 
-const openFolder = (): void => {
-  projectStore.ASK_FOR_OPEN_PROJECT()
-}
-
 const caseSensitiveClicked = (): void => {
   isCaseSensitive.value = !isCaseSensitive.value
   search()
@@ -370,6 +353,8 @@ onMounted(() => {
     flex-shrink: 0;
     margin-top: 0;
     & > span {
+      position: relative;
+
       cursor: pointer;
       width: 18px;
       height: 18px;
@@ -391,6 +376,36 @@ onMounted(() => {
       }
       &.active svg {
         fill: #3370ff;
+      }
+      &::after {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 50%;
+        z-index: 20;
+
+        padding: 3px 7px;
+
+        color: #fff;
+        font-weight: 400;
+        font-size: 11px;
+        line-height: 18px;
+        white-space: nowrap;
+
+        background: #1f2329;
+        border-radius: 4px;
+        box-shadow: 0 4px 10px rgb(31 35 41 / 18%);
+        transform: translate(-50%, -2px);
+        visibility: hidden;
+        opacity: 0;
+
+        transition: opacity 50ms linear, transform 50ms linear;
+        content: attr(data-tooltip);
+        pointer-events: none;
+      }
+      &:hover::after {
+        transform: translate(-50%);
+        visibility: visible;
+        opacity: 1;
       }
     }
   }
@@ -421,39 +436,12 @@ onMounted(() => {
   font-size: 12px;
   color: #8f959e;
 }
-.empty,
 .search-result {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   &::-webkit-scrollbar:vertical {
     width: 8px;
-  }
-}
-.empty {
-  font-size: 14px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  padding-bottom: 100px;
-  & .no-data {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-  }
-  & .no-data .el-button {
-    margin-top: 20px;
-  }
-  & .no-data .el-button.is-text.is-has-bg {
-    background-color: var(--buttonPrimaryBgColor);
-    color: var(--buttonPrimaryFontColor);
-    border-color: transparent;
-  }
-  & .no-data .el-button.is-text.is-has-bg:hover,
-  & .no-data .el-button.is-text.is-has-bg:focus {
-    background-color: var(--buttonPrimaryBgColorHover);
-    color: var(--buttonPrimaryFontColorHover);
   }
 }
 </style>

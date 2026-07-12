@@ -22,6 +22,10 @@ describe('paragraph front button positioning', () => {
         expect(frontButtonMainAxis('order-list', 12, true)).toBe(32);
     });
 
+    it('reserves room for the disclosure triangle beside a heading', () => {
+        expect(frontButtonMainAxis('atx-heading', 0, false, true)).toBe(26);
+    });
+
     it('replaces a stale front button owned by the same editor root', () => {
         const root = document.createElement('div');
         document.body.appendChild(root);

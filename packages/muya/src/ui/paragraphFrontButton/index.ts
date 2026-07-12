@@ -35,13 +35,18 @@ function isOrderOrBulletList(block: Parent): block is OrderList | BulletList {
     return block instanceof OrderList || block instanceof BulletList;
 }
 
-export function frontButtonMainAxis(blockName: string, paddingTop: number, isLooseList: boolean) {
+export function frontButtonMainAxis(
+    blockName: string,
+    paddingTop: number,
+    isLooseList: boolean,
+    isCollapsedSection = false,
+) {
     // Code blocks reserve 40px of top padding for their caption/actions row.
     // That vertical header must not become a horizontal Floating UI offset.
     if (blockName === 'code-block')
         return 8;
 
-    return (isLooseList ? paddingTop * 2 : paddingTop) + 8;
+    return (isLooseList ? paddingTop * 2 : paddingTop) + 8 + (isCollapsedSection ? 18 : 0);
 }
 
 function blockLabel(block: Parent) {
@@ -113,6 +118,31 @@ function renderDiagramIcon() {
     ]);
 }
 
+function renderQuoteIcon() {
+    const pathAttrs = {
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.7',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+    };
+    return h('span.mu-block-label.quote', [
+        h(
+            'svg.mu-block-label-glyph.mu-quote-icon',
+            {
+                attrs: {
+                    viewBox: '0 0 20 20',
+                    'aria-hidden': 'true',
+                },
+            },
+            [
+                h('path', { attrs: { ...pathAttrs, d: 'M4.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
+                h('path', { attrs: { ...pathAttrs, d: 'M11.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
+            ],
+        ),
+    ]);
+}
+
 function renderBlockLabel(kind: string, label: string) {
     if (kind === 'order-list' || kind === 'bullet-list')
         return renderListIcon(kind);
@@ -120,6 +150,8 @@ function renderBlockLabel(kind: string, label: string) {
         return renderTableIcon();
     if (kind === 'diagram')
         return renderDiagramIcon();
+    if (kind === 'quote')
+        return renderQuoteIcon();
 
     return h(`span.mu-block-label.${kind}`, [
         h('span.mu-block-label-glyph', label),
@@ -499,7 +531,12 @@ export class ParagraphFrontButton {
         const paddingTop = Number.parseFloat(styles.paddingTop);
 
         const isLooseList = isOrderOrBulletList(block) && block.meta.loose;
-        const dynamicMainAxis = frontButtonMainAxis(block.blockName, paddingTop, isLooseList);
+        const dynamicMainAxis = frontButtonMainAxis(
+            block.blockName,
+            paddingTop,
+            isLooseList,
+            domNode!.classList.contains('mu-section-has-disclosure'),
+        );
 
         // Extract offset values, handling both number and object types
         let crossAxisValue = 0;

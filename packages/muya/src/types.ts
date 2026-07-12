@@ -64,6 +64,10 @@ export interface IMuyaOptions {
      * When omitted, muya falls back to `navigator.clipboard.readText()`.
      */
     clipboardText?: () => Promise<string>;
+    /** Write plain text to the host OS clipboard. */
+    clipboardWriteText?: (text: string) => void | Promise<void>;
+    /** Write a rendered image data URL to the host OS clipboard. */
+    clipboardWriteImage?: (dataUrl: string) => void | Promise<void>;
     /**
      * Persist an image per the embedder's insert preference (copy into the
      * document's assets folder, upload to an image host, or keep the path) and

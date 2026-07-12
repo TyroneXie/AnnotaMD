@@ -23,8 +23,7 @@ const REQUIRED_TYPES = [
     'u',
     'del',
     'inline_code',
-    'text_color',
-    'background_color',
+    'color_palette',
 ] as const;
 
 describe('inlineFormatToolbar config — required inline format types', () => {
@@ -45,6 +44,23 @@ describe('inlineFormatToolbar config — required inline format types', () => {
             expect(matches.length, `type=${type} appears ${matches.length} times`).toBe(1);
         }
     });
+
+    it('uses one combined color entry and the same format order as table toolbars', () => {
+        expect(icons.filter(icon => icon.type === 'color_palette')).toHaveLength(1);
+        expect(icons.some(icon => icon.type === 'text_color')).toBe(false);
+        expect(icons.some(icon => icon.type === 'background_color')).toBe(false);
+        expect(icons.map(icon => icon.type)).toEqual([
+            'text_style',
+            'strong',
+            'del',
+            'em',
+            'u',
+            'inline_code',
+            'color_palette',
+            'annotamd_comment',
+            'annotamd_delete_selection',
+        ]);
+    });
 });
 
 // marktext #3630: the inline_code / inline_math tooltips advertised Cmd/Ctrl+E
@@ -57,5 +73,4 @@ describe('inlineFormatToolbar config — shortcut labels match default keybindin
         expect(entry.shortcut).toContain('`');
         expect(entry.shortcut).not.toMatch(/\+E$/i);
     });
-
 });

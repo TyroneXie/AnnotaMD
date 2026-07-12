@@ -157,12 +157,6 @@ class DiagramPreview extends Parent {
     clickHandler(event: Event) {
         event.preventDefault();
         event.stopPropagation();
-
-        if (this.parent == null)
-            return;
-
-        const cursorBlock = this.parent.firstContentInDescendant();
-        cursorBlock?.setCursor(0, 0);
     }
 
     async update(code = this._code) {

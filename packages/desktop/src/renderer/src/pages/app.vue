@@ -2,6 +2,7 @@
   <div
     class="editor-container"
     :class="{ 'comment-pane-open': commentPaneVisible }"
+    :style="commentPaneStyle"
   >
     <side-bar v-if="init" />
 
@@ -37,12 +38,26 @@
       <rename />
       <import-modal />
     </div>
+    <div
+      v-if="hasCurrentFile && init && commentPaneVisible"
+      class="annotamd-comment-pane-resizer"
+      role="separator"
+      aria-label="Resize comment pane"
+      aria-orientation="vertical"
+      :aria-valuenow="commentPaneWidth"
+      :aria-valuemin="COMMENT_PANE_MIN_WIDTH"
+      :aria-valuemax="COMMENT_PANE_MAX_WIDTH"
+      tabindex="0"
+      @mousedown="startCommentPaneResize"
+      @keydown.left.prevent="resizeCommentPaneBy(16)"
+      @keydown.right.prevent="resizeCommentPaneBy(-16)"
+    />
     <AnnotaMDCommentPane v-if="hasCurrentFile && init && commentPaneVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, watch, nextTick, onMounted, ref } from 'vue'
+import { computed, watch, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
@@ -67,6 +82,13 @@ import { useProjectStore } from '@/store/project'
 import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import {
+  COMMENT_PANE_MAX_WIDTH,
+  COMMENT_PANE_MIN_WIDTH,
+  clampCommentPaneWidth,
+  readCommentPaneWidth,
+  writeCommentPaneWidth
+} from '@/util/commentPaneResize'
 
 const mainStore = useMainStore()
 const editorStore = useEditorStore()
@@ -80,6 +102,7 @@ const notificationStore = useNotificationStore()
 const annotaMDCommentsStore = useAnnotaMDCommentsStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
+const commentPaneWidth = ref(readCommentPaneWidth(window.localStorage, window.innerWidth))
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
@@ -87,6 +110,53 @@ const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(prefer
 const { projectTrees } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
+
+const commentPaneStyle = computed<Record<string, string>>(() => ({
+  '--annotamd-comment-pane-width': commentPaneVisible.value ? `${commentPaneWidth.value}px` : '0px'
+}))
+
+let stopCommentPaneResize: (() => void) | null = null
+
+const resizeCommentPaneBy = (delta: number): void => {
+  commentPaneWidth.value = clampCommentPaneWidth(
+    commentPaneWidth.value + delta,
+    window.innerWidth
+  )
+  writeCommentPaneWidth(commentPaneWidth.value, window.localStorage)
+}
+
+const startCommentPaneResize = (event: MouseEvent): void => {
+  if (event.button !== 0) return
+  event.preventDefault()
+
+  const startX = event.clientX
+  const startWidth = commentPaneWidth.value
+  const previousCursor = document.body.style.cursor
+  const previousUserSelect = document.body.style.userSelect
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+
+  const handleMouseMove = (moveEvent: MouseEvent): void => {
+    commentPaneWidth.value = clampCommentPaneWidth(
+      startWidth + startX - moveEvent.clientX,
+      window.innerWidth
+    )
+  }
+
+  const handleMouseUp = (): void => {
+    writeCommentPaneWidth(commentPaneWidth.value, window.localStorage)
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.body.style.cursor = previousCursor
+    document.body.style.userSelect = previousUserSelect
+    stopCommentPaneResize = null
+  }
+
+  stopCommentPaneResize?.()
+  stopCommentPaneResize = handleMouseUp
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
 
 const pathname = computed(() => currentFile.value?.pathname)
 const currentProject = computed(() => {
@@ -231,6 +301,8 @@ onMounted(async () => {
     addStyles(style)
   })
 })
+
+onBeforeUnmount(() => stopCommentPaneResize?.())
 </script>
 
 <style scoped>
@@ -299,6 +371,30 @@ onMounted(async () => {
 }
 .editor-container.comment-pane-open {
   --annotamd-comment-pane-width: 330px;
+}
+.annotamd-comment-pane-resizer {
+  position: fixed;
+  z-index: 31;
+  top: var(--titleBarHeight);
+  right: calc(var(--annotamd-comment-pane-width) - 4px);
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.annotamd-comment-pane-resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  content: '';
+  transition: background-color 80ms ease;
+}
+.annotamd-comment-pane-resizer:hover::after,
+.annotamd-comment-pane-resizer:focus-visible::after {
+  background: var(--annotamd-blue);
 }
 .editor-container .hide {
   z-index: -1;

@@ -1,15 +1,19 @@
 .mu-float-wrapper.mu-preview-tools-container {
     overflow: visible;
 
-    background: var(--editor-color-04);
-
-    border-radius: 7px;
+    background: transparent;
+    border: 0;
     box-shadow: none;
 }
 
 .mu-preview-tools {
-    width: 90px;
-    height: 28px;
+    width: max-content;
+    height: 40px;
+
+    background: #fff;
+    border: 1px solid #dee0e3;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
 }
 
 .mu-preview-tools ul,
@@ -20,7 +24,7 @@
 
 .mu-preview-tools ul {
     display: flex;
-    padding: 0 7px;
+    padding: 4px;
 }
 
 .mu-preview-tools li.item {
@@ -28,16 +32,17 @@
 
     display: flex;
     align-items: center;
-    justify-content: space-around;
-    width: 35px;
-    height: 28px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 
     list-style: none;
+    border-radius: 6px;
     cursor: pointer;
 }
 
 .mu-preview-tools li.item:hover {
-    background: var(--float-hover-color);
+    background: #f2f3f5;
 }
 
 .mu-preview-tools li.item:last-of-type {
@@ -47,10 +52,10 @@
 .mu-preview-tools li.item:last-of-type::before {
     position: absolute;
     top: 6px;
-    left: -3px;
+    left: -5px;
 
     width: 1px;
-    height: 18px;
+    height: 20px;
 
     background: var(--editor-color-10);
 

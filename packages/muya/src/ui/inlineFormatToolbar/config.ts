@@ -36,6 +36,12 @@ const icons = [
         groupBreakBefore: true,
     },
     {
+        type: 'del',
+        tooltip: 'Strikethrough',
+        shortcut: `${COMMAND_KEY}+D`,
+        label: 'S',
+    },
+    {
         type: 'em',
         tooltip: 'Italic',
         shortcut: `${COMMAND_KEY}+I`,
@@ -55,22 +61,8 @@ const icons = [
         label: '</>',
     },
     {
-        type: 'del',
-        tooltip: 'Strikethrough',
-        shortcut: `${COMMAND_KEY}+D`,
-        label: 'S',
-        groupBreakBefore: true,
-    },
-    {
-        type: 'text_color',
-        tooltip: 'Font Color',
-        shortcut: '',
-        label: 'A',
-        palette: true,
-    },
-    {
-        type: 'background_color',
-        tooltip: 'Background Color',
+        type: 'color_palette',
+        tooltip: 'Text and Background Color',
         shortcut: '',
         label: 'A',
         palette: true,
@@ -81,6 +73,12 @@ const icons = [
         shortcut: '',
         label: '',
         groupBreakBefore: true,
+    },
+    {
+        type: 'annotamd_delete_selection',
+        tooltip: 'Delete Selection',
+        shortcut: '',
+        label: '',
     },
 ];
 

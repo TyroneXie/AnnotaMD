@@ -103,7 +103,6 @@ import {
   ParagraphQuickInsertMenu,
   PreviewToolBar,
   TableChessboard,
-  TableColumnToolbar,
   TableDragBar,
   TableRowColumMenu,
   wordCount as muyaWordCount,
@@ -1889,7 +1888,6 @@ onMounted(() => {
       jumpClick
     })
     Muya.use(FootnoteTool)
-    Muya.use(TableColumnToolbar)
     Muya.use(TableDragBar)
     Muya.use(TableRowColumMenu)
   }
@@ -1930,6 +1928,8 @@ onMounted(() => {
     clipboardFilePath: guessClipboardFilePath,
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
+    clipboardWriteText: (text: string) => window.electron.clipboard.writeText(text),
+    clipboardWriteImage: (dataUrl: string) => window.electron.clipboard.writeImage(dataUrl),
     // Image-persist callbacks read by the engine's clipboard + drag-drop handlers
     // from `muya.options.*` (distinct from the ImageEditTool plugin option above).
     // Without these, local-file drag-drop, screenshot/binary clipboard paste, and

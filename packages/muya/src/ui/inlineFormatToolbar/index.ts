@@ -5,11 +5,14 @@ import type { IBaseOptions } from '../types';
 
 import type { ColorFormatType, FormatToolIcon, TextStyleType } from './config';
 import Format, { isInlineStyleFormatToken } from '../../block/base/format';
+import { SelectionDirection } from '../../selection/types';
 import { isAtxHeadingState } from '../../state/types';
 import { isKeyboardEvent } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import { formatActionIcon, renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import icons, { COLOR_PALETTES, TEXT_STYLE_OPTIONS } from './config';
+import '../actionIcons.css';
 import './index.css';
 
 /** Default float options for inline format toolbar */
@@ -49,6 +52,28 @@ const NON_EDITING_KEYS = new Set([
     'Tab',
 ]);
 
+type AnnotaMDSelectionAction = 'annotamd_comment' | 'annotamd_delete_selection';
+const ANNOTAMD_SELECTION_ACTIONS = new Set<string>([
+    'annotamd_comment',
+    'annotamd_delete_selection',
+]);
+
+function pathPrecedesOrEquals(anchorPath: Array<number | string>, focusPath: Array<number | string>): boolean {
+    const length = Math.max(anchorPath.length, focusPath.length);
+    for (let index = 0; index < length; index++) {
+        const anchorPart = anchorPath[index];
+        const focusPart = focusPath[index];
+        if (anchorPart === focusPart)
+            continue;
+        if (anchorPart == null)
+            return true;
+        if (focusPart == null)
+            return false;
+        return String(anchorPart).localeCompare(String(focusPart), undefined, { numeric: true }) < 0;
+    }
+    return true;
+}
+
 /**
  * Inline format toolbar for text formatting
  * Provides quick access to text formatting options like bold, italic, etc.
@@ -70,7 +95,7 @@ export class InlineFormatToolbar extends BaseFloat {
     private _formats: Token[] = [];
 
     /** Color panel currently expanded from the toolbar. */
-    private _openPalette: ColorFormatType | null = null;
+    private _openPalette: 'combined' | null = null;
 
     /** Paragraph/heading menu expanded from the left-most style control. */
     private _textStyleOpen = false;
@@ -229,28 +254,35 @@ export class InlineFormatToolbar extends BaseFloat {
      */
     private _createIconItem(icon: FormatToolIcon, formats: Token[], i18n: typeof this.muya.i18n) {
         const textStyle = this._currentTextStyle();
-        const iconElement = h('span.text-icon', icon.type === 'text_style'
-            ? TEXT_STYLE_OPTIONS.find(option => option.type === textStyle)!.label
-            : icon.label);
+        const actionIcon = icon.type === 'text_style'
+            ? renderActionIcon(
+                    'text-style',
+                    TEXT_STYLE_OPTIONS.find(option => option.type === textStyle)!.label,
+                )
+            : icon.type === 'color_palette'
+                ? renderActionIcon('color')
+                : icon.type === 'annotamd_comment'
+                    ? renderActionIcon('comment')
+                    : icon.type === 'annotamd_delete_selection'
+                        ? renderActionIcon('delete')
+                        : renderActionIcon(formatActionIcon(icon.type)!, icon.label);
 
         const iconWrapper = h('div.icon-wrapper', icon.type === 'text_style'
-            ? [iconElement, h('span.mu-text-style-chevron', '⌄')]
-            : iconElement);
+            ? [actionIcon, h('span.mu-text-style-chevron', '⌄')]
+            : actionIcon);
 
-        const colorType: ColorFormatType | null = icon.type === 'text_color' || icon.type === 'background_color'
-            ? icon.type
-            : null;
-        const isActive = formats.some(f => colorType
-            ? isInlineStyleFormatToken(f, colorType)
-            : f.type === icon.type || (f.type === 'html_tag' && f.tag === icon.type));
-        const paletteOpen = colorType !== null && this._openPalette === colorType;
+        const isColorPalette = icon.type === 'color_palette';
+        const isActive = isColorPalette
+            ? formats.some(f => isInlineStyleFormatToken(f, 'text_color') || isInlineStyleFormatToken(f, 'background_color'))
+            : formats.some(f => f.type === icon.type || (f.type === 'html_tag' && f.tag === icon.type));
+        const paletteOpen = isColorPalette && this._openPalette === 'combined';
         const textStyleOpen = icon.type === 'text_style' && this._textStyleOpen;
         const tooltip = [i18n.t(icon.tooltip), icon.shortcut].filter(Boolean).join('  ');
 
         const itemSelector = `li.item.${icon.type}${'groupBreakBefore' in icon && icon.groupBreakBefore ? '.group-break-before' : ''}${isActive ? '.active' : ''}${paletteOpen ? '.palette-open' : ''}${textStyleOpen ? '.text-style-open' : ''}`;
         const children: VNode[] = [iconWrapper];
-        if (paletteOpen && colorType)
-            children.push(this._createColorPalette(colorType, i18n));
+        if (paletteOpen)
+            children.push(this._createCombinedColorPalette(i18n));
         if (textStyleOpen)
             children.push(this._createTextStyleMenu(i18n));
 
@@ -285,7 +317,7 @@ export class InlineFormatToolbar extends BaseFloat {
             `button.mu-text-style-option${option.type === current ? '.active' : ''}`,
             {
                 attrs: {
-                    type: 'button',
+                    'type': 'button',
                     'data-paragraph-type': option.type,
                     'aria-label': i18n.t(option.title),
                 },
@@ -337,8 +369,8 @@ export class InlineFormatToolbar extends BaseFloat {
                 selector,
                 {
                     attrs: {
-                        type: 'button',
-                        title: value || i18n.t('Default Color'),
+                        'type': 'button',
+                        'title': value || i18n.t('Default Color'),
                         'aria-label': value || i18n.t('Default Color'),
                     },
                     style: value ? { background: value } : {},
@@ -354,9 +386,16 @@ export class InlineFormatToolbar extends BaseFloat {
             );
         });
 
-        return h('div.mu-color-palette', [
+        return h('section.mu-color-palette-section', [
             h('div.mu-color-palette-title', i18n.t(type === 'text_color' ? 'Font Color' : 'Background Color')),
             h('div.mu-color-grid', swatches),
+        ]);
+    }
+
+    private _createCombinedColorPalette(i18n: typeof this.muya.i18n): VNode {
+        return h('div.mu-color-palette.combined', [
+            this._createColorPalette('text_color', i18n),
+            this._createColorPalette('background_color', i18n),
         ]);
     }
 
@@ -401,14 +440,43 @@ export class InlineFormatToolbar extends BaseFloat {
             return;
         }
 
-        if (item.type === 'text_color' || item.type === 'background_color') {
+        if (item.type === 'color_palette') {
             this._textStyleOpen = false;
-            this._openPalette = this._openPalette === item.type ? null : item.type;
+            this._openPalette = this._openPalette === 'combined' ? null : 'combined';
             this._render();
             return;
         }
 
-        if (item.type === 'annotamd_comment') {
+        if (ANNOTAMD_SELECTION_ACTIONS.has(item.type)) {
+            this._selectAnnotaMDAction(item.type as AnnotaMDSelectionAction);
+            return;
+        }
+
+        // Restore selection before formatting
+        selection.setSelection(
+            { offset: anchor.offset, block: anchorBlock, path: anchorPath },
+            { offset: focus.offset, block: focusBlock, path: focusPath },
+        );
+
+        this._block!.format(item.type);
+
+        // Hide toolbar for link and image, re-render for other formats
+        if (/link|image/.test(item.type)) {
+            this.hide();
+        }
+        else {
+            this._formats = this._block!.getFormatsInRange().formats;
+            this._render();
+        }
+    }
+
+    private _selectAnnotaMDAction(type: AnnotaMDSelectionAction): void {
+        const { selection } = this.muya.editor;
+        const { anchor, focus, anchorBlock, anchorPath, focusBlock, focusPath } = selection;
+        if (!anchor || !focus || !anchorBlock || !focusBlock)
+            return;
+
+        if (type === 'annotamd_comment') {
             const anchorKey = Array.isArray(anchorPath) ? anchorPath.join('/') : '';
             const focusKey = Array.isArray(focusPath) ? focusPath.join('/') : anchorKey;
             const anchorOffset = anchor.offset ?? 0;
@@ -440,21 +508,21 @@ export class InlineFormatToolbar extends BaseFloat {
             return;
         }
 
-        // Restore selection before formatting
+        const anchorPrecedesFocus = anchorBlock === focusBlock
+            ? anchor.offset <= focus.offset
+            : pathPrecedesOrEquals(anchorPath, focusPath);
         selection.setSelection(
             { offset: anchor.offset, block: anchorBlock, path: anchorPath },
             { offset: focus.offset, block: focusBlock, path: focusPath },
         );
-
-        this._block!.format(item.type);
-
-        // Hide toolbar for link and image, re-render for other formats
-        if (/link|image/.test(item.type)) {
-            this.hide();
-        }
-        else {
-            this._formats = this._block!.getFormatsInRange().formats;
-            this._render();
-        }
+        this.muya.editor.clipboard.cutHandler({
+            anchor: { offset: anchor.offset, block: anchorBlock, path: anchorPath },
+            focus: { offset: focus.offset, block: focusBlock, path: focusPath },
+            isSelectionInSameBlock: anchorBlock === focusBlock,
+            direction: anchorPrecedesFocus
+                ? SelectionDirection.FORWARD
+                : SelectionDirection.BACKWARD,
+        });
+        this.hide();
     }
 }

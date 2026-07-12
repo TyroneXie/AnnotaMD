@@ -111,6 +111,7 @@ export interface IpcSendChannels {
   'mt::ask-for-user-preference': []
   'mt::check-for-update': []
   'mt::clipboard::write-text': [text: string]
+  'mt::clipboard::write-image': [dataUrl: string]
   'mt::close-window': []
   'mt::close-window-confirm': [unsavedFiles: UnsavedFile[]]
   'mt::cmd-close-window': []

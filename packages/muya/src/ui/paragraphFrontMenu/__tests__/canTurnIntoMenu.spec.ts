@@ -84,6 +84,14 @@ describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselve
         const items = canTurnIntoMenu(fakeBlock('paragraph', 'hello world'));
         expect(items.some((i: { label: string }) => i.label === 'math-block')).toBe(false);
     });
+
+    it.each(['order-list', 'bullet-list', 'task-list'])(
+        '%s offers an explicit return to paragraph',
+        (blockName) => {
+            const items = canTurnIntoMenu(fakeBlock(blockName));
+            expect(items.some((item: { label: string }) => item.label === 'paragraph')).toBe(true);
+        },
+    );
 });
 
 // Regression for marktext commit f00da152 (#812 — "insert table into `table`,

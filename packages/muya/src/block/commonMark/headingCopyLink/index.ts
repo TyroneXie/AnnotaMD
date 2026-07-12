@@ -5,6 +5,7 @@ import { stableSlug } from '../../../state/getTOC';
 import { isKeyboardEvent } from '../../../utils';
 import logger from '../../../utils/logger';
 import TreeNode from '../../base/treeNode';
+import '../../../ui/tooltip/index.css';
 
 const debug = logger('headingCopyLink:');
 
@@ -38,7 +39,7 @@ class HeadingCopyLink extends TreeNode {
         super(muya);
         const label = muya.i18n.t('Copy anchor link to this heading');
         this.tagName = 'i';
-        this.classList = ['mu-icon', CLASS_NAMES.MU_COPY_HEADER_LINK];
+        this.classList = ['mu-icon', CLASS_NAMES.MU_COPY_HEADER_LINK, 'mu-icon-tooltip'];
         // Accessible button semantics: discoverable + focusable + operable by
         // assistive tech and keyboard (the keydown handler below activates it).
         this.attributes = {
@@ -46,7 +47,7 @@ class HeadingCopyLink extends TreeNode {
             'role': 'button',
             'tabindex': '0',
             'aria-label': label,
-            'title': label,
+            'data-tooltip': label,
         };
         this.createDomNode();
 

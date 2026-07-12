@@ -338,6 +338,11 @@
     }
   },
   "recent": {
+    "startTitle": "AnnotaMD を始める",
+    "startDescription": "Markdown ファイルを開いて閲覧、編集、コメントできます。",
+    "openFile": "ファイルを開く",
+    "newBlankFile": "空白の文書を新規作成",
+    "dragHint": "Markdown ファイルをここにドラッグすることもできます",
     "noTabsOpen": "開いているタブがありません。",
     "newFile": "新しいファイル"
   },

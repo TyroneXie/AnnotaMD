@@ -338,6 +338,11 @@
     }
   },
   "recent": {
+    "startTitle": "Comenzar con AnnotaMD",
+    "startDescription": "Abre un archivo Markdown para leerlo, editarlo y comentarlo.",
+    "openFile": "Abrir archivo",
+    "newBlankFile": "Nuevo documento en blanco",
+    "dragHint": "También puedes arrastrar un archivo Markdown aquí",
     "noTabsOpen": "No tienes pestañas abiertas.",
     "newFile": "Nuevo Archivo"
   },

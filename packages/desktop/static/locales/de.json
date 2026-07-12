@@ -338,6 +338,11 @@
     }
   },
   "recent": {
+    "startTitle": "AnnotaMD verwenden",
+    "startDescription": "Öffne eine Markdown-Datei zum Lesen, Bearbeiten und Kommentieren.",
+    "openFile": "Datei öffnen",
+    "newBlankFile": "Leeres Dokument erstellen",
+    "dragHint": "Oder ziehe eine Markdown-Datei hierher",
     "noTabsOpen": "Sie haben keine Tabs geöffnet.",
     "newFile": "Neue Datei"
   },

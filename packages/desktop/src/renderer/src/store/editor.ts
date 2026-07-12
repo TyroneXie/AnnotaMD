@@ -1350,7 +1350,10 @@ export const useEditorStore = defineStore('editor', {
     SHOW_TAB_VIEW(always: boolean): void {
       const { tabs } = this
       const layoutStore = useLayoutStore()
-      if (always || tabs.length === 1) {
+      // NEW_UNTITLED_TAB / NEW_TAB_WITH_CONTENT call this before inserting the
+      // incoming tab. Zero therefore means "the first file is opening" and one
+      // means "a second tab is opening"; both cases need the filename strip.
+      if (always || tabs.length <= 1) {
         layoutStore.SET_LAYOUT({ showTabBar: true })
         layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
       }

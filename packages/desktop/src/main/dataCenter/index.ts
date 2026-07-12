@@ -8,6 +8,7 @@ import log from 'electron-log'
 import { ensureDirSync } from 'common/filesystem'
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
 import { TypedEmitter } from '@shared/types/typedEmitter'
+import { migrateLegacyAssetPath } from '../app/userDataBranding'
 
 const DATA_CENTER_NAME = 'dataCenter'
 
@@ -60,6 +61,20 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       this.store.set(defaultData)
       ensureDirSync(this.store.get('screenshotFolderPath') as string)
     } else {
+      const imageFolderPath = migrateLegacyAssetPath(
+        this.store.get('imageFolderPath'),
+        this.userDataPath,
+        'images'
+      )
+      const screenshotFolderPath = migrateLegacyAssetPath(
+        this.store.get('screenshotFolderPath'),
+        this.userDataPath,
+        'screenshot'
+      )
+      this.store.set({ imageFolderPath, screenshotFolderPath })
+      ensureDirSync(imageFolderPath)
+      ensureDirSync(screenshotFolderPath)
+
       // Migrate legacy uploader values that no longer exist
       const stored = this.store.get('currentUploader') as string | undefined
       if (stored === 'none' || stored === 'github') {

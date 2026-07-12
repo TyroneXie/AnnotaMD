@@ -31,14 +31,64 @@ function bootMuya(markdown: string): Muya {
 }
 
 describe('inline format toolbar text-style menu', () => {
+    it('deletes only the selected text from the inline toolbar', async () => {
+        const muya = bootMuya('keep remove keep\n');
+        const content = muya.editor.scrollPage!.firstContentInDescendant()!;
+        content.setCursor(5, 11, true);
+        const toolbar = new InlineFormatToolbar(muya);
+        const internals = toolbar as unknown as {
+            _block: typeof content;
+            _render: () => void;
+        };
+        internals._block = content;
+        internals._render();
+        expect(muya.editor.selection.anchor?.offset).toBe(5);
+        expect(muya.editor.selection.focus?.offset).toBe(11);
+        const cutHandler = vi.spyOn(muya.editor.clipboard, 'cutHandler');
+
+        toolbar.container!
+            .querySelector<HTMLElement>('li.item.annotamd_delete_selection')!
+            .click();
+
+        expect(cutHandler).toHaveBeenCalledOnce();
+        expect(cutHandler.mock.calls[0][0]?.anchor.offset).toBe(5);
+        expect(cutHandler.mock.calls[0][0]?.focus.offset).toBe(11);
+        expect(cutHandler.mock.calls[0][0]?.isSelectionInSameBlock).toBe(true);
+        expect(content.text).toBe('keep  keep');
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe('keep  keep\n'));
+    });
+
+    it('deletes a backward selection spanning two paragraphs', async () => {
+        const muya = bootMuya('first tail\n\nsecond end\n');
+        const first = muya.editor.scrollPage!.firstContentInDescendant()!;
+        const second = muya.editor.scrollPage!.lastContentInDescendant()!;
+        muya.editor.selection.setSelection(
+            { offset: 6, block: second, path: second.path },
+            { offset: 5, block: first, path: first.path },
+        );
+        const toolbar = new InlineFormatToolbar(muya);
+        const internals = toolbar as unknown as {
+            _block: typeof first;
+            _render: () => void;
+        };
+        internals._block = first;
+        internals._render();
+
+        toolbar.container!
+            .querySelector<HTMLElement>('li.item.annotamd_delete_selection')!
+            .click();
+
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe('first end\n'));
+    });
+
     it('offers paragraph and H1-H6, then converts the selected block', async () => {
         const muya = bootMuya('hello world\n');
         const content = muya.editor.scrollPage!.firstContentInDescendant()!;
         content.setCursor(0, 5, true);
         const toolbar = new InlineFormatToolbar(muya);
         const internals = toolbar as unknown as {
-            _block: typeof content
-            _render: () => void
+            _block: typeof content;
+            _render: () => void;
         };
         internals._block = content;
         internals._render();
@@ -65,5 +115,38 @@ describe('inline format toolbar text-style menu', () => {
             expect(state.name).toBe('atx-heading');
             expect(state.meta?.level).toBe(2);
         });
+    });
+
+    it('opens one palette containing both text and background colors', () => {
+        const muya = bootMuya('hello world\n');
+        const content = muya.editor.scrollPage!.firstContentInDescendant()!;
+        content.setCursor(0, 5, true);
+        const toolbar = new InlineFormatToolbar(muya);
+        const internals = toolbar as unknown as {
+            _block: typeof content;
+            _render: () => void;
+        };
+        internals._block = content;
+        internals._render();
+
+        for (const icon of [
+            'strong',
+            'strikethrough',
+            'italic',
+            'underline',
+            'inline-code',
+            'color',
+            'comment',
+            'delete',
+        ]) {
+            expect(toolbar.container!.querySelector(`.mu-action-icon-${icon}`), icon).not.toBeNull();
+        }
+
+        toolbar.container!.querySelector<HTMLElement>('li.item.color_palette')!.click();
+
+        expect(toolbar.container!.querySelectorAll('.mu-color-palette')).toHaveLength(1);
+        expect(toolbar.container!.querySelectorAll('.mu-color-palette-section')).toHaveLength(2);
+        expect(toolbar.container!.textContent).toContain('Font Color');
+        expect(toolbar.container!.textContent).toContain('Background Color');
     });
 });

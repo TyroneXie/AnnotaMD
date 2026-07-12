@@ -118,6 +118,48 @@ function createPaletteIcon() {
     return svg;
 }
 
+function createCopyIcon() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('mu-diagram-control-svg');
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.setAttribute('aria-hidden', 'true');
+    const back = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    back.setAttribute('x', '3');
+    back.setAttribute('y', '3');
+    back.setAttribute('width', '10');
+    back.setAttribute('height', '10');
+    back.setAttribute('rx', '2');
+    const front = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    front.setAttribute('x', '7');
+    front.setAttribute('y', '7');
+    front.setAttribute('width', '10');
+    front.setAttribute('height', '10');
+    front.setAttribute('rx', '2');
+    [back, front].forEach((rect) => {
+        rect.setAttribute('fill', 'white');
+        rect.setAttribute('stroke', 'currentColor');
+        rect.setAttribute('stroke-width', '1.5');
+        svg.appendChild(rect);
+    });
+    return svg;
+}
+
+function createDownloadIcon() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('mu-diagram-control-svg');
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M10 3v9m-3-3 3 3 3-3M4 16h12');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.6');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+    return svg;
+}
+
 export function diagramPreviewDataUrl(preview: HTMLElement, background: string): string | null {
     const image = preview.querySelector<HTMLImageElement>('img');
     if (image?.currentSrc || image?.src)
@@ -259,7 +301,19 @@ class DiagramBlock extends Parent {
         colorMenu.appendChild(colorGrid);
         colorControl.append(colorToggle, colorMenu);
 
-        toolbar.append(viewControl, fullscreen, colorControl);
+        const copy = createButton('mu-diagram-copy', i18n.t('Copy Diagram'), [
+            createCopyIcon(),
+        ]);
+        copy.dataset.tooltip = i18n.t('Copy Diagram');
+        attachBodyTooltip(copy);
+
+        const download = createButton('mu-diagram-download', i18n.t('Download Diagram'), [
+            createDownloadIcon(),
+        ]);
+        download.dataset.tooltip = i18n.t('Download Diagram');
+        attachBodyTooltip(download);
+
+        toolbar.append(viewControl, fullscreen, colorControl, copy, download);
         this.domNode!.appendChild(toolbar);
         this.domNode!.dataset.diagramBackground = '#ffffff';
         this.domNode!.style.setProperty('--mu-diagram-background', '#ffffff');
@@ -335,6 +389,46 @@ class DiagramBlock extends Parent {
                 if (data)
                     eventCenter.emit('preview-image', { data, background });
                 closeMenus();
+            },
+        );
+
+        eventCenter.attachDOMEvent(
+            root.querySelector<HTMLElement>('.mu-diagram-copy')!,
+            'click',
+            () => {
+                const preview = root.querySelector<HTMLElement>('.mu-diagram-preview');
+                if (!preview)
+                    return;
+                const data = diagramPreviewDataUrl(
+                    preview,
+                    root.dataset.diagramBackground ?? '#ffffff',
+                );
+                if (!data)
+                    return;
+                const result = this.muya.options.clipboardWriteImage?.(data);
+                if (result instanceof Promise)
+                    result.catch(() => {});
+            },
+        );
+
+        eventCenter.attachDOMEvent(
+            root.querySelector<HTMLElement>('.mu-diagram-download')!,
+            'click',
+            () => {
+                const preview = root.querySelector<HTMLElement>('.mu-diagram-preview');
+                if (!preview)
+                    return;
+                const data = diagramPreviewDataUrl(
+                    preview,
+                    root.dataset.diagramBackground ?? '#ffffff',
+                );
+                if (!data)
+                    return;
+                const extension = data.startsWith('data:image/svg+xml') ? 'svg' : 'png';
+                const anchor = document.createElement('a');
+                anchor.href = data;
+                anchor.download = `${this.meta.type || 'diagram'}-diagram.${extension}`;
+                anchor.click();
             },
         );
 

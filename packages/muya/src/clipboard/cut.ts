@@ -3,6 +3,7 @@ import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
 import type Table from '../block/gfm/table';
 import type TableBodyCell from '../block/gfm/table/cell';
+import type { ISelection } from '../selection/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import Format from '../block/base/format';
@@ -342,7 +343,9 @@ function cutTableStructure(clipboard: Clipboard): boolean {
     return removeEmptyTableStructure(clipboard);
 }
 
-export function cutSelection(clipboard: Clipboard): void {
+type CutSelection = Pick<ISelection, 'anchor' | 'focus' | 'isSelectionInSameBlock' | 'direction'>;
+
+export function cutSelection(clipboard: Clipboard, selectionOverride?: CutSelection): void {
     // Cut a selected image: the copy half wrote its raw markdown; remove it here.
     const selectedImage = clipboard.selection.image;
     if (selectedImage) {
@@ -360,7 +363,7 @@ export function cutSelection(clipboard: Clipboard): void {
         return;
     }
 
-    const selection = clipboard.selection.getSelection();
+    const selection = selectionOverride ?? clipboard.selection.getSelection();
     if (selection == null)
         return;
 

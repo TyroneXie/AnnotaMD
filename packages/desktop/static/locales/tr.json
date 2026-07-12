@@ -338,6 +338,11 @@
     }
   },
   "recent": {
+    "startTitle": "AnnotaMD'yi Kullanmaya Başla",
+    "startDescription": "Okumak, düzenlemek ve yorum eklemek için bir Markdown dosyası açın.",
+    "openFile": "Dosya Aç",
+    "newBlankFile": "Yeni Boş Belge",
+    "dragHint": "Markdown dosyasını buraya da sürükleyebilirsiniz",
     "noTabsOpen": "Açık sekmeniz yok.",
     "newFile": "Yeni Dosya"
   },

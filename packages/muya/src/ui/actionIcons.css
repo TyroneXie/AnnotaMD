@@ -1,0 +1,66 @@
+.mu-action-icon {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+
+    color: currentcolor;
+    font-weight: 500;
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1;
+}
+
+.mu-action-icon svg {
+    width: 16px;
+    height: 16px;
+
+    fill: none;
+    stroke: currentcolor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.6;
+}
+
+.mu-action-icon-strong {
+    font-weight: 800;
+}
+
+.mu-action-icon-strikethrough {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+}
+
+.mu-action-icon-italic {
+    font-style: italic;
+}
+
+.mu-action-icon-underline {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.mu-action-icon-inline-code {
+    font-weight: 650;
+    font-size: 11px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    letter-spacing: -1.8px;
+
+    transform: scaleX(0.86);
+}
+
+.mu-action-icon-color {
+    color: #1f2329;
+
+    background: #fff2b8;
+    border-radius: 4px;
+}
+
+.mu-action-icon-delete svg {
+    stroke-width: 2.05;
+}

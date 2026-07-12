@@ -7,6 +7,7 @@ import { isMouseEvent, throttle } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
 import BaseFloat from '../baseFloat';
 import icons from './config';
+import '../tooltip/index.css';
 
 import './index.css';
 
@@ -111,7 +112,7 @@ export class TableColumnToolbar extends BaseFloat {
             );
             const iconWrapper = h(iconWrapperSelector, icon);
 
-            let itemSelector = `li.item.${i.type}`;
+            let itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
             if (block?.align === i.type)
                 itemSelector += '.active';
 
@@ -122,7 +123,8 @@ export class TableColumnToolbar extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
-                        title: `${i18n.t(i.tooltip)}`,
+                        'aria-label': i18n.t(i.tooltip),
+                        'data-tooltip': i18n.t(i.tooltip),
                     },
                     on: {
                         click: (event) => {

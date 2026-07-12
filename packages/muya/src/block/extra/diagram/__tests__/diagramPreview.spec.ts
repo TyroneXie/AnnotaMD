@@ -117,7 +117,7 @@ describe('diagramPreview — invalid / error state', () => {
 });
 
 describe('diagramPreview — clickHandler routing', () => {
-    it('preventDefault + stopPropagation + setCursor(0,0) on the parent first content', () => {
+    it('consumes chart clicks without moving the caret into the hidden source editor', () => {
         const { preview } = makePreview('');
         const setCursor = vi.fn();
         const cursorBlock = { setCursor };
@@ -137,8 +137,8 @@ describe('diagramPreview — clickHandler routing', () => {
 
         expect(event.preventDefault).toHaveBeenCalledTimes(1);
         expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-        expect(parent.firstContentInDescendant).toHaveBeenCalledTimes(1);
-        expect(setCursor).toHaveBeenCalledWith(0, 0);
+        expect(parent.firstContentInDescendant).not.toHaveBeenCalled();
+        expect(setCursor).not.toHaveBeenCalled();
     });
 
     it('still preventDefault/stopPropagation but does not throw when parent is null', () => {
@@ -155,7 +155,7 @@ describe('diagramPreview — clickHandler routing', () => {
         expect(event.stopPropagation).toHaveBeenCalledTimes(1);
     });
 
-    it('does not throw when parent has no content (firstContentInDescendant returns null)', () => {
+    it('does not inspect parent content when the chart is clicked', () => {
         const { preview } = makePreview('');
         const parent = {
             firstContentInDescendant: vi.fn(() => null),
@@ -168,7 +168,7 @@ describe('diagramPreview — clickHandler routing', () => {
         } as unknown as Event;
 
         expect(() => preview.clickHandler(event)).not.toThrow();
-        expect(parent.firstContentInDescendant).toHaveBeenCalledTimes(1);
+        expect(parent.firstContentInDescendant).not.toHaveBeenCalled();
     });
 });
 

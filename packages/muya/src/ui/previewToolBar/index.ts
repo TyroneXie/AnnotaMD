@@ -6,8 +6,11 @@ import { ScrollPage } from '../../block/scrollPage';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import ICONS from './config';
+import '../actionIcons.css';
+import '../tooltip/index.css';
 
 import './index.css';
 
@@ -71,30 +74,22 @@ export class PreviewToolBar extends BaseFloat {
 
     render() {
         const { _iconContainer: iconContainer, _oldVNode: oldVNode } = this;
+        const { i18n } = this.muya;
         const children = ICONS.map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
-            const icon = h(
-                'i.icon',
-                h(
-                    'i.icon-inner',
-                    {
-                        style: {
-                            'background': `url(${i.icon}) no-repeat`,
-                            'background-size': '100%',
-                        },
-                    },
-                    '',
-                ),
+            const iconWrapper = h(
+                iconWrapperSelector,
+                renderActionIcon(i.type === 'delete' ? 'delete' : 'edit'),
             );
-            const iconWrapper = h(iconWrapperSelector, icon);
 
-            const itemSelector = `li.item.${i.type}`;
+            const itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
 
             return h(
                 itemSelector,
                 {
                     attrs: {
-                        title: `${i.tooltip}`,
+                        'aria-label': i18n.t(i.tooltip),
+                        'data-tooltip': i18n.t(i.tooltip),
                     },
                     on: {
                         click: (event) => {

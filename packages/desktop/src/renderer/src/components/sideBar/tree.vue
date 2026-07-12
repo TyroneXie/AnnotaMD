@@ -498,16 +498,17 @@ onMounted(() => {
 }
 .open-project .el-button.is-text.is-has-bg,
 .empty-project .el-button.is-text.is-has-bg {
-  background-color: var(--buttonPrimaryBgColor);
-  color: var(--buttonPrimaryFontColor);
-  border-color: transparent;
+  color: var(--editorColor);
+  background-color: transparent;
+  border-color: var(--borderColor);
 }
 .open-project .el-button.is-text.is-has-bg:hover,
 .open-project .el-button.is-text.is-has-bg:focus,
 .empty-project .el-button.is-text.is-has-bg:hover,
 .empty-project .el-button.is-text.is-has-bg:focus {
-  background-color: var(--buttonPrimaryBgColorHover);
-  color: var(--buttonPrimaryFontColorHover);
+  color: var(--buttonPrimaryFontColor);
+  background-color: var(--buttonPrimaryBgColor);
+  border-color: transparent;
 }
 .new-input {
   outline: none;

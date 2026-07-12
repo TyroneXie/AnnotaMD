@@ -4,11 +4,27 @@ import type Format from '../../block/base/format';
 import type { Muya } from '../../index';
 
 import type { ImageToken } from '../../inlineRenderer/types';
+import type { ActionIconName } from '../actionIcons';
 import type { Icon } from './config';
 import { h, patch } from '../../utils/snabbdom';
+import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import icons from './config';
+import '../actionIcons.css';
+import '../tooltip/index.css';
 import './index.css';
+
+function imageActionIcon(type: Icon['type']): ActionIconName {
+    const iconsByType: Record<Icon['type'], ActionIconName> = {
+        edit: 'edit',
+        inline: 'inline-image',
+        left: 'align-left',
+        center: 'align-center',
+        right: 'align-right',
+        delete: 'delete',
+    };
+    return iconsByType[type];
+}
 
 const defaultOptions = {
     placement: 'top' as const,
@@ -71,21 +87,8 @@ export class ImageToolBar extends BaseFloat {
         const dataAlign = attrs['data-align'];
         const children = icons.map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
-            const icon = h(
-                'i.icon',
-                h(
-                    'i.icon-inner',
-                    {
-                        style: {
-                            'background': `url(${i.icon}) no-repeat`,
-                            'background-size': '100%',
-                        },
-                    },
-                    '',
-                ),
-            );
-            const iconWrapper = h(iconWrapperSelector, icon);
-            let itemSelector = `li.item.${i.type}`;
+            const iconWrapper = h(iconWrapperSelector, renderActionIcon(imageActionIcon(i.type)));
+            let itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
 
             if (i.type === dataAlign || (!dataAlign && i.type === 'inline'))
                 itemSelector += '.active';
@@ -93,11 +96,9 @@ export class ImageToolBar extends BaseFloat {
             return h(
                 itemSelector,
                 {
-                    dataset: {
-                        tip: i.tooltip,
-                    },
                     attrs: {
-                        title: i18n.t(i.tooltip),
+                        'aria-label': i18n.t(i.tooltip),
+                        'data-tooltip': i18n.t(i.tooltip),
                     },
                     on: {
                         click: (event) => {

@@ -341,6 +341,11 @@
     }
   },
   "recent": {
+    "startTitle": "开始使用 AnnotaMD",
+    "startDescription": "打开 Markdown 文件进行阅读、编辑和批注",
+    "openFile": "打开文件",
+    "newBlankFile": "新建空白文档",
+    "dragHint": "也可以将 Markdown 文件拖到此处",
     "noTabsOpen": "您没有打开的标签页。",
     "newFile": "新建文件"
   },
