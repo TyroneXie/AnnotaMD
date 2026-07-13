@@ -34,6 +34,7 @@ export const es = {
         'HTML Block': 'Bloque HTML',
         'Code Block': 'Bloque de código',
         'Quote Block': 'Cita',
+        'Highlight Block': 'Bloque destacado',
         'Order List': 'Lista ordenada',
         'Bullet List': 'Lista con viñetas',
         'To-do List': 'Lista de tareas',

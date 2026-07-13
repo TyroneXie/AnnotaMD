@@ -27,6 +27,7 @@ import DiagramBlock from './extra/diagram';
 import DiagramContainer from './extra/diagram/diagramContainer';
 import DiagramPreview from './extra/diagram/diagramPreview';
 import Footnote from './extra/footnote';
+import HighlightBlock from './extra/highlightBlock';
 import MathBlock from './extra/math';
 import MathContainer from './extra/math/mathContainer';
 import MathPreview from './extra/math/mathPreview';
@@ -85,4 +86,5 @@ export function registerBlocks() {
     ScrollPage.register(DiagramPreview);
     // Footnote
     ScrollPage.register(Footnote);
+    ScrollPage.register(HighlightBlock);
 }

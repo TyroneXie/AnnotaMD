@@ -7,6 +7,7 @@ import type {
     IDiagramState,
     IFootnoteBlockState,
     IFrontmatterState,
+    IHighlightBlockState,
     IHtmlBlockState,
     IListItemState,
     IMathBlockState,
@@ -184,6 +185,11 @@ export default class ExportMarkdown {
             case 'block-quote':
                 this._insertLineBreak(result, indent);
                 result.push(this._serializeBlockquote(state, indent));
+                break;
+
+            case 'highlight-block':
+                this._insertLineBreak(result, indent);
+                result.push(this._serializeHighlightBlock(state, indent));
                 break;
 
             case 'table':
@@ -437,6 +443,12 @@ export default class ExportMarkdown {
         const newIndent = `${indent}> `;
 
         return this._convertStatesToMarkdown(children, newIndent);
+    }
+
+    private _serializeHighlightBlock(state: IHighlightBlockState, indent: string) {
+        const marker = state.meta.collapsed ? '[!HIGHLIGHT collapsed]' : '[!HIGHLIGHT]';
+        const body = this._convertStatesToMarkdown(state.children, `${indent}> `);
+        return `${indent}> ${marker}\n${body}`;
     }
 
     private _serializeFootnote(state: IFootnoteBlockState, indent: string) {

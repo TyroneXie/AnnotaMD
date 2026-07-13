@@ -43,6 +43,7 @@ const PARAGRAPH_TYPES: ReadonlySet<string> = new Set([
 const CONTAINER_TYPE_BY_NAME: Readonly<Record<string, string>> = {
     'paragraph': 'p',
     'block-quote': 'blockquote',
+    'highlight-block': 'blockquote',
     'bullet-list': 'ul',
     'task-list': 'ul',
     'order-list': 'ol',

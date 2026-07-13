@@ -34,6 +34,7 @@ export const ko = {
         'HTML Block': 'HTML 블록',
         'Code Block': '코드 블록',
         'Quote Block': '인용',
+        'Highlight Block': '강조 블록',
         'Order List': '번호 목록',
         'Bullet List': '글머리 기호 목록',
         'To-do List': '할 일 목록',

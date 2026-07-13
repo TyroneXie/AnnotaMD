@@ -1,8 +1,11 @@
 // @vitest-environment happy-dom
 
-import type { Muya } from '../../../index';
+import type Parent from '../../../block/base/parent';
+import type { Muya as MuyaType } from '../../../index';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ParagraphFrontButton, frontButtonMainAxis } from '../index';
+import { canTurnInto } from '../../../block/blockTransforms';
+import { Muya } from '../../../muya';
+import { frontButtonMainAxis, frontButtonTarget, ParagraphFrontButton } from '../index';
 
 const buttons: ParagraphFrontButton[] = [];
 
@@ -26,6 +29,13 @@ describe('paragraph front button positioning', () => {
         expect(frontButtonMainAxis('atx-heading', 0, false, true)).toBe(26);
     });
 
+    it.each(['order-list', 'bullet-list', 'task-list'])(
+        'keeps the front button outside the %s item marker gutter',
+        (blockName) => {
+            expect(frontButtonMainAxis(blockName, 0, false, false, true)).toBe(30);
+        },
+    );
+
     it('replaces a stale front button owned by the same editor root', () => {
         const root = document.createElement('div');
         document.body.appendChild(root);
@@ -36,11 +46,36 @@ describe('paragraph front button positioning', () => {
                 detachDOMEvent: () => {},
                 emit: () => {},
             },
-        } as unknown as Muya;
+        } as unknown as MuyaType;
 
         buttons.push(new ParagraphFrontButton(muya));
         buttons.push(new ParagraphFrontButton(muya));
 
         expect(document.querySelectorAll('.mu-front-button-wrapper')).toHaveLength(1);
+    });
+
+    it('targets the hovered list item instead of the whole list container', () => {
+        window.MUYA_VERSION = 'test';
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const muya = new Muya(host, { markdown: '- first\n- second\n' });
+        muya.init();
+        const list = muya.editor.scrollPage!.firstChild as Parent;
+        const secondItem = list.find(1) as Parent;
+        expect(frontButtonTarget([secondItem.domNode!, list.domNode!])).toBe(secondItem);
+    });
+
+    it('targets an inner text block inside a highlight container and forbids nested highlights', () => {
+        window.MUYA_VERSION = 'test';
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const muya = new Muya(host, { markdown: '> [!HIGHLIGHT]\n> Inside\n' });
+        muya.init();
+        const highlight = muya.editor.scrollPage!.firstChild as Parent;
+        const paragraph = highlight.firstChild as Parent;
+
+        expect(frontButtonTarget([paragraph.domNode!, highlight.domNode!])).toBe(paragraph);
+        expect(canTurnInto(paragraph, 'highlight-block')).toBe(false);
+        expect(canTurnInto(paragraph, 'atx-heading 2')).toBe(true);
     });
 });

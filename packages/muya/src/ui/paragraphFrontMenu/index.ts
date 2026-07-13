@@ -11,7 +11,9 @@ import type {
 } from '../../state/types';
 import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import type { ActionIconName } from '../actionIcons';
-import { replaceBlockByLabel } from '../../block/blockTransforms';
+import { replaceBlockByLabel, replaceTextContainerByLabel } from '../../block/blockTransforms';
+import { convertListItem, isListItemBlock, mergeAdjacentCompatibleLists } from '../../block/listItemTransforms';
+import { collectSelectedTextTargets, convertSelectedTextTargets } from '../../block/multiBlockTransforms';
 import { ScrollPage } from '../../block/scrollPage';
 import emptyStates from '../../config/emptyStates';
 import { tokenizer, tokensToPlainText } from '../../inlineRenderer/lexer';
@@ -56,6 +58,8 @@ function renderQuoteTurnIntoIcon() {
 function renderIcon({ label, icon }: { label: string; icon: string }) {
     if (label === 'block-quote')
         return renderQuoteTurnIntoIcon();
+    if (label === 'highlight-block')
+        return h('i.icon.mu-highlight-turn-into-icon', '✦');
 
     return h(
         'i.icon',
@@ -133,6 +137,7 @@ export class ParagraphFrontMenu extends BaseFloat {
     private _headingObserver: MutationObserver | null = null;
     private _typeTooltip: HTMLDivElement | null = null;
     private _conversionLocked = false;
+    private _convertedBlock: Parent | null = null;
 
     constructor(muya: Muya, options = {}) {
         const name = 'mu-front-menu';
@@ -214,15 +219,16 @@ export class ParagraphFrontMenu extends BaseFloat {
             );
 
             let itemSelector = `div.turn-into-item.${label}`;
-            if (block?.blockName === 'atx-heading') {
+            const activeBlockName = isListItemBlock(block!) ? block?.parent?.blockName : block?.blockName;
+            if (activeBlockName === 'atx-heading') {
                 if (
-                    label.startsWith(block.blockName)
+                    label.startsWith(activeBlockName)
                     && label.endsWith(String((block as AtxHeading).meta.level))
                 ) {
                     itemSelector += '.active';
                 }
             }
-            else if (label === block?.blockName) {
+            else if (label === activeBlockName) {
                 itemSelector += '.active';
             }
 
@@ -362,13 +368,20 @@ export class ParagraphFrontMenu extends BaseFloat {
         const oldState = block.getState();
         const parent = block.parent;
         const previous = block.prev as Parent | null;
+        this._convertedBlock = null;
 
         if (isMetaAction)
             this._block = null;
 
+        const selectedTargets = isMetaAction ? [] : collectSelectedTextTargets(this.muya);
+        const isBatchConversion = selectedTargets.length > 1 && selectedTargets.includes(block);
         const cursorBlock = isMetaAction
             ? this._applyMetaAction(label, block, oldState)
-            : this._turnIntoBlock(label, block, oldState);
+            : isBatchConversion
+                ? null
+                : this._turnIntoBlock(label, block, oldState);
+        if (isBatchConversion)
+            this._convertedBlock = convertSelectedTextTargets(this.muya, selectedTargets, label);
 
         if (cursorBlock) {
             // mock cursorBlock focus
@@ -383,9 +396,9 @@ export class ParagraphFrontMenu extends BaseFloat {
         // Keep the type chooser open, but retarget it to the replacement block
         // immediately. List/quote unwrapping can create several paragraphs; in
         // that case the first replacement occupies the original block's slot.
-        const replacement = block.parent
+        const replacement = this._convertedBlock ?? (block.parent
             ? block
-            : (previous?.next as Parent | null) ?? (parent.firstChild as Parent | null);
+            : (previous?.next as Parent | null) ?? (parent.firstChild as Parent | null));
         if (!replacement?.parent) {
             this._block = null;
             this.hide();
@@ -776,7 +789,7 @@ export class ParagraphFrontMenu extends BaseFloat {
 
         return this._markdown(state)
             .split('\n')
-            .filter(line => !/^\s*(?:```|~~~)/.test(line))
+            .filter(line => !/^\s*(?:(?:>\s*)?\[!HIGHLIGHT(?:\s+collapsed)?\]|```|~~~)/.test(line))
             .map(line => line
                 .replace(/^\s{0,3}#{1,6}\s+/, '')
                 .replace(/^\s*(?:>\s*)+/, '')
@@ -809,11 +822,16 @@ export class ParagraphFrontMenu extends BaseFloat {
         switch (block.blockName) {
             case 'paragraph':
                 // fall through
-            case 'atx-heading': {
+            case 'atx-heading':
+                // fall through
+            case 'setext-heading': {
                 if (block.blockName === 'paragraph' && block.blockName === label)
                     return null;
 
-                const headingLevel = isAtxHeadingState(oldState) ? oldState.meta.level : null;
+                const headingLevel
+                    = isAtxHeadingState(oldState) || oldState.name === 'setext-heading'
+                        ? oldState.meta.level
+                        : null;
                 if (
                     block.blockName === 'atx-heading'
                     && headingLevel !== null
@@ -823,31 +841,56 @@ export class ParagraphFrontMenu extends BaseFloat {
                 }
 
                 const rawText = 'text' in oldState ? oldState.text : '';
-                const text
-                    = block.blockName === 'paragraph'
-                        ? rawText
-                        : rawText.replace(/^ {0,3}#{1,6}(?:\s+|$)/, '');
-                replaceBlockByLabel({
+                const text = block.blockName === 'atx-heading'
+                    ? rawText.replace(/^ {0,3}#{1,6}(?:\s+|$)/, '')
+                    : rawText;
+                const replacement = replaceBlockByLabel({
                     block,
                     label,
                     muya,
                     text,
                 });
 
-                return null;
+                if (replacement) {
+                    if (/^(?:order|bullet|task)-list$/.test(replacement.blockName))
+                        this._convertedBlock = mergeAdjacentCompatibleLists(replacement).item;
+                    else this._convertedBlock = replacement;
+                }
+
+                return this._convertedBlock?.firstContentInDescendant() ?? null;
             }
 
             case 'block-quote':
                 if (label === 'paragraph')
                     muya.resetToParagraph(block);
-                return null;
+                else
+                    this._convertedBlock = replaceTextContainerByLabel({ block, muya, label });
+                return this._convertedBlock?.firstContentInDescendant() ?? null;
+
+            case 'highlight-block':
+                if (label === 'highlight-block')
+                    return null;
+                this._convertedBlock = replaceTextContainerByLabel({ block, muya, label });
+                return this._convertedBlock?.firstContentInDescendant() ?? null;
 
             case 'order-list':
                 // fall through
             case 'bullet-list':
                 // fall through
             case 'task-list':
+                if (label === 'block-quote' || label === 'highlight-block' || label.startsWith('atx-heading ')) {
+                    this._convertedBlock = replaceTextContainerByLabel({ block, muya, label });
+                    return this._convertedBlock?.firstContentInDescendant() ?? null;
+                }
                 return this._turnIntoList(label, block, oldState);
+
+            case 'list-item':
+                // fall through
+            case 'task-list-item': {
+                const replacements = convertListItem(block, label);
+                this._convertedBlock = replacements[0] ?? null;
+                return this._convertedBlock?.firstContentInDescendant() ?? null;
+            }
 
             default:
                 return null;

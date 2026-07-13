@@ -34,6 +34,7 @@ export const ja = {
         'HTML Block': 'HTMLブロック',
         'Code Block': 'コードブロック',
         'Quote Block': '引用',
+        'Highlight Block': 'ハイライトブロック',
         'Order List': '秩序リスト',
         'Bullet List': '無秩序リスト',
         'To-do List': 'タスクリスト',

@@ -61,6 +61,14 @@ export interface IBlockQuoteState {
     children: TState[];
 }
 
+export interface IHighlightBlockState {
+    name: 'highlight-block';
+    meta: {
+        collapsed: boolean;
+    };
+    children: TState[];
+}
+
 export interface IListItemState {
     name: 'list-item';
     children: TState[];
@@ -183,6 +191,7 @@ export type TLeafState
 
 export type TContainerState
     = | IBlockQuoteState
+        | IHighlightBlockState
         | IOrderListState
         | IBulletListState
         | ITableState
@@ -219,6 +228,7 @@ export const isDiagramState = (s: TState): s is IDiagramState => s.name === 'dia
 export const isTableCellState = (s: TState): s is ITableCellState => s.name === 'table.cell';
 
 export const isBlockQuoteState = (s: TState): s is IBlockQuoteState => s.name === 'block-quote';
+export const isHighlightBlockState = (s: TState): s is IHighlightBlockState => s.name === 'highlight-block';
 export const isOrderListState = (s: TState): s is IOrderListState => s.name === 'order-list';
 export const isBulletListState = (s: TState): s is IBulletListState => s.name === 'bullet-list';
 export const isTableState = (s: TState): s is ITableState => s.name === 'table';

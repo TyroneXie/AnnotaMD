@@ -43,6 +43,25 @@ function fakeBlock(blockName: string, paragraphText: string = ''): Parent {
     } as unknown as Parent;
 }
 
+const TEXT_TARGETS = [
+    'paragraph',
+    'atx-heading 1',
+    'atx-heading 2',
+    'atx-heading 3',
+    'atx-heading 4',
+    'atx-heading 5',
+    'atx-heading 6',
+    'block-quote',
+    'highlight-block',
+    'order-list',
+    'bullet-list',
+    'task-list',
+];
+
+function conversionLabels(blockName: string, paragraphText = 'content'): string[] {
+    return canTurnIntoMenu(fakeBlock(blockName, paragraphText)).map(item => item.label);
+}
+
 describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselves (marktext 7b7a9424)', () => {
     it('returns [] for a math-block (front menu shows no turn-into list)', () => {
         expect(canTurnIntoMenu(fakeBlock('math-block'))).toEqual([]);
@@ -92,6 +111,29 @@ describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselve
             expect(items.some((item: { label: string }) => item.label === 'paragraph')).toBe(true);
         },
     );
+});
+
+describe('canTurnIntoMenu — unified text block conversion matrix', () => {
+    it.each([
+        'paragraph',
+        'atx-heading',
+        'block-quote',
+        'order-list',
+        'bullet-list',
+        'task-list',
+        'highlight-block',
+    ])('%s exposes the same paragraph, heading, quote and list targets', (blockName) => {
+        expect(conversionLabels(blockName)).toEqual(TEXT_TARGETS);
+    });
+
+    it('keeps structural insertion targets exclusive to empty paragraphs', () => {
+        const emptyLabels = conversionLabels('paragraph', '');
+        expect(emptyLabels).toContain('table');
+        expect(emptyLabels).toContain('code-block');
+
+        const typedLabels = conversionLabels('paragraph', 'typed');
+        expect(typedLabels).toEqual(TEXT_TARGETS);
+    });
 });
 
 // Regression for marktext commit f00da152 (#812 — "insert table into `table`,

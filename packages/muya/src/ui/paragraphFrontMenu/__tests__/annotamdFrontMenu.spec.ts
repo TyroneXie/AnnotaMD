@@ -250,7 +250,7 @@ describe('AnnotaMD paragraph front menu actions', () => {
         menu.selectItem(new Event('click'), { label: 'task-list' });
 
         const activeBlock = (menu as unknown as { _block: Parent | null })._block;
-        expect(activeBlock?.blockName).toBe('task-list');
+        expect(activeBlock?.blockName).toBe('task-list-item');
         expect(document.querySelector('.turn-into-item.task-list.active')).not.toBeNull();
         expect(document.querySelector('.turn-into-item.paragraph')).not.toBeNull();
 
@@ -261,6 +261,291 @@ describe('AnnotaMD paragraph front menu actions', () => {
         });
         expect((menu as unknown as { _block: Parent | null })._block?.blockName).toBe('paragraph');
         expect(document.querySelector('.turn-into-item.paragraph.active')).not.toBeNull();
+    });
+
+    it('converts a multi-item list to headings without dropping any item text', async () => {
+        const muya = bootMuya('- first\n- second\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0]);
+        menu.selectItem(new Event('click'), { label: 'atx-heading 2' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual(['atx-heading', 'atx-heading']);
+        });
+        expect(muya.getMarkdown()).toBe('## first\n\n## second\n');
+    });
+
+    it('converts a multi-paragraph quote to a Todo list and preserves each paragraph', async () => {
+        const muya = bootMuya('> first\n>\n> second\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0]);
+        menu.selectItem(new Event('click'), { label: 'task-list' });
+
+        await vi.waitFor(() => expect(muya.getState()[0].name).toBe('task-list'));
+        const state = muya.getState()[0];
+        expect(state.name === 'task-list' ? state.children : []).toHaveLength(2);
+        expect(muya.getMarkdown()).toContain('- [ ] first');
+        expect(muya.getMarkdown()).toContain('- [ ] second');
+    });
+
+    it('converts a multi-item list to one quote container with all item paragraphs', async () => {
+        const muya = bootMuya('1. first\n2. second\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0]);
+        menu.selectItem(new Event('click'), { label: 'block-quote' });
+
+        await vi.waitFor(() => expect(muya.getState()[0].name).toBe('block-quote'));
+        const state = muya.getState()[0];
+        expect(state.name === 'block-quote' ? state.children : []).toHaveLength(2);
+        expect(muya.getMarkdown()).toBe('> first\n>\n> second\n');
+    });
+
+    it('converts only the targeted middle list item to a heading and splits the list around it', async () => {
+        const muya = bootMuya('- first\n- second\n- third\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const list = blocks(muya)[0];
+        const middleItem = list.find(1) as Parent;
+
+        expect(canTurnIntoMenu(middleItem).map(item => item.label)).toEqual([
+            'paragraph',
+            'atx-heading 1',
+            'atx-heading 2',
+            'atx-heading 3',
+            'atx-heading 4',
+            'atx-heading 5',
+            'atx-heading 6',
+            'block-quote',
+            'highlight-block',
+            'order-list',
+            'bullet-list',
+            'task-list',
+        ]);
+
+        openOn(menu, middleItem);
+        menu.selectItem(new Event('click'), { label: 'atx-heading 2' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual([
+                'bullet-list',
+                'atx-heading',
+                'bullet-list',
+            ]);
+        });
+        expect(muya.getMarkdown()).toBe('- first\n\n## second\n\n- third\n');
+    });
+
+    it('converts only one Todo item to a quote and preserves checked siblings', async () => {
+        const muya = bootMuya('- [x] first\n- [ ] second\n- [x] third\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const middleItem = blocks(muya)[0].find(1) as Parent;
+
+        openOn(menu, middleItem);
+        menu.selectItem(new Event('click'), { label: 'block-quote' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual([
+                'task-list',
+                'block-quote',
+                'task-list',
+            ]);
+        });
+        expect(muya.getMarkdown()).toBe('- [x] first\n\n> second\n\n- [x] third\n');
+    });
+
+    it('wraps a paragraph in a real highlight container and keeps inner headings out of the TOC', async () => {
+        const muya = bootMuya('One\n\n# Outer\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        openOn(menu, blocks(muya)[0]);
+
+        expect(canTurnIntoMenu(blocks(muya)[0]).map(item => item.label)).toContain('highlight-block');
+
+        menu.selectItem(new Event('click'), { label: 'highlight-block' });
+
+        await vi.waitFor(() => expect(muya.getState()[0].name).toBe('highlight-block'));
+        expect(muya.getMarkdown()).toBe('> [!HIGHLIGHT]\n> One\n\n# Outer\n');
+        expect(muya.getTOC().map(item => item.content)).toEqual(['Outer']);
+    });
+
+    it('offers the unified conversion targets on a highlight and unwraps it to paragraphs', async () => {
+        const muya = bootMuya('> [!HIGHLIGHT]\n> First\n>\n> Second\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const highlight = blocks(muya)[0];
+
+        expect(canTurnIntoMenu(highlight).map(item => item.label)).toEqual([
+            'paragraph',
+            'atx-heading 1',
+            'atx-heading 2',
+            'atx-heading 3',
+            'atx-heading 4',
+            'atx-heading 5',
+            'atx-heading 6',
+            'block-quote',
+            'highlight-block',
+            'order-list',
+            'bullet-list',
+            'task-list',
+        ]);
+
+        openOn(menu, highlight);
+        menu.selectItem(new Event('click'), { label: 'paragraph' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual(['paragraph', 'paragraph']);
+        });
+        expect(muya.getMarkdown()).toBe('First\n\nSecond\n');
+    });
+
+    it('persists highlight collapse changes in markdown', async () => {
+        const muya = bootMuya('> [!HIGHLIGHT collapsed]\n> Body\n');
+        const highlight = blocks(muya)[0] as Parent & { collapsed: boolean };
+
+        expect(highlight.blockName).toBe('highlight-block');
+        expect(highlight.collapsed).toBe(true);
+        highlight.collapsed = false;
+
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe('> [!HIGHLIGHT]\n> Body\n'));
+        expect(highlight.domNode?.classList.contains('mu-highlight-collapsed')).toBe(false);
+    });
+
+    it('merges a paragraph converted to a list item with compatible lists on both sides', async () => {
+        const muya = bootMuya('- first\n\nmiddle\n\n- third\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[1]);
+        menu.selectItem(new Event('click'), { label: 'bullet-list' });
+
+        await vi.waitFor(() => expect(muya.getState()).toHaveLength(1));
+        const state = muya.getState()[0];
+        expect(state.name).toBe('bullet-list');
+        expect(state.name === 'bullet-list' ? state.children : []).toHaveLength(3);
+        expect(muya.getMarkdown()).toBe('- first\n- middle\n- third\n');
+    });
+
+    it('keeps incompatible neighbouring list types separate', async () => {
+        const muya = bootMuya('1. first\n\nmiddle\n\n- third\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[1]);
+        menu.selectItem(new Event('click'), { label: 'task-list' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual([
+                'order-list',
+                'task-list',
+                'bullet-list',
+            ]);
+        });
+    });
+
+    it('records one undo boundary for a list-item split conversion', async () => {
+        const original = '- first\n- second\n- third\n';
+        const muya = bootMuya(original);
+        const menu = new ParagraphFrontMenu(muya, {});
+        const middleItem = blocks(muya)[0].find(1) as Parent;
+
+        openOn(menu, middleItem);
+        menu.selectItem(new Event('click'), { label: 'atx-heading 2' });
+        await vi.waitFor(() => expect(muya.getMarkdown()).toContain('## second'));
+
+        muya.undo();
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe(original));
+    });
+
+    it('converts a cross-block paragraph selection into one list and keeps the converted range selected', async () => {
+        const muya = bootMuya('first\n\nsecond\n\nthird\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const [first, second, third] = blocks(muya);
+        const firstContent = first.firstContentInDescendant()!;
+        const thirdContent = third.lastContentInDescendant()!;
+        muya.editor.selection.setSelection(
+            { offset: 0, block: firstContent, path: firstContent.path },
+            { offset: thirdContent.text.length, block: thirdContent, path: thirdContent.path },
+        );
+
+        openOn(menu, second);
+        menu.selectItem(new Event('click'), { label: 'bullet-list' });
+
+        await vi.waitFor(() => expect(muya.getState()).toHaveLength(1));
+        const state = muya.getState()[0];
+        expect(state.name).toBe('bullet-list');
+        expect(state.name === 'bullet-list' ? state.children : []).toHaveLength(3);
+        expect(muya.editor.selection.anchorBlock?.text).toBe('first');
+        expect(muya.editor.selection.focusBlock?.text).toBe('third');
+
+        muya.undo();
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe('first\n\nsecond\n\nthird\n'));
+    });
+
+    it('wraps a cross-block text selection in one highlight container', async () => {
+        const muya = bootMuya('first\n\nsecond\n\nthird\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const [first, second, third] = blocks(muya);
+        const firstContent = first.firstContentInDescendant()!;
+        const thirdContent = third.lastContentInDescendant()!;
+        muya.editor.selection.setSelection(
+            { offset: 0, block: firstContent, path: firstContent.path },
+            { offset: thirdContent.text.length, block: thirdContent, path: thirdContent.path },
+        );
+
+        openOn(menu, second);
+        menu.selectItem(new Event('click'), { label: 'highlight-block' });
+
+        await vi.waitFor(() => expect(muya.getState()).toHaveLength(1));
+        const state = muya.getState()[0];
+        expect(state.name).toBe('highlight-block');
+        expect(state.name === 'highlight-block' ? state.children : []).toHaveLength(3);
+        expect(muya.getMarkdown()).toBe('> [!HIGHLIGHT]\n> first\n>\n> second\n>\n> third\n');
+    });
+
+    it('converts several selected list items into independent headings in one operation', async () => {
+        const muya = bootMuya('- first\n- second\n- third\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const list = blocks(muya)[0];
+        const firstItem = list.find(0) as Parent;
+        const secondItem = list.find(1) as Parent;
+        const thirdItem = list.find(2) as Parent;
+        const firstContent = firstItem.firstContentInDescendant()!;
+        const thirdContent = thirdItem.lastContentInDescendant()!;
+        muya.editor.selection.setSelection(
+            { offset: 0, block: firstContent, path: firstContent.path },
+            { offset: thirdContent.text.length, block: thirdContent, path: thirdContent.path },
+        );
+
+        openOn(menu, secondItem);
+        menu.selectItem(new Event('click'), { label: 'atx-heading 3' });
+
+        await vi.waitFor(() => {
+            expect(muya.getState().map(state => state.name)).toEqual([
+                'atx-heading',
+                'atx-heading',
+                'atx-heading',
+            ]);
+        });
+        expect(muya.getMarkdown()).toBe('### first\n\n### second\n\n### third\n');
+        expect(muya.editor.selection.anchorBlock?.text).toContain('first');
+        expect(muya.editor.selection.focusBlock?.text).toContain('third');
+    });
+
+    it('does not batch-convert a selection that crosses a structural code block', async () => {
+        const muya = bootMuya('first\n\n```ts\nconst x = 1\n```\n\nthird\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const [first, code, third] = blocks(muya);
+        const firstContent = first.firstContentInDescendant()!;
+        const thirdContent = third.lastContentInDescendant()!;
+        muya.editor.selection.setSelection(
+            { offset: 0, block: firstContent, path: firstContent.path },
+            { offset: thirdContent.text.length, block: thirdContent, path: thirdContent.path },
+        );
+
+        openOn(menu, first);
+        menu.selectItem(new Event('click'), { label: 'atx-heading 2' });
+
+        await vi.waitFor(() => expect(blocks(muya)[0].blockName).toBe('atx-heading'));
+        expect(blocks(muya)[1]).toBe(code);
+        expect(blocks(muya)[2]).toBe(third);
     });
 
     it('cuts one block by copying its Markdown and removing only that block', async () => {

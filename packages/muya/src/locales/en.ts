@@ -34,6 +34,7 @@ export const en = {
         'HTML Block': 'HTML Block',
         'Code Block': 'Code Block',
         'Quote Block': 'Quote Block',
+        'Highlight Block': 'Highlight Block',
         'Order List': 'Order List',
         'Bullet List': 'Bullet List',
         'To-do List': 'To-do List',

@@ -5,6 +5,7 @@ import type {
     ICodeBlockState,
     IDiagramState,
     IFrontmatterState,
+    IHighlightBlockState,
     IHtmlBlockState,
     IMathBlockState,
     IOrderListState,
@@ -24,6 +25,7 @@ interface IEmptyStates {
     'html-block': IHtmlBlockState;
     'code-block': ICodeBlockState;
     'block-quote': IBlockQuoteState;
+    'highlight-block': IHighlightBlockState;
     'order-list': IOrderListState;
     'bullet-list': IBulletListState;
     'task-list': ITaskListState;
@@ -125,6 +127,11 @@ const emptyStates: IEmptyStates = {
                 text: '',
             },
         ],
+    },
+    'highlight-block': {
+        name: 'highlight-block',
+        meta: { collapsed: false },
+        children: [{ name: 'paragraph', text: '' }],
     },
     'order-list': {
         name: 'order-list',

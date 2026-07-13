@@ -104,6 +104,15 @@
     height: 16px;
 }
 
+.mu-front-menu li .icon-wrapper .mu-highlight-turn-into-icon {
+    align-items: center;
+    justify-content: center;
+
+    color: #f59e0b;
+    font-weight: 700;
+    font-size: 14px;
+}
+
 .mu-front-menu li .icon-wrapper .menu-symbol {
     position: relative;
 

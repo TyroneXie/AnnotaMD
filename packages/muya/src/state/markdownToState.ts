@@ -47,7 +47,33 @@ export class MarkdownToState {
     constructor(private _options: IMarkdownToStateOptions = DEFAULT_OPTIONS) {}
 
     generate(markdown: string): TState[] {
-        return this._convertMarkdownToState(markdown);
+        return this._extractTopLevelHighlightBlocks(this._convertMarkdownToState(markdown));
+    }
+
+    private _extractTopLevelHighlightBlocks(states: TState[]): TState[] {
+        return states.map((state) => {
+            if (state.name !== 'block-quote')
+                return state;
+
+            const marker = state.children[0];
+            if (marker?.name !== 'paragraph')
+                return state;
+
+            const [markerLine, ...continuation] = marker.text.split('\n');
+            const match = /^\[!HIGHLIGHT(?:\s+(collapsed))?\]$/.exec(markerLine.trim());
+            if (!match)
+                return state;
+
+            const children = state.children.slice(1);
+            if (continuation.length)
+                children.unshift({ name: 'paragraph', text: continuation.join('\n') });
+
+            return {
+                name: 'highlight-block' as const,
+                meta: { collapsed: match[1] === 'collapsed' },
+                children,
+            };
+        });
     }
 
     private _convertMarkdownToState(markdown: string): TState[] {

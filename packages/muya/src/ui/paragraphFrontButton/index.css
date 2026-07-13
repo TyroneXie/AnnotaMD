@@ -93,6 +93,12 @@
     color: #3370ff;
 }
 
+.mu-block-label.highlight .mu-block-label-glyph {
+    color: #f59e0b;
+    font-size: 14px;
+    font-weight: 700;
+}
+
 .mu-block-label.task-list .mu-block-label-glyph {
     font-size: 13px;
     font-weight: 650;

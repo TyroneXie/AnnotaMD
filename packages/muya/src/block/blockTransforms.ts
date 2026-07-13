@@ -1,14 +1,55 @@
 import type { Muya } from '../muya';
-import type { IFrontmatterMeta } from '../state/types';
+import type {
+    IBlockQuoteState,
+    IBulletListState,
+    IFrontmatterMeta,
+    IHighlightBlockState,
+    IOrderListState,
+    ITaskListState,
+    TState,
+} from '../state/types';
 import type Parent from './base/parent';
 import emptyStates from '../config/emptyStates';
 import { getCursorReference } from '../selection';
-import { isParagraphState } from '../state/types';
+import { isAnyListState, isAtxHeadingState, isParagraphState, isSetextHeadingState } from '../state/types';
 import { deepClone } from '../utils';
 import logger from '../utils/logger';
 import { ScrollPage } from './scrollPage';
 
 const debug = logger('quickInsert:');
+
+export const TEXT_BLOCK_LABELS = [
+    'paragraph',
+    'atx-heading 1',
+    'atx-heading 2',
+    'atx-heading 3',
+    'atx-heading 4',
+    'atx-heading 5',
+    'atx-heading 6',
+    'block-quote',
+    'order-list',
+    'bullet-list',
+    'task-list',
+    'highlight-block',
+] as const;
+
+const TEXT_BLOCK_LABEL_SET = new Set<string>(TEXT_BLOCK_LABELS);
+const TEXT_BLOCK_NAMES = new Set([
+    'paragraph',
+    'atx-heading',
+    'setext-heading',
+    'block-quote',
+    'order-list',
+    'bullet-list',
+    'task-list',
+    'highlight-block',
+    'list-item',
+    'task-list-item',
+]);
+
+export function isTextBlockTarget(block: Parent): boolean {
+    return TEXT_BLOCK_NAMES.has(block.blockName);
+}
 
 /**
  * Derive the frontmatter `lang`/`style` from the user's `frontmatterType`
@@ -94,6 +135,14 @@ type TLeafReplacementLabel
         | 'code-block'
         | 'block-quote';
 
+function buildHighlightState(children: TState[]): IHighlightBlockState {
+    return {
+        name: 'highlight-block',
+        meta: { collapsed: false },
+        children: deepClone(children),
+    };
+}
+
 function buildLeafBlock(label: TLeafReplacementLabel, muya: Muya, text: string) {
     const cloned = deepClone(emptyStates[label]);
     if (cloned.name === 'paragraph') {
@@ -167,6 +216,12 @@ export function buildReplacementBlock(label: string, muya: Muya, text: string) {
         return buildDiagramBlock(label, muya);
 
     switch (label) {
+        case 'highlight-block':
+            return ScrollPage.loadBlock(label).create(
+                muya,
+                buildHighlightState([{ name: 'paragraph', text }]),
+            );
+
         case 'paragraph':
             // fall through
         case 'thematic-break':
@@ -220,7 +275,7 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
                 triggerContent.update();
             }
         }
-        return;
+        return null;
     }
 
     // The in-editor "table" insert shows a hover-grid dimension picker
@@ -229,13 +284,14 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
     // bail before the in-place empty-table replacement below.
     if (label === 'table') {
         showTablePicker(muya, block);
-        return;
+        return null;
     }
 
     const newBlock = buildReplacementBlock(label, muya, text);
 
     block.replaceWith(newBlock);
     finishInsertedBlock(newBlock, muya, label);
+    return newBlock;
 }
 
 // Position the caret after a block was inserted or replaced. A thematic-break
@@ -283,34 +339,137 @@ export function insertBlockBelowByLabel({ block, muya, label }: {
     finishInsertedBlock(newBlock, muya, label);
 }
 
+function stateText(state: TState): string | null {
+    if (isParagraphState(state) || isSetextHeadingState(state))
+        return state.text;
+    if (isAtxHeadingState(state))
+        return state.text.replace(/^ {0,3}#{1,6}(?:\s+|$)/, '');
+    return null;
+}
+
+function convertLeafState(state: TState, label: string, muya: Muya): TState[] {
+    const text = stateText(state);
+    if (text === null)
+        return [deepClone(state)];
+
+    const replacement = buildReplacementBlock(label, muya, text);
+    return replacement ? [replacement.getState()] : [deepClone(state)];
+}
+
+export function convertTextStatesToLabel(states: TState[], label: string, muya: Muya): TState[] {
+    if (label === 'highlight-block')
+        return [buildHighlightState(states)];
+    return states.flatMap(state => convertLeafState(state, label, muya));
+}
+
+function containerChildren(state: TState): TState[] {
+    if (isAnyListState(state))
+        return state.children.flatMap(item => deepClone(item.children));
+    if (state.name === 'block-quote' || state.name === 'highlight-block')
+        return deepClone(state.children);
+    return [deepClone(state)];
+}
+
+function buildListStateFromChildren(
+    label: 'order-list' | 'bullet-list' | 'task-list',
+    children: TState[],
+    muya: Muya,
+): IOrderListState | IBulletListState | ITaskListState {
+    const { preferLooseListItem, orderListDelimiter, bulletListMarker } = muya.options;
+    if (label === 'order-list') {
+        return {
+            name: 'order-list',
+            meta: { start: 1, loose: preferLooseListItem, delimiter: orderListDelimiter },
+            children: children.map(child => ({ name: 'list-item', children: [child] })),
+        };
+    }
+    if (label === 'task-list') {
+        return {
+            name: 'task-list',
+            meta: { marker: bulletListMarker, loose: preferLooseListItem },
+            children: children.map(child => ({
+                name: 'task-list-item',
+                meta: { checked: false },
+                children: [child],
+            })),
+        };
+    }
+    return {
+        name: 'bullet-list',
+        meta: { marker: bulletListMarker, loose: preferLooseListItem },
+        children: children.map(child => ({ name: 'list-item', children: [child] })),
+    };
+}
+
+export function convertTextContainerState(state: TState, label: string, muya: Muya): TState[] {
+    const children = containerChildren(state);
+
+    if (label === 'highlight-block')
+        return [buildHighlightState(children)];
+
+    if (label === 'block-quote') {
+        const quote: IBlockQuoteState = { name: 'block-quote', children };
+        return [quote];
+    }
+
+    if (label === 'order-list' || label === 'bullet-list' || label === 'task-list')
+        return [buildListStateFromChildren(label, children, muya)];
+
+    return children.flatMap(child => convertLeafState(child, label, muya));
+}
+
+/**
+ * Convert a quote/list container into another text-block shape without losing
+ * any child blocks. Multiple replacements are inserted at the source slot and
+ * their OT operations are batched by JSONState into one editor change.
+ */
+export function replaceTextContainerByLabel({ block, muya, label }: {
+    block: Parent;
+    muya: Muya;
+    label: string;
+}): Parent | null {
+    const parent = block.parent;
+    if (!parent || !TEXT_BLOCK_LABEL_SET.has(label))
+        return null;
+
+    const replacementStates = convertTextContainerState(block.getState(), label, muya);
+    let reference: Parent = block;
+    let firstReplacement: Parent | null = null;
+    for (const state of replacementStates) {
+        const replacement = ScrollPage.loadBlock(state.name).create(muya, state);
+        parent.insertAfter(replacement, reference);
+        reference = replacement;
+        firstReplacement ??= replacement;
+    }
+    block.remove();
+    return firstReplacement;
+}
+
 // Whether `block` can be turned into `label` in place (the front-menu's
 // turn-into set). The label-matching regexes are the single source of truth and
 // must stay in sync with `MENU_CONFIG`'s labels and `PARAGRAPH_LABEL_MAP`.
 export function canTurnInto(block: Parent, label: string): boolean {
     const { blockName } = block;
 
-    switch (blockName) {
-        case 'paragraph': {
+    if (isTextBlockTarget(block)) {
+        if (label === 'highlight-block') {
+            let ancestor = block.parent;
+            while (ancestor) {
+                if (ancestor.blockName === 'highlight-block')
+                    return false;
+                ancestor = ancestor.parent;
+            }
+        }
+        if (blockName === 'paragraph') {
             const paragraphIsEmpty = /^\s*$/.test(block.firstContentInDescendant()!.text);
             if (paragraphIsEmpty)
                 return label !== 'frontmatter';
-
-            return /paragraph|atx-heading|block-quote|order-list|bullet-list|task-list/.test(label);
         }
 
-        case 'atx-heading':
-            return /atx-heading|paragraph/.test(label);
+        return TEXT_BLOCK_LABEL_SET.has(label);
+    }
 
-        case 'block-quote':
-            return label === 'paragraph';
-
-        case 'order-list':
-            // fall through
-        case 'bullet-list':
-            // fall through
-        case 'task-list':
-            return /paragraph|order-list|bullet-list|task-list/.test(label);
-
+    switch (blockName) {
         default:
             return false;
     }

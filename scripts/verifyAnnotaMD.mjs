@@ -1,0 +1,108 @@
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const mode = process.argv[2] ?? 'quick'
+const pack = process.argv[3] ?? 'smoke'
+
+if (!['quick', 'feature'].includes(mode)) {
+  console.error('Usage: node scripts/verifyAnnotaMD.mjs <quick|feature> [smoke|menu|table|comments]')
+  process.exit(2)
+}
+
+const testPacks = {
+  menu: {
+    cwd: path.join(root, 'packages/muya'),
+    command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
+    files: [
+      'src/ui/paragraphFrontButton/__tests__/positioning.spec.ts',
+      'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
+      'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
+      'src/block/extra/highlightBlock/__tests__/highlightBlock.spec.ts'
+    ]
+  },
+  table: {
+    cwd: path.join(root, 'packages/muya'),
+    command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
+    files: [
+      'src/ui/tableDragBar/__tests__/insertionSide.spec.ts',
+      'src/ui/tableRowColumMenu/__tests__/axisSelection.spec.ts',
+      'src/ui/tableRowColumMenu/__tests__/axisSelectionStyle.spec.ts',
+      'src/ui/tableRowColumMenu/__tests__/toolbarConfig.spec.ts',
+      'src/ui/tableColumnToolbar/__tests__/hoverGuard.spec.ts'
+    ]
+  },
+  comments: {
+    cwd: path.join(root, 'packages/desktop'),
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
+    files: [
+      'test/unit/specs/annotamd-comment-highlights.spec.ts',
+      'test/unit/specs/annotamd-comment-navigation.spec.ts',
+      'test/unit/specs/comment-pane-resize.spec.ts'
+    ]
+  }
+}
+
+const selectedPacks = pack === 'smoke' ? Object.keys(testPacks) : [pack]
+if (selectedPacks.some((name) => !(name in testPacks))) {
+  console.error(`Unknown verification pack: ${pack}`)
+  process.exit(2)
+}
+
+const checks = [
+  {
+    label: 'working-tree whitespace',
+    command: 'git',
+    args: ['diff', '--check']
+  },
+  {
+    label: 'staged whitespace',
+    command: 'git',
+    args: ['diff', '--cached', '--check']
+  }
+]
+
+for (const name of selectedPacks) {
+  const testPack = testPacks[name]
+  checks.push({
+    label: `${name} tests`,
+    command: testPack.command,
+    args: ['run', ...testPack.files],
+    cwd: testPack.cwd,
+    env: { ...process.env, CI: '1' }
+  })
+}
+
+if (mode === 'feature') {
+  checks.push({
+    label: 'AnnotaMD desktop typecheck',
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vue-tsc'),
+    args: ['--noEmit', '-p', 'tsconfig.annotamd.json'],
+    cwd: path.join(root, 'packages/desktop')
+  })
+}
+
+const startedAt = performance.now()
+
+for (const check of checks) {
+  const checkStartedAt = performance.now()
+  console.log(`\n[verify:${mode}:${pack}] ${check.label}`)
+  const result = spawnSync(check.command, check.args, {
+    cwd: check.cwd ?? root,
+    env: check.env ?? process.env,
+    stdio: 'inherit'
+  })
+
+  if (result.error) {
+    console.error(result.error.message)
+    process.exit(1)
+  }
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1)
+  }
+
+  console.log(`[verify:${mode}:${pack}] passed in ${Math.round(performance.now() - checkStartedAt)} ms`)
+}
+
+console.log(`\n[verify:${mode}:${pack}] all checks passed in ${Math.round(performance.now() - startedAt)} ms`)

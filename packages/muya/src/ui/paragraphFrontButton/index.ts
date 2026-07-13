@@ -13,6 +13,7 @@ import { h, patch } from '../../utils/snabbdom';
 import './index.css';
 
 const LEFT_OFFSET = 100;
+const LIST_ITEM_MAIN_AXIS = 30;
 const FRONT_BUTTON_OWNER = '__MUYA_FRONT_BUTTON_OWNER__';
 
 type FrontButtonWrapper = HTMLDivElement & {
@@ -35,12 +36,48 @@ function isOrderOrBulletList(block: Parent): block is OrderList | BulletList {
     return block instanceof OrderList || block instanceof BulletList;
 }
 
+function isListItem(block: Parent): boolean {
+    return block.blockName === 'list-item' || block.blockName === 'task-list-item';
+}
+
+function isTextChildOfHighlight(block: Parent): boolean {
+    if (!/^(?:paragraph|atx-heading|setext-heading|block-quote|order-list|bullet-list|task-list)$/.test(block.blockName))
+        return false;
+    let ancestor = block.parent;
+    while (ancestor) {
+        if (ancestor.blockName === 'highlight-block')
+            return true;
+        ancestor = ancestor.parent;
+    }
+    return false;
+}
+
+function displayBlock(block: Parent): Parent {
+    return isListItem(block) && block.parent ? block.parent : block;
+}
+
+export function frontButtonTarget(elements: Element[]): Parent | null {
+    const blocks = elements
+        .map(element => element[BLOCK_DOM_PROPERTY] as Parent | undefined)
+        .filter((block): block is Parent => !!block);
+    return blocks.find(isListItem)
+        ?? blocks.find(isTextChildOfHighlight)
+        ?? blocks.find(block => block.isOutMostBlock)
+        ?? null;
+}
+
 export function frontButtonMainAxis(
     blockName: string,
     paddingTop: number,
     isLooseList: boolean,
     isCollapsedSection = false,
+    isListItemTarget = false,
 ) {
+    // List markers and task checkboxes live outside the list item's content
+    // box. Keep the floating button to their left instead of covering them.
+    if (isListItemTarget)
+        return LIST_ITEM_MAIN_AXIS;
+
     // Code blocks reserve 40px of top padding for their caption/actions row.
     // That vertical header must not become a horizontal Floating UI offset.
     if (blockName === 'code-block')
@@ -60,6 +97,8 @@ function blockLabel(block: Parent) {
             return '✓';
         case 'block-quote':
             return '”';
+        case 'highlight-block':
+            return '✦';
         case 'code-block':
             return '</>';
         default:
@@ -86,6 +125,8 @@ function blockKind(block: Parent) {
             return 'code';
         case 'block-quote':
             return 'quote';
+        case 'highlight-block':
+            return 'highlight';
         default:
             return 'text';
     }
@@ -251,13 +292,9 @@ export class ParagraphFrontButton {
                 ...document.elementsFromPoint(x, y),
                 ...document.elementsFromPoint(x + LEFT_OFFSET, y),
             ];
-            const outMostElement = els.find(
-                ele =>
-                    ele[BLOCK_DOM_PROPERTY]
-                    && (ele[BLOCK_DOM_PROPERTY] as Parent).isOutMostBlock,
-            );
-            if (outMostElement) {
-                this.show(outMostElement[BLOCK_DOM_PROPERTY] as Parent);
+            const target = frontButtonTarget(els);
+            if (target) {
+                this.show(target);
                 this.render();
             }
             else {
@@ -389,7 +426,7 @@ export class ParagraphFrontButton {
     private _startDrag = () => {
         const { _block: block } = this;
         // Frontmatter should not be drag.
-        if (!block || block.blockName === 'frontmatter')
+        if (!block || block.blockName === 'frontmatter' || isListItem(block))
             return;
 
         this._disableListen = true;
@@ -466,8 +503,9 @@ export class ParagraphFrontButton {
     render() {
         const { _container: container, _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
 
-        const kind = blockKind(block!);
-        const label = blockLabel(block!);
+        const visualBlock = displayBlock(block!);
+        const kind = blockKind(visualBlock);
+        const label = blockLabel(visualBlock);
         const iconWrapperSelector = `div.mu-icon-wrapper.${kind}`;
         const vnode = h(
             iconWrapperSelector,
@@ -530,12 +568,14 @@ export class ParagraphFrontButton {
         const styles = window.getComputedStyle(domNode!);
         const paddingTop = Number.parseFloat(styles.paddingTop);
 
-        const isLooseList = isOrderOrBulletList(block) && block.meta.loose;
+        const visualBlock = displayBlock(block);
+        const isLooseList = block === visualBlock && isOrderOrBulletList(block) && block.meta.loose;
         const dynamicMainAxis = frontButtonMainAxis(
-            block.blockName,
+            visualBlock.blockName,
             paddingTop,
             isLooseList,
             domNode!.classList.contains('mu-section-has-disclosure'),
+            isListItem(block),
         );
 
         // Extract offset values, handling both number and object types

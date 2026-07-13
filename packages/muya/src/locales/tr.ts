@@ -34,6 +34,7 @@ export const tr = {
         'HTML Block': 'HTML Bloğu',
         'Code Block': 'Kod Bloğu',
         'Quote Block': 'Alıntı Bloğu',
+        'Highlight Block': 'Vurgu Bloğu',
         'Order List': 'Sıralı Liste',
         'Bullet List': 'Sırasız Liste',
         'To-do List': 'Yapılacaklar Listesi',

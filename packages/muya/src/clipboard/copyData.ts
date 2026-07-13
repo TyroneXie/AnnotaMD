@@ -237,7 +237,7 @@ function appendPartialState(
     // A block-quote or list endpoint is partially selected: carry only the
     // selected side of the container, with the boundary item's own text
     // truncated to the caret, rather than the whole container/item.
-    if (/block-quote|bullet-list|order-list|task-list/.test(outBlock!.blockName)) {
+    if (/block-quote|highlight-block|bullet-list|order-list|task-list/.test(outBlock!.blockName)) {
         copyState.push(
             buildPartialContainerState(outBlock as Parent, block, offset, position),
         );

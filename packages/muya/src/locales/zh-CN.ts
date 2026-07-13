@@ -34,6 +34,7 @@ export const zhCN = {
         'HTML Block': 'HTML块',
         'Code Block': '代码块',
         'Quote Block': '引用',
+        'Highlight Block': '高亮块',
         'Order List': '有序列表',
         'Bullet List': '无序列表',
         'To-do List': '任务列表',

@@ -14,6 +14,7 @@ import header3Icon from '../../assets/icons/heading_3/2.png';
 import header4Icon from '../../assets/icons/heading_4/2.png';
 import header5Icon from '../../assets/icons/heading_5/2.png';
 import header6Icon from '../../assets/icons/heading_6/2.png';
+import highlightIcon from '../../assets/icons/highlight/2.png';
 import thematicBreakIcon from '../../assets/icons/horizontal_line/2.png';
 import htmlIcon from '../../assets/icons/html/2.png';
 import mathBlockIcon from '../../assets/icons/math/2.png';
@@ -54,6 +55,9 @@ export function getIcon(block: Parent) {
 
         case 'block-quote':
             return quoteIcon;
+
+        case 'highlight-block':
+            return highlightIcon;
 
         case 'bullet-list':
             return bulletListIcon;

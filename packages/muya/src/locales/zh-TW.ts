@@ -34,6 +34,7 @@ export const zhTW = {
         'HTML Block': 'HTML 區塊',
         'Code Block': '程式碼區塊',
         'Quote Block': '引言',
+        'Highlight Block': '高亮區塊',
         'Order List': '有序清單',
         'Bullet List': '無序清單',
         'To-do List': '待辦清單',

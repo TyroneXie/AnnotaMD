@@ -258,6 +258,79 @@
     padding-right: 0;
 }
 
+/* AnnotaMD highlight container */
+.mu-container .mu-highlight-block {
+    position: relative;
+
+    box-sizing: border-box;
+    margin: 16px 0;
+    padding: 18px 42px;
+
+    color: var(--editor-color);
+
+    background: #edf4ff;
+    border: 1px solid #a8c5ff;
+    border-radius: 8px;
+}
+
+.mu-container .mu-highlight-block::before {
+    position: absolute;
+    top: 18px;
+    left: 16px;
+
+    color: #f59e0b;
+
+    font-size: 16px;
+    line-height: 1;
+
+    content: '✦';
+}
+
+.mu-highlight-disclosure {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+
+    width: 24px;
+    height: 24px;
+    padding: 0;
+
+    color: #646a73;
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.mu-highlight-disclosure:hover {
+    color: #3370ff;
+
+    background: rgb(51 112 255 / 10%);
+}
+
+.mu-highlight-title {
+    display: none;
+
+    color: #646a73;
+
+    font-weight: 600;
+}
+
+.mu-container .mu-highlight-block.mu-highlight-collapsed {
+    min-height: 48px;
+    padding-block: 14px;
+}
+
+.mu-highlight-block.mu-highlight-collapsed > .mu-highlight-title {
+    display: block;
+}
+
+.mu-highlight-block.mu-highlight-collapsed > :not(:is(.mu-highlight-disclosure, .mu-highlight-title)) {
+    display: none;
+}
+
 /* thematic break */
 .mu-thematic-break {
     position: relative;

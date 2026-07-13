@@ -32,6 +32,16 @@ describe('feishu-style table axis toolbar configuration', () => {
         }
     });
 
+    it('keeps comment immediately before delete without a separator', () => {
+        for (const tools of [toolList.right, toolList.bottom]) {
+            const commentIndex = tools.findIndex(item => item.action === 'comment');
+            const removeIndex = tools.findIndex(item => item.action === 'remove');
+
+            expect(commentIndex).toBe(removeIndex - 1);
+            expect(tools[commentIndex].group).toBe(tools[removeIndex].group);
+        }
+    });
+
     it('uses a short middle stroke whose position distinguishes alignment', () => {
         const source = readFileSync(
             fileURLToPath(new URL('../index.ts', import.meta.url)),
