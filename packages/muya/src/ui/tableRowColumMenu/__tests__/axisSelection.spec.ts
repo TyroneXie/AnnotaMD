@@ -99,6 +99,27 @@ describe('Feishu-style table axis selection', () => {
         });
 
         await vi.waitFor(() => expect(muya.getMarkdown()).toContain('| **1** | **2** |'));
+        expect(table().domNode!.querySelectorAll('strong')).toHaveLength(2);
+    });
+
+    it('toggles inline code for the selected axis and reflects its active state', async () => {
+        select('right', 1, 0);
+        const item = {
+            label: 'Inline Code',
+            action: 'format' as const,
+            target: 'row' as const,
+            format: 'inline_code' as const,
+            symbol: '</>',
+            group: 1,
+        };
+
+        menu.selectItem(new Event('click'), item);
+        await vi.waitFor(() => expect(muya.getMarkdown()).toContain('| `1` | `2` |'));
+        expect(menu.container!.querySelector('li.item.inline_code')?.classList.contains('active')).toBe(true);
+
+        menu.selectItem(new Event('click'), item);
+        await vi.waitFor(() => expect(muya.getMarkdown()).toMatch(/\| 1\s+\| 2\s+\|/));
+        expect(menu.container!.querySelector('li.item.inline_code')?.classList.contains('active')).toBe(false);
     });
 
     it('emits one comment request spanning the selected axis', () => {

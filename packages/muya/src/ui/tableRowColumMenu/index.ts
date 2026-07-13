@@ -43,6 +43,21 @@ function wrapOrUnwrap(text: string, open: string, close = open): string {
         : `${open}${text}${close}`;
 }
 
+export function isWholeTableCellFormatted(text: string, type: TableAxisFormat): boolean {
+    switch (type) {
+        case 'strong':
+            return text.startsWith('**') && text.endsWith('**');
+        case 'del':
+            return text.startsWith('~~') && text.endsWith('~~');
+        case 'em':
+            return text.startsWith('*') && !text.startsWith('**') && text.endsWith('*');
+        case 'u':
+            return text.startsWith('<u>') && text.endsWith('</u>');
+        case 'inline_code':
+            return /^(`+)[\s\S]*\1$/.test(text);
+    }
+}
+
 function tableActionIcon(item: MenuItem): ActionIconName {
     if (item.action === 'format')
         return formatActionIcon(item.format!)!;
@@ -76,8 +91,11 @@ export function formatWholeTableCell(
         case 'u':
             return wrapOrUnwrap(text, '<u>', '</u>');
         case 'inline_code': {
+            const match = text.match(/^(`+)([\s\S]*)\1$/);
+            if (match)
+                return match[2];
             const marker = text.includes('`') ? '``' : '`';
-            return wrapOrUnwrap(text, marker);
+            return `${marker}${text}${marker}`;
         }
         case 'text_color':
         case 'background_color': {
@@ -194,6 +212,9 @@ export class TableRowColumMenu extends BaseFloat {
         const renderArray: MenuItem[] = toolList[tableInfo!.barType];
         const rowIndex = (this._block!.table.firstChild as TableInner).offset(this._block!.row);
         const columnIndex = this._block!.row.offset(this._block!);
+        const axisTexts = this._axisContents()
+            .map(content => content.text)
+            .filter(text => text.trim());
         let previousGroup: number | null = null;
         const children = renderArray.map((item) => {
             const { label } = item;
@@ -204,7 +225,9 @@ export class TableRowColumMenu extends BaseFloat {
                 && (item.target === 'row'
                     ? (item.location === 'previous' ? rowIndex === 0 : rowIndex === this._block!.table.rowCount - 1)
                     : (item.location === 'left' ? columnIndex === 0 : columnIndex === this._block!.table.columnCount - 1));
-            const active = item.action === 'align' && this._block!.align === item.value;
+            const active = (item.action === 'align' && this._block!.align === item.value)
+                || (item.action === 'format' && item.format != null && axisTexts.length > 0
+                    && axisTexts.every(text => isWholeTableCellFormatted(text, item.format!)));
             const paletteOpen = item.action === 'palette' && this._paletteOpen;
             const selector = `li.item.${item.action}.${item.format ?? ''}.${direction}${groupStart ? '.group-start' : ''}${disabled ? '.disabled' : ''}${active ? '.active' : ''}${paletteOpen ? '.palette-open' : ''}`;
             const itemChildren: VNode[] = [renderActionIcon(tableActionIcon(item))];
@@ -357,6 +380,11 @@ export class TableRowColumMenu extends BaseFloat {
             if (!content.text.trim())
                 continue;
             content.text = formatWholeTableCell(content.text, type, value);
+            // Assigning `text` updates the document state, but table cells do
+            // not re-render themselves from that assignment. Refresh every
+            // affected cell so the whole selected row/column changes visibly
+            // at once instead of only updating after reopening the document.
+            content.update();
         }
     }
 

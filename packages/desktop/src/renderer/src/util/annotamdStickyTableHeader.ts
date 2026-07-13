@@ -58,9 +58,10 @@ export class AnnotaMDStickyTableHeader {
       if (!table || !headerRow) continue
 
       const figureRect = figure.getBoundingClientRect()
+      const tableRect = table.getBoundingClientRect()
       const headerRect = headerRow.getBoundingClientRect()
       const headerHasScrolledAway = headerRect.top < stickyTop
-      const tableStillCoversHeader = figureRect.bottom > stickyTop + headerRect.height
+      const tableStillCoversHeader = tableRect.bottom > stickyTop + headerRect.height
       if (!headerHasScrolledAway || !tableStillCoversHeader) continue
 
       this.render(figure, table, headerRow, rootRect, figureRect)
