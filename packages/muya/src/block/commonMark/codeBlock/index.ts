@@ -1,14 +1,14 @@
 import type { Muya } from '../../../muya';
 import type { ICodeBlockState } from '../../../state/types';
+import type LangInputContent from '../../content/langInputContent';
 import type { TBlockPath } from '../../types';
 import diff from 'fast-diff';
 import { diffToTextOp, firstWordOfInfo } from '../../../utils';
+import { codeInfoTitle, withCodeInfoTitle } from '../../../utils/codeInfoString';
 import { operateClassName } from '../../../utils/dom';
 import logger from '../../../utils/logger';
 import { languageDisplayName, loadLanguage } from '../../../utils/prism';
-import { codeInfoTitle, withCodeInfoTitle } from '../../../utils/codeInfoString';
 import Parent from '../../base/parent';
-import type LangInputContent from '../../content/langInputContent';
 import { ScrollPage } from '../../scrollPage';
 
 const debug = logger('codeblock:');
@@ -29,6 +29,7 @@ class CodeBlock extends Parent {
 
         codeBlock.append(langInput);
         codeBlock.append(code);
+        codeBlock._createCollapseIndicator();
         codeBlock._createCaption();
 
         // Move the line-numbers gutter from .mu-code into the pre so that
@@ -141,6 +142,43 @@ class CodeBlock extends Parent {
             const languageInput = this.firstContentInDescendant() as LangInputContent | null;
             languageInput?.updateInfoString(withCodeInfoTitle(this.meta.lang, caption.value));
         });
+    }
+
+    private _createCollapseIndicator() {
+        const indicator = document.createElement('button');
+        const collapseText = this.muya.i18n.t('Collapse Section');
+        indicator.type = 'button';
+        indicator.className = 'mu-code-collapse-indicator';
+        indicator.contentEditable = 'false';
+        indicator.setAttribute('aria-expanded', 'true');
+        indicator.setAttribute('aria-label', collapseText);
+        indicator.dataset.tooltip = collapseText;
+
+        this.domNode!.addEventListener('mousedown', (event) => {
+            if (
+                this.domNode!.classList.contains('mu-code-collapsed')
+                && event.target === this.domNode
+            ) {
+                event.preventDefault();
+            }
+        });
+        indicator.addEventListener('mousedown', event => event.preventDefault());
+        indicator.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const collapsed = this.domNode!.classList.toggle('mu-code-collapsed');
+            if (collapsed)
+                this.domNode!.contentEditable = 'false';
+            else
+                this.domNode!.removeAttribute('contenteditable');
+            const text = this.muya.i18n.t(collapsed ? 'Expand Section' : 'Collapse Section');
+            indicator.setAttribute('aria-expanded', String(!collapsed));
+            indicator.setAttribute('aria-label', text);
+            indicator.dataset.tooltip = text;
+        });
+
+        this.domNode!.appendChild(indicator);
     }
 
     queryBlock(path: TBlockPath) {

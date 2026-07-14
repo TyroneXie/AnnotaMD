@@ -14,7 +14,13 @@ import BaseFloat from '../index';
 // visible. Reported against "Insert Row Above/Below": the TableRowColumMenu
 // stayed on screen after picking an item.
 
-class TestFloat extends BaseFloat {}
+class TestFloat extends BaseFloat {
+    positionedCount = 0;
+
+    protected override onPositioned() {
+        this.positionedCount += 1;
+    }
+}
 
 function makeFloat(): TestFloat {
     const muya = { eventCenter: { emit: vi.fn() } } as unknown as Muya;
@@ -38,6 +44,17 @@ const reference = {
 const tick = () => new Promise(resolve => setTimeout(resolve, 20));
 
 describe('baseFloat hide() vs in-flight position update', () => {
+    it('notifies subclasses only after the float coordinates are committed', async () => {
+        const float = makeFloat();
+        float.show(reference);
+
+        expect(float.positionedCount).toBe(0);
+        await tick();
+
+        expect(float.positionedCount).toBeGreaterThan(0);
+        expect(float.floatBox!.style.opacity).toBe('1');
+    });
+
     it('stays hidden when hide() interrupts the initial position update', async () => {
         const float = makeFloat();
         float.show(reference);

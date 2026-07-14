@@ -151,7 +151,7 @@ class Code extends Parent {
             i18n,
             this._withLineNumbers,
             this._initialLanguage,
-            options.wrapCodeBlocks,
+            options.wrapCodeBlocks ?? false,
         ));
         if (withLineNumbers)
             html += lineNumbersWrapperHTML();

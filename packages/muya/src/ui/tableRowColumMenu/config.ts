@@ -1,4 +1,4 @@
-export type TableAxisTarget = 'row' | 'column';
+export type TableAxisTarget = 'row' | 'column' | 'cells';
 export type TableAxisFormat = 'strong' | 'del' | 'em' | 'u' | 'inline_code';
 export type TableAxisAction =
     | 'insert'
@@ -30,7 +30,7 @@ const formatTools = (target: TableAxisTarget, group: number): MenuItem[] => [
     { label: 'Font Color', action: 'palette', target, symbol: 'A', group },
 ];
 
-export const toolList: Record<'right' | 'bottom', MenuItem[]> = {
+export const toolList: Record<'right' | 'bottom' | 'rect', MenuItem[]> = {
     right: [
         ...formatTools('row', 1),
         { label: 'Move Row Up', action: 'move', location: 'previous', target: 'row', symbol: '↑', group: 2 },
@@ -48,5 +48,9 @@ export const toolList: Record<'right' | 'bottom', MenuItem[]> = {
         { label: 'Reset Column Width', action: 'reset-width', target: 'column', symbol: '↔', group: 4 },
         { label: 'Comment', action: 'comment', target: 'column', symbol: '', group: 5 },
         { label: 'Remove Column', action: 'remove', target: 'column', symbol: '⌫', group: 5 },
+    ],
+    rect: [
+        ...formatTools('cells', 1),
+        { label: 'Comment', action: 'comment', target: 'cells', symbol: '', group: 2 },
     ],
 };

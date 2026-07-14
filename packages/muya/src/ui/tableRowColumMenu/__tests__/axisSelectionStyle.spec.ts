@@ -17,6 +17,18 @@ const desktopEditor = readFileSync(
 );
 
 describe('Feishu-style table axis selection appearance', () => {
+    it('keeps cell text above selection overlays', () => {
+        expect(css).toMatch(
+            /\.mu-table-cell-content\s*\{(?=[^}]*position:\s*relative;)(?=[^}]*z-index:\s*2;)[^}]*\}/s,
+        );
+    });
+
+    it('uses the same Feishu blue for rectangular cell selections', () => {
+        expect(css).toMatch(
+            /\.mu-table-inner tr td\.mu-table-cell-selected::before\s*\{(?=[^}]*background:\s*rgb\(51 112 255 \/ 13%\);)[^}]*\}/s,
+        );
+    });
+
     it('draws selected column and row edges outside the table border', () => {
         expect(css).toMatch(
             /\.mu-table-axis-edge-column::before\s*\{(?=[^}]*height:\s*calc\(100% \+ 6px\);)(?=[^}]*border-top:\s*5px solid #3370ff;)(?=[^}]*transform:\s*translateY\(-5px\);)[^}]*\}/s,

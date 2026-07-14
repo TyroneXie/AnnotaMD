@@ -32,6 +32,9 @@ abstract class BaseFloat {
     private _lastScrollTop: number | null = null;
     protected cb: (...args: unknown[]) => void = noop;
 
+    /** Called after Floating UI has committed the current reference position. */
+    protected onPositioned() {}
+
     private _cleanup: (() => void) | null = null;
     private _resizeObserver: ResizeObserver | null = null;
 
@@ -189,6 +192,7 @@ abstract class BaseFloat {
                     top: `${safeY}px`,
                     opacity: 1,
                 });
+                this.onPositioned();
             });
         });
         this._cleanup = cleanup;

@@ -417,6 +417,105 @@
     width: 3px;
 }
 
+.mu-code-collapse-indicator {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    z-index: 3;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 26px;
+    padding: 0;
+
+    background: transparent;
+    border: 0;
+    outline: none;
+    opacity: 0;
+    pointer-events: none;
+    cursor: pointer;
+
+    transition: opacity 0.12s ease;
+}
+
+.mu-code-collapse-indicator:focus-visible,
+.mu-code-block:hover > .mu-code-collapse-indicator,
+.mu-code-block.mu-code-collapsed > .mu-code-collapse-indicator {
+    opacity: 1;
+    pointer-events: auto;
+    transition: none;
+}
+
+.mu-code-collapse-indicator::before {
+    width: 0;
+    height: 0;
+
+    border-top: 6px solid #646a73;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+
+    content: '';
+}
+
+.mu-code-collapsed > .mu-code-collapse-indicator::before {
+    border-top: 5px solid transparent;
+    border-right: 0;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid #646a73;
+}
+
+.mu-code-collapse-indicator::after {
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    z-index: 2147483000;
+
+    padding: 4px 8px;
+
+    color: #fff;
+    font-weight: 400;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
+    line-height: 20px;
+    white-space: nowrap;
+
+    background: #1f2329;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgb(31 35 41 / 18%);
+    transform: translateX(-50%) translateY(2px);
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 50ms linear, transform 50ms linear;
+
+    content: attr(data-tooltip);
+}
+
+.mu-code-collapse-indicator:hover::before {
+    border-top-color: #1456f0;
+}
+
+.mu-code-collapsed > .mu-code-collapse-indicator:hover::before {
+    border-top-color: transparent;
+    border-left-color: #1456f0;
+}
+
+.mu-code-collapse-indicator:hover::after,
+.mu-code-collapse-indicator:focus-visible::after {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.mu-code-block.mu-code-collapsed > .mu-code {
+    overflow: hidden;
+}
+
+.mu-code-block.mu-code-collapsed .mu-codeblock-content {
+    display: none;
+}
+
 .mu-code-block .mu-content {
     white-space: inherit;
 }
@@ -447,6 +546,12 @@
 .mu-code-block:hover .mu-code-actions {
     opacity: 1;
     pointer-events: auto;
+}
+
+.mu-code-block.mu-code-collapsed .mu-code-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transition: none;
 }
 
 .mu-code-actions button,
@@ -569,6 +674,10 @@
     content: counter(mu-linenumber);
 }
 
+.mu-code-block.mu-code-collapsed > .mu-line-numbers-rows {
+    display: none;
+}
+
 span.mu-language-input {
     display: none;
 }
@@ -576,7 +685,7 @@ span.mu-language-input {
 input.mu-code-caption {
     position: absolute;
     top: 7px;
-    left: 10px;
+    left: 30px;
     z-index: 2;
 
     display: inline-flex;
@@ -884,7 +993,7 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
 .mu-table-inner tr td.mu-table-cell-selected::before {
     z-index: 1;
 
-    background: var(--editor-color-04);
+    background: rgb(51 112 255 / 13%);
 }
 
 .mu-table-inner tr td.mu-table-axis-selected::before {
@@ -933,6 +1042,28 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     border-radius: 3px 0 0 3px;
     box-shadow: inset 2px 0 0 rgb(51 112 255 / 12%);
     transform: translateX(-5px);
+}
+
+/* The insertion handle paints its own guide line. Suppress the selected-axis
+   edge while it is visible so the guide and the `+` always share one axis. */
+.mu-table-inner.mu-table-insertion-active tr td.mu-table-axis-edge-column::before,
+.mu-table-inner.mu-table-insertion-active tr td.mu-table-axis-hover-edge-column::before {
+    height: calc(100% + 1px);
+
+    border-top: 1px solid var(--table-border-color);
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+}
+
+.mu-table-inner.mu-table-insertion-active tr td.mu-table-axis-edge-row::before,
+.mu-table-inner.mu-table-insertion-active tr td.mu-table-axis-hover-edge-row::before {
+    width: calc(100% + 1px);
+
+    border-left: 1px solid var(--table-border-color);
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
 }
 
 .mu-table-inner tr td.mu-table-cell-border-top::before {
@@ -1440,6 +1571,9 @@ pre[data-role='vega-lite']::after {
 }
 
 .mu-table-cell-content {
+    position: relative;
+    z-index: 2;
+
     min-width: 10em;
 }
 

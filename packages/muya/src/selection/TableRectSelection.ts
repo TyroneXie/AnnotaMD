@@ -60,6 +60,42 @@ class TableRectSelection {
         );
     }
 
+    selectedCells(): TableBodyCell[] {
+        if (this._table == null || this._anchor == null || this._focus == null)
+            return [];
+
+        const minRow = Math.min(this._anchor.row, this._focus.row);
+        const maxRow = Math.max(this._anchor.row, this._focus.row);
+        const minColumn = Math.min(this._anchor.column, this._focus.column);
+        const maxColumn = Math.max(this._anchor.column, this._focus.column);
+        const cells: TableBodyCell[] = [];
+
+        for (let row = minRow; row <= maxRow; row++) {
+            for (let column = minColumn; column <= maxColumn; column++) {
+                const cell = this._table.cellAt(row, column);
+                if (cell)
+                    cells.push(cell);
+            }
+        }
+
+        return cells;
+    }
+
+    getBoundingClientRect(): DOMRect {
+        const rects = this.selectedCells()
+            .map(cell => cell.domNode?.getBoundingClientRect())
+            .filter((rect): rect is DOMRect => rect != null);
+        if (rects.length === 0)
+            return new DOMRect();
+
+        const left = Math.min(...rects.map(rect => rect.left));
+        const top = Math.min(...rects.map(rect => rect.top));
+        const right = Math.max(...rects.map(rect => rect.right));
+        const bottom = Math.max(...rects.map(rect => rect.bottom));
+
+        return new DOMRect(left, top, right - left, bottom - top);
+    }
+
     selectTable(table: Table): void {
         this.clear();
 
@@ -171,8 +207,28 @@ class TableRectSelection {
 
         // Nothing to freeze when the drag never started (a plain click) or the
         // pointer was released outside the table (focus is null).
-        if (!this._isSelecting || this._focus == null)
+        if (!this._isSelecting || this._focus == null) {
             this.clear();
+            return;
+        }
+
+        const block = this._anchor!.cell;
+        // A completed browser drag dispatches a trailing `click` after
+        // `mouseup`. BaseFloat closes menus on document clicks, so opening the
+        // toolbar synchronously here makes that click immediately hide it.
+        // Defer one task: the click finishes first, then the frozen rectangle's
+        // toolbar opens and stays pinned for the user's next action.
+        setTimeout(() => {
+            if (!this.hasSelection)
+                return;
+            this._muya.eventCenter.emit('muya-table-bar', {
+                reference: {
+                    getBoundingClientRect: () => this.getBoundingClientRect(),
+                },
+                tableInfo: { barType: 'rect' },
+                block,
+            });
+        }, 0);
     };
 
     private _freezeNativeSelection(): void {

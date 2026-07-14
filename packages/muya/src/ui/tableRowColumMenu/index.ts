@@ -113,7 +113,7 @@ export function formatWholeTableCell(
 }
 
 interface ITableInfo {
-    barType: 'bottom' | 'right';
+    barType: 'bottom' | 'right' | 'rect';
 }
 
 export class TableRowColumMenu extends BaseFloat {
@@ -146,9 +146,9 @@ export class TableRowColumMenu extends BaseFloat {
                     this._tableInfo = tableInfo;
                     this._block = block;
                     this._paletteOpen = false;
-                    this.options = tableInfo.barType === 'bottom'
-                        ? columnOptions
-                        : rowOptions;
+                    this.options = tableInfo.barType === 'right'
+                        ? rowOptions
+                        : columnOptions;
                     this.render();
                     this._highlightSelection();
                     this.show(reference);
@@ -168,6 +168,8 @@ export class TableRowColumMenu extends BaseFloat {
 
     private _highlightSelection() {
         if (!this._block || !this._tableInfo)
+            return;
+        if (this._tableInfo.barType === 'rect')
             return;
 
         const { table, row } = this._block;
@@ -350,6 +352,12 @@ export class TableRowColumMenu extends BaseFloat {
     private _axisContents(): Format[] {
         if (!this._block || !this._tableInfo)
             return [];
+
+        if (this._tableInfo.barType === 'rect') {
+            return this.muya.editor.selection.table.selectedCells()
+                .map(cell => cell.firstContentInDescendant())
+                .filter((content): content is Format => content instanceof Format);
+        }
 
         const { table, row } = this._block;
         const rowIndex = (table.firstChild as TableInner).offset(row);

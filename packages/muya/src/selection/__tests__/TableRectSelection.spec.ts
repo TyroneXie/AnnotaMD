@@ -108,6 +108,28 @@ describe('cross-cell table selection — highlight', () => {
         expect(muya.editor.selection.table.hasSelection).toBe(true);
     });
 
+    it('opens the table formatting toolbar after the drag click has finished', async () => {
+        const muya = bootMuya(TABLE_MD);
+        const table = firstTable(muya);
+        const listener = vi.fn();
+        muya.eventCenter.on('muya-table-bar', listener);
+
+        dragSelect(table, 0, 0, 1, 1);
+        // Real browsers dispatch a trailing click after mouseup. The toolbar
+        // must open after it or BaseFloat's document click handler closes it.
+        fireMouse(cellDom(table, 1, 1), 'click');
+
+        await vi.waitFor(() => {
+            expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+                reference: expect.objectContaining({
+                    getBoundingClientRect: expect.any(Function),
+                }),
+                tableInfo: { barType: 'rect' },
+                block: table.cellAt(0, 0),
+            }));
+        });
+    });
+
     it('keeps the table selection exclusive of any text selection', () => {
         const muya = bootMuya(TABLE_MD);
         const table = firstTable(muya);

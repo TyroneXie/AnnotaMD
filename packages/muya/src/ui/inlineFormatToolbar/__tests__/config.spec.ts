@@ -35,7 +35,7 @@ describe('inlineFormatToolbar config — required inline format types', () => {
     it.each(REQUIRED_TYPES)('contains an entry for type %s with an icon', (type) => {
         const entry = icons.find(i => i.type === type);
         expect(entry, `missing config entry for type=${type}`).toBeTruthy();
-        expect('icon' in entry || 'label' in entry, `type=${type} entry has no visual`).toBe(true);
+        expect('icon' in entry! || 'label' in entry!, `type=${type} entry has no visual`).toBe(true);
     });
 
     it('does not duplicate any required type', () => {

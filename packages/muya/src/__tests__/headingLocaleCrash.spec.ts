@@ -123,7 +123,7 @@ describe('typing `#` to create a heading under a non-en locale (#4424 / #4427)',
         // the pre-#4424 missing locale key would have produced.
         expect(expected).not.toBe('Copy anchor link to this heading');
         expect(affordance!.getAttribute('aria-label')).toBe(expected);
-        expect(affordance!.getAttribute('title')).toBe(expected);
+        expect(affordance!.getAttribute('data-tooltip')).toBe(expected);
     });
 
     it('resolves the affordance label per-locale (en vs zh-CN) for the same heading', async () => {

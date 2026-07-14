@@ -65,15 +65,15 @@ describe('muya.locale() refreshes rendered hints (Phase G — G8)', () => {
     it('updates the code-block language-input hint attribute', () => {
         const muya = bootMuya('```\n\n```\n');
         const findLangInput = (): Element | null =>
-            muya.domNode.querySelector('[hint]');
+            muya.domNode.querySelector('.mu-language-input[hint]');
         expect(findLangInput()?.getAttribute('hint')).toBe(
-            en.resource['Input Language Identifier...'],
+            en.resource['Code Block'],
         );
 
         muya.locale(zhCN);
 
         expect(findLangInput()?.getAttribute('hint')).toBe(
-            zhCN.resource['Input Language Identifier...'],
+            zhCN.resource['Code Block'],
         );
     });
 

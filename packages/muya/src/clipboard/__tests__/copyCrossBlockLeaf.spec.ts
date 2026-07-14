@@ -17,6 +17,7 @@ vi.mock('../../utils/prism/index', () => ({
     walkTokens: () => null,
     loadedLanguages: new Set(),
     transformAliasToOrigin: (s: string) => s,
+    languageDisplayName: (s: string) => s,
     loadLanguage: () => Promise.resolve([]),
     search: () => [],
 }));

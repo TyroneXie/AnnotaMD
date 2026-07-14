@@ -122,6 +122,10 @@
     transform: translateX(-50%);
 }
 
+.mu-table-drag-bar[data-drag='bottom'][data-insert='after']::after {
+    transform: translateX(50%);
+}
+
 .mu-table-drag-bar[data-drag='right'][data-insert='before']::before,
 .mu-table-drag-bar[data-drag='right'][data-insert='before']::after {
     top: 0;
@@ -150,6 +154,10 @@
     height: 2px;
 
     transform: translateY(-50%);
+}
+
+.mu-table-drag-bar[data-drag='right'][data-insert='after']::after {
+    transform: translateY(50%);
 }
 
 .mu-cell-transform {

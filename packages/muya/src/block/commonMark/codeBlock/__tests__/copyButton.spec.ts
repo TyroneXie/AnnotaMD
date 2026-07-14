@@ -1,10 +1,12 @@
 // @vitest-environment happy-dom
 
+import type CodeBlock from '../index';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyType } from '../../../../clipboard/types';
 import { Muya } from '../../../../muya';
 import { CodeBlockLanguageSelector } from '../../../../ui/codeBlockLanguageSelector';
-import type CodeBlock from '../index';
 
 // Characterization coverage for the code-block copy button wiring
 // (Code._listen, code.ts:104-134). copyHandler.spec only exercises the
@@ -97,6 +99,59 @@ describe('code-block copy button', () => {
     });
 });
 
+describe('code-block session collapse', () => {
+    it('collapses only the rendered body and restores it without changing Markdown', () => {
+        const markdown = '```ts title="Example"\nconst value = 1\n```\n';
+        const muya = bootMuya(markdown, { codeBlockLineNumbers: true });
+        const codeBlock = muya.domNode.querySelector<HTMLElement>('pre.mu-code-block')!;
+        const disclosure = codeBlock.querySelector<HTMLButtonElement>('.mu-code-collapse-indicator');
+
+        expect(disclosure).not.toBeNull();
+        expect(disclosure!.getAttribute('aria-expanded')).toBe('true');
+        expect(codeBlock.classList.contains('mu-code-collapsed')).toBe(false);
+
+        const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        disclosure!.dispatchEvent(mousedown);
+        expect(mousedown.defaultPrevented).toBe(true);
+
+        disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(codeBlock.classList.contains('mu-code-collapsed')).toBe(true);
+        expect(codeBlock.getAttribute('contenteditable')).toBe('false');
+        expect(disclosure!.getAttribute('aria-expanded')).toBe('false');
+        expect(disclosure!.dataset.tooltip).toBe('Expand Section');
+        expect(muya.getMarkdown()).toBe(markdown);
+
+        const collapsedShellMouseDown = new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+        });
+        codeBlock.dispatchEvent(collapsedShellMouseDown);
+        expect(collapsedShellMouseDown.defaultPrevented).toBe(true);
+
+        disclosure!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(codeBlock.classList.contains('mu-code-collapsed')).toBe(false);
+        expect(codeBlock.hasAttribute('contenteditable')).toBe(false);
+        expect(disclosure!.getAttribute('aria-expanded')).toBe('true');
+        expect(disclosure!.dataset.tooltip).toBe('Collapse Section');
+        expect(muya.getMarkdown()).toBe(markdown);
+    });
+
+    it('shows the disclosure only on hover and hides code content plus its gutter when collapsed', () => {
+        const stylesheet = readFileSync(
+            resolve(process.cwd(), 'src/assets/styles/blockSyntax.css'),
+            'utf8',
+        );
+
+        expect(stylesheet).toContain('opacity: 0;\n    pointer-events: none;');
+        expect(stylesheet).toContain('.mu-code-block:hover > .mu-code-collapse-indicator');
+        expect(stylesheet).toContain('.mu-code-block.mu-code-collapsed > .mu-code-collapse-indicator');
+        expect(stylesheet).toContain('.mu-code-block.mu-code-collapsed > .mu-code {\n    overflow: hidden;');
+        expect(stylesheet).toContain('.mu-code-block.mu-code-collapsed .mu-codeblock-content {\n    display: none;');
+        expect(stylesheet).toContain('.mu-code-block.mu-code-collapsed > .mu-line-numbers-rows {\n    display: none;');
+        expect(stylesheet).toContain('.mu-code-block.mu-code-collapsed .mu-code-actions {\n    opacity: 1;');
+    });
+});
+
 describe('code-block language input', () => {
     it('opens the complete language picker from the right-side language button', () => {
         const muya = bootMuya('```ts\nconst value = 1\n```\n');
@@ -163,7 +218,7 @@ describe('code-block language input', () => {
     it('restores the caption and preserves it when changing language', () => {
         const muya = bootMuya('```ts title="领域模型"\nconst value = 1\n```\n');
         const codeBlock = muya.editor.scrollPage!.firstChild! as CodeBlock;
-        const languageInput = codeBlock.firstContentInDescendant()! as {
+        const languageInput = codeBlock.firstContentInDescendant()! as unknown as {
             updateLanguage: (language: string) => void;
         };
         const caption = muya.domNode.querySelector<HTMLElement>('.mu-code-caption')!;

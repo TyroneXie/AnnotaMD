@@ -32,7 +32,7 @@ function table(): Table {
     return muya.editor.scrollPage!.firstChild as Table;
 }
 
-function select(barType: 'right' | 'bottom', row: number, column: number) {
+function select(barType: 'right' | 'bottom' | 'rect', row: number, column: number) {
     const block = table().cellAt(row, column)!;
     muya.eventCenter.emit('muya-table-bar', {
         reference,
@@ -42,6 +42,49 @@ function select(barType: 'right' | 'bottom', row: number, column: number) {
 }
 
 describe('Feishu-style table axis selection', () => {
+    it('reuses the formatting toolbar for a rectangular cell selection', async () => {
+        muya.editor.selection.table.selectTable(table());
+        select('rect', 0, 0);
+
+        expect(menu.container!.querySelector('.mu-action-icon-strong')).not.toBeNull();
+        expect(menu.container!.querySelector('.mu-action-icon-comment')).not.toBeNull();
+        expect(menu.container!.querySelector('.mu-action-icon-delete')).toBeNull();
+
+        menu.selectItem(new Event('click'), {
+            label: 'Emphasize',
+            action: 'format',
+            target: 'cells',
+            format: 'strong',
+            symbol: 'B',
+            group: 1,
+        });
+
+        await vi.waitFor(() => {
+            expect(table().domNode!.querySelectorAll('strong')).toHaveLength(4);
+        });
+    });
+
+    it('emits one comment request spanning a rectangular cell selection', () => {
+        const listener = vi.fn();
+        muya.eventCenter.on('annotamd-comment-selection', listener);
+        muya.editor.selection.table.selectTable(table());
+        select('rect', 0, 0);
+
+        menu.selectItem(new Event('click'), {
+            label: 'Comment',
+            action: 'comment',
+            target: 'cells',
+            symbol: '',
+            group: 2,
+        });
+
+        expect(listener).toHaveBeenCalledOnce();
+        expect(listener.mock.calls[0][0]).toMatchObject({
+            quote: 'A B 1 2',
+            isCrossBlock: true,
+        });
+    });
+
     it('selects and pins a whole row until the menu closes', () => {
         select('right', 1, 0);
 
