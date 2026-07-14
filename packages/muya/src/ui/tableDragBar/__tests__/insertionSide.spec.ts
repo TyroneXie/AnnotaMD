@@ -23,7 +23,7 @@ describe('Feishu-style table insertion hit areas', () => {
         expect(getInsertionSide('right', rect, 95, 70)).toBeNull();
     });
 
-    it('keeps the outer drag hit areas transparent and paints hover borders inside cells', () => {
+    it('keeps the drag hit areas transparent and paints hover borders outside cells', () => {
         expect(css).toMatch(
             /\.mu-table-drag-bar::before\s*\{[^}]*background:\s*transparent;/s,
         );

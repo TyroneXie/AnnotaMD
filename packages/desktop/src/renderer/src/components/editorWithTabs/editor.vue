@@ -2450,6 +2450,10 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   background: #fff;
 }
 
+.editor-component .mu-container table.mu-table-inner {
+  overflow: visible !important;
+}
+
 .editor-component .mu-container table th,
 .editor-component .mu-container table td {
   border-color: #eceff3;
@@ -2506,6 +2510,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
 }
 
 .editor-component .mu-container figure.mu-table {
+  padding-inline-start: 5px;
   overflow-x: auto !important;
   overflow-y: hidden !important;
   scrollbar-width: thin;
