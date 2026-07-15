@@ -32,6 +32,20 @@ interface IPendingInsertionRender {
     y: number;
 }
 
+interface IColumnResizeTarget {
+    table: Table;
+    tableElement: HTMLTableElement;
+    columnIndex: number;
+    boundaryX: number;
+}
+
+interface IColumnResizeInfo extends IColumnResizeTarget {
+    startX: number;
+    startTableRight: number;
+    widths: number[];
+    eventIds: string[];
+}
+
 function calculateAspects(tableBlock: Table, barType: BarType) {
     const table = tableBlock.firstChild!.domNode!;
 
@@ -88,6 +102,67 @@ function getDragCells(tableBlock: Table, barType: BarType, index: number) {
 
 const OFFSET = 20;
 const INSERT_HIT_AREA = 12;
+const COLUMN_RESIZE_HIT_AREA = 5;
+const MIN_COLUMN_WIDTH = 72;
+const TABLE_RIGHT_GUIDE_RANGE = 36;
+const TABLE_RIGHT_SNAP_RANGE = 12;
+
+export function getTableRightSnap(
+    tableRight: number,
+    contentRight: number,
+): { showGuide: boolean; adjustment: number } {
+    const adjustment = contentRight - tableRight;
+    const distance = Math.abs(adjustment);
+
+    return {
+        showGuide: distance <= TABLE_RIGHT_GUIDE_RANGE,
+        adjustment: distance <= TABLE_RIGHT_SNAP_RANGE ? adjustment : 0,
+    };
+}
+
+export function resizeColumnWidths(
+    widths: number[],
+    columnIndex: number,
+    delta: number,
+): number[] {
+    const nextWidths = [...widths];
+    if (columnIndex < 0 || columnIndex >= nextWidths.length)
+        return nextWidths;
+
+    nextWidths[columnIndex] = Math.max(
+        MIN_COLUMN_WIDTH,
+        widths[columnIndex] + delta,
+    );
+    return nextWidths;
+}
+
+export function applyTableColumnWidths(
+    table: HTMLTableElement,
+    widths: number[],
+) {
+    let colgroup = [...table.children].find(
+        child => child.tagName === 'COLGROUP' && child.hasAttribute('data-muya-column-widths'),
+    ) as HTMLTableColElement | undefined;
+
+    if (!colgroup) {
+        colgroup = document.createElement('colgroup');
+        colgroup.dataset.muyaColumnWidths = 'true';
+        colgroup.contentEditable = 'false';
+        colgroup.setAttribute('aria-hidden', 'true');
+        table.prepend(colgroup);
+    }
+
+    colgroup.replaceChildren(...widths.map((width) => {
+        const column = document.createElement('col');
+        column.style.width = `${width}px`;
+        return column;
+    }));
+
+    table.dataset.columnResized = 'true';
+    table.style.tableLayout = 'fixed';
+    table.style.width = `${widths.reduce((total, width) => total + width, 0)}px`;
+    table.style.minWidth = '0px';
+}
 
 export function getInsertionSide(
     barType: BarType,
@@ -230,6 +305,11 @@ export class TableDragBar extends BaseFloat {
     private _hoverCells: HTMLElement[] = [];
     private _insertionTable: HTMLElement | null = null;
     private _pendingInsertionRender: IPendingInsertionRender | null = null;
+    private _columnResizeHandle: HTMLDivElement;
+    private _columnResizeGuide: HTMLDivElement;
+    private _columnResizeTarget: IColumnResizeTarget | null = null;
+    private _columnResizeInfo: IColumnResizeInfo | null = null;
+    private _previousBodyCursor: string = '';
 
     constructor(muya: Muya, options = {}) {
         const name = 'mu-table-drag-bar';
@@ -237,6 +317,16 @@ export class TableDragBar extends BaseFloat {
         super(muya, name, opts);
 
         this.floatBox!.classList.add('mu-table-drag-container');
+        this._columnResizeHandle = document.createElement('div');
+        this._columnResizeHandle.className = 'mu-table-column-resize-handle';
+        this._columnResizeHandle.contentEditable = 'false';
+        this._columnResizeHandle.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(this._columnResizeHandle);
+        this._columnResizeGuide = document.createElement('div');
+        this._columnResizeGuide.className = 'mu-table-column-resize-guide';
+        this._columnResizeGuide.contentEditable = 'false';
+        this._columnResizeGuide.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(this._columnResizeGuide);
         this.listen();
     }
 
@@ -258,6 +348,25 @@ export class TableDragBar extends BaseFloat {
                 isTableCellOwnedByMuya(element, this.muya);
             const hasTableCell = (elements: Element[]) =>
                 elements.some(isOwnedTableCell);
+
+            if (this._columnResizeInfo)
+                return;
+
+            const hoveredCell = els.find(isOwnedTableCell);
+            const resizeTarget = hoveredCell
+                ? this._getColumnResizeTarget(
+                        hoveredCell as HTMLTableCellElement,
+                        hoveredCell[BLOCK_DOM_PROPERTY] as TableBodyCell,
+                        x,
+                    )
+                : null;
+            if (!this._isDragTableBar && resizeTarget) {
+                this._hideAxisBar();
+                this._showColumnResizeHandle(resizeTarget);
+                return;
+            }
+
+            this._hideColumnResizeHandle();
 
             if (
                 !this._isDragTableBar
@@ -324,14 +433,223 @@ export class TableDragBar extends BaseFloat {
         eventCenter.attachDOMEvent(document.body, 'mousemove', handler);
         eventCenter.attachDOMEvent(container!, 'mousedown', this._mousedown);
         eventCenter.attachDOMEvent(container!, 'mouseup', this._mouseup);
+        eventCenter.attachDOMEvent(
+            this._columnResizeHandle,
+            'mousedown',
+            this._columnResizeMousedown,
+        );
+        eventCenter.attachDOMEvent(document, 'scroll', () => {
+            if (!this._columnResizeInfo)
+                this._hideColumnResizeHandle();
+        }, true);
     }
 
     override hide() {
+        this._hideColumnResizeHandle();
+        this._hideAxisBar();
+    }
+
+    private _hideAxisBar() {
         this._pendingInsertionRender = null;
         this._suspendInsertionVisual();
         this._setInsertionActive(false);
         this._clearHover();
         super.hide();
+    }
+
+    private _getColumnResizeTarget(
+        cellElement: HTMLTableCellElement,
+        cellBlock: TableBodyCell,
+        x: number,
+    ): IColumnResizeTarget | null {
+        const rect = cellElement.getBoundingClientRect();
+        const currentIndex = cellBlock.columnOffset;
+        let columnIndex = currentIndex;
+        let boundaryX = rect.right;
+
+        if (Math.abs(x - rect.right) <= COLUMN_RESIZE_HIT_AREA) {
+            columnIndex = currentIndex;
+            boundaryX = rect.right;
+        }
+        else if (
+            currentIndex > 0
+            && Math.abs(x - rect.left) <= COLUMN_RESIZE_HIT_AREA
+        ) {
+            columnIndex = currentIndex - 1;
+            boundaryX = rect.left;
+        }
+        else {
+            return null;
+        }
+
+        return {
+            table: cellBlock.table,
+            tableElement: cellBlock.table.firstChild!.domNode as HTMLTableElement,
+            columnIndex,
+            boundaryX,
+        };
+    }
+
+    private _showColumnResizeHandle(target: IColumnResizeTarget) {
+        const tableRect = target.tableElement.getBoundingClientRect();
+        this._columnResizeTarget = target;
+        this._columnResizeHandle.dataset.visible = 'true';
+        this._columnResizeHandle.style.left = `${target.boundaryX - 4}px`;
+        this._columnResizeHandle.style.top = `${tableRect.top}px`;
+        this._columnResizeHandle.style.height = `${tableRect.height}px`;
+    }
+
+    private _hideColumnResizeHandle() {
+        if (this._columnResizeInfo)
+            return;
+
+        this._columnResizeTarget = null;
+        delete this._columnResizeHandle.dataset.visible;
+    }
+
+    private _columnResizeMousedown = (event: Event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isMouseEvent(event) || !this._columnResizeTarget)
+            return;
+
+        const { table, tableElement, columnIndex, boundaryX }
+            = this._columnResizeTarget;
+        const firstRow = tableElement.querySelector('tr');
+        if (!firstRow)
+            return;
+
+        const widths = [...firstRow.children].map(
+            cell => cell.getBoundingClientRect().width,
+        );
+        applyTableColumnWidths(tableElement, widths);
+
+        const eventIds = [
+            this.muya.eventCenter.attachDOMEvent(
+                document,
+                'mousemove',
+                this._columnResizeMousemove,
+            ),
+            this.muya.eventCenter.attachDOMEvent(
+                document,
+                'mouseup',
+                this._columnResizeMouseup,
+            ),
+        ];
+        this._columnResizeInfo = {
+            table,
+            tableElement,
+            columnIndex,
+            boundaryX,
+            startX: event.clientX,
+            startTableRight: tableElement.getBoundingClientRect().right,
+            widths,
+            eventIds,
+        };
+        this._columnResizeHandle.dataset.active = 'true';
+        this._previousBodyCursor = document.body.style.cursor;
+        document.body.style.cursor = 'col-resize';
+    };
+
+    private _columnResizeMousemove = (event: Event) => {
+        if (!this._columnResizeInfo || !isMouseEvent(event))
+            return;
+
+        event.preventDefault();
+        if (!shouldContinueTableDrag(event.buttons)) {
+            this._finishColumnResize();
+            return;
+        }
+
+        const { tableElement, columnIndex, startX, startTableRight, widths }
+            = this._columnResizeInfo;
+        let nextWidths = resizeColumnWidths(
+            widths,
+            columnIndex,
+            event.clientX - startX,
+        );
+        const contentRight = this._getContentRight(tableElement);
+        const initialWidth = widths.reduce(
+            (total, width) => total + width,
+            0,
+        );
+        const nextWidth = nextWidths.reduce(
+            (total, width) => total + width,
+            0,
+        );
+        const tableRight = startTableRight + nextWidth - initialWidth;
+        const snap = getTableRightSnap(tableRight, contentRight);
+        if (snap.adjustment) {
+            nextWidths = resizeColumnWidths(
+                nextWidths,
+                columnIndex,
+                snap.adjustment,
+            );
+        }
+        applyTableColumnWidths(tableElement, nextWidths);
+
+        if (snap.showGuide)
+            this._showColumnResizeGuide(contentRight, tableElement);
+        else this._hideColumnResizeGuide();
+
+        const firstRow = tableElement.querySelector('tr');
+        const resizedCell = firstRow?.children[columnIndex];
+        if (resizedCell) {
+            const rect = resizedCell.getBoundingClientRect();
+            this._columnResizeHandle.style.left = `${rect.right - 4}px`;
+        }
+    };
+
+    private _columnResizeMouseup = (event: Event) => {
+        event.preventDefault();
+        this._finishColumnResize();
+    };
+
+    private _finishColumnResize() {
+        if (!this._columnResizeInfo)
+            return;
+
+        for (const id of this._columnResizeInfo.eventIds)
+            this.muya.eventCenter.detachDOMEvent(id);
+
+        this._columnResizeInfo = null;
+        delete this._columnResizeHandle.dataset.active;
+        this._hideColumnResizeGuide();
+        document.body.style.cursor = this._previousBodyCursor;
+        this._previousBodyCursor = '';
+    }
+
+    private _getContentRight(tableElement: HTMLTableElement) {
+        const container = tableElement.closest('.mu-container')
+            ?? this.muya.domNode;
+        const rect = container.getBoundingClientRect();
+        const paddingRight = Number.parseFloat(
+            getComputedStyle(container).paddingRight,
+        ) || 0;
+
+        return rect.right - paddingRight;
+    }
+
+    private _showColumnResizeGuide(
+        contentRight: number,
+        tableElement: HTMLTableElement,
+    ) {
+        const editor = tableElement.closest('.editor-component')
+            ?? this.muya.domNode.closest('.editor-component')
+            ?? this.muya.domNode.parentElement
+            ?? this.muya.domNode;
+        const rect = editor.getBoundingClientRect();
+        const top = Math.max(0, rect.top);
+        const bottom = Math.min(window.innerHeight, rect.bottom);
+
+        this._columnResizeGuide.dataset.visible = 'true';
+        this._columnResizeGuide.style.left = `${contentRight}px`;
+        this._columnResizeGuide.style.top = `${top}px`;
+        this._columnResizeGuide.style.height = `${Math.max(0, bottom - top)}px`;
+    }
+
+    private _hideColumnResizeGuide() {
+        delete this._columnResizeGuide.dataset.visible;
     }
 
     protected override onPositioned() {
@@ -769,5 +1087,12 @@ export class TableDragBar extends BaseFloat {
             else
                 this._clearHover();
         }
+    }
+
+    override destroy() {
+        this._finishColumnResize();
+        this._columnResizeHandle.remove();
+        this._columnResizeGuide.remove();
+        super.destroy();
     }
 }

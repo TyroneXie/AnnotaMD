@@ -11,6 +11,63 @@
     cursor: grabbing;
 }
 
+.mu-table-column-resize-handle {
+    position: fixed;
+    z-index: 1001;
+
+    display: none;
+    width: 8px;
+
+    cursor: col-resize;
+
+    touch-action: none;
+}
+
+.mu-table-column-resize-handle[data-visible='true'] {
+    display: block;
+}
+
+.mu-table-column-resize-guide {
+    position: fixed;
+    z-index: 1000;
+
+    display: none;
+    width: 0;
+
+    border-left: 1px dashed rgb(51 112 255 / 72%);
+
+    pointer-events: none;
+}
+
+.mu-table-column-resize-guide[data-visible='true'] {
+    display: block;
+}
+
+.mu-table-column-resize-handle::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+
+    width: 2px;
+
+    background: transparent;
+
+    content: '';
+    pointer-events: none;
+}
+
+.mu-table-column-resize-handle:hover::after,
+.mu-table-column-resize-handle[data-active='true']::after {
+    background: #3370ff;
+}
+
+.mu-table-inner[data-column-resized='true'] .mu-table-cell-content {
+    min-width: 0;
+
+    overflow-wrap: anywhere;
+}
+
 .mu-table-drag-bar[data-drag='bottom'] {
     box-sizing: border-box;
     width: var(--table-axis-length, 24px);

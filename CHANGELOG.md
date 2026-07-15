@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0 - 2026-07-15
+
+### Added
+
+- Added table column resizing by dragging any column boundary horizontally.
+- Added a dashed content-edge guide and magnetic snapping when the table's right edge approaches the editor's maximum text width.
+
+### Changed
+
+- Kept every cell in a resized column synchronized through a shared table column layout.
+- Kept narrow resized columns usable with a minimum width and safe text wrapping.
+- Kept column resizing as a session-level visual adjustment without changing the Markdown source.
+
 ## 2.2.0 - 2026-07-13
 
 ### Added
