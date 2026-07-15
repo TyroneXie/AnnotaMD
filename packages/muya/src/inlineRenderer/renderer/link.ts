@@ -71,7 +71,7 @@ export default function link(
             // no-text-link
             return [
                 h(
-                    `span.${CLASS_NAMES.MU_GRAY}.${CLASS_NAMES.MU_REMOVE}`,
+                    `span.${CLASS_NAMES.MU_HIDE}.${CLASS_NAMES.MU_REMOVE}`,
                     firstMiddleBracket,
                 ),
                 h(
@@ -96,7 +96,7 @@ export default function link(
                         ),
                     ],
                 ),
-                h(`span.${CLASS_NAMES.MU_GRAY}.${CLASS_NAMES.MU_REMOVE}`, lastBracket),
+                h(`span.${CLASS_NAMES.MU_HIDE}.${CLASS_NAMES.MU_REMOVE}`, lastBracket),
             ];
         }
         else {

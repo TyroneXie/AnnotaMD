@@ -5,12 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import EventCenter from '../../../event';
 import LinkTools from '../index';
 
-// P3 defensive lock for marktext `1ef0d016` (link tools — unlink / jump).
+// P3 defensive lock for marktext `1ef0d016` (link tools).
 // The new linkTools subscriber + `selectItem` dispatcher is fully staged
 // in muya but there's no emitter for `muya-link-tools` yet, so neither
-// the unlink path nor the jump path is exercised end-to-end. Without a
-// test pinning the dispatch, a future refactor (e.g. renaming `unlink` /
-// `jumpClick`, or swapping the switch on `item.type`) would silently
+// the unlink path is exercised end-to-end. Without a test pinning the
+// dispatch, a future refactor could silently
 // regress the structure when the wiring is finally completed.
 //
 // These tests stub the floating-tool DOM surface and the eventCenter,
@@ -27,7 +26,9 @@ interface ILinkToolsView {
         raw?: string;
         range?: { start: number; end: number } | null;
     } | null;
-    selectItem: (event: Event, item: { type: string; icon: string }) => void;
+    _draftText: string;
+    _draftHref: string;
+    selectItem: (event: Event, item: { type: string; icon: string; tooltip?: string }) => void;
     render: () => void;
     container: HTMLElement | null;
     destroy: () => void;
@@ -50,6 +51,8 @@ function makeFakeMuya(): { muya: Muya; domNode: HTMLElement } {
     const muya = {
         eventCenter,
         domNode,
+        i18n: { t: (key: string) => key },
+        options: {},
     } as unknown as Muya;
     return { muya, domNode };
 }
@@ -86,7 +89,7 @@ afterEach(() => {
     }
 });
 
-describe('linkTools.selectItem — dispatches to block.unlink / jumpClick', () => {
+describe('linkTools.selectItem — edit and unlink', () => {
     it('unlink: routes to block.unlink with { range, text } from linkInfo', () => {
         const { tools } = bootLinkTools();
         const blockUnlink = vi.fn();
@@ -131,25 +134,53 @@ describe('linkTools.selectItem — dispatches to block.unlink / jumpClick', () =
         expect(blockUnlink).not.toHaveBeenCalled();
     });
 
-    it('jump: routes to options.jumpClick with the captured linkInfo', () => {
-        const jumpClick = vi.fn();
-        const { tools } = bootLinkTools({ jumpClick });
+    it('edit: replaces the toolbar with editable text and link fields', () => {
+        const { tools } = bootLinkTools();
+        tools._linkInfo = { text: 'Example', href: 'https://example.com' };
+        tools._draftText = 'Example';
+        tools._draftHref = 'https://example.com';
 
-        const linkInfo = { href: 'https://example.com' };
-        tools._linkInfo = linkInfo;
+        tools.selectItem(makeFakeEvent(), { type: 'edit', icon: '' });
 
-        tools.selectItem(makeFakeEvent(), { type: 'jump', icon: '' });
+        expect(tools.container!.querySelector<HTMLInputElement>('.link-text-input')?.value)
+            .toBe('Example');
+        expect(tools.container!.querySelector<HTMLInputElement>('.link-href-input')?.value)
+            .toBe('https://example.com');
+        expect(tools.container!.querySelector('.link-toolbar')).toBeNull();
+    });
 
-        expect(jumpClick).toHaveBeenCalledTimes(1);
-        expect(jumpClick).toHaveBeenCalledWith(linkInfo);
+    it('edit: writes both changed text and URL into a markdown link', () => {
+        const { tools } = bootLinkTools();
+        const setCursor = vi.fn();
+        const block = { text: '[Example]()', setCursor };
+        tools._linkBlock = block as unknown as Format;
+        tools._linkInfo = {
+            href: '',
+            text: 'Example',
+            raw: '[Example]()',
+            range: { start: 0, end: 11 },
+        };
+        tools._draftText = 'Example';
+        tools._draftHref = '';
+        tools.selectItem(makeFakeEvent(), { type: 'edit', icon: '' });
+        const textInput = tools.container!.querySelector<HTMLInputElement>('.link-text-input')!;
+        const hrefInput = tools.container!.querySelector<HTMLInputElement>('.link-href-input')!;
+        textInput.value = 'Renamed';
+        textInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hrefInput.value = 'https://example.com';
+        hrefInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hrefInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+        expect(block.text).toBe('[Renamed](https://example.com)');
+        expect(setCursor).toHaveBeenCalledWith(30, 30, true);
     });
 });
 
-describe('linkTools.render — jump visibility tracks linkInfo.href', () => {
+describe('linkTools.render — Feishu-style toolbar structure', () => {
     // Regression guard for issue #4356: a link whose href was sanitized away
     // (unsupported custom protocol) reaches the popover with `href: null`.
-    // There is nothing to jump to, so the jump item must not render.
-    it('omits the jump item when linkInfo.href is null', () => {
+    // The address falls back to visible text while the toolbar stays usable.
+    it('falls back to link text when href is null', () => {
         const { tools } = bootLinkTools();
         tools._linkInfo = {
             href: null,
@@ -160,11 +191,15 @@ describe('linkTools.render — jump visibility tracks linkInfo.href', () => {
 
         tools.render();
 
-        expect(tools.container!.querySelectorAll('li.item.jump').length).toBe(0);
+        expect(tools.container!.querySelector('.link-address-text')?.textContent)
+            .toBe('sambesi://localhost/node/11164');
+        expect(tools.container!.querySelectorAll('li.item.edit').length).toBe(1);
         expect(tools.container!.querySelectorAll('li.item.unlink').length).toBe(1);
+        expect(tools.container!.querySelectorAll('li.item.view-selector').length).toBe(1);
+        expect(tools.container!.querySelectorAll('li.item.more').length).toBe(1);
     });
 
-    it('renders both unlink and jump when linkInfo.href is present', () => {
+    it('renders address, edit, unlink, view selector and more actions', () => {
         const { tools } = bootLinkTools();
         tools._linkInfo = {
             href: 'https://example.com',
@@ -175,7 +210,42 @@ describe('linkTools.render — jump visibility tracks linkInfo.href', () => {
 
         tools.render();
 
-        expect(tools.container!.querySelectorAll('li.item.jump').length).toBe(1);
+        expect(tools.container!.querySelector('.link-address-text')?.textContent)
+            .toBe('https://example.com');
+        expect(tools.container!.querySelectorAll('li.item.edit').length).toBe(1);
         expect(tools.container!.querySelectorAll('li.item.unlink').length).toBe(1);
+        expect(tools.container!.querySelector('.mu-action-icon-edit')).not.toBeNull();
+        expect(tools.container!.querySelector('.view-mode-label')?.textContent).toBe('Title View');
+        expect(tools.container!.querySelector('.more-grid .mu-action-icon-more')).not.toBeNull();
+    });
+
+    it('opens only the Markdown-backed view options and the two-option copy menu', () => {
+        const { muya, tools } = bootLinkTools();
+        const writeText = vi.fn();
+        (muya.options as { clipboardWriteText?: (text: string) => void }).clipboardWriteText = writeText;
+        tools._linkInfo = {
+            href: 'https://example.com',
+            text: 'Example',
+            raw: '[Example](https://example.com)',
+            range: { start: 0, end: 30 },
+        };
+        tools.render();
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        expect([...tools.container!.querySelectorAll('.link-view-menu .link-menu-label')]
+            .map(item => item.textContent))
+            .toEqual(['Link View', 'Title View']);
+        expect(tools.container!.querySelector('.link-view-menu .selected .link-menu-check')?.textContent)
+            .toBe('✓');
+        expect(tools.container!.querySelectorAll('.link-view-menu .disabled')).toHaveLength(0);
+
+        tools.container!.querySelector<HTMLElement>('.more-button')!.click();
+        expect([...tools.container!.querySelectorAll('.link-more-menu .link-menu-label')]
+            .map(item => item.textContent))
+            .toEqual(['Copy Link', 'Copy Original Web Link']);
+        expect(tools.container!.querySelector('.link-more-menu .mu-action-icon-copy-link')).not.toBeNull();
+        expect(tools.container!.querySelector('.link-more-menu .mu-action-icon-web-link')).not.toBeNull();
+        tools.container!.querySelector<HTMLElement>('.link-more-menu .copy-link')!.click();
+        expect(writeText).toHaveBeenCalledWith('[Example](https://example.com)');
     });
 });

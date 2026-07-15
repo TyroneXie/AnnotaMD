@@ -6,7 +6,7 @@ import type { IRenderCursor } from '../../selection/types';
 import type InlineRenderer from '../index';
 import type { ISyntaxRenderOptions, Token } from '../types';
 import { CLASS_NAMES } from '../../config';
-import { conflict, methodMixins, snakeToCamel } from '../../utils';
+import { methodMixins, snakeToCamel } from '../../utils';
 import { h, toHTML } from '../../utils/snabbdom';
 import autoLink from './autoLink';
 import autoLinkExtension from './autoLinkExtension';
@@ -108,32 +108,16 @@ class Renderer {
 
     constructor(public muya: Muya, public parent: InlineRenderer) {}
 
-    private _checkConflicted(block: Format, token: Token, cursor: IRenderCursor = {}) {
-        const anchor = cursor.anchor || cursor.start;
-        const focus = cursor.focus || cursor.end;
-        if (!anchor || !focus || (cursor.block && cursor.block !== block))
-            return false;
-
-        const { start, end } = token.range;
-
-        return (
-            conflict([start, end], [anchor.offset, anchor.offset])
-            || conflict([start, end], [focus.offset, focus.offset])
-        );
-    }
-
     getClassName(
-        outerClass: string | undefined,
-        block: Format,
-        token: Token,
-        cursor: IRenderCursor,
+        _outerClass: string | undefined,
+        _block: Format,
+        _token: Token,
+        _cursor: IRenderCursor,
     ) {
-        return (
-            outerClass
-            || (this._checkConflicted(block, token, cursor)
-                ? CLASS_NAMES.MU_GRAY
-                : CLASS_NAMES.MU_HIDE)
-        );
+        // The desktop app has a dedicated source editor. Keep the WYSIWYG
+        // surface strict: moving the caret into rendered content must never
+        // reveal its Markdown delimiters.
+        return CLASS_NAMES.MU_HIDE;
     }
 
     getHighlightClassName(active: boolean) {

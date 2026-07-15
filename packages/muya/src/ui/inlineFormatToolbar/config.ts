@@ -54,6 +54,12 @@ const icons = [
         label: 'U',
     },
     {
+        type: 'link',
+        tooltip: 'Link',
+        shortcut: `${COMMAND_KEY}+L`,
+        label: '',
+    },
+    {
         type: 'inline_code',
         tooltip: 'Inline Code',
         // Default keybinding is Cmd/Ctrl+` (Linux uses Ctrl+Y); was wrongly +E.

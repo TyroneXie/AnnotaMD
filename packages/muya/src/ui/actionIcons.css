@@ -5,53 +5,61 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: 16px;
-    min-width: 16px;
-    height: 16px;
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
 
     color: currentcolor;
     font-weight: 500;
-    font-size: 17px;
+    font-size: 16px;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
     line-height: 1;
 }
 
 .mu-action-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
 
     fill: none;
     stroke: currentcolor;
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-width: 1.6;
+    stroke-width: 1.65;
+}
+
+.mu-action-icon-phosphor-bold svg {
+    fill: currentcolor;
+    stroke: none;
 }
 
 .mu-action-icon-strong {
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .mu-action-icon-strikethrough {
+    font-weight: 600;
     text-decoration: line-through;
-    text-decoration-thickness: 2px;
+    text-decoration-thickness: 1.5px;
 }
 
 .mu-action-icon-italic {
+    font-size: 17px;
     font-style: italic;
 }
 
 .mu-action-icon-underline {
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 2px;
 }
 
 .mu-action-icon-inline-code {
     font-weight: 650;
-    font-size: 11px;
+    font-size: 12px;
     font-family: "SF Mono", Menlo, Consolas, monospace;
-    letter-spacing: -1.8px;
+    letter-spacing: -1.5px;
 
-    transform: scaleX(0.86);
+    transform: scaleX(0.9);
 }
 
 .mu-action-icon-color {
@@ -59,8 +67,4 @@
 
     background: #fff2b8;
     border-radius: 4px;
-}
-
-.mu-action-icon-delete svg {
-    stroke-width: 2.05;
 }

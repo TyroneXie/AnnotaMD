@@ -5,8 +5,10 @@ import type { TableColumnToolIcon } from './config';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import icons from './config';
+import '../actionIcons.css';
 import '../tooltip/index.css';
 
 import './index.css';
@@ -97,20 +99,7 @@ export class TableColumnToolbar extends BaseFloat {
         const { i18n } = this.muya;
         const children = icons.map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
-            const icon = h(
-                'i.icon',
-                h(
-                    'i.icon-inner',
-                    {
-                        style: {
-                            'background': `url(${i.icon}) no-repeat`,
-                            'background-size': '100%',
-                        },
-                    },
-                    '',
-                ),
-            );
-            const iconWrapper = h(iconWrapperSelector, icon);
+            const iconWrapper = h(iconWrapperSelector, renderActionIcon(i.actionIcon));
 
             let itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
             if (block?.align === i.type)

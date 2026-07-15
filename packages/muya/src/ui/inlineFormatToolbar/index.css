@@ -19,6 +19,65 @@
     box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
 }
 
+.mu-format-picker.link-create-open {
+    width: min(440px, calc(100vw - 24px));
+    height: 68px;
+    padding: 11px 12px;
+}
+
+.mu-link-create-panel {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.mu-link-create-input {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    color: #1f2329;
+    font: 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    background: #fff;
+    border: 1px solid #bbbfc4;
+    border-radius: 6px;
+    outline: none;
+}
+
+.mu-link-create-input::placeholder {
+    color: #8f959e;
+}
+
+.mu-link-create-input:focus {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 1px #3370ff;
+}
+
+.mu-link-create-confirm {
+    flex: 0 0 80px;
+    height: 40px;
+    padding: 0;
+    color: #fff;
+    font: 500 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    background: #3370ff;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mu-link-create-confirm:hover:not(:disabled) {
+    background: #245bdb;
+}
+
+.mu-link-create-confirm:disabled {
+    color: #fff;
+    background: #bbbfc4;
+    cursor: not-allowed;
+}
+
 .mu-format-picker ul,
 .mu-format-picker li {
     margin: 0;

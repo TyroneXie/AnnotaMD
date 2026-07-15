@@ -11,9 +11,9 @@ describe('AnnotaMD compact inline toolbar', () => {
       'utf8'
     )
 
-    expect(css).toMatch(/\.mu-format-picker\s*\{[^}]*height:\s*34px;/s)
-    expect(css).toMatch(/\.mu-format-picker li\.item\s*\{[^}]*min-width:\s*28px;/s)
-    expect(css).toMatch(/\.mu-format-picker li\.item\s*\{[^}]*height:\s*26px;/s)
+    expect(css).toMatch(/\.mu-format-picker\s*\{[^}]*height:\s*40px;/s)
+    expect(css).toMatch(/\.mu-format-picker li\.item\s*\{[^}]*min-width:\s*32px;/s)
+    expect(css).toMatch(/\.mu-format-picker li\.item\s*\{[^}]*height:\s*32px;/s)
   })
 
   it('defines a visible color palette and swatches', () => {
@@ -41,11 +41,12 @@ describe('AnnotaMD compact inline toolbar', () => {
     expect(toolbar).toContain('this.muya.updateParagraph(type)')
     expect(css).toContain('.mu-text-style-menu')
     expect(css).toMatch(
-      /\.mu-format-picker li\.item\.inline_code\s*\{[^}]*width:\s*28px;[^}]*padding:\s*0;/s
+      /\.mu-format-picker li\.item\.inline_code\s*\{[^}]*width:\s*32px;[^}]*padding:\s*0;/s
     )
     expect(css).toMatch(
-      /\.mu-format-picker li\.item\.inline_code \.text-icon\s*\{[^}]*width:\s*20px;[^}]*min-width:\s*20px;/s
+      /\.mu-format-picker li\.item \.icon-wrapper\s*\{[^}]*width:\s*18px;[^}]*min-width:\s*18px;[^}]*height:\s*18px;/s
     )
+    expect(toolbar).toContain('renderActionIcon(formatActionIcon(icon.type)!')
   })
 
   it('uses immediate Feishu-style tooltips instead of native title bubbles', () => {
@@ -87,9 +88,8 @@ describe('AnnotaMD compact inline toolbar', () => {
       /type:\s*'annotamd_comment',[^}]*tooltip:\s*'Comment',[^}]*label:\s*'',[^}]*groupBreakBefore:\s*true/s
     )
     expect(config).not.toContain("type: 'mark'")
-    expect(css).toMatch(
-      /\.mu-format-picker li\.item\.annotamd_comment \.text-icon\s*\{[^}]*width:\s*16px;[^}]*height:\s*13px;[^}]*border:\s*1\.5px solid currentcolor;/s
-    )
+    expect(toolbar).toContain("renderActionIcon('comment')")
+    expect(toolbar).toContain("import '../actionIcons.css'")
     expect(css).not.toMatch(/\.mu-format-picker li\.item\.annotamd_comment\s*\{[^}]*background:/s)
     expect(toolbar).toContain("this.muya.eventCenter.emit('annotamd-comment-selection'")
   })

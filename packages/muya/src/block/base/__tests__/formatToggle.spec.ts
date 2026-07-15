@@ -330,19 +330,16 @@ describe('format.format(\'clear\') with the caret inside the run', () => {
     });
 });
 
-// The inline-format toolbar (the "format picker") is what calls
-// `content.format('link')` when the user clicks the link button. The toolbar's
-// `_selectItem` collapses the picker after a link/image (you can't keep the
-// floating buttons up while the cursor jumps into the new `[](…)` URL slot).
-// `format()` itself emits NOTHING — the collapse lives in the toolbar — so this
-// drives the real `_selectItem` link branch on a real booted block and pins the
-// hide.
+// The inline-format toolbar opens a link-entry panel when the user clicks the
+// link button. Markdown is only rewritten after the user supplies a URL and
+// confirms it, so opening the panel must preserve the selected text.
 //
 // Reading the toolbar's private `_selectItem` off the prototype (the
 // linkTools.spec.ts technique): the only collaborators it touches are
 // `this.muya.editor.selection`, `this._block.format(type)` and `this.hide()`.
 interface IFormatToolbarInternals {
     _block: Format | null;
+    _linkCreateOpen: boolean;
     status: boolean;
     hide: () => void;
     _selectItem: (event: Event, item: { type: string; icon: string }) => void;
@@ -377,8 +374,8 @@ describe('inline format toolbar is a passive float (#3196)', () => {
     });
 });
 
-describe('format picker collapses after link creation', () => {
-    it('selecting the link button runs content.format(\'link\') and hides the picker', () => {
+describe('format picker link creation', () => {
+    it('selecting the link button opens the URL input without rewriting the selection', () => {
         const muya = bootMuya('abc\n');
         const content = muya.editor.scrollPage!.firstContentInDescendant() as unknown as Format;
         muya.editor.activeContentBlock = content as never;
@@ -387,7 +384,6 @@ describe('format picker collapses after link creation', () => {
         const toolbar = new InlineFormatToolbar(muya);
         const internals = toolbar as unknown as IFormatToolbarInternals;
         internals._block = content;
-        // `_selectItem` only collapses (`hide()`) once the float is shown.
         internals.status = true;
         const hideSpy = vi.spyOn(internals, 'hide');
 
@@ -405,10 +401,9 @@ describe('format picker collapses after link creation', () => {
 
         internals._selectItem(makeFakeEvent(), { type: 'link', icon: '' });
 
-        // The real `format('link')` rewrote the run into a markdown link.
-        expect(content.text).toBe('[abc]()');
-        // ...and the picker collapsed (link/image branch → `this.hide()`).
-        expect(hideSpy).toHaveBeenCalledTimes(1);
+        expect(content.text).toBe('abc');
+        expect(internals._linkCreateOpen).toBe(true);
+        expect(hideSpy).not.toHaveBeenCalled();
 
         toolbar.destroy();
     });

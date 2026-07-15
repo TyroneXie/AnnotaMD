@@ -62,13 +62,13 @@ describe('feishu-style table axis toolbar configuration', () => {
 
     it('keeps every toolbar symbol on the same visual canvas', () => {
         expect(sharedIconCss).toMatch(
-            /\.mu-action-icon\s*\{[^}]*width:\s*16px;[^}]*min-width:\s*16px;[^}]*height:\s*16px;/,
+            /\.mu-action-icon\s*\{[^}]*width:\s*18px;[^}]*min-width:\s*18px;[^}]*height:\s*18px;/,
         );
     });
 
     it('keeps the inline-code glyph narrow inside the shared icon canvas', () => {
         expect(sharedIconCss).toMatch(
-            /\.mu-action-icon-inline-code\s*\{[^}]*font-size:\s*11px;[^}]*transform:\s*scaleX\(0\.86\);/,
+            /\.mu-action-icon-inline-code\s*\{[^}]*font-size:\s*12px;[^}]*transform:\s*scaleX\(0\.9\);/,
         );
     });
 });

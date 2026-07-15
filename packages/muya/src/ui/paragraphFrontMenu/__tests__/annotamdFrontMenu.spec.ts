@@ -117,7 +117,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'utf8',
         );
         expect(sharedIconCss).toMatch(
-            /\.mu-action-icon\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;/s,
+            /\.mu-action-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
         );
     });
 
@@ -127,6 +127,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'utf8',
         );
         expect(stylesheet).toMatch(/\.menu-symbol\.copy-plain-text::before\s*\{[^}]*font-size:\s*14px;/s);
+        expect(stylesheet).toMatch(/\.menu-symbol\s*\{[^}]*transform:\s*scale\(1\.125\);/s);
     });
 
     it('reveals heading disclosure controls only while the heading is hovered', () => {

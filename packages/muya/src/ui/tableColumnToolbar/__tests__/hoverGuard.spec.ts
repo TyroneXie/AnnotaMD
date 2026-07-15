@@ -1,5 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { isInsideFloatLayer } from '../index';
 
 describe('table column toolbar hover guard', () => {
@@ -17,5 +19,13 @@ describe('table column toolbar hover guard', () => {
         const cell = document.createElement('td');
 
         expect(isInsideFloatLayer([cell, document.body])).toBe(false);
+    });
+
+    it('uses the shared action icon set for every column action', () => {
+        const source = readFileSync(
+            resolve(process.cwd(), 'src/ui/tableColumnToolbar/index.ts'),
+            'utf8',
+        );
+        expect(source).toContain('renderActionIcon(i.actionIcon)');
     });
 });

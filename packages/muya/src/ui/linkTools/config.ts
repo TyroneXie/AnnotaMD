@@ -1,14 +1,21 @@
-import linkJumpIcon from '../../assets/icons/link_jump/2.png';
-import unlinkIcon from '../../assets/icons/unlink/2.png';
+import type { ActionIconName } from '../actionIcons';
 
-const icons = [
+interface LinkToolIconConfig {
+    type: 'edit' | 'unlink';
+    actionIcon: ActionIconName;
+    tooltip: string;
+}
+
+const icons: LinkToolIconConfig[] = [
     {
-        type: 'unlink',
-        icon: unlinkIcon,
+        type: 'edit',
+        actionIcon: 'edit',
+        tooltip: 'Edit Link',
     },
     {
-        type: 'jump',
-        icon: linkJumpIcon,
+        type: 'unlink',
+        actionIcon: 'unlink',
+        tooltip: 'Remove Link',
     },
 ];
 

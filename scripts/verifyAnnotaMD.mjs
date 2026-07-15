@@ -19,6 +19,10 @@ const testPacks = {
       'src/ui/paragraphFrontButton/__tests__/positioning.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
+      'src/ui/inlineFormatToolbar/__tests__/strikethroughStyle.spec.ts',
+      'src/ui/__tests__/sharedActionIcons.spec.ts',
+      'src/inlineRenderer/__tests__/wysiwygBlockMarkers.spec.ts',
+      'src/ui/linkTools/__tests__/linkTools.spec.ts',
       'src/block/extra/highlightBlock/__tests__/highlightBlock.spec.ts'
     ]
   },

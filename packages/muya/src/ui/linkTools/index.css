@@ -1,93 +1,375 @@
-/* Mirrors the per-instance overrides on the other floating tools
-   (imageToolbar / inlineFormatToolbar / tableColumnToolbar) so the
-   linkTools popover gets the same baseline as them. Without
-   `overflow: visible` the baseFloat default `overflow: hidden` clips
-   any decoration (li::before divider, focus rings, box-shadow) that
-   spills outside the 100x34 box. */
 .mu-float-wrapper.mu-link-tools-container {
     overflow: visible;
 
-    border-radius: 2px;
+    background: var(--float-bg-color);
+    border: 1px solid var(--editor-color-10);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgb(31 35 41 / 12%), 0 1px 4px rgb(31 35 41 / 8%);
 }
 
 .mu-link-tools {
     position: relative;
 
-    width: 100px;
-    height: 34px;
+    box-sizing: border-box;
+    width: min(520px, calc(100vw - 24px));
+    height: 48px;
 }
 
-.mu-link-tools ul,
-.mu-link-tools li {
+.mu-link-tools.editing {
+    width: min(500px, calc(100vw - 24px));
+    height: 126px;
+}
+
+.mu-link-tools .link-edit-panel {
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    padding: 15px 16px;
+}
+
+.mu-link-tools .link-edit-row {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    height: 42px;
+}
+
+.mu-link-tools .link-edit-row:last-child {
+    grid-template-columns: 54px minmax(0, 1fr) 80px;
+}
+
+.mu-link-tools .link-edit-label {
+    color: #1f2329;
+    font: 14px/20px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+}
+
+.mu-link-tools .link-edit-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    color: #1f2329;
+    font: 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    background: #fff;
+    border: 1px solid #bbbfc4;
+    border-radius: 6px;
+    outline: none;
+}
+
+.mu-link-tools .link-edit-input:focus {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 1px #3370ff;
+}
+
+.mu-link-tools .link-edit-confirm {
+    height: 40px;
+    padding: 0;
+    color: #fff;
+    font: 500 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    background: #3370ff;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mu-link-tools .link-edit-confirm:hover:not(:disabled) {
+    background: #245bdb;
+}
+
+.mu-link-tools .link-edit-confirm:disabled {
+    background: #bbbfc4;
+    cursor: not-allowed;
+}
+
+.mu-link-tools ul {
     margin: 0;
     padding: 0;
 }
 
-.mu-link-tools ul {
+.mu-link-tools .link-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
+    padding: 4px 6px;
 }
 
-.mu-link-tools li.item {
-    position: relative;
+.mu-link-tools .link-address {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
 
+    color: var(--editor-color);
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 38px;
+    text-align: left;
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    outline: none;
+}
+
+.mu-link-tools .link-address {
     display: flex;
     align-items: center;
-    justify-content: space-around;
-    width: 28px;
-    height: 28px;
-    margin: 0 11px;
 
-    list-style: none;
-    border-radius: 8px;
     cursor: pointer;
 }
 
-.mu-link-tools li.item:hover {
+.mu-link-tools .link-address:hover {
     background: var(--float-hover-color);
 }
 
-.mu-link-tools li.item:last-of-type::before {
-    position: absolute;
-    top: 6px;
-    left: -12px;
+.mu-link-tools .link-address-text {
+    display: block;
+    overflow: hidden;
 
-    width: 1px;
-    height: 18px;
-
-    background: var(--editor-color-10);
-
-    content: '';
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.mu-link-tools li.item .icon-wrapper {
+.mu-link-tools .link-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    height: 38px;
+}
+
+.mu-link-tools li.item,
+.mu-link-tools li.link-divider {
+    position: relative;
+
+    flex: 0 0 auto;
+    margin: 0;
+
+    list-style: none;
+}
+
+.mu-link-tools li.item {
+    height: 38px;
+}
+
+.mu-link-tools li.link-divider {
+    width: 1px;
+    height: 24px;
+    margin: 0 5px;
+
+    background: var(--editor-color-10);
+}
+
+.mu-link-tools .action-button,
+.mu-link-tools .view-selector-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 38px;
+    padding: 0;
+
+    color: var(--icon-color);
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.mu-link-tools .action-button {
+    width: 38px;
+}
+
+.mu-link-tools .action-button:hover,
+.mu-link-tools .view-selector-button:hover,
+.mu-link-tools li.item.open > button {
+    background: var(--float-hover-color);
+}
+
+.mu-link-tools .action-button:active,
+.mu-link-tools .view-selector-button:active,
+.mu-link-tools .link-menu-item:active {
+    transform: translateY(1px);
+}
+
+.mu-link-tools button:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: -2px;
+}
+
+.mu-link-tools .icon-wrapper {
+    display: block;
     width: 18px;
     height: 18px;
 }
 
-.mu-link-tools li.item .icon-wrapper i.icon {
-    position: relative;
+.mu-link-tools .view-selector-button {
+    gap: 7px;
+    min-width: 118px;
+    padding: 0 8px;
 
-    display: inline-block;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-
-    color: var(--icon-color);
-
-    transition: all 0.25s ease-in-out;
+    color: var(--editor-color);
+    font-size: 14px;
+    white-space: nowrap;
 }
 
-.mu-link-tools li.item .icon-wrapper i.icon > i[class^='icon-'] {
-    position: relative;
-    left: -18px;
+.mu-link-tools .view-mode-mark {
+    width: 20px;
 
-    display: inline-block;
+    color: var(--icon-color);
+    font-weight: 650;
+    font-size: 14px;
+    letter-spacing: -4px;
+    text-align: left;
+}
+
+.mu-link-tools .view-mode-label {
+    line-height: 1;
+}
+
+.mu-link-tools .view-mode-chevron {
+    width: 8px;
+    height: 8px;
+    margin: -4px 1px 0 2px;
+
+    border-right: 2px solid var(--editor-color-40);
+    border-bottom: 2px solid var(--editor-color-40);
+    transform: rotate(45deg);
+}
+
+.mu-link-tools li.view-selector.open .view-mode-chevron {
+    margin-top: 4px;
+
+    transform: rotate(225deg);
+}
+
+.mu-link-tools .more-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.mu-link-tools .link-view-menu,
+.mu-link-tools .link-more-menu {
+    position: absolute;
+    top: 46px;
+    z-index: 2;
+
+    box-sizing: border-box;
+    padding: 6px;
+
+    background: var(--float-bg-color);
+    border: 1px solid var(--editor-color-10);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgb(31 35 41 / 14%), 0 2px 6px rgb(31 35 41 / 8%);
+}
+
+.mu-link-tools .link-view-menu {
+    right: -43px;
+
+    width: 232px;
+}
+
+.mu-link-tools .link-more-menu {
+    right: -1px;
+
+    width: 250px;
+}
+
+.mu-link-tools .link-menu-item {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
     width: 100%;
-    height: 100%;
+    height: 44px;
+    padding: 0 10px;
 
-    filter: drop-shadow(18px 0 currentcolor);
+    color: var(--editor-color);
+    font-size: 14px;
+    font-family: inherit;
+    text-align: left;
+
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.mu-link-tools .link-menu-item:hover {
+    background: var(--float-hover-color);
+}
+
+.mu-link-tools .link-menu-item.selected {
+    color: #3370ff;
+
+    background: rgb(51 112 255 / 8%);
+}
+
+.mu-link-tools .link-menu-icon {
+    position: relative;
+
+    display: flex;
+    flex: 0 0 24px;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+}
+
+.mu-link-tools .link-menu-label {
+    flex: 1 1 auto;
+}
+
+.mu-link-tools .link-menu-check {
+    flex: 0 0 auto;
+
+    font-size: 18px;
+}
+
+.mu-link-tools .link-menu-item.title .link-menu-icon::before {
+    position: absolute;
+    top: 10px;
+    left: 2px;
+
+    width: 20px;
+    height: 2px;
+
+    background: currentcolor;
+
+    content: '';
+}
+
+.mu-link-tools .link-menu-item.link .link-menu-icon::before,
+.mu-link-tools .link-menu-item.link .link-menu-icon::after {
+    position: absolute;
+
+    box-sizing: border-box;
+    width: 13px;
+    height: 8px;
+
+    border: 2px solid currentcolor;
+    border-radius: 5px;
+    transform: rotate(-45deg);
+
+    content: '';
+}
+
+.mu-link-tools .link-menu-item.link .link-menu-icon::before {
+    top: 4px;
+    left: 2px;
+}
+
+.mu-link-tools .link-menu-item.link .link-menu-icon::after {
+    right: 2px;
+    bottom: 4px;
 }

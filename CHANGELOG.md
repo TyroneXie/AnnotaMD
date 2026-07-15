@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.5.0 - 2026-07-15
+
+### Added
+
+- Added link creation to the shared inline toolbar for regular paragraphs, lists, and table cells.
+- Added Feishu-style link editing for both visible text and destination, plus copy-link and copy-original-URL actions.
+
+### Changed
+
+- Kept Markdown delimiters hidden while editing rendered links, inline code, emphasis, strong text, strikethrough, and headings in WYSIWYG mode.
+- Limited link display choices to the Markdown-backed link and title views instead of exposing unsupported card and preview modes.
+- Unified action-icon sizing across inline, link, image, preview, and table toolbars, with refreshed edit, more, link-copy, and web-link shapes.
+- Matched inline-code height to surrounding text and aligned strikethrough rules across prose and inline code.
+
+### Fixed
+
+- Fixed mismatched strikethrough baselines when a deleted range contains inline code.
+- Fixed link actions being unavailable from paragraph and table-cell selection toolbars.
+
 ## 2.4.1 - 2026-07-15
 
 ### Fixed

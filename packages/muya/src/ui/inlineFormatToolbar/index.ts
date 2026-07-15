@@ -100,6 +100,12 @@ export class InlineFormatToolbar extends BaseFloat {
     /** Paragraph/heading menu expanded from the left-most style control. */
     private _textStyleOpen = false;
 
+    /** Link creation form shown after the link action is chosen. */
+    private _linkCreateOpen = false;
+    private _draftLinkHref = '';
+    private _linkSelection: { block: Format; start: number; end: number } | null = null;
+    private _reference: HTMLElement | null = null;
+
     /** Toolbar configuration options */
     public override options: IBaseOptions;
 
@@ -133,8 +139,13 @@ export class InlineFormatToolbar extends BaseFloat {
 
         eventCenter.subscribe('muya-format-picker', ({ reference, block }) => {
             if (reference) {
+                this._reference = reference;
                 this._block = block;
                 this._formats = block.getFormatsInRange().formats;
+                this._linkCreateOpen = false;
+                this._draftLinkHref = '';
+                this._linkSelection = null;
+                this.options.placement = 'top';
                 requestAnimationFrame(() => {
                     this.show(reference);
                     this._render();
@@ -143,6 +154,7 @@ export class InlineFormatToolbar extends BaseFloat {
             else {
                 this._openPalette = null;
                 this._textStyleOpen = false;
+                this._linkCreateOpen = false;
                 this.hide();
             }
         });
@@ -152,7 +164,7 @@ export class InlineFormatToolbar extends BaseFloat {
         // command / shortcut) light up their buttons. Single-block tool, so
         // ignore collapsed / cross-block selections.
         eventCenter.subscribe('selection-change', ({ formats, isCollapsed, isSelectionInSameBlock }) => {
-            if (!this.status || isCollapsed || !isSelectionInSameBlock)
+            if (!this.status || this._linkCreateOpen || isCollapsed || !isSelectionInSameBlock)
                 return;
 
             this._formats = formats;
@@ -238,6 +250,48 @@ export class InlineFormatToolbar extends BaseFloat {
     private _render() {
         const { _icons: icons, _oldVNode: oldVNode, _formatContainer: formatContainer, _formats: formats } = this;
         const { i18n } = this.muya;
+
+        this.container?.classList.toggle('link-create-open', this._linkCreateOpen);
+        if (this._linkCreateOpen) {
+            const vnode = h('div.mu-link-create-panel', [
+                h('input.mu-link-create-input', {
+                    attrs: {
+                        type: 'url',
+                        placeholder: i18n.t('Paste or enter link'),
+                        'aria-label': i18n.t('Paste or enter link'),
+                    },
+                    props: { value: this._draftLinkHref },
+                    on: {
+                        input: (event: Event) => {
+                            this._draftLinkHref = (event.target as HTMLInputElement).value;
+                            const button = this.container?.querySelector<HTMLButtonElement>('.mu-link-create-confirm');
+                            if (button)
+                                button.disabled = !this._draftLinkHref.trim();
+                        },
+                        keydown: (event: KeyboardEvent) => {
+                            if (event.key === 'Enter')
+                                this._commitLink(event);
+                            else if (event.key === 'Escape') {
+                                event.preventDefault();
+                                this.hide();
+                            }
+                        },
+                    },
+                }),
+                h('button.mu-link-create-confirm', {
+                    attrs: {
+                        type: 'button',
+                        disabled: !this._draftLinkHref.trim(),
+                    },
+                    on: { click: (event: Event) => this._commitLink(event) },
+                }, i18n.t('Confirm')),
+            ]);
+
+            patch(oldVNode || formatContainer, vnode);
+            this._oldVNode = vnode;
+            requestAnimationFrame(() => this.container?.querySelector<HTMLInputElement>('.mu-link-create-input')?.focus());
+            return;
+        }
 
         const children = icons.map(icon => this._createIconItem(icon, formats, i18n));
         const vnode = h('ul', children);
@@ -452,6 +506,25 @@ export class InlineFormatToolbar extends BaseFloat {
             return;
         }
 
+        if (item.type === 'link') {
+            if (anchorBlock !== focusBlock || !(anchorBlock instanceof Format))
+                return;
+            this._linkSelection = {
+                block: anchorBlock,
+                start: Math.min(anchor.offset, focus.offset),
+                end: Math.max(anchor.offset, focus.offset),
+            };
+            this._linkCreateOpen = true;
+            this._draftLinkHref = '';
+            this._openPalette = null;
+            this._textStyleOpen = false;
+            this.options.placement = 'bottom';
+            this._render();
+            if (this._reference)
+                this.show(this._reference);
+            return;
+        }
+
         // Restore selection before formatting
         selection.setSelection(
             { offset: anchor.offset, block: anchorBlock, path: anchorPath },
@@ -468,6 +541,25 @@ export class InlineFormatToolbar extends BaseFloat {
             this._formats = this._block!.getFormatsInRange().formats;
             this._render();
         }
+    }
+
+    private _commitLink(event: Event): void {
+        event.preventDefault();
+        event.stopPropagation();
+        const selection = this._linkSelection;
+        const href = this._draftLinkHref.trim();
+        if (!selection || !href)
+            return;
+
+        const { block, start, end } = selection;
+        const selectedText = block.text.slice(start, end);
+        const link = `[${selectedText}](${href})`;
+        block.text = `${block.text.slice(0, start)}${link}${block.text.slice(end)}`;
+        const cursor = start + link.length;
+        block.setCursor(cursor, cursor, true);
+        this._linkCreateOpen = false;
+        this._linkSelection = null;
+        this.hide();
     }
 
     private _selectAnnotaMDAction(type: AnnotaMDSelectionAction): void {

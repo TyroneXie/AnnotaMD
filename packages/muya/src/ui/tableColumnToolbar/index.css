@@ -56,38 +56,14 @@
 
 .mu-table-column-tools li.item .icon-wrapper {
     display: flex;
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
 }
 
-.mu-table-column-tools li.item .icon-wrapper i.icon {
-    position: relative;
-
-    display: inline-block;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-
-    color: var(--icon-color);
-
-    transition: all 0.25s ease-in-out;
-}
-
-.mu-table-column-tools li.item .icon-wrapper i.icon > i[class^='icon-'] {
-    position: relative;
-    left: -14px;
-
-    display: inline-block;
-    width: 100%;
-    height: 100%;
-
-    filter: drop-shadow(14px 0 currentcolor);
-}
-
-.mu-table-column-tools li.item.active .icon-wrapper i.icon {
+.mu-table-column-tools li.item.active .icon-wrapper {
     color: var(--theme-color);
 }
 
-.mu-table-column-tools li.item.delete .icon-wrapper i.icon {
+.mu-table-column-tools li.item.delete .icon-wrapper {
     color: var(--delete-color);
 }

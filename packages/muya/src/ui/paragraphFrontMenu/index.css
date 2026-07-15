@@ -121,6 +121,7 @@
     height: 16px;
 
     color: #646a73;
+    transform: scale(1.125);
 }
 
 .mu-front-menu li .icon-wrapper .menu-symbol::before,

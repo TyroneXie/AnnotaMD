@@ -134,6 +134,7 @@ describe('inline format toolbar text-style menu', () => {
             'strikethrough',
             'italic',
             'underline',
+            'link',
             'inline-code',
             'color',
             'comment',
@@ -148,5 +149,34 @@ describe('inline format toolbar text-style menu', () => {
         expect(toolbar.container!.querySelectorAll('.mu-color-palette-section')).toHaveLength(2);
         expect(toolbar.container!.textContent).toContain('Font Color');
         expect(toolbar.container!.textContent).toContain('Background Color');
+    });
+
+    it('opens a link input before creating a link from selected text', async () => {
+        const muya = bootMuya('hello world\n');
+        const content = muya.editor.scrollPage!.firstContentInDescendant()!;
+        content.setCursor(0, 5, true);
+        const toolbar = new InlineFormatToolbar(muya);
+        const internals = toolbar as unknown as {
+            _block: typeof content;
+            _render: () => void;
+        };
+        internals._block = content;
+        internals._render();
+
+        toolbar.container!.querySelector<HTMLElement>('li.item.link')!.click();
+
+        expect(muya.getMarkdown()).toBe('hello world\n');
+        const input = toolbar.container!.querySelector<HTMLInputElement>('.mu-link-create-input')!;
+        const confirm = toolbar.container!.querySelector<HTMLButtonElement>('.mu-link-create-confirm')!;
+        expect(input.placeholder).toBe('Paste or enter link');
+        expect(confirm.disabled).toBe(true);
+
+        input.value = 'https://example.com';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        expect(confirm.disabled).toBe(false);
+        confirm.click();
+
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe('[hello](https://example.com) world\n'));
+        expect(toolbar.status).toBe(false);
     });
 });
