@@ -56,9 +56,12 @@ describe('AnnotaMD code block controls', () => {
 
   it('always bootstraps editor windows in quick-edit mode', () => {
     const editorWindow = readRepoFile('packages/desktop/src/main/windows/editor.ts')
+    const editorStore = readRepoFile('packages/desktop/src/renderer/src/store/editor.ts')
 
     expect(editorWindow).toContain('appMenu.addEditorMenu(win, { sourceCodeModeEnabled: false })')
     expect(editorWindow.match(/sourceCodeModeEnabled: false/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(editorStore).toMatch(/type:\s*'sourceCode',\s*checked:\s*false/)
+    expect(editorStore).not.toMatch(/checked:\s*!!sourceCodeModeEnabled/)
   })
 
   it('bridges Muya wrap toggles into the persisted preference', () => {

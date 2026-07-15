@@ -7,6 +7,8 @@ import {
   getPASTE,
   getRENAME,
   getDELETE,
+  getCopyName,
+  getCopyPath,
   getShowInFolder
 } from './menuItems'
 import { popupContextMenu, type ContextMenuItem } from '../popupMenu'
@@ -27,6 +29,8 @@ export const showContextMenu = (
     getRENAME(),
     getDELETE(),
     SEPARATOR,
+    getCopyName(),
+    getCopyPath(),
     getShowInFolder()
   ]
 
@@ -53,6 +57,8 @@ export const showRootContextMenu = (
     getNewFile(),
     getNewDirectory(),
     SEPARATOR,
+    getCopyName(),
+    getCopyPath(),
     getShowInFolder(),
     SEPARATOR,
     {

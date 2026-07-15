@@ -31,6 +31,14 @@ export const remove = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowAr
   bus.emit('SIDEBAR::remove')
 }
 
+export const copyName = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::copy-name')
+}
+
+export const copyPath = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
+  bus.emit('SIDEBAR::copy-path')
+}
+
 export const showInFolder = (_menuItem?: MenuItemArg, _browserWindow?: BrowserWindowArg): void => {
   bus.emit('SIDEBAR::show-in-folder')
 }

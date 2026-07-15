@@ -198,6 +198,8 @@
       "paste": "Colar",
       "rename": "Renomear",
       "moveToTrash": "Mover para Lixeira",
+      "copyName": "Copiar nome",
+      "copyPath": "Copiar caminho",
       "showInFolder": "Mostrar na Pasta"
     },
     "tabs": {
@@ -206,7 +208,8 @@
       "closeSavedTabs": "Fechar abas salvas",
       "closeAllTabs": "Fechar todas as abas",
       "rename": "Renomear",
-      "copyPath": "Copiar caminho",
+      "copyName": "Copiar nome do arquivo",
+      "copyPath": "Copiar caminho do arquivo",
       "showInFolder": "Mostrar na pasta"
     }
   },

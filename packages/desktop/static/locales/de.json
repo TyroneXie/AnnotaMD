@@ -198,6 +198,8 @@
       "paste": "Einfügen",
       "rename": "Umbenennen",
       "moveToTrash": "In Papierkorb verschieben",
+      "copyName": "Dateinamen kopieren",
+      "copyPath": "Dateipfad kopieren",
       "showInFolder": "Im Ordner anzeigen"
     },
     "tabs": {
@@ -206,6 +208,7 @@
       "closeSavedTabs": "Gespeicherte Tabs schließen",
       "closeAllTabs": "Alle Tabs schließen",
       "rename": "Umbenennen",
+      "copyName": "Namen kopieren",
       "copyPath": "Pfad kopieren",
       "showInFolder": "Im Ordner anzeigen"
     }

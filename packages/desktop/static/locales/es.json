@@ -198,6 +198,8 @@
       "paste": "Pegar",
       "rename": "Renombrar",
       "moveToTrash": "Mover a la Papelera",
+      "copyName": "Copiar nombre",
+      "copyPath": "Copiar ruta",
       "showInFolder": "Mostrar en Carpeta"
     },
     "tabs": {
@@ -206,7 +208,8 @@
       "closeSavedTabs": "Cerrar pestañas guardadas",
       "closeAllTabs": "Cerrar todas las pestañas",
       "rename": "Renombrar",
-      "copyPath": "Copiar ruta",
+      "copyName": "Copiar nombre de archivo",
+      "copyPath": "Copiar ruta de archivo",
       "showInFolder": "Mostrar en carpeta"
     }
   },

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.4.0 - 2026-07-15
+
+### Added
+
+- Added “Copy File Name” and “Copy Full Path” actions to editor-tab and opened-file context menus.
+- Added continuous line numbers for every line in source mode.
+
+### Changed
+
+- Matched the source-mode editing width to the WYSIWYG editor's maximum text width.
+- Removed block editing controls and the inner scrollbar from source mode.
+- Always start new application sessions in WYSIWYG mode instead of restoring transient source, typewriter, or focus modes.
+
+### Fixed
+
+- Fixed Mermaid fenced blocks whose three-backtick closing fence is attached directly to a final statement such as `end`, so the diagram and following Markdown render correctly.
+
 ## 2.3.0 - 2026-07-15
 
 ### Added

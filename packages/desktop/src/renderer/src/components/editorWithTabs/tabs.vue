@@ -70,6 +70,7 @@ import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
 import { Plus, Close } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
+import { copyFileName, copyFilePath } from '../../util/copyFileInfo'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
 import { useI18n } from 'vue-i18n'
@@ -197,7 +198,14 @@ const rename = (tabId: unknown) => {
 const copyPath = (tabId: unknown) => {
   const tab = tabs.value.find((f) => f.id === tabId)
   if (tab && tab.pathname) {
-    window.electron.clipboard.writeText(tab.pathname)
+    copyFilePath(tab.pathname)
+  }
+}
+
+const copyName = (tabId: unknown) => {
+  const tab = tabs.value.find((f) => f.id === tabId)
+  if (tab && tab.pathname) {
+    copyFileName(tab.pathname)
   }
 }
 
@@ -227,6 +235,7 @@ onMounted(() => {
   bus.on('TABS::close-saved', closeSaved)
   bus.on('TABS::close-all', closeAll)
   bus.on('TABS::rename', rename)
+  bus.on('TABS::copy-name', copyName)
   bus.on('TABS::copy-path', copyPath)
   bus.on('TABS::show-in-folder', showInFolder)
   bus.on('EDITOR_TABS::change-max-width', changeMaxWidth)
@@ -292,6 +301,7 @@ onBeforeUnmount(() => {
   bus.off('TABS::close-saved', closeSaved)
   bus.off('TABS::close-all', closeAll)
   bus.off('TABS::rename', rename)
+  bus.off('TABS::copy-name', copyName)
   bus.off('TABS::copy-path', copyPath)
   bus.off('TABS::show-in-folder', showInFolder)
   bus.off('EDITOR_TABS::change-max-width', changeMaxWidth)

@@ -5,6 +5,7 @@ import {
   getCloseSaved,
   getCloseAll,
   getRENAME,
+  getCopyName,
   getCopyPath,
   getShowInFolder
 } from './menuItems'
@@ -43,10 +44,11 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
   const closeSaved = getCloseSaved()
   const closeAll = getCloseAll()
   const rename = getRENAME()
+  const copyName = getCopyName()
   const copyPath = getCopyPath()
   const showInFolder = getShowInFolder()
 
-  ;([rename, copyPath, showInFolder] as MenuItemShape[]).forEach((item) => {
+  ;([rename, copyName, copyPath, showInFolder] as MenuItemShape[]).forEach((item) => {
     item.enabled = !!pathname
   })
 
@@ -57,6 +59,7 @@ export const showContextMenu = (event: ContextMenuClickEvent, tab: TabLike): voi
     closeAll,
     SEPARATOR,
     rename,
+    copyName,
     copyPath,
     showInFolder
   ].map((item) => wrapClick(item as MenuItemShape, tab.id))

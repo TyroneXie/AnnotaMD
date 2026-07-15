@@ -51,6 +51,14 @@ export const getRENAME = () => ({
   }
 })
 
+export const getCopyName = () => ({
+  label: t('contextMenu.tabs.copyName'),
+  id: 'copyName',
+  click(menuItem: TabMenuItem, _browserWindow?: unknown) {
+    contextMenu.copyName(menuItem._tabId)
+  }
+})
+
 export const getCopyPath = () => ({
   label: t('contextMenu.tabs.copyPath'),
   id: 'copyPath',
@@ -73,5 +81,6 @@ export const CLOSE_OTHERS = getCloseOthers()
 export const CLOSE_SAVED = getCloseSaved()
 export const CLOSE_ALL = getCloseAll()
 export const RENAME = getRENAME()
+export const COPY_NAME = getCopyName()
 export const COPY_PATH = getCopyPath()
 export const SHOW_IN_FOLDER = getShowInFolder()

@@ -198,6 +198,8 @@
       "paste": "붙여넣기",
       "rename": "이름 바꾸기",
       "moveToTrash": "휴지통으로 이동",
+      "copyName": "파일 이름 복사",
+      "copyPath": "파일 경로 복사",
       "showInFolder": "폴더에서 보기"
     },
     "tabs": {
@@ -206,6 +208,7 @@
       "closeSavedTabs": "저장된 탭 닫기",
       "closeAllTabs": "모든 탭 닫기",
       "rename": "이름 바꾸기",
+      "copyName": "이름 복사",
       "copyPath": "경로 복사",
       "showInFolder": "폴더에서 보기"
     }

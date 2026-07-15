@@ -198,6 +198,8 @@
       "paste": "Yapıştır",
       "rename": "Yeniden Adlandır",
       "moveToTrash": "Çöp Kutusuna Taşı",
+      "copyName": "Adı kopyala",
+      "copyPath": "Yolu kopyala",
       "showInFolder": "Klasörde Göster"
     },
     "tabs": {
@@ -206,7 +208,8 @@
       "closeSavedTabs": "Kaydedilmiş sekmeleri kapat",
       "closeAllTabs": "Tüm sekmeleri kapat",
       "rename": "Yeniden Adlandır",
-      "copyPath": "Yolu kopyala",
+      "copyName": "Dosya adını kopyala",
+      "copyPath": "Dosya yolunu kopyala",
       "showInFolder": "Klasörde göster"
     }
   },

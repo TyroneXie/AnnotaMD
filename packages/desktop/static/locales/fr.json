@@ -198,6 +198,8 @@
       "paste": "Coller",
       "rename": "Renommer",
       "moveToTrash": "Déplacer vers la corbeille",
+      "copyName": "Copier le nom du fichier",
+      "copyPath": "Copier le chemin du fichier",
       "showInFolder": "Afficher dans le dossier"
     },
     "tabs": {
@@ -206,6 +208,7 @@
       "closeSavedTabs": "Fermer les onglets sauvegardés",
       "closeAllTabs": "Fermer tous les onglets",
       "rename": "Renommer",
+      "copyName": "Copier le nom",
       "copyPath": "Copier le chemin",
       "showInFolder": "Afficher dans le dossier"
     }

@@ -198,6 +198,8 @@
       "paste": "Paste",
       "rename": "Rename",
       "moveToTrash": "Move To Trash",
+      "copyName": "Copy name",
+      "copyPath": "Copy path",
       "showInFolder": "Show In Folder"
     },
     "tabs": {
@@ -206,7 +208,8 @@
       "closeSavedTabs": "Close saved tabs",
       "closeAllTabs": "Close all tabs",
       "rename": "Rename",
-      "copyPath": "Copy path",
+      "copyName": "Copy file name",
+      "copyPath": "Copy file path",
       "showInFolder": "Show in folder"
     }
   },

@@ -198,6 +198,8 @@
       "paste": "粘贴",
       "rename": "重命名",
       "moveToTrash": "移动到废纸篓",
+      "copyName": "复制文件名",
+      "copyPath": "复制文件路径",
       "showInFolder": "在文件夹中显示"
     },
     "tabs": {
@@ -206,6 +208,7 @@
       "closeSavedTabs": "关闭已保存的标签页",
       "closeAllTabs": "关闭所有标签页",
       "rename": "重命名",
+      "copyName": "复制名称",
       "copyPath": "复制路径",
       "showInFolder": "在文件夹中显示"
     }

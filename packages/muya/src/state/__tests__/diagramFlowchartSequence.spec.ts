@@ -37,6 +37,50 @@ function toMarkdown(states: IStateLike[]): string {
 // two diagram types stay first-class alongside mermaid / plantuml /
 // vega-lite.
 describe('diagram blocks — flowchart & sequence parity', () => {
+    it('accepts a closing fence attached to the final Mermaid statement', () => {
+        const md = `\`\`\`mermaid
+sequenceDiagram
+  participant FE
+  alt 编辑已有应用
+    FE->>FE: 回填配置
+  end\`\`\`
+
+## 下一章节
+`;
+        const states = generate(md);
+
+        expect(states).toHaveLength(2);
+        expect(states[0]).toMatchObject({
+            name: 'diagram',
+            text: expect.stringContaining('  end'),
+            meta: { type: 'mermaid' },
+        });
+        expect(states[1]).toMatchObject({
+            name: 'atx-heading',
+            text: '## 下一章节',
+        });
+    });
+
+    it('accepts an attached closing fence after a Mermaid closing brace', () => {
+        const md = `\`\`\`mermaid
+erDiagram
+  APP {
+    string id
+  }\`\`\`
+
+正文
+`;
+        const states = generate(md);
+
+        expect(states).toHaveLength(2);
+        expect(states[0]).toMatchObject({
+            name: 'diagram',
+            text: expect.stringContaining('  }'),
+            meta: { type: 'mermaid' },
+        });
+        expect(states[1]).toMatchObject({ name: 'paragraph', text: '正文' });
+    });
+
     it('parses a ```flowchart``` fence as a diagram block of type flowchart', () => {
         const md = `\`\`\`flowchart
 st=>start: Start

@@ -8,6 +8,55 @@ import fm from './frontMatter';
 import { DEFAULT_OPTIONS } from './options';
 import walkTokens from './walkTokens';
 
+function normalizeAttachedClosingFences(src: string): string {
+    const parts = src.split(/(\r\n|\n|\r)/);
+    const fallbackLineEnding = parts.find((_, index) => index % 2 === 1) || '\n';
+    let openFence: { marker: '`' | '~'; length: number } | null = null;
+
+    for (let index = 0; index < parts.length; index += 2) {
+        const line = parts[index];
+
+        if (!openFence) {
+            const opener = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+            if (opener && !(opener[1][0] === '`' && opener[2].includes('`'))) {
+                openFence = {
+                    marker: opener[1][0] as '`' | '~',
+                    length: opener[1].length,
+                };
+            }
+            continue;
+        }
+
+        const trailingWhitespace = /[ \t]*$/.exec(line)?.[0] || '';
+        const lineWithoutTrailingWhitespace = line.slice(0, line.length - trailingWhitespace.length);
+        let markerStart = lineWithoutTrailingWhitespace.length;
+        while (
+            markerStart > 0
+            && lineWithoutTrailingWhitespace[markerStart - 1] === openFence.marker
+        ) {
+            markerStart--;
+        }
+
+        const markerLength = lineWithoutTrailingWhitespace.length - markerStart;
+        if (markerLength < openFence.length)
+            continue;
+
+        const content = lineWithoutTrailingWhitespace.slice(0, markerStart);
+        if (!content.trim()) {
+            // A regular closing fence already occupies its own line.
+            if (/^ {0,3}$/.test(content))
+                openFence = null;
+            continue;
+        }
+
+        const lineEnding = parts[index + 1] || fallbackLineEnding;
+        parts[index] = `${content}${lineEnding}${openFence.marker.repeat(markerLength)}${trailingWhitespace}`;
+        openFence = null;
+    }
+
+    return parts.join('');
+}
+
 export function lexBlock(
     src: string,
     options: ILexOption = DEFAULT_OPTIONS,
@@ -41,6 +90,8 @@ export function lexBlock(
             src = newSrc;
         }
     }
+
+    src = normalizeAttachedClosingFences(src);
 
     // Pass `m.defaults` to the Lexer so the extensions registered via m.use()
     // are picked up; the no-arg constructor would fall back to global defaults.

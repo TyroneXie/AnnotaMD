@@ -10,6 +10,7 @@ import { getFileStateFromData } from './help'
 import { useLayoutStore } from './layout'
 import { useEditorStore } from './editor'
 import { debouncedSendBufferedState } from './bufferedState'
+import { copyFileName, copyFilePath } from '../util/copyFileInfo'
 import type { TreeNode } from '../components/sideBar/types'
 import type { FileChangeDetail } from '@shared/types/files'
 import {
@@ -256,6 +257,14 @@ export const useProjectStore = defineStore('project', () => {
     bus.on('SIDEBAR::show-in-folder', () => {
       const { pathname } = activeItem.value
       window.electron.shell.showItemInFolder(pathname)
+    })
+    bus.on('SIDEBAR::copy-name', () => {
+      const { pathname } = activeItem.value
+      if (pathname) copyFileName(pathname)
+    })
+    bus.on('SIDEBAR::copy-path', () => {
+      const { pathname } = activeItem.value
+      if (pathname) copyFilePath(pathname)
     })
     bus.on('SIDEBAR::new', (type: unknown) => {
       const { pathname, isDirectory } = activeItem.value

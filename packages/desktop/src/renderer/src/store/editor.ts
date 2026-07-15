@@ -893,8 +893,7 @@ export const useEditorStore = defineStore('editor', {
           markdownList,
           lineEnding,
           sideBarVisibility,
-          tabBarVisibility,
-          sourceCodeModeEnabled
+          tabBarVisibility
         } = config
 
         window.electron.ipcRenderer.send('mt::window-initialized')
@@ -908,7 +907,7 @@ export const useEditorStore = defineStore('editor', {
         layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
         preferencesStore.SET_MODE({
           type: 'sourceCode',
-          checked: !!sourceCodeModeEnabled
+          checked: false
         })
 
         if (addBlankTab) {

@@ -322,6 +322,7 @@ const handleScrollToHeader = (slug: unknown) => {
 }
 
 onMounted(() => {
+  document.body.classList.add('annotamd-source-code-mode')
   if (!currentTab.value) return
   const { id } = currentTab.value
   // reset currentTab scrollTop position because the codeMirror scroll position is completely different from the muya scroll position
@@ -340,14 +341,8 @@ onMounted(() => {
     lineWrapping: true,
     styleActiveLine: true,
     direction: textDirection,
-    viewportMargin: Infinity,
-    lineNumberFormatter (line: number) {
-      if (line % 10 === 0 || line === 1) {
-        return line
-      } else {
-        return ''
-      }
-    }
+    scrollbarStyle: 'null',
+    viewportMargin: Infinity
   }
 
   if (railscastsThemes.includes(theme.value)) {
@@ -393,6 +388,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('annotamd-source-code-mode')
   viewDestroyed.value = true
   if (commitTimer.value) clearTimeout(commitTimer.value)
 
@@ -424,7 +420,7 @@ onBeforeUnmount(() => {
 .source-code .CodeMirror {
   height: auto;
   margin: 50px auto;
-  max-width: var(--editorAreaWidth);
+  width: min(100%, var(--annotamd-editor-area-width, 980px));
   background: transparent;
 }
 .source-code .CodeMirror-gutters {
@@ -434,5 +430,9 @@ onBeforeUnmount(() => {
 .source-code .CodeMirror-activeline-background,
 .source-code .CodeMirror-activeline-gutter {
   background: var(--floatHoverColor);
+}
+body.annotamd-source-code-mode .mu-front-button-wrapper,
+body.annotamd-source-code-mode .mu-float-wrapper {
+  display: none !important;
 }
 </style>

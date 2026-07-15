@@ -137,6 +137,8 @@ interface ModeTogglePayload {
   checked: boolean
 }
 
+const transientEditModes = new Set(['typewriter', 'focus', 'sourceCode'])
+
 export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
     autoSave: false,
@@ -246,6 +248,8 @@ export const usePreferencesStore = defineStore('preferences', {
       const oldLanguage = this.language
 
       Object.keys(preference).forEach((key) => {
+        if (transientEditModes.has(key)) return
+
         const incoming = (preference as Record<string, unknown>)[key]
         if (
           typeof incoming !== 'undefined' &&

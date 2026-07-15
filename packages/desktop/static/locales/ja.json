@@ -198,6 +198,8 @@
       "paste": "貼り付け",
       "rename": "名前を変更",
       "moveToTrash": "ゴミ箱に移動",
+      "copyName": "ファイル名をコピー",
+      "copyPath": "ファイルパスをコピー",
       "showInFolder": "フォルダで表示"
     },
     "tabs": {
@@ -206,6 +208,7 @@
       "closeSavedTabs": "保存済みタブを閉じる",
       "closeAllTabs": "すべてのタブを閉じる",
       "rename": "名前を変更",
+      "copyName": "名前をコピー",
       "copyPath": "パスをコピー",
       "showInFolder": "フォルダで表示"
     }

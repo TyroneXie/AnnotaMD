@@ -20,6 +20,10 @@ export const rename = (tabId: string): void => {
   bus.emit('TABS::rename', tabId)
 }
 
+export const copyName = (tabId: string): void => {
+  bus.emit('TABS::copy-name', tabId)
+}
+
 export const copyPath = (tabId: string): void => {
   bus.emit('TABS::copy-path', tabId)
 }
