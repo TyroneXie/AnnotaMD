@@ -27,6 +27,46 @@
 - **不得把其他分支、其他 worktree 或未合入提交中的验证结果当作当前项目结果。** 汇报“已修复/已优化”前，必须确认改动存在于当前工作树和当前分支；发布前还必须确认改动已进入发布提交与实际构建产物。
 - 发布前执行分支一致性检查：记录当前分支与 `HEAD`，核对目标修复提交是 `HEAD` 的祖先，检查 `git status`，并从最终产物做一次真实界面冒烟验证。只在实验分支生效但未合入发布分支的功能，必须明确标注“未合入”，不能描述为已完成。
 
+## 版本号与 Release 发布
+
+用户说“发布”“提交远程并发布新版本”等明确发布指令时，直接按本节执行，不再让用户选择 patch 或 minor。版本号遵循 SemVer，并以远程最高稳定 tag 为基准：
+
+- **Patch：`X.Y.(Z+1)`**。仅包含向后兼容的问题修复、兼容性修正、性能修正或现有交互的纠偏，没有新增用户可调用的能力。例如从 `2.3.0` 只修复 Mermaid 解析、源码模式宽度或控件显隐，应发布 `2.3.1`。
+- **Minor：`X.(Y+1).0`**。新增向后兼容的用户能力、菜单操作、编辑能力、设置项或支持的新格式。只要发布范围含一项此类功能，即使同时包含修复，也使用 minor。例如 `2.3.0` 后新增“复制文件名/完整路径”，应发布 `2.4.0`。
+- **Major：`(X+1).0.0`**。存在不向后兼容的数据格式、配置、命令、插件/API 或迁移要求。只有相关破坏性变更已经被用户明确授权时才直接发布 major；否则发布前先确认。
+- 多类改动混合时采用其中最高级别；提交数量和改动行数不影响版本级别。除非用户明确要求 beta/rc，否则发布稳定版本，不添加预发布后缀。
+- 不复用、不删除、不移动已经推送到远程的 tag。远程 tag 后若只遇到临时 CI 故障，可重跑流水线；若必须修改代码，则修复后发布下一个 patch。
+
+### 标准发布流程
+
+1. **确认发布基线与范围**
+   - 确认仓库路径、当前分支、`HEAD` 和 `git status --short`；保留并排除所有与本次发布无关的用户改动和未跟踪文件。
+   - 执行 `git fetch origin main --tags`，以远程最高稳定 tag 确定当前版本，并确认发布分支是 `main`、本地基线没有落后于 `origin/main`。
+   - 查看从上一 tag 到待发布 `HEAD` 的实际用户可见改动，按上述规则确定唯一的新版本号，并在进度消息中简述判定依据。
+
+2. **更新版本与日志**
+   - 同步更新根目录 `package.json` 与 `packages/desktop/package.json` 的版本号。
+   - 在 `CHANGELOG.md` 顶部新增 `X.Y.Z - YYYY-MM-DD`，按 `Added`、`Changed`、`Fixed` 记录本次实际变更；没有内容的分类不写。
+   - 新增 `docs/releases/release-notes-vX.Y.Z.md`，使用中文说明用户可见变化、Electron 实机验证结论和 macOS 安装提示。
+   - 执行 `git diff --check`，并确认所有 locale JSON 可解析、版本号与发布说明一致。
+
+3. **发布前验证**
+   - 运行改动对应的回归测试、受影响 package 的全量测试以及 `npm run verify:feature`。桌面端和 Muya 分别使用 `npm --prefix packages/desktop run test:unit`、`npm --prefix packages/muya test`。
+   - 执行 `npm --prefix packages/desktop run typecheck:annotamd` 和 `npm --prefix packages/desktop run build`，确认 AnnotaMD TypeScript 检查与 Electron production build 通过。
+   - 界面或交互改动必须在 Electron 中打开真实文档验证，不能只凭单元测试。发布前使用 `npm --prefix packages/desktop run build:mac:arm64`（Apple Silicon）或 `build:mac:x64`（Intel）打包当前架构，并从该新产物启动一次，核对版本号和本次核心场景。
+   - 任一与本次改动相关的检查失败时不得创建 tag；先修复并重新验证。既有且确认无关的失败要明确记录，不能静默忽略。
+
+4. **提交与推送**
+   - 只暂存本次发布范围，提交信息统一为 `release: prepare AnnotaMD vX.Y.Z`。
+   - 创建 annotated tag：`git tag -a vX.Y.Z -m "AnnotaMD vX.Y.Z"`。
+   - 最后核对 tag 指向发布提交，再使用 `git push --atomic origin main vX.Y.Z` 同时推送分支和 tag。
+
+5. **等待并验收正式 Release**
+   - 持续监控 tag 触发的 `Release AnnotaMD` GitHub Actions，直到流水线明确成功或失败；不能在排队或运行中就宣称发布完成。
+   - 成功标准：GitHub Release 不是 draft/prerelease（预发布除外），macOS x64/arm64、Windows x64/arm64、Linux 产物均已上传，并存在 `SHA256SUMS.txt`。
+   - 检查 Release 页面正文。若自动正文只有安装提示和比较链接，使用本次 `docs/releases/release-notes-vX.Y.Z.md` 补齐详细中文更新日志，同时保留下载校验说明和完整变更链接。
+   - 最终汇报 commit、tag、Release URL、产物范围、验证结果，以及仍被保留的无关工作树文件。
+
 ## 开发经验维护
 
 - 开发中遇到已确认、可能再次出现的坑时，主动更新本文件，不必等待用户提醒。

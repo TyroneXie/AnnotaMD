@@ -1,4 +1,9 @@
-import { listAdditionalLanguages, listCommonLanguages } from '../../utils/prism';
+import {
+    languageDisplayName,
+    listAdditionalLanguages,
+    listCommonLanguages,
+    search,
+} from '../../utils/prism';
 
 export const MORE_LANGUAGES_ITEM_NAME = '__more-languages__';
 
@@ -70,14 +75,26 @@ export function languageCategory(name: string): LanguageCategory {
     return 'code';
 }
 
-export function buildLanguagePickerItems(expanded: boolean): LanguagePickerItem[] {
-    const common = listCommonLanguages().map(item => ({ ...item, kind: 'language' as const }));
+export function buildLanguagePickerItems(
+    expanded: boolean,
+    currentLanguage = '',
+): LanguagePickerItem[] {
+    const common: LanguagePickerItem[] = listCommonLanguages()
+        .map(item => ({ ...item, kind: 'language' as const }));
+    const currentLabel = languageDisplayName(currentLanguage);
+    const currentIsCommon = common.some(item => item.name === currentLanguage
+        || (item.title || item.name) === currentLabel);
+    const current = !expanded && currentLanguage && !currentIsCommon
+        ? search(currentLanguage).find(item => item.name === currentLanguage
+            || (item.title || item.name) === currentLabel)
+        : undefined;
     const additional = expanded
         ? listAdditionalLanguages().map(item => ({ ...item, kind: 'language' as const }))
         : [];
 
     return [
         ...common,
+        ...(current ? [{ ...current, kind: 'language' as const }] : []),
         ...additional,
         {
             name: MORE_LANGUAGES_ITEM_NAME,

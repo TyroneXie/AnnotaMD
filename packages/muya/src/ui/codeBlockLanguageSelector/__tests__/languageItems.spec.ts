@@ -32,6 +32,28 @@ describe('code language picker items', () => {
         });
     });
 
+    it('keeps one uncommon current language visible without expanding the catalogue', () => {
+        const items = buildLanguagePickerItems(false, 'abap');
+        const names = items.map(item => item.name);
+
+        expect(names).toContain('abap');
+        expect(names).not.toContain('6502');
+        expect(names).not.toContain('xquery');
+        expect(items).toHaveLength(23);
+        expect(items[items.length - 1]).toMatchObject({
+            name: MORE_LANGUAGES_ITEM_NAME,
+            kind: 'more',
+            expanded: false,
+        });
+    });
+
+    it('does not duplicate a common language selected through an alias', () => {
+        const items = buildLanguagePickerItems(false, 'js');
+
+        expect(items.filter(item => item.title === 'JavaScript')).toHaveLength(1);
+        expect(items).toHaveLength(22);
+    });
+
     it.each([
         ['', 'plain'],
         ['markdown', 'markup'],

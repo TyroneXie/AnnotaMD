@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.1 - 2026-07-15
+
+### Fixed
+
+- Fixed the code-block language picker automatically expanding the full Prism language catalogue when opened for an uncommon language.
+- Reset the language picker to the common-language list every time it opens, while keeping the current uncommon language available as a single entry.
+
 ## 2.4.0 - 2026-07-15
 
 ### Added

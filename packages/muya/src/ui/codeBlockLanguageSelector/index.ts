@@ -112,19 +112,11 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             const currentLanguage = firstWordOfInfo(language || block.text);
             const currentLabel = languageDisplayName(currentLanguage);
             this._showAllLanguages = false;
-            this.renderArray = buildLanguagePickerItems(false);
+            this.renderArray = buildLanguagePickerItems(false, currentLanguage);
             this.activeItem = this.renderArray.find(
                 item => (item as LanguageItem).name === currentLanguage
                     || (item as LanguageItem).title === currentLabel,
             ) ?? null;
-            if (!this.activeItem && currentLanguage) {
-                this._showAllLanguages = true;
-                this.renderArray = buildLanguagePickerItems(true);
-                this.activeItem = this.renderArray.find(
-                    item => (item as LanguageItem).name === currentLanguage
-                        || (item as LanguageItem).title === currentLabel,
-                ) ?? null;
-            }
             this.activeItem ??= this.renderArray[0] ?? null;
             this.show(reference);
             this.render();
