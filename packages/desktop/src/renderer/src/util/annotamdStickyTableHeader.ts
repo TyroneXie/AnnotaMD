@@ -64,7 +64,7 @@ export class AnnotaMDStickyTableHeader {
       const tableStillCoversHeader = tableRect.bottom > stickyTop + headerRect.height
       if (!headerHasScrolledAway || !tableStillCoversHeader) continue
 
-      this.render(figure, table, headerRow, rootRect, figureRect)
+      this.render(figure, table, headerRow, rootRect, figureRect, tableRect)
       return
     }
 
@@ -76,10 +76,11 @@ export class AnnotaMDStickyTableHeader {
     table: HTMLTableElement,
     headerRow: HTMLTableRowElement,
     rootRect: DOMRect,
-    figureRect: DOMRect
+    figureRect: DOMRect,
+    tableRect: DOMRect
   ): void {
-    const visibleLeft = Math.max(rootRect.left, figureRect.left)
-    const visibleRight = Math.min(rootRect.right, figureRect.right)
+    const visibleLeft = Math.max(rootRect.left, figureRect.left, tableRect.left)
+    const visibleRight = Math.min(rootRect.right, figureRect.right, tableRect.right)
     const visibleWidth = Math.max(0, visibleRight - visibleLeft)
     if (visibleWidth === 0) {
       this.hide()
@@ -117,7 +118,7 @@ export class AnnotaMDStickyTableHeader {
 
     const cloneTable = this.overlay.firstElementChild as HTMLTableElement | null
     if (cloneTable) {
-      const hiddenLeft = figure.scrollLeft + Math.max(0, visibleLeft - figureRect.left)
+      const hiddenLeft = Math.max(0, visibleLeft - tableRect.left)
       cloneTable.style.transform = `translateX(${-hiddenLeft}px)`
     }
 
