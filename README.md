@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/annotamd-readme-showcase.png" alt="AnnotaMD — 本地优先的所见即所得 Markdown 编辑器" width="100%" />
-</p>
-
 <h1 align="center">AnnotaMD</h1>
 
 <p align="center">
@@ -19,6 +15,10 @@
 </p>
 
 ---
+
+<p align="center">
+  <img src="docs/assets/annotamd-readme-showcase.png" alt="AnnotaMD — 本地优先的所见即所得 Markdown 编辑器" width="100%" />
+</p>
 
 ## ✨ 主要特性
 
