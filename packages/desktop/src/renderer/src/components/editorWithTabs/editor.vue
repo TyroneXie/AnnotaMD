@@ -95,7 +95,6 @@ import {
   ImageEditTool,
   ImagePathPicker,
   ImageResizeBar,
-  ImageToolBar,
   InlineFormatToolbar,
   LinkTools,
   ParagraphFrontButton,
@@ -1879,7 +1878,6 @@ onMounted(() => {
       imagePathAutoComplete
     })
     Muya.use(ImageResizeBar)
-    Muya.use(ImageToolBar)
     Muya.use(InlineFormatToolbar)
     Muya.use(ParagraphFrontButton)
     Muya.use(ParagraphFrontMenu)
@@ -2088,7 +2086,7 @@ onMounted(() => {
     'format-click',
     ({ event, formatType, data }: { event: MouseEvent; formatType: string; data: unknown }) => {
       const ctrlOrMeta = (isOsx && event.metaKey) || (!isOsx && event.ctrlKey)
-      if (formatType === 'link' && ctrlOrMeta) {
+      if (formatType === 'link') {
         editorStore.FORMAT_LINK_CLICK({
           data: data as { href: string; [key: string]: unknown },
           dirname: window.DIRNAME
@@ -2375,7 +2373,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   box-sizing: border-box;
   padding: 8px 12px;
   color: #1f2329;
-  font-size: 0.875em;
+  font-size: inherit;
   font-weight: 650;
   line-height: var(--mu-line-height, 1.5);
   background: #f7f8fa;
@@ -2458,7 +2456,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
 .editor-component .mu-container table td {
   border-color: #eceff3;
   color: #2f3437;
-  font-size: 0.875em;
+  font-size: inherit;
   line-height: var(--mu-line-height, 1.5);
 }
 

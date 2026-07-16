@@ -51,8 +51,12 @@ describe('icon-only block control tooltips', () => {
     it('uses a balanced outlined quote icon for quote blocks', () => {
         const source = read('../paragraphFrontButton/index.ts');
         const css = read('../paragraphFrontButton/index.css');
+        const quoteRenderer = source.slice(
+            source.indexOf('function renderQuoteIcon()'),
+            source.indexOf('function renderImageIcon()'),
+        );
         expect(source).toContain('svg.mu-block-label-glyph.mu-quote-icon');
-        expect(source.match(/stroke: 'currentColor'/g)).toHaveLength(1);
+        expect(quoteRenderer.match(/stroke: 'currentColor'/g)).toHaveLength(1);
         expect(source).toContain('if (kind === \'quote\')');
         expect(css).toMatch(/\.mu-block-label\.quote \.mu-block-label-glyph\s*\{[^}]*color:\s*#3370ff;/);
     });

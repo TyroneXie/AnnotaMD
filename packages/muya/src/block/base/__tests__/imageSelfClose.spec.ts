@@ -73,4 +73,19 @@ describe('#2505 — aligned/edited images emit a self-closing <img/> (JSX-safe)'
         expect(block.text).toMatch(/<img\b[^>]*\/>/);
         expect(block.text).not.toMatch(/<img\b[^>]*[^/]>/);
     });
+
+    it('persists a resized image width when the markdown is reopened', () => {
+        const muya = bootMuya('![cat](https://example.com/cat.png)\n');
+        const block = firstBlock(muya);
+        const imageEl = muya.domNode.querySelector<HTMLElement>('[data-raw]');
+        expect(imageEl).not.toBeNull();
+
+        block.updateImage(getImageInfo(imageEl!), 'width', '420');
+        expect(block.text).toMatch(/<img\b[^>]*width="420"[^>]*\/>/);
+
+        const reopened = bootMuya(`${block.text}\n`);
+        const reopenedImage = reopened.domNode.querySelector<HTMLElement>('[data-raw]');
+        expect(reopenedImage).not.toBeNull();
+        expect(getImageInfo(reopenedImage!).token.attrs.width).toBe('420');
+    });
 });

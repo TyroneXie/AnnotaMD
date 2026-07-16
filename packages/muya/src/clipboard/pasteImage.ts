@@ -218,29 +218,22 @@ function findImageWrapper(block: Format, startOffset: number): Nullable<HTMLElem
     return wrapper;
 }
 
-// Float the image toolbar + resize bar over `wrapper`, mirroring the loaded-image
-// branch of `ImageSelection._handleClickInlineImage`. The controls anchor to the
-// image container's box, so this must run only once the image has loaded.
+// Float the resize bar over `wrapper`, mirroring the loaded-image branch of
+// `ImageSelection._handleClickInlineImage`. It anchors to the image container's
+// box, so this must run only once the image has loaded.
 function positionImageControls(clipboard: Clipboard, block: Format, wrapper: HTMLElement): void {
     const imageContainer = wrapper.querySelector(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`);
     if (imageContainer == null)
         return;
 
     const imageInfo = getImageInfo(wrapper);
-    const rect = imageContainer.getBoundingClientRect();
-    const reference = {
-        getBoundingClientRect: () => rect,
-        width: wrapper.offsetWidth,
-        height: wrapper.offsetHeight,
-    };
     const { eventCenter } = clipboard.muya;
-    eventCenter.emit('muya-image-toolbar', { block, reference, imageInfo });
     eventCenter.emit('muya-transformer', { block, reference: imageContainer, imageInfo });
 }
 
 // Re-select the replaced image and float its controls over it. The image is
-// selected synchronously so it stays the active selection; the toolbar / resize
-// bar are positioned only once the image has loaded — they anchor to the loaded
+// selected synchronously so it stays the active selection; the resize bar is
+// positioned only once the image has loaded — it anchors to the loaded
 // image box, which is 0-sized (and has no `<img>`) until `loadImageAsync` fills
 // it in, which never re-emits the positioning events on its own.
 function reselectImageAt(clipboard: Clipboard, block: Format, startOffset: number): void {

@@ -66,6 +66,69 @@ export function frontButtonTarget(elements: Element[]): Parent | null {
         ?? null;
 }
 
+export function imageFrontButtonWrapper(elements: Element[]): HTMLElement | null {
+    for (const element of elements) {
+        const imageContainer = element.closest<HTMLElement>('.mu-image-container');
+        const wrapper = imageContainer?.closest<HTMLElement>('.mu-inline-image');
+        if (wrapper)
+            return wrapper;
+    }
+
+    return null;
+}
+
+export function isImageFloatingControlHit(elements: Element[]): boolean {
+    return elements.some(element => !!element.closest(
+        '.mu-image-toolbar-container, .mu-transformer',
+    ));
+}
+
+export function imageFrontButtonTarget(reference: unknown, fallback: Parent): Parent {
+    if (!(reference instanceof Element))
+        return fallback;
+
+    const ancestors: Element[] = [];
+    let element: Element | null = reference;
+    while (element) {
+        ancestors.push(element);
+        element = element.parentElement;
+    }
+
+    return frontButtonTarget(ancestors) ?? fallback;
+}
+
+export function isStandaloneImageBlock(block: Parent): boolean {
+    if (block.blockName !== 'paragraph' || !block.domNode)
+        return false;
+
+    const state = block.getState() as { text?: string };
+    if (typeof state.text !== 'string')
+        return false;
+
+    const text = state.text.trim();
+    return Array.from(block.domNode?.querySelectorAll<HTMLElement>('.mu-inline-image') ?? [])
+        .some(wrapper => wrapper.dataset.raw?.trim() === text);
+}
+
+export function frontButtonElementsForEditor(
+    editorRoot: HTMLElement,
+    elements: Element[],
+): Element[] {
+    return elements.filter(element => editorRoot.contains(element));
+}
+
+export function isImageBlockHoverRegion(
+    blockRect: Pick<DOMRect, 'top' | 'right' | 'bottom' | 'left'>,
+    menuRect: Pick<DOMRect, 'top' | 'right' | 'bottom' | 'left'>,
+    x: number,
+    y: number,
+): boolean {
+    return x >= Math.min(blockRect.left, menuRect.left)
+        && x <= Math.max(blockRect.right, menuRect.right)
+        && y >= Math.min(blockRect.top, menuRect.top)
+        && y <= Math.max(blockRect.bottom, menuRect.bottom);
+}
+
 export function frontButtonMainAxis(
     blockName: string,
     paddingTop: number,
@@ -184,6 +247,32 @@ function renderQuoteIcon() {
     ]);
 }
 
+function renderImageIcon() {
+    const pathAttrs = {
+        fill: 'none',
+        stroke: 'currentColor',
+        'stroke-width': '1.8',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+    };
+    return h('span.mu-block-label.image', [
+        h(
+            'svg.mu-block-label-glyph.mu-image-block-icon',
+            {
+                attrs: {
+                    viewBox: '0 0 24 24',
+                    'aria-hidden': 'true',
+                },
+            },
+            [
+                h('rect', { attrs: { ...pathAttrs, x: '4', y: '4.5', width: '16', height: '15', rx: '1.8' } }),
+                h('circle', { attrs: { ...pathAttrs, cx: '15.8', cy: '8.8', r: '1.3' } }),
+                h('path', { attrs: { ...pathAttrs, d: 'M6.5 16.8 10.2 12.7l2.6 2.7 2-2 2.8 3.4' } }),
+            ],
+        ),
+    ]);
+}
+
 function renderBlockLabel(kind: string, label: string) {
     if (kind === 'order-list' || kind === 'bullet-list')
         return renderListIcon(kind);
@@ -193,6 +282,8 @@ function renderBlockLabel(kind: string, label: string) {
         return renderDiagramIcon();
     if (kind === 'quote')
         return renderQuoteIcon();
+    if (kind === 'image')
+        return renderImageIcon();
 
     return h(`span.mu-block-label.${kind}`, [
         h('span.mu-block-label-glyph', label),
@@ -217,6 +308,8 @@ export class ParagraphFrontButton {
     private _block: Parent | null = null;
     private _oldVNode: VNode | null = null;
     private _status: boolean = false;
+    private _kindOverride: 'image' | null = null;
+    private _lastPointer: { x: number; y: number } | null = null;
     private _floatBox: HTMLDivElement = document.createElement('div');
     private _container: HTMLDivElement = document.createElement('div');
     private _iconWrapper: HTMLDivElement = document.createElement('div');
@@ -288,12 +381,51 @@ export class ParagraphFrontButton {
                 return;
 
             const { x, y } = event;
-            const els = [
-                ...document.elementsFromPoint(x, y),
+            this._lastPointer = { x, y };
+            const directElements = document.elementsFromPoint(x, y);
+            if (
+                this._kindOverride === 'image'
+                && directElements.some(element => this._floatBox.contains(element))
+            ) {
+                return;
+            }
+
+            const imageWrapper = imageFrontButtonWrapper(directElements);
+            if (imageWrapper && this.muya.domNode.contains(imageWrapper)) {
+                const target = frontButtonTarget(frontButtonElementsForEditor(
+                    this.muya.domNode,
+                    directElements,
+                ));
+                if (target) {
+                    this.show(target, 'image');
+                    this.render();
+                }
+                else {
+                    this.hide();
+                }
+                return;
+            }
+
+            if (isImageFloatingControlHit(directElements)) {
+                if (this._kindOverride !== 'image')
+                    this.hide();
+                return;
+            }
+
+            if (this._isCurrentImageHoverRegion(x, y))
+                return;
+
+            const els = frontButtonElementsForEditor(this.muya.domNode, [
+                ...directElements,
                 ...document.elementsFromPoint(x + LEFT_OFFSET, y),
-            ];
+            ]);
             const target = frontButtonTarget(els);
             if (target) {
+                if (isStandaloneImageBlock(target)) {
+                    this.show(target, 'image');
+                    this.render();
+                    return;
+                }
                 this.show(target);
                 this.render();
             }
@@ -308,6 +440,7 @@ export class ParagraphFrontButton {
                     getBoundingClientRect: () => container.getBoundingClientRect(),
                 },
                 block: this._block,
+                kind: this._kindOverride,
             });
         };
 
@@ -315,6 +448,33 @@ export class ParagraphFrontButton {
         eventCenter.attachDOMEvent(container, 'mouseup', this._dragBarMouseUp);
         eventCenter.attachDOMEvent(document, 'mousemove', mousemoveHandler);
         eventCenter.attachDOMEvent(container, 'click', clickHandler);
+        eventCenter.on('muya-transformer', ({ block, reference }) => {
+            if (reference && block) {
+                this.show(imageFrontButtonTarget(reference, block), 'image');
+                this.render();
+            }
+            else if (
+                this._kindOverride === 'image'
+                && (!this._lastPointer || !this._isCurrentImageHoverRegion(
+                    this._lastPointer.x,
+                    this._lastPointer.y,
+                ))
+            ) {
+                this.hide();
+            }
+        });
+    }
+
+    private _isCurrentImageHoverRegion(x: number, y: number): boolean {
+        if (this._kindOverride !== 'image' || !this._block?.domNode || !this._status)
+            return false;
+
+        return isImageBlockHoverRegion(
+            this._block.domNode.getBoundingClientRect(),
+            this._floatBox.getBoundingClientRect(),
+            x,
+            y,
+        );
     }
 
     private _dragBarMouseDown = (event: Event) => {
@@ -504,7 +664,7 @@ export class ParagraphFrontButton {
         const { _container: container, _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
 
         const visualBlock = displayBlock(block!);
-        const kind = blockKind(visualBlock);
+        const kind = this._kindOverride ?? blockKind(visualBlock);
         const label = blockLabel(visualBlock);
         const iconWrapperSelector = `div.mu-icon-wrapper.${kind}`;
         const vnode = h(
@@ -532,6 +692,7 @@ export class ParagraphFrontButton {
             return;
 
         this._block = null;
+        this._kindOverride = null;
         this._status = false;
         const { eventCenter } = this.muya;
         if (this._cleanup) {
@@ -550,11 +711,12 @@ export class ParagraphFrontButton {
         eventCenter.emit('muya-float-button', this, false);
     }
 
-    show(block: Parent) {
-        if (this._block && this._block === block)
+    show(block: Parent, kindOverride: 'image' | null = null) {
+        if (this._block === block && this._kindOverride === kindOverride)
             return;
 
         this._block = block;
+        this._kindOverride = kindOverride;
         const { domNode } = block;
         const { _floatBox: floatBox } = this;
         const { placement, offsetOptions } = this._options;

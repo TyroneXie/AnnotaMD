@@ -83,7 +83,7 @@ describe('format-click on links', () => {
         expect(handler.mock.calls[0][0].formatType).toBe('link');
     });
 
-    it('does NOT emit format-click on a plain (no-modifier) link click', () => {
+    it('emits format-click on a plain (no-modifier) link click', () => {
         const muya = bootMuya('[hello](https://example.com)');
         const link = muya.domNode.querySelector<HTMLElement>(`span.${CLASS_NAMES.MU_LINK}`)!;
 
@@ -92,7 +92,9 @@ describe('format-click on links', () => {
 
         dispatchClick(link);
 
-        expect(handler).not.toHaveBeenCalled();
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler.mock.calls[0][0].formatType).toBe('link');
+        expect(handler.mock.calls[0][0].data.href).toBe('https://example.com');
     });
 });
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.6.0 - 2026-07-16
+
+### Added
+
+- Added four-corner proportional image resizing with persisted Markdown width, content-edge guidance, and magnetic full-width snapping.
+- Added a Feishu-style image block affordance that appears over the actual image area and remains anchored to the paragraph gutter while resizing.
+- Added ordinary single-click navigation for rendered web, local Markdown, and anchor links while preserving the existing safe desktop routing.
+
+### Changed
+
+- Centered standalone images by default and kept mixed inline images inline unless an explicit alignment is stored.
+- Made editor font-size preferences apply consistently to table text, numbers, dates, and inline code.
+- Replaced the selected-image darkening effect with a light outline and invisible in-frame corner resize targets.
+- Moved image editing, toggleable inline/alignment, and deletion actions from the click toolbar into a dedicated vertical image block menu, with deletion kept last.
+
+### Fixed
+
+- Fixed image resize cursors appearing away from the visible bitmap and made the resize outline remain stable while moving between the image and corner targets.
+- Fixed image paragraphs showing text-block `T` controls or duplicate controls from inactive editor instances, and kept the image block control reachable across the whole image row while moving to its menu.
+- Fixed rendered links lacking a pointer cursor or requiring Cmd/Ctrl-click before opening their destination.
+
 ## 2.5.0 - 2026-07-15
 
 ### Added

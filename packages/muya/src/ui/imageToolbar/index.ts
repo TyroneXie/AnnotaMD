@@ -85,12 +85,15 @@ export class ImageToolBar extends BaseFloat {
         const { i18n } = this.muya;
         const { attrs } = imageInfo!.token;
         const dataAlign = attrs['data-align'];
+        const defaultAlign = this._block!.text.trim() === imageInfo!.token.raw.trim()
+            ? 'center'
+            : 'inline';
         const children = icons.map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
             const iconWrapper = h(iconWrapperSelector, renderActionIcon(imageActionIcon(i.type)));
             let itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
 
-            if (i.type === dataAlign || (!dataAlign && i.type === 'inline'))
+            if (i.type === dataAlign || (!dataAlign && i.type === defaultAlign))
                 itemSelector += '.active';
 
             return h(

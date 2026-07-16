@@ -68,7 +68,10 @@ describe('AnnotaMD preference styling', () => {
     expect(editor).toMatch(/\.editor-component \.mu-container h2\s*\{[^}]*font-size:\s*1\.5em;/s)
     expect(editor).toMatch(/\.editor-component \.mu-container h3\s*\{[^}]*font-size:\s*1\.25em;/s)
     expect(editor).toMatch(
-      /\.editor-component \.mu-container table th,\s*\.editor-component \.mu-container table td\s*\{[^}]*font-size:\s*0\.875em;[^}]*line-height:\s*var\(--mu-line-height, 1\.5\);/s
+      /\.editor-component \.mu-container table th,\s*\.editor-component \.mu-container table td\s*\{[^}]*font-size:\s*inherit;[^}]*line-height:\s*var\(--mu-line-height, 1\.5\);/s
+    )
+    expect(editor).toMatch(
+      /\.annotamd-sticky-table-header \.mu-table-cell\s*\{[^}]*font-size:\s*inherit;[^}]*line-height:\s*var\(--mu-line-height, 1\.5\);/s
     )
   })
 

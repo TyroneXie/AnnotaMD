@@ -22,7 +22,14 @@ const testPacks = {
       'src/ui/inlineFormatToolbar/__tests__/strikethroughStyle.spec.ts',
       'src/ui/__tests__/sharedActionIcons.spec.ts',
       'src/inlineRenderer/__tests__/wysiwygBlockMarkers.spec.ts',
+      'src/__tests__/formatClickEvents.spec.ts',
+      'src/editor/__tests__/clickableAutolink.spec.ts',
+      'src/editor/__tests__/linkCursorStyle.spec.ts',
       'src/ui/linkTools/__tests__/linkTools.spec.ts',
+      'src/ui/imageResizeBar/__tests__/imageResizeBarStyle.spec.ts',
+      'src/ui/imageResizeBar/__tests__/imageResizeSnap.spec.ts',
+      'src/selection/__tests__/imageHoverResize.spec.ts',
+      'src/block/base/__tests__/imageSelfClose.spec.ts',
       'src/block/extra/highlightBlock/__tests__/highlightBlock.spec.ts'
     ]
   },

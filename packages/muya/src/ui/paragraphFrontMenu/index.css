@@ -291,6 +291,15 @@
     background: #f5f7fa;
 }
 
+.mu-front-menu > ul li.item.active {
+    background: #eef3ff;
+}
+
+.mu-front-menu > ul li.item.active .icon-wrapper,
+.mu-front-menu > ul li.item.active .text {
+    color: #3370ff;
+}
+
 .mu-front-menu > ul li.item.disabled {
     cursor: default;
     opacity: 0.42;

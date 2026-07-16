@@ -99,6 +99,15 @@
     font-weight: 700;
 }
 
+.mu-block-label.image {
+    color: #f5b90b;
+}
+
+.mu-image-block-icon {
+    width: 17px;
+    height: 17px;
+}
+
 .mu-block-label.task-list .mu-block-label-glyph {
     font-size: 13px;
     font-weight: 650;
@@ -280,6 +289,10 @@
 
 .mu-icon-wrapper:hover .mu-block-label.diagram {
     background-color: #f5f3ff;
+}
+
+.mu-icon-wrapper:hover .mu-block-label.image {
+    background-color: #fffbeb;
 }
 
 .mu-line-ghost {

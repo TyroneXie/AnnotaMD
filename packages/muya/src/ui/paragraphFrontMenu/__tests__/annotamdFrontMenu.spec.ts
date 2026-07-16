@@ -45,8 +45,11 @@ function blocks(muya: Muya): Parent[] {
     return result;
 }
 
-function openOn(menu: ParagraphFrontMenu, block: Parent): void {
-    (menu as unknown as { _block: Parent })._block = block;
+function openOn(menu: ParagraphFrontMenu, block: Parent, kind: 'image' | null = null): void {
+    Object.assign(menu as unknown as { _block: Parent; _kind: 'image' | null }, {
+        _block: block,
+        _kind: kind,
+    });
 }
 
 function visibleActions(block: Parent): string[] {
@@ -119,6 +122,43 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         expect(sharedIconCss).toMatch(
             /\.mu-action-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
         );
+    });
+
+    it('replaces text conversions with image actions for a standalone image block', () => {
+        const muya = bootMuya('![alt](https://example.com/image.png)\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        openOn(menu, blocks(muya)[0], 'image');
+
+        menu.render();
+
+        expect(Array.from(menu.container!.querySelectorAll('li.item[class*="image-"]'))
+            .map(item => Array.from(item.classList).find(name => name.startsWith('image-'))))
+            .toEqual([
+                'image-edit',
+                'image-inline',
+                'image-left',
+                'image-center',
+                'image-right',
+                'image-delete',
+            ]);
+        expect(menu.container!.querySelector('.turn-into-item.atx-heading')).toBeNull();
+        expect(menu.container!.querySelectorAll('li.item.delete')).toHaveLength(1);
+        expect(menu.container!.querySelector('.image-center.active')).not.toBeNull();
+        expect(menu.container!.querySelector('li.item:last-child')?.classList)
+            .toContain('image-delete');
+    });
+
+    it('toggles an active inline image back to a centered block image', async () => {
+        const muya = bootMuya('<img src="https://example.com/image.png" data-align="inline" />\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        openOn(menu, blocks(muya)[0], 'image');
+
+        menu.selectItem(new Event('click'), { label: 'image-inline' });
+
+        await vi.waitFor(() => {
+            expect(muya.getMarkdown()).toContain('data-align="center"');
+        });
+        expect(muya.getMarkdown()).not.toContain('data-align="inline"');
     });
 
     it('keeps the plain-text T at the same visual scale as the other action icons', () => {

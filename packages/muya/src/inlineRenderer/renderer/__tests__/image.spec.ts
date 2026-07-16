@@ -94,13 +94,49 @@ function findImgSrc(vnodes: VNode | VNode[]): string | undefined {
 // don't satisfy the full Renderer / Format / IRenderCursor surface, but
 // `image()` only touches the loadImageAsync / urlMap / muya fields and
 // the token range.
-const fakeBlock = {} as unknown as Format;
+const fakeBlock = { text: 'paragraph with image' } as Format;
 const fakeCursor = {} as unknown as IRenderCursor;
 function asRenderer(r: IFakeRenderer): Renderer {
     return r as unknown as Renderer;
 }
 
 describe('image renderer — small image class (marktext cb7be189)', () => {
+    it('centers an image when it is the paragraph\'s only content', () => {
+        const renderer = makeRenderer({
+            id: 'mu-image-centered',
+            isSuccess: true,
+            width: 400,
+            height: 300,
+        });
+        const token = makeImageToken();
+        const standaloneBlock = { text: token.raw } as Format;
+
+        const out = image.call(
+            asRenderer(renderer),
+            { h, block: standaloneBlock, token, cursor: fakeCursor },
+        );
+
+        expect(getWrapperSelector(out)).toContain('.center');
+    });
+
+    it('keeps an image inline when text shares the paragraph', () => {
+        const renderer = makeRenderer({
+            id: 'mu-image-inline',
+            isSuccess: true,
+            width: 400,
+            height: 300,
+        });
+        const token = makeImageToken();
+        const mixedBlock = { text: `before ${token.raw} after` } as Format;
+
+        const out = image.call(
+            asRenderer(renderer),
+            { h, block: mixedBlock, token, cursor: fakeCursor },
+        );
+
+        expect(getWrapperSelector(out)).not.toContain('.center');
+    });
+
     it('adds `mu-small-image` class when loaded width is below 100px', () => {
         const renderer = makeRenderer({
             id: 'mu-image-1',

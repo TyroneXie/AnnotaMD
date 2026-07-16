@@ -33,6 +33,11 @@
 a.mu-inline-rule,
 span.mu-inline-rule.mu-link {
     color: var(--link-color, rgb(20 86 240));
+    cursor: pointer;
+}
+
+.mu-html-preview a[href] {
+    cursor: pointer;
 }
 
 /* Note: previously this rule also set `pointer-events: none` to suppress
@@ -524,7 +529,7 @@ blockquote .mu-hide.mu-math > .mu-math-render {
 }
 
 .mu-inline-image.mu-image-success.mu-inline-image-selected .mu-image-container img {
-    filter: brightness(80%);
+    filter: none;
 }
 
 .mu-inline-image.mu-image-uploading .mu-image-container::before,

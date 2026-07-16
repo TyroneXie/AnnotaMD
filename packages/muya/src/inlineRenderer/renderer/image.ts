@@ -123,6 +123,11 @@ export default function image(
         }`
         : `span.${CLASS_NAMES.MU_INLINE_IMAGE}`;
 
+    const dataAlign = token.attrs['data-align'];
+    const isStandalone = block.text.trim() === token.raw.trim();
+    if (!dataAlign && isStandalone)
+        wrapperSelector += '.center';
+
     const imageIcons = [
         renderIcon(h, 'mu-image-icon-success', ImageIcon),
         renderIcon(h, 'mu-image-icon-fail', ImageFailIcon),
@@ -145,8 +150,8 @@ export default function image(
         return h(`span.${CLASS_NAMES.MU_IMAGE_CONTAINER}`, data, args);
     };
 
-    if (typeof token.attrs['data-align'] === 'string')
-        wrapperSelector += `.${token.attrs['data-align']}`;
+    if (typeof dataAlign === 'string')
+        wrapperSelector += `.${dataAlign}`;
 
     // the src image is still loading, so use the url Map base64.
     if (this.urlMap.has(src)) {

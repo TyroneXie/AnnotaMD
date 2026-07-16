@@ -22,13 +22,14 @@ import { getLinkInfo } from '../utils/getLinkInfo';
 // (cursor isn't editing inside the link), which keeps the
 // popover from flashing while the user types the URL.
 //
-// Click suppression: PR-11b removed the `pointer-events: none` rule that
+// Click handling: PR-11b removed the `pointer-events: none` rule that
 // `inlineSyntax.css` used to set on link wrappers, because that rule
 // hid all mouse events from us — events hit-tested straight through to
 // the editor container. We compensate by `preventDefault()`-ing clicks
 // on `a.mu-inline-rule` wrappers (standard contenteditable rich-text
-// pattern: clicking a link inside the editor should place the cursor,
-// not navigate away).
+// pattern). AnnotaMD treats rendered links like links in a reader: a plain
+// click is forwarded to the host, which safely opens web URLs, local Markdown
+// files and anchors through the existing `FORMAT_LINK_CLICK` path.
 //
 // Cleanup: every listener is attached via `eventCenter.attachDOMEvent`,
 // so `muya.destroy()` → `eventCenter.detachAllDomEvents()` removes them.
@@ -54,13 +55,6 @@ function findLinkWrapper(target: EventTarget | null): HTMLElement | null {
         return null;
 
     return target.closest<HTMLElement>(LINK_SELECTOR);
-}
-
-// True for a Cmd-click (macOS) or Ctrl-click (other platforms). The desktop
-// renderer makes the same OS distinction; emitting on either keeps muya
-// platform-agnostic and lets the host decide.
-function isModifierClick(event: Event): boolean {
-    return event instanceof MouseEvent && (event.metaKey || event.ctrlKey);
 }
 
 function isPopoverTarget(wrapper: HTMLElement): boolean {
@@ -149,18 +143,13 @@ export function attachLinkMouseHandlers(muya: Muya): void {
         if (anchor)
             event.preventDefault();
 
-        // Cmd/Ctrl-click a link → ask the host to open it. marktext's
+        // Click a link → ask the host to open it. marktext's
         // `clickCtrl.js` dispatched `format-click` with `{ event, formatType:
-        // 'link', data: { text, href } }`; the desktop renderer gates on the
-        // modifier itself (`editor.vue` `format-click` handler) and calls
-        // `FORMAT_LINK_CLICK({ data })`, so the only contract it needs is a
-        // `data.href`. We gate on the modifier here too so plain clicks keep
-        // their cursor-placement-only behavior. `getLinkInfo` resolves the
+        // 'link', data: { text, href } }`; the desktop renderer forwards that
+        // to `FORMAT_LINK_CLICK({ data })`, so the only contract it needs is a
+        // `data.href`. `getLinkInfo` resolves the
         // wrapper that hosts the href even when the IMG/text descendant was
         // clicked, and returns a superset (`{ href, raw, text, range }`).
-        if (!isModifierClick(event))
-            return;
-
         const wrapper = findLinkWrapper(event.target);
         if (!wrapper) {
             // A link inside a raw HTML block renders into `.mu-html-preview` as

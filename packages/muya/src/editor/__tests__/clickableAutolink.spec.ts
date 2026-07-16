@@ -8,7 +8,7 @@ import { Muya } from '../../muya';
 // (`<https://x.com>`) and GFM bare-URL autolinks (`https://x.com`) render as
 // `a.mu-auto-link` / `a.mu-auto-link-extension`, but those classes were absent
 // from linkMouseEvents' LINK_SELECTOR and the renderers never set `data-raw`,
-// so `getLinkInfo` returned null and a Cmd/Ctrl-click never emitted
+// so `getLinkInfo` returned null and a click never emitted
 // `format-click` — the link could not be followed. These boot a real engine,
 // render each autolink variant, and assert a modifier-click asks the host to
 // open it.
@@ -54,7 +54,7 @@ function modifierClick(el: Element) {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
 }
 
-describe('#2165 — autolinks are followable via Cmd/Ctrl-click', () => {
+describe('#2165 — autolinks are followable by clicking', () => {
     it('renders a.mu-auto-link with data-raw + href for a CommonMark autolink `<https://example.com>`', () => {
         const muya = bootMuya('<https://example.com>\n');
         const anchor = muya.domNode.querySelector<HTMLAnchorElement>('a.mu-auto-link');
@@ -88,14 +88,15 @@ describe('#2165 — autolinks are followable via Cmd/Ctrl-click', () => {
         expect(emits[0].data.href).toContain('https://example.com');
     });
 
-    it('a plain (non-modifier) click on an autolink does NOT emit format-click', () => {
+    it('a plain (non-modifier) click on an autolink emits format-click', () => {
         const muya = bootMuya('<https://example.com>\n');
         const emits = captureFormatClick(muya);
         const anchor = muya.domNode.querySelector<HTMLAnchorElement>('a.mu-auto-link')!;
 
         anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
-        expect(emits).toHaveLength(0);
+        expect(emits).toHaveLength(1);
+        expect(emits[0].data.href).toContain('https://example.com');
     });
 
     it('hovering an autolink does NOT open the edit/unlink popover (follow-only)', () => {

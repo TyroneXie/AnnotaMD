@@ -16,6 +16,8 @@ class ImageSelection {
 
     attach(): void {
         const { eventCenter, domNode } = this._muya;
+        eventCenter.attachDOMEvent(domNode, 'mouseover', this._handleMouseOver);
+        eventCenter.attachDOMEvent(domNode, 'mouseout', this._handleMouseOut);
         eventCenter.attachDOMEvent(domNode, 'click', this._handleClick);
         eventCenter.attachDOMEvent(document, 'click', this._handleDocClick);
         eventCenter.attachDOMEvent(document, 'keydown', this._handleKeydown);
@@ -37,6 +39,46 @@ class ImageSelection {
         this.selected = null;
         if (imageWrapper)
             this._handleClickInlineImage(event, imageWrapper);
+    };
+
+    private _handleMouseOver = (event: Event): void => {
+        const { target } = event;
+        if (!isHTMLElement(target) || target.tagName !== 'IMG')
+            return;
+
+        const imageWrapper = target.closest<HTMLElement>(`.${CLASS_NAMES.MU_INLINE_IMAGE}`);
+        const imageContainer = target.closest<HTMLElement>(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`);
+        const contentDom = findContentDOM(target);
+        if (!imageWrapper || !imageContainer || !contentDom)
+            return;
+
+        const contentBlock = contentDom[BLOCK_DOM_PROPERTY] as Format;
+        this._muya.eventCenter.emit('muya-transformer', {
+            block: contentBlock,
+            reference: imageContainer,
+            imageInfo: getImageInfo(imageWrapper),
+        });
+    };
+
+    private _handleMouseOut = (event: Event): void => {
+        const { target } = event;
+        if (!isHTMLElement(target) || target.tagName !== 'IMG')
+            return;
+
+        if (event instanceof MouseEvent && event.relatedTarget instanceof Node) {
+            const imageContainer = target.closest(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`);
+            const relatedElement = event.relatedTarget instanceof HTMLElement
+                ? event.relatedTarget
+                : event.relatedTarget.parentElement;
+            if (
+                imageContainer?.contains(event.relatedTarget)
+                || relatedElement?.closest('.mu-transformer .bar')
+            ) {
+                return;
+            }
+        }
+
+        this._muya.eventCenter.emit('muya-transformer', { reference: null });
     };
 
     private _handleKeydown = (event: Event): void => {
@@ -133,12 +175,6 @@ class ImageSelection {
                 width: imageWrapper.offsetWidth,
                 height: imageWrapper.offsetHeight,
             };
-
-            eventCenter.emit('muya-image-toolbar', {
-                block: contentBlock,
-                reference,
-                imageInfo,
-            });
 
             // Resolve the image container from the clicked wrapper directly.
             // Images that share the same src (and paragraph offset) render with
