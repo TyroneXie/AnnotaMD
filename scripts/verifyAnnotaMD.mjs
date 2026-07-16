@@ -51,6 +51,7 @@ const testPacks = {
     files: [
       'test/unit/specs/annotamd-comment-highlights.spec.ts',
       'test/unit/specs/annotamd-comment-navigation.spec.ts',
+      'test/unit/specs/comment-bubble-layout.spec.ts',
       'test/unit/specs/comment-pane-resize.spec.ts'
     ]
   }

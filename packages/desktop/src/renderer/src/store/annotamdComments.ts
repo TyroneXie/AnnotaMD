@@ -52,6 +52,7 @@ interface AnnotaMDCommentsState {
   activeSelection: AnnotaMDSelection | null
   agentReadable: boolean
   paneVisible: boolean
+  activeCommentId: string | null
   composerRequest: AnnotaMDComposerRequest | null
   commentFocusRequest: AnnotaMDCommentFocusRequest | null
 }
@@ -80,6 +81,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     activeSelection: null,
     agentReadable: true,
     paneVisible: false,
+    activeCommentId: null,
     composerRequest: null,
     commentFocusRequest: null
   }),
@@ -141,6 +143,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
 
     requestCommentFocus(commentId: string): void {
       this.paneVisible = true
+      this.activeCommentId = commentId
       this.composerRequest = null
       this.commentFocusRequest = {
         id: Date.now(),
@@ -154,8 +157,14 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
 
     setPaneVisible(visible: boolean): void {
       this.paneVisible = visible
+      if (!visible) this.activeCommentId = null
       this.clearComposerRequest()
       this.clearCommentFocusRequest()
+    },
+
+    setActiveComment(commentId: string | null): void {
+      if (this.activeCommentId === commentId) return
+      this.activeCommentId = commentId
     },
 
     addDocumentComment(filePath: string, body: string): void {

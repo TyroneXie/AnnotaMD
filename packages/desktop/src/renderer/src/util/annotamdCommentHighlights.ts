@@ -30,6 +30,13 @@ type HighlightConstructor = new (...ranges: Range[]) => unknown
 const BLOCK_DOM_PROPERTY = '__MUYA_BLOCK__'
 
 export const ANNOTAMD_COMMENT_HIGHLIGHT = 'annotamd-selection-comment'
+export const ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT = 'annotamd-active-selection-comment'
+
+export interface CommentAnchorRect {
+  id: string
+  top: number
+  bottom: number
+}
 
 const pathKey = (path: Array<string | number>): string => path.join('/')
 
@@ -121,6 +128,20 @@ export const buildAnnotaMDCommentRanges = (
   return ranges
 }
 
+export const buildAnnotaMDCommentAnchorRects = (
+  root: HTMLElement,
+  comments: CommentHighlightSource[]
+): CommentAnchorRect[] => {
+  const blocks = contentBlocksByPath(root)
+  return comments.flatMap((comment) => {
+    if (!comment.id) return []
+    const range = rangeForComment(blocks, comment)
+    if (!range) return []
+    const rect = range.getBoundingClientRect()
+    return [{ id: comment.id, top: rect.top, bottom: rect.bottom }]
+  })
+}
+
 export const findAnnotaMDCommentAtPosition = (
   root: HTMLElement,
   comments: CommentHighlightSource[],
@@ -149,18 +170,32 @@ const highlightApi = (): {
 
 export const syncAnnotaMDCommentHighlights = (
   root: HTMLElement,
-  comments: CommentHighlightSource[]
+  comments: CommentHighlightSource[],
+  activeCommentId: string | null = null
 ): void => {
   const api = highlightApi()
   if (!api) return
 
   api.registry.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
+  api.registry.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
   const ranges = buildAnnotaMDCommentRanges(root, comments)
   if (ranges.length) {
     api.registry.set(ANNOTAMD_COMMENT_HIGHLIGHT, new api.HighlightClass(...ranges))
   }
+  const activeComment = comments.find((comment) => comment.id === activeCommentId)
+  if (activeComment) {
+    const activeRange = rangeForComment(contentBlocksByPath(root), activeComment)
+    if (activeRange) {
+      api.registry.set(
+        ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT,
+        new api.HighlightClass(activeRange)
+      )
+    }
+  }
 }
 
 export const clearAnnotaMDCommentHighlights = (): void => {
-  highlightApi()?.registry.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
+  const registry = highlightApi()?.registry
+  registry?.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
+  registry?.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
 }

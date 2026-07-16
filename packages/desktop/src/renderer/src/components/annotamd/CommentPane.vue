@@ -36,6 +36,8 @@
     <section
       ref="commentList"
       class="annotamd-comment-list"
+      :class="{ anchored: anchoredLayoutEnabled }"
+      :style="{ '--annotamd-comment-stage-height': `${commentStageHeight}px` }"
       :aria-label="t('annotamd.comments.listLabel')"
     >
       <article
@@ -81,7 +83,14 @@
         :key="comment.id"
         :data-comment-id="comment.id"
         class="annotamd-comment-card"
-        :class="{ resolved: comment.resolved, focused: focusedCommentId === comment.id }"
+        :class="{
+          resolved: comment.resolved,
+          emphasized: activeCommentId === comment.id
+        }"
+        :style="commentCardStyle(comment.id)"
+        @mouseenter="commentStore.setActiveComment(comment.id)"
+        @mouseleave="clearActiveComment(comment.id)"
+        @click="commentStore.setActiveComment(comment.id)"
       >
         <div class="annotamd-comment-row">
           <span class="annotamd-comment-scope">{{ t('annotamd.comments.selectionScope') }}</span>
@@ -179,10 +188,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import bus from '@/bus'
+import {
+  layoutCommentBubbles,
+  type CommentBubbleLayout
+} from '@/util/commentBubbleLayout'
+import type { CommentAnchorRect } from '@/util/annotamdCommentHighlights'
 import { useI18n } from 'vue-i18n'
 
 const editorStore = useEditorStore()
@@ -190,7 +205,13 @@ const commentStore = useAnnotaMDCommentsStore()
 const { t } = useI18n()
 
 const { currentFile } = storeToRefs(editorStore)
-const { activeSelection, agentReadable, composerRequest, commentFocusRequest } = storeToRefs(commentStore)
+const {
+  activeSelection,
+  activeCommentId,
+  agentReadable,
+  composerRequest,
+  commentFocusRequest
+} = storeToRefs(commentStore)
 
 const composerOpen = ref(false)
 const draftBody = ref('')
@@ -200,7 +221,9 @@ const replyingId = ref<string | null>(null)
 const replyBody = ref('')
 const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
-const focusedCommentId = ref<string | null>(null)
+const commentAnchors = ref<CommentAnchorRect[]>([])
+const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
+let commentListResizeObserver: ResizeObserver | null = null
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
@@ -214,6 +237,44 @@ const pendingSummary = computed(() =>
     )
   })
 )
+const anchoredLayoutEnabled = computed(() =>
+  !composerOpen.value && Object.keys(commentLayout.value.positions).length > 0
+)
+const commentStageHeight = computed(() => commentLayout.value.height)
+
+const commentCardStyle = (commentId: string): Record<string, string> => {
+  if (!anchoredLayoutEnabled.value) return {}
+  const top = commentLayout.value.positions[commentId]
+  return Number.isFinite(top) ? { top: `${top}px` } : {}
+}
+
+const updateCommentBubbleLayout = async (): Promise<void> => {
+  await nextTick()
+  const list = commentList.value
+  if (!list || composerOpen.value) return
+
+  const listRect = list.getBoundingClientRect()
+  const anchorById = new Map(commentAnchors.value.map((anchor) => [anchor.id, anchor]))
+  const bubbles = selectionComments.value.map((comment) => {
+    const card = list.querySelector<HTMLElement>(`[data-comment-id="${comment.id}"]`)
+    const anchor = anchorById.get(comment.id)
+    return {
+      id: comment.id,
+      anchorTop: anchor ? anchor.top - listRect.top + list.scrollTop : null,
+      height: card?.offsetHeight ?? 120
+    }
+  })
+  commentLayout.value = layoutCommentBubbles(bubbles, 0, list.clientHeight)
+}
+
+const handleCommentAnchors = (payload: unknown): void => {
+  commentAnchors.value = Array.isArray(payload) ? payload as CommentAnchorRect[] : []
+  void updateCommentBubbleLayout()
+}
+
+const clearActiveComment = (commentId: string): void => {
+  if (activeCommentId.value === commentId) commentStore.setActiveComment(null)
+}
 
 const openComposer = (): void => {
   composerOpen.value = true
@@ -264,7 +325,8 @@ const saveReply = (id: string): void => {
 const focusCommentCard = async (commentId: string): Promise<void> => {
   composerOpen.value = false
   draftBody.value = ''
-  focusedCommentId.value = commentId
+  commentStore.setActiveComment(commentId)
+  await updateCommentBubbleLayout()
   await nextTick()
   const card = [...(commentList.value?.querySelectorAll<HTMLElement>('[data-comment-id]') ?? [])]
     .find((element) => element.dataset.commentId === commentId)
@@ -282,6 +344,33 @@ watch(commentFocusRequest, (request) => {
   if (!request) return
   void focusCommentCard(request.commentId)
 }, { immediate: true })
+
+watch(
+  [selectionComments, editingId, replyingId, composerOpen],
+  () => void updateCommentBubbleLayout(),
+  { deep: true }
+)
+
+watch(filePath, () => {
+  commentStore.setActiveComment(null)
+  commentAnchors.value = []
+  commentLayout.value = { positions: {}, height: 0 }
+})
+
+onMounted(() => {
+  bus.on('annotamd-comment-anchors', handleCommentAnchors)
+  if (commentList.value) {
+    commentListResizeObserver = new ResizeObserver(() => void updateCommentBubbleLayout())
+    commentListResizeObserver.observe(commentList.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  bus.off('annotamd-comment-anchors', handleCommentAnchors)
+  commentListResizeObserver?.disconnect()
+  commentListResizeObserver = null
+  commentStore.setActiveComment(null)
+})
 </script>
 
 <style scoped>
@@ -411,9 +500,24 @@ watch(commentFocusRequest, (request) => {
 }
 
 .annotamd-comment-list {
+  position: relative;
   flex: 1;
   overflow: auto;
   padding: 0 14px 80px;
+}
+
+.annotamd-comment-list.anchored::after {
+  display: block;
+  height: var(--annotamd-comment-stage-height);
+  content: '';
+}
+
+.annotamd-comment-list.anchored .annotamd-comment-card[data-comment-id] {
+  position: absolute;
+  right: 14px;
+  left: 14px;
+  margin-bottom: 0;
+  transition: top 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
 
 .annotamd-comment-card {
@@ -428,9 +532,9 @@ watch(commentFocusRequest, (request) => {
   box-shadow: 0 0 0 3px var(--annotamd-surface-blue);
 }
 
-.annotamd-comment-card.focused {
-  border-color: var(--annotamd-blue);
-  box-shadow: 0 0 0 3px var(--annotamd-surface-blue);
+.annotamd-comment-card.emphasized {
+  border-color: #9bb8ff;
+  background: #f7f9ff;
 }
 
 .annotamd-comment-card.resolved {

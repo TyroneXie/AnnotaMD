@@ -133,6 +133,7 @@ import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
 import { resolveTocHeadingElement } from '@/util/tocNavigation'
 import {
+  buildAnnotaMDCommentAnchorRects,
   clearAnnotaMDCommentHighlights,
   findAnnotaMDCommentAtPosition,
   syncAnnotaMDCommentHighlights
@@ -312,6 +313,10 @@ let imageViewer: SimpleImageViewer | null = null
 // The engine has no `scroll` event; we listen on the scroll container directly.
 let scrollHandler: ((e: Event) => void) | null = null
 let commentClickHandler: ((event: MouseEvent) => void) | null = null
+let commentHoverHandler: ((event: MouseEvent) => void) | null = null
+let commentLeaveHandler: (() => void) | null = null
+let commentHoverFrame: number | null = null
+let pendingCommentHoverPoint: { clientX: number; clientY: number } | null = null
 let documentCommentFooterObserver: MutationObserver | null = null
 let commentHighlightFrame: number | null = null
 let stopCommentHighlightSubscription: (() => void) | null = null
@@ -1284,7 +1289,15 @@ const observeDocumentCommentFooterTarget = (): void => {
 const refreshAnnotaMDCommentHighlights = (): void => {
   const root = getScrollContainer()
   if (!root) return
-  syncAnnotaMDCommentHighlights(root, currentFileComments.value)
+  syncAnnotaMDCommentHighlights(
+    root,
+    currentFileComments.value,
+    annotaMDCommentsStore.activeCommentId
+  )
+  bus.emit(
+    'annotamd-comment-anchors',
+    buildAnnotaMDCommentAnchorRects(root, currentFileComments.value)
+  )
 }
 
 const queueAnnotaMDCommentHighlights = (): void => {
@@ -1295,18 +1308,24 @@ const queueAnnotaMDCommentHighlights = (): void => {
   })
 }
 
-const caretPositionFromPoint = (event: MouseEvent): { node: Node; offset: number } | null => {
+const caretPositionFromPoint = (
+  point: { clientX: number; clientY: number }
+): { node: Node; offset: number } | null => {
   const caretDocument = document as Document & {
     caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
     caretRangeFromPoint?: (x: number, y: number) => Range | null
   }
-  const position = caretDocument.caretPositionFromPoint?.(event.clientX, event.clientY)
+  const position = caretDocument.caretPositionFromPoint?.(point.clientX, point.clientY)
   if (position) return { node: position.offsetNode, offset: position.offset }
-  const range = caretDocument.caretRangeFromPoint?.(event.clientX, event.clientY)
+  const range = caretDocument.caretRangeFromPoint?.(point.clientX, point.clientY)
   return range ? { node: range.startContainer, offset: range.startOffset } : null
 }
 
 const handleCommentHighlightClick = (event: MouseEvent): void => {
+  // Muya may replace the clicked text node while it updates the caret. Rebuild
+  // the CSS Highlight ranges after that DOM update so inactive annotations do
+  // not lose their persistent underline.
+  requestAnimationFrame(queueAnnotaMDCommentHighlights)
   const root = getScrollContainer()
   const position = caretPositionFromPoint(event)
   if (!root || !position) return
@@ -1317,8 +1336,29 @@ const handleCommentHighlightClick = (event: MouseEvent): void => {
     position.offset
   )
   if (comment?.id) {
+    annotaMDCommentsStore.setActiveComment(comment.id)
     annotaMDCommentsStore.requestCommentFocus(comment.id)
   }
+}
+
+const handleCommentHighlightHover = (event: MouseEvent): void => {
+  pendingCommentHoverPoint = { clientX: event.clientX, clientY: event.clientY }
+  if (commentHoverFrame != null) return
+  commentHoverFrame = requestAnimationFrame(() => {
+    commentHoverFrame = null
+    const point = pendingCommentHoverPoint
+    pendingCommentHoverPoint = null
+    const root = getScrollContainer()
+    const position = point ? caretPositionFromPoint(point) : null
+    if (!root || !position) return
+    const comment = findAnnotaMDCommentAtPosition(
+      root,
+      currentFileComments.value,
+      position.node,
+      position.offset
+    )
+    annotaMDCommentsStore.setActiveComment(comment?.id ?? null)
+  })
 }
 
 watch(() => currentFile.value?.pathname, queueAnnotaMDCommentHighlights)
@@ -2066,10 +2106,15 @@ onMounted(() => {
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
     }
+    queueAnnotaMDCommentHighlights()
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
   commentClickHandler = handleCommentHighlightClick
   container.addEventListener('click', commentClickHandler)
+  commentHoverHandler = handleCommentHighlightHover
+  container.addEventListener('mousemove', commentHoverHandler, { passive: true })
+  commentLeaveHandler = () => annotaMDCommentsStore.setActiveComment(null)
+  container.addEventListener('mouseleave', commentLeaveHandler)
 
   // Clicking the hover-to-copy affordance on a heading emits `heading-copy-link`
   // with the heading's stable slug; copy the matching GitHub anchor to the
@@ -2214,6 +2259,19 @@ onBeforeUnmount(() => {
     container?.removeEventListener('click', commentClickHandler)
   }
   commentClickHandler = null
+  if (commentHoverHandler && editor.value) {
+    const container = getScrollContainer()
+    container?.removeEventListener('mousemove', commentHoverHandler)
+  }
+  commentHoverHandler = null
+  if (commentHoverFrame != null) cancelAnimationFrame(commentHoverFrame)
+  commentHoverFrame = null
+  pendingCommentHoverPoint = null
+  if (commentLeaveHandler && editor.value) {
+    const container = getScrollContainer()
+    container?.removeEventListener('mouseleave', commentLeaveHandler)
+  }
+  commentLeaveHandler = null
 
   resizeObserverForEditor.disconnect()
   stickyTableHeader?.destroy()
@@ -2497,6 +2555,18 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   background: transparent;
   color: inherit;
   text-decoration: underline rgb(51 112 255 / 85%);
+  text-decoration-skip-ink: none;
+  text-decoration-skip-spaces: none;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+::highlight(annotamd-active-selection-comment) {
+  background: rgb(51 112 255 / 14%);
+  color: inherit;
+  text-decoration: underline rgb(51 112 255 / 100%);
+  text-decoration-skip-ink: none;
+  text-decoration-skip-spaces: none;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }

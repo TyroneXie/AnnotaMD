@@ -52,6 +52,7 @@ describe('AnnotaMD comment navigation', () => {
     store.requestCommentFocus('comment-1')
 
     expect(store.paneVisible).toBe(true)
+    expect(store.activeCommentId).toBe('comment-1')
     expect(store.commentFocusRequest?.commentId).toBe('comment-1')
   })
 
@@ -64,9 +65,11 @@ describe('AnnotaMD comment navigation', () => {
     )
 
     expect(editor).toContain('findAnnotaMDCommentAtPosition')
+    expect(editor).toContain('handleCommentHighlightHover')
     expect(editor).toContain("annotaMDCommentsStore.requestCommentFocus(comment.id)")
     expect(pane).toContain(':data-comment-id="comment.id"')
     expect(pane).toContain('commentFocusRequest')
+    expect(pane).toContain('activeCommentId === comment.id')
     expect(pane).toContain("card?.scrollIntoView({ block: 'center', behavior: 'smooth' })")
   })
 })

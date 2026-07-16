@@ -70,5 +70,8 @@ describe('AnnotaMD selection comment highlights', () => {
     expect(editor).toMatch(
       /::highlight\(annotamd-selection-comment\)\s*\{[^}]*background:\s*transparent;[^}]*text-decoration:\s*underline rgb\(51 112 255 \/ 85%\);/s
     )
+    expect(editor).toMatch(
+      /::highlight\(annotamd-active-selection-comment\)\s*\{[^}]*background:\s*rgb\(51 112 255 \/ 14%\);/s
+    )
   })
 })
