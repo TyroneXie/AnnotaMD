@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.7.1 - 2026-07-17
+
+### Fixed
+
+- Fixed a crash when deleting a table column after the table had been detached from the document, by guarding against null table/row references in the table row/column menu.
+
+### Changed
+
+- Redesigned README with a professional showcase hero image featuring feature callouts and app screenshot.
+
 ## 2.7.0 - 2026-07-16
 
 ### Added
