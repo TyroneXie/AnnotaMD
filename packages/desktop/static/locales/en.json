@@ -118,6 +118,7 @@
       "focusMode": "Focus Mode",
       "toggleTableOfContents": "Toggle Table of Contents",
       "reloadImages": "Reload Images",
+      "showScrollbars": "Show Scrollbars",
       "showDeveloperTools": "Show Developer Tools",
       "reloadWindow": "Reload Window"
     },
@@ -140,8 +141,8 @@
       "theme": "&Theme",
       "dark": "Dark",
       "followThemDisabled": "Theme selection disabled when following system theme",
-      "lightThemes": "— Light Themes —",
-      "darkThemes": "— Dark Themes —",
+      "lightThemes": "Light Themes",
+      "darkThemes": "Dark Themes",
       "ayuDark": "Ayu Dark",
       "ayuLight": "Ayu Light",
       "ayuMirage": "Ayu Mirage",
@@ -435,6 +436,7 @@
         "openedFilesInSidebar": "Whether to show opened files in the sidebar."
       }
     },
+    "advancedSettings": "Advanced settings",
     "categories": {
       "general": "General",
       "editor": "Editor",
@@ -462,6 +464,7 @@
         "hideScrollbars": "Hide scrollbars",
         "openFilesInNewWindow": "Open files in new window",
         "openFoldersInNewWindow": "Open folders in new window",
+        "openItemsInNewWindow": "Open files and folders in new windows",
         "zoom": "Zoom"
       },
       "startup": {

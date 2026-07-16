@@ -16,13 +16,6 @@
           :disable="!spellcheckerEnabled"
           :on-change="(value) => onSelectChange('spellcheckerNoUnderline', value)"
         />
-        <bool
-          v-show="isOsx"
-          :description="t('preferences.spellchecker.autoDetectLanguage')"
-          :bool="true"
-          :disable="true"
-          :on-change="noop"
-        />
         <cur-select
           v-show="!isOsx"
           :description="t('preferences.spellchecker.defaultLanguage')"
@@ -34,10 +27,7 @@
       </template>
     </compound>
 
-    <div
-      v-if="isOsx && spellcheckerEnabled"
-      class="description"
-    >
+    <div v-if="isOsx && spellcheckerEnabled" class="description">
       {{ t('preferences.spellchecker.autoDetectDescription') }}
     </div>
 
@@ -53,10 +43,7 @@
         :empty-text="t('preferences.spellchecker.customDictionary.noWordsAvailable')"
         style="width: 100%"
       >
-        <el-table-column
-          prop="word"
-          :label="t('preferences.spellchecker.customDictionary.word')"
-        />
+        <el-table-column prop="word" :label="t('preferences.spellchecker.customDictionary.word')" />
 
         <el-table-column
           fixed="right"
@@ -70,10 +57,7 @@
               :title="t('preferences.spellchecker.customDictionary.delete')"
               @click="handleDeleteClick(scope.row)"
             >
-              <Delete
-                width="16"
-                height="16"
-              />
+              <Delete width="16" height="16" />
             </el-button>
           </template>
         </el-table-column>
@@ -140,13 +124,12 @@ const getAvailableDictionaries = async (): Promise<PrefSelectOption<string>[]> =
   })
 }
 
-const handleSpellcheckerLanguage = async (languageCode: string | number | boolean): Promise<void> => {
+const handleSpellcheckerLanguage = async (
+  languageCode: string | number | boolean
+): Promise<void> => {
   onSelectChange('spellcheckerLanguage', languageCode)
 
-  await window.electron.ipcRenderer.invoke(
-    'mt::spellchecker-switch-language',
-    String(languageCode)
-  )
+  await window.electron.ipcRenderer.invoke('mt::spellchecker-switch-language', String(languageCode))
 }
 
 const handleSpellcheckerEnabled = (isEnabled: boolean): void => {
@@ -156,11 +139,6 @@ const handleSpellcheckerEnabled = (isEnabled: boolean): void => {
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
 }
-
-// No-op handler for the disabled "auto-detect language" toggle. The control
-// is permanently disabled, so the callback is never invoked, but the typed
-// bool component requires `onChange` to be present.
-const noop = (): void => {}
 
 const handleDeleteClick = (selectedItem: CustomDictionaryWord): void => {
   if (selectedItem && typeof selectedItem.word === 'string') {

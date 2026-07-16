@@ -118,6 +118,7 @@
       "focusMode": "专注模式",
       "toggleTableOfContents": "切换目录",
       "reloadImages": "重新加载图片",
+      "showScrollbars": "显示滚动条",
       "showDeveloperTools": "显示开发者工具",
       "reloadWindow": "重新加载窗口"
     },
@@ -140,8 +141,8 @@
       "theme": "主题(&T)",
       "dark": "深色",
       "followThemDisabled": "跟随系统主题时无法选择主题",
-      "lightThemes": "— 浅色主题 —",
-      "darkThemes": "— 深色主题 —",
+      "lightThemes": "浅色主题",
+      "darkThemes": "深色主题",
       "ayuDark": "Ayu 深色",
       "ayuLight": "Ayu 浅色",
       "ayuMirage": "Ayu Mirage",
@@ -435,6 +436,7 @@
         "openedFilesInSidebar": "是否在侧边栏中显示已打开文件"
       }
     },
+    "advancedSettings": "高级设置",
     "categories": {
       "general": "通用",
       "editor": "编辑器",
@@ -462,6 +464,7 @@
         "hideScrollbars": "隐藏滚动条",
         "openFilesInNewWindow": "在新窗口中打开文件",
         "openFoldersInNewWindow": "在新窗口中打开文件夹",
+        "openItemsInNewWindow": "在新窗口中打开文件和文件夹",
         "zoom": "缩放"
       },
       "startup": {
@@ -564,7 +567,7 @@
         },
         "hideQuickInsertHint": "隐藏快速插入提示",
         "hideLinkPopup": "隐藏链接弹出窗口",
-        "autoCheck": "自动检查",
+        "autoCheck": "任务列表状态自动联动",
         "autoNormalizeLineEndings": "打开时自动将行尾规范化为 LF",
         "wrapCodeBlocks": "换行代码块"
       }
@@ -627,7 +630,7 @@
         "pleaseInstall": "请安装",
         "scriptPath": "脚本路径"
       },
-      "defaultBehavior": "粘贴或拖拽图片到 AnnotaMD 后的默认行为"
+      "defaultBehavior": "粘贴或拖拽图片到 AnnotaMD"
     },
     "markdown": {
       "title": "Markdown",

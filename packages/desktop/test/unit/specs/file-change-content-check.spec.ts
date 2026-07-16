@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn()
+    }
+  })
   const w = globalThis as unknown as {
     window?: {
       path?: { sep: string; dirname: (p: string) => string }
@@ -24,10 +33,9 @@ import { useEditorStore } from '@/store/editor'
 
 // #1861: a watcher 'change' event fires even when only the file's mtime changed
 // (e.g. a git checkout that left the content byte-identical). The handler then
-// marked the tab unsaved and showed a "file changed on disk" prompt for a
-// no-op change. Skip the handling when the new on-disk content equals the
-// tab's current content.
-describe('useEditorStore LISTEN_FOR_FILE_CHANGE — content-identical change (#1861)', () => {
+// marked the tab unsaved and showed a "file changed on disk" prompt. Identical
+// content remains a no-op; real external changes reload automatically.
+describe('useEditorStore LISTEN_FOR_FILE_CHANGE — automatic external reload', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -62,15 +70,16 @@ describe('useEditorStore LISTEN_FOR_FILE_CHANGE — content-identical change (#1
     expect(tab.isSaved).toBe(true)
   })
 
-  it('still warns when the on-disk content actually changed', () => {
+  it('reloads changed disk content without showing a confirmation', () => {
     const store = useEditorStore()
-    const tab = makeSavedTab(store)
+    makeSavedTab(store)
     const notifySpy = vi.spyOn(store, 'pushTabNotification').mockImplementation(() => {})
+    const loadSpy = vi.spyOn(store, 'loadChange').mockImplementation(() => {})
     store.LISTEN_FOR_FILE_CHANGE()
 
     fire(captureHandler(), 'hello world')
 
-    expect(notifySpy).toHaveBeenCalledTimes(1)
-    expect(tab.isSaved).toBe(false)
+    expect(loadSpy).toHaveBeenCalledTimes(1)
+    expect(notifySpy).not.toHaveBeenCalled()
   })
 })

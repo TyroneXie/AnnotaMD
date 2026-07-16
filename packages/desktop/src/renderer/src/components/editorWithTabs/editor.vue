@@ -4,10 +4,7 @@
     :class="[{ typewriter: typewriter, focus: focus, source: sourceCode }]"
     :dir="textDirection"
   >
-    <div
-      ref="editorRef"
-      class="editor-component"
-    />
+    <div ref="editorRef" class="editor-component" />
     <Teleport
       v-if="documentCommentFooterReady && hasDocumentContent"
       :to="documentCommentFooterTarget"
@@ -15,14 +12,8 @@
       <AnnotaMDDocumentCommentFooter />
     </Teleport>
     <Teleport to="body">
-      <div
-        v-show="imageViewerVisible"
-        class="image-viewer"
-      >
-        <span
-          class="icon-close"
-          @click="setImageViewerVisible(false)"
-        >
+      <div v-show="imageViewerVisible" class="image-viewer">
+        <span class="icon-close" @click="setImageViewerVisible(false)">
           <CloseIcon />
         </span>
         <div ref="imageViewerRef" />
@@ -42,10 +33,7 @@
           {{ t('editor.insertTable.title') }}
         </div>
       </template>
-      <el-form
-        :model="tableChecker"
-        :inline="true"
-      >
+      <el-form :model="tableChecker" :inline="true">
         <el-form-item :label="t('editor.insertTable.rows')">
           <el-input-number
             ref="rowInput"
@@ -71,10 +59,7 @@
           <el-button @click="dialogTableVisible = false">
             {{ t('common.cancel') }}
           </el-button>
-          <el-button
-            type="primary"
-            @click="handleDialogTableConfirm"
-          >
+          <el-button type="primary" @click="handleDialogTableConfirm">
             {{ t('common.ok') }}
           </el-button>
         </div>
@@ -240,7 +225,6 @@ const {
   isGitlabCompatibilityEnabled,
   lineHeight,
   fontSize,
-  codeFontSize,
   codeFontFamily,
   codeBlockLineNumbers,
   trimUnnecessaryCodeBlockEmptyLines,
@@ -532,7 +516,10 @@ class SimpleImageViewer {
   _onMousemove!: (e: MouseEvent) => void
   _onMouseup!: () => void
 
-  constructor (container: HTMLElement, { url, background = 'transparent' }: { url: string; background?: string }) {
+  constructor(
+    container: HTMLElement,
+    { url, background = 'transparent' }: { url: string; background?: string }
+  ) {
     this.container = container
     this.scale = 1
     this.translateX = 0
@@ -543,7 +530,7 @@ class SimpleImageViewer {
     this._init(url, background)
   }
 
-  _init (url: string, background: string) {
+  _init(url: string, background: string) {
     this.container.innerHTML = ''
     this.img = document.createElement('img')
     this.img.src = url
@@ -555,11 +542,11 @@ class SimpleImageViewer {
     this._bindEvents()
   }
 
-  _updateTransform () {
+  _updateTransform() {
     this.img.style.transform = `translate(${this.translateX}px,${this.translateY}px) scale(${this.scale})`
   }
 
-  _bindEvents () {
+  _bindEvents() {
     this._onWheel = (e: WheelEvent) => {
       e.preventDefault()
       const factor = e.deltaY < 0 ? 1.1 : 0.9
@@ -590,7 +577,7 @@ class SimpleImageViewer {
     document.addEventListener('mouseup', this._onMouseup)
   }
 
-  destroy () {
+  destroy() {
     this.container.removeEventListener('wheel', this._onWheel)
     this.container.removeEventListener('mousedown', this._onMousedown)
     document.removeEventListener('mousemove', this._onMousemove)
@@ -643,7 +630,12 @@ watch(sourceCode, (isSource) => {
 
 watch(fontSize, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
-    editor.value.setOptions({ fontSize: value })
+    editor.value.setOptions({ fontSize: value, codeFontSize: value })
+    addCommonStyle({
+      codeFontSize: value,
+      codeFontFamily: codeFontFamily.value,
+      hideScrollbar: hideScrollbar.value
+    })
   }
 })
 
@@ -702,11 +694,14 @@ watch(sequenceTheme, (value, oldValue) => {
   }
 })
 
-watch(() => preferencesStore.plantumlServer, (value, oldValue) => {
-  if (value !== oldValue && editor.value) {
-    editor.value.setOptions({ plantumlServer: value }, true)
+watch(
+  () => preferencesStore.plantumlServer,
+  (value, oldValue) => {
+    if (value !== oldValue && editor.value) {
+      editor.value.setOptions({ plantumlServer: value }, true)
+    }
   }
-})
+)
 
 watch(listIndentation, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
@@ -810,18 +805,6 @@ watch(autoCheck, (value, oldValue) => {
   }
 })
 
-watch(codeFontSize, (value, oldValue) => {
-  if (value !== oldValue && editor.value) {
-    editor.value.setOptions({ codeFontSize: value })
-    // Source-mode CodeMirror is a separate surface muya doesn't own.
-    addCommonStyle({
-      codeFontSize: value,
-      codeFontFamily: codeFontFamily.value,
-      hideScrollbar: hideScrollbar.value
-    })
-  }
-})
-
 watch(codeBlockLineNumbers, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ codeBlockLineNumbers: value }, true)
@@ -833,7 +816,7 @@ watch(codeFontFamily, (value, oldValue) => {
     editor.value.setOptions({ codeFontFamily: resolveCodeFont(value) })
     // Source-mode CodeMirror is a separate surface muya doesn't own.
     addCommonStyle({
-      codeFontSize: codeFontSize.value,
+      codeFontSize: fontSize.value,
       codeFontFamily: value,
       hideScrollbar: hideScrollbar.value
     })
@@ -843,7 +826,7 @@ watch(codeFontFamily, (value, oldValue) => {
 watch(hideScrollbar, (value, oldValue) => {
   if (value !== oldValue) {
     addCommonStyle({
-      codeFontSize: codeFontSize.value,
+      codeFontSize: fontSize.value,
       codeFontFamily: codeFontFamily.value,
       hideScrollbar: value
     })
@@ -955,8 +938,9 @@ const imageAction = async (
     : null
   if (isTabSavedOnDisk && imageRelativeDirectoryBase.value !== 'file') {
     const rootPath = projectTrees.value.find(
-      (tree) => tree.pathname === currentPathname
-        || window.fileUtils.isChildOfDirectory(tree.pathname, currentPathname)
+      (tree) =>
+        tree.pathname === currentPathname ||
+        window.fileUtils.isChildOfDirectory(tree.pathname, currentPathname)
     )?.pathname
     if (rootPath && window.fileUtils.isChildOfDirectory(rootPath, currentPathname)) {
       // Save assets relative to root directory.
@@ -1308,9 +1292,10 @@ const queueAnnotaMDCommentHighlights = (): void => {
   })
 }
 
-const caretPositionFromPoint = (
-  point: { clientX: number; clientY: number }
-): { node: Node; offset: number } | null => {
+const caretPositionFromPoint = (point: {
+  clientX: number
+  clientY: number
+}): { node: Node; offset: number } | null => {
   const caretDocument = document as Document & {
     caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
     caretRangeFromPoint?: (x: number, y: number) => Range | null
@@ -1945,7 +1930,7 @@ onMounted(() => {
     fontSize: fontSize.value,
     lineHeight: lineHeight.value,
     editorFontFamily: resolveEditorFont(editorFontFamily.value),
-    codeFontSize: codeFontSize.value,
+    codeFontSize: fontSize.value,
     codeFontFamily: resolveCodeFont(codeFontFamily.value),
     wrapCodeBlocks: wrapCodeBlocks.value,
     codeBlockLineNumbers: codeBlockLineNumbers.value,
@@ -2148,15 +2133,18 @@ onMounted(() => {
     }
   )
 
-  editor.value.on('preview-image', ({ data, background }: { data: string; background?: string }) => {
-    if (imageViewer) {
-      imageViewer.destroy()
+  editor.value.on(
+    'preview-image',
+    ({ data, background }: { data: string; background?: string }) => {
+      if (imageViewer) {
+        imageViewer.destroy()
+      }
+      if (imageViewerRef.value) {
+        imageViewer = new SimpleImageViewer(imageViewerRef.value, { url: data, background })
+        setImageViewerVisible(true)
+      }
     }
-    if (imageViewerRef.value) {
-      imageViewer = new SimpleImageViewer(imageViewerRef.value, { url: data, background })
-      setImageViewerVisible(true)
-    }
-  })
+  )
 
   editor.value.on('annotamd-comment-selection', (selection?: AnnotaMDSelection) => {
     if (selection?.quote) {
@@ -2454,7 +2442,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   padding: 24px 56px 100vh;
   overflow-x: hidden !important;
   color: #2f3437;
-  font-size: var(--mu-font-size, 16px);
+  font-size: var(--mu-font-size, 15px);
   line-height: var(--mu-line-height, 1.58);
 }
 

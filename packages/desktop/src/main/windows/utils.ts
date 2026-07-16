@@ -18,6 +18,11 @@ export const zoomOut = (win: BrowserWindow | null | undefined): void => {
   webContents.send('mt::window-zoom', Math.max(0.5, zoom - 0.125))
 }
 
+export const actualSize = (win: BrowserWindow | null | undefined): void => {
+  if (!win) return
+  win.webContents.send('mt::window-zoom', 1.0)
+}
+
 export const centerWindowOptions = (
   options: BrowserWindowConstructorOptions & {
     width: number

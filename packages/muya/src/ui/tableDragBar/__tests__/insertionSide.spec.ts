@@ -9,6 +9,7 @@ import {
     shouldContinueTableDrag,
     shouldHighlightTableAxis,
 } from '../index';
+import { isPointInsideEditorViewport } from '../../tableHoverGuard';
 
 const rect = { left: 100, right: 200, top: 50, bottom: 90 };
 const css = readFileSync(fileURLToPath(new URL('../index.css', import.meta.url)), 'utf8');
@@ -18,6 +19,15 @@ const blockCss = readFileSync(
 );
 
 describe('Feishu-style table insertion hit areas', () => {
+    it('clears hover tools when the pointer moves into tabs above the editor', () => {
+        const editorRect = { left: 100, right: 900, top: 120, bottom: 700 };
+
+        expect(isPointInsideEditorViewport({ x: 500, y: 119 }, editorRect)).toBe(false);
+        expect(isPointInsideEditorViewport({ x: 500, y: 120 }, editorRect)).toBe(true);
+        expect(isPointInsideEditorViewport({ x: 500, y: 700 }, editorRect)).toBe(true);
+        expect(isPointInsideEditorViewport({ x: 901, y: 400 }, editorRect)).toBe(false);
+    });
+
     it('only lets the editor that owns a table cell react to it', () => {
         const owner = {};
         const foreignEditor = {};

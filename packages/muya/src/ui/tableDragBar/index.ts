@@ -7,6 +7,7 @@ import { ScrollPage } from '../../block/scrollPage';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle } from '../../utils';
 import BaseFloat from '../baseFloat';
+import { isPointInsideEditorViewport } from '../tableHoverGuard';
 import './index.css';
 
 type BarType = 'bottom' | 'right';
@@ -340,6 +341,20 @@ export class TableDragBar extends BaseFloat {
                 return;
 
             const { x, y } = event;
+            if (this._columnResizeInfo)
+                return;
+
+            if (
+                !this._isDragTableBar
+                && !isPointInsideEditorViewport(
+                    { x, y },
+                    this.muya.domNode.getBoundingClientRect(),
+                )
+            ) {
+                this.hide();
+                return;
+            }
+
             const els = [...document.elementsFromPoint(x, y)];
             const belowEls = [...document.elementsFromPoint(x, y + OFFSET)];
             const rightEls = [...document.elementsFromPoint(x + OFFSET, y)];
@@ -348,9 +363,6 @@ export class TableDragBar extends BaseFloat {
                 isTableCellOwnedByMuya(element, this.muya);
             const hasTableCell = (elements: Element[]) =>
                 elements.some(isOwnedTableCell);
-
-            if (this._columnResizeInfo)
-                return;
 
             const hoveredCell = els.find(isOwnedTableCell);
             const resizeTarget = hoveredCell

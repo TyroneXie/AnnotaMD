@@ -3,17 +3,22 @@
     class="pref-text-box-item"
     :class="{ 'ag-underdevelop': disable }"
   >
-    <div
-      class="description"
-      style="display: flex; align-items: center"
-    >
-      <span>{{ description }}:</span>
-      <LinkIcon
-        v-if="more"
-        :size="14"
-        class="link-icon"
-        @click="handleMoreClick"
-      />
+    <div class="label-column">
+      <div class="description">
+        <span>{{ description }}:</span>
+        <LinkIcon
+          v-if="more"
+          :size="14"
+          class="link-icon"
+          @click="handleMoreClick"
+        />
+      </div>
+      <div
+        v-if="notes"
+        class="notes"
+      >
+        {{ notes }}
+      </div>
     </div>
     <el-input
       v-model="inputText"
@@ -24,12 +29,6 @@
       clearable
       @input="handleInput"
     />
-    <div
-      v-if="notes"
-      class="notes"
-    >
-      {{ notes }}
-    </div>
   </section>
 </template>
 
@@ -100,9 +99,13 @@ const handleInput = (value: string) => {
 
 <style>
 .pref-text-box-item {
-  font-size: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--prefControlWidth);
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
   user-select: none;
-  margin: 8px 0;
+  margin: 4px 0;
   color: var(--editorColor);
   width: 100%;
   & div {
@@ -120,7 +123,7 @@ const handleInput = (value: string) => {
     }
   }
   & .input {
-    width: 100%;
+    width: var(--prefControlWidth);
   }
   & .el-input.is-active .el-input__inner,
   & .el-input__inner:focus {
@@ -131,6 +134,8 @@ const handleInput = (value: string) => {
     line-height: 28px;
   }
   & .description {
+    display: flex;
+    align-items: center;
     margin-bottom: 6px;
   }
   & svg {
@@ -141,6 +146,12 @@ const handleInput = (value: string) => {
   }
   & svg:hover {
     color: var(--themeColor);
+  }
+  & .description {
+    margin-bottom: 0;
+  }
+  & .notes {
+    margin-top: 2px;
   }
 }
 .pref-text-box-item .el-input.error input {

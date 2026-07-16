@@ -307,7 +307,7 @@ export const BACK_HASH: Record<string, string> = {
 };
 
 export const MUYA_DEFAULT_OPTIONS = {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.6,
     focusMode: false,
     markdown: '',
@@ -320,7 +320,7 @@ export const MUYA_DEFAULT_OPTIONS = {
     bulletListMarker: '-',
     orderListDelimiter: '.',
     tabSize: 4,
-    codeBlockLineNumbers: false,
+    codeBlockLineNumbers: true,
     wrapCodeBlocks: false,
     // bullet/list marker width + listIndentation, tab or Daring Fireball Markdown (4 spaces) --> list indentation
     listIndentation: 1,

@@ -2,13 +2,13 @@
   "autoSave": {
     "description": "General--Automatically save the content being edited.",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "autoSaveDelay": {
     "description": "General--The time in ms after a change that the file is saved.",
     "type": "number",
     "minimum": 1000,
-    "default": 5000
+    "default": 1000
   },
   "titleBarStyle": {
     "description": "General--The title bar style (Windows and Linux system only).",
@@ -82,7 +82,7 @@
     "type": "number",
     "maximum": 32,
     "minimum": 12,
-    "default": 16
+    "default": 15
   },
   "lineHeight": {
     "description": "Editor--Line Height",

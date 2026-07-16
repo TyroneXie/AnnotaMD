@@ -102,6 +102,7 @@ const COMMANDS = Object.freeze({
   VIEW_TYPEWRITER_MODE: 'view.typewriter-mode',
 
   WINDOW_MINIMIZE: 'window.minimize',
+  WINDOW_ACTUAL_SIZE: 'window.actualSize',
   WINDOW_TOGGLE_ALWAYS_ON_TOP: 'window.toggle-always-on-top',
   WINDOW_TOGGLE_FULL_SCREEN: 'window.toggle-full-screen',
   WINDOW_ZOOM_IN: 'window.zoomIn',

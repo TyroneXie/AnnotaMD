@@ -2,8 +2,13 @@ import { type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import * as actions from '../actions/view'
 import { t } from '../../i18n'
 import type Keybindings from '../../keyboard/shortcutHandler'
+import type Preference from '../../preferences'
 
-export default function(keybindings: Keybindings): MenuItemConstructorOptions {
+export default function(
+  keybindings: Keybindings,
+  preferences: Preference
+): MenuItemConstructorOptions {
+  const showScrollbars = !preferences.getItem<boolean>('hideScrollbar')
   const submenu: MenuItemConstructorOptions[] = [
     {
       label: t('menu.view.commandPalette'),
@@ -66,6 +71,16 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
       checked: false,
       click(_item, focusedWindow) {
         actions.toggleTabBar(focusedWindow as BrowserWindow | undefined)
+      }
+    },
+    {
+      id: 'showScrollbarsMenuItem',
+      label: t('menu.view.showScrollbars'),
+      type: 'checkbox',
+      checked: showScrollbars,
+      click() {
+        const hideScrollbar = preferences.getItem<boolean>('hideScrollbar')
+        preferences.setItem('hideScrollbar', !hideScrollbar)
       }
     },
     {

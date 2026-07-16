@@ -54,6 +54,17 @@ const testPacks = {
       'test/unit/specs/comment-bubble-layout.spec.ts',
       'test/unit/specs/comment-pane-resize.spec.ts'
     ]
+  },
+  editor: {
+    cwd: path.join(root, 'packages/desktop'),
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
+    files: [
+      'test/unit/specs/annotamd-code-block-controls.spec.ts',
+      'test/unit/specs/annotamd-preference-style.spec.ts',
+      'test/unit/specs/auto-save-default.spec.ts',
+      'test/unit/specs/file-change-content-check.spec.ts',
+      'test/unit/specs/multi-root-sidebar.spec.ts'
+    ]
   }
 }
 

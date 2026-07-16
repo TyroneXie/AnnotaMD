@@ -108,7 +108,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         const menu = new ParagraphFrontMenu(muya, {});
         openOn(menu, blocks(muya)[1]);
         menu.render();
-        for (const semanticIcon of ['comment', 'delete', 'move-up', 'move-down'])
+        for (const semanticIcon of ['comment', 'delete', 'move-up', 'move-down', 'insert-above', 'insert-below'])
             expect(menu.container!.querySelector(`.mu-action-icon-${semanticIcon}`)).not.toBeNull();
 
         menu.render();

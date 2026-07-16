@@ -425,6 +425,16 @@ class AppMenu {
     })
   }
 
+  updateScrollbarMenu = (hideScrollbar: boolean): void => {
+    this.windowMenus.forEach((value) => {
+      const { menu, type } = value
+      if (type !== MenuType.EDITOR || !menu) return
+
+      const showScrollbarsMenu = menu.getMenuItemById('showScrollbarsMenuItem')
+      if (showScrollbarsMenu) showScrollbarsMenu.checked = !hideScrollbar
+    })
+  }
+
   _buildEditorMenu(recentUsedDocuments: string[] | null = null): WindowMenuEntry {
     if (!recentUsedDocuments) {
       recentUsedDocuments = this.getRecentlyUsedDocuments()
@@ -536,6 +546,9 @@ class AppMenu {
       }
       if (prefs.autoSave !== undefined) {
         this.updateAutoSaveMenu(prefs.autoSave)
+      }
+      if (prefs.hideScrollbar !== undefined) {
+        this.updateScrollbarMenu(prefs.hideScrollbar)
       }
       if (prefs.language) {
         // Update main process language and rebuild menu

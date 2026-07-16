@@ -118,6 +118,7 @@
       "focusMode": "フォーカスモード",
       "toggleTableOfContents": "目次の切り替え",
       "reloadImages": "画像を再読み込み",
+      "showScrollbars": "スクロールバーを表示",
       "showDeveloperTools": "開発者ツールを表示",
       "reloadWindow": "ウィンドウを再読み込み"
     },
@@ -140,8 +141,8 @@
       "theme": "テーマ (&T)",
       "dark": "ダーク",
       "followThemDisabled": "システムテーマに従う場合、テーマ選択は無効です",
-      "lightThemes": "— ライトテーマ —",
-      "darkThemes": "— ダークテーマ —",
+      "lightThemes": "ライトテーマ",
+      "darkThemes": "ダークテーマ",
       "ayuDark": "Ayu ダーク",
       "ayuLight": "Ayu ライト",
       "ayuMirage": "Ayu Mirage",
@@ -432,6 +433,7 @@
         "openedFilesInSidebar": "開いているファイルをサイドバーに表示するかどうか"
       }
     },
+    "advancedSettings": "詳細設定",
     "categories": {
       "general": "一般",
       "editor": "エディター",
@@ -459,6 +461,7 @@
         "hideScrollbars": "スクロールバーを隠す",
         "openFilesInNewWindow": "新しいウィンドウでファイルを開く",
         "openFoldersInNewWindow": "新しいウィンドウでフォルダを開く",
+        "openItemsInNewWindow": "ファイルとフォルダーを新しいウィンドウで開く",
         "zoom": "ズーム"
       },
       "startup": {

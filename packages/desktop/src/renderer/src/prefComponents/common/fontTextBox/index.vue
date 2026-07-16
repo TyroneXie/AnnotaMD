@@ -131,11 +131,15 @@ onMounted(async () => {
 }
 
 .pref-font-input-item {
-  margin: 8px 0;
-  font-size: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--prefControlWidth);
+  align-items: center;
+  gap: 16px;
+  margin: 4px 0;
+  font-size: 14px;
   color: var(--editorColor);
   & .font-autocomplete {
-    width: 100%;
+    width: var(--prefControlWidth);
   }
   & input.el-input__inner {
     height: 28px;
@@ -153,7 +157,7 @@ onMounted(async () => {
   }
 }
 .pref-font-input-item .description {
-  margin-bottom: 6px;
+  margin-bottom: 0;
   & svg {
     cursor: pointer;
     opacity: 0.7;

@@ -23,18 +23,23 @@ defineProps<{
 
 <style>
 .pref-compound-item {
-  font-size: 13px;
+  font-size: 14px;
   user-select: none;
-  margin: 24px 0;
+  margin: 12px 0;
   color: var(--editorColor);
 
   & .pref-compound-head h6.title {
-    padding-bottom: 4px;
+    margin: 0 0 6px;
+    padding: 0;
   }
 
   & .pref-compound-body {
-    padding: 0;
-    margin-top: -4px;
+    padding-left: 18px;
+    margin-top: 0;
+  }
+
+  & .pref-compound-body > h6 {
+    margin: 0 0 6px;
   }
 
   & .description {

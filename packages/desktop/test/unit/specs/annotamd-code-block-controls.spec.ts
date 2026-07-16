@@ -6,7 +6,7 @@ const repoRoot = resolve(__dirname, '../../../../..')
 const readRepoFile = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
 
 describe('AnnotaMD code block controls', () => {
-  it('keeps every code-block setting together in Markdown', () => {
+  it('keeps code-block controls together in Markdown and shares the editor font size', () => {
     const editor = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/editor/index.vue'
     )
@@ -19,7 +19,7 @@ describe('AnnotaMD code block controls', () => {
     expect(editor).not.toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
     expect(editor).not.toContain("onSelectChange('codeBlockLineNumbers', value)")
     expect(editor).not.toContain("onSelectChange('wrapCodeBlocks', value)")
-    expect(markdown).toContain("onSelectChange('codeFontSize', value)")
+    expect(markdown).not.toContain("onSelectChange('codeFontSize', value)")
     expect(markdown).toContain("onSelectChange('codeFontFamily', value)")
     expect(markdown).toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
     expect(markdown).toContain("onSelectChange('codeBlockLineNumbers', value)")
@@ -27,12 +27,17 @@ describe('AnnotaMD code block controls', () => {
     expect(markdown).toContain("preferences.markdown.codeBlock.title")
   })
 
-  it('shows code line numbers by default in both preference defaults', () => {
+  it('shows code line numbers by default in every preference source', () => {
     const schema = readRepoFile('packages/desktop/src/main/preferences/schema.json')
     const store = readRepoFile('packages/desktop/src/renderer/src/store/preferences.ts')
+    const defaults = readRepoFile('packages/desktop/static/preference.json')
 
     expect(schema).toMatch(/"codeBlockLineNumbers"\s*:\s*\{[^}]*"default"\s*:\s*true/s)
     expect(store).toMatch(/codeBlockLineNumbers:\s*true/)
+    expect(defaults).toMatch(/"codeBlockLineNumbers":\s*true/)
+    expect(
+      readRepoFile('packages/desktop/src/main/preferences/index.ts')
+    ).toMatch(/'2\.7\.0':\s*\(store\)\s*=>\s*\{[^}]*store\.set\('codeBlockLineNumbers', true\)/s)
   })
 
   it('uses bold hierarchy for preference page and section headings', () => {

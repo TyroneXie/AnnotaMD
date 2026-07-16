@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.7.0 - 2026-07-16
+
+### Added
+
+- Added comment-card collision avoidance and direct visual association between annotated text and its corresponding comment.
+- Added automatic disk saving by default in both WYSIWYG and source modes, with regression coverage for both editing paths.
+- Added file sorting to the sidebar and scrollbar visibility to the View menu so frequently used display controls stay close to the document.
+
+### Changed
+
+- Reload externally modified files automatically without showing a confirmation prompt, while cancelling stale delayed saves before applying disk content.
+- Default editor text to 15px and enable code-block line numbers by default across static, schema, renderer, and Muya configuration.
+- Keep comments in the right rail and emphasize a comment only while its text or card is hovered, focused, or selected.
+- Replace the ambiguous insert-above and insert-below block-menu glyphs with explicit block-and-plus direction icons.
+- Reworked Settings into a denser, aligned layout with right-aligned controls, compact numeric steppers, clearer labels, and selectable light/dark themes.
+- Removed redundant expert-facing save-delay and bulk-save controls while keeping reliable automatic saving with an internal delay.
+
+### Fixed
+
+- Fixed table column highlights and insertion guides remaining active after the pointer moved to the tab bar or outside the editor viewport.
+- Fixed the settings window sometimes opening as a persistent blank white surface by waiting for its first rendered frame before showing it.
+
 ## 2.6.1 - 2026-07-16
 
 ### Changed

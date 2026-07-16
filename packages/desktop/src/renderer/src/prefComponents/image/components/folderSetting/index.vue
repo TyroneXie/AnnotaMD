@@ -113,9 +113,9 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
 
 <style scoped>
 .image-folder .footnote {
-  font-size: 13px;
+  font-size: 14px;
   & code {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 </style>

@@ -59,6 +59,10 @@ function placeCursorOnFirstBlock(muya: Muya): Content {
 // markers so two trees built from the same state compare equal.
 function domHtml(muya: Muya): string {
     const clone = muya.domNode.cloneNode(true) as HTMLElement;
+    // Line-number rows are derived presentation content and can be populated
+    // on a later layout pass. Keep the wrapper in the structural comparison,
+    // but ignore the timing-dependent generated row spans.
+    clone.querySelectorAll('.mu-line-numbers-rows').forEach(el => el.replaceChildren());
     clone.querySelectorAll('*').forEach((el) => {
         el.removeAttribute('id');
         el.removeAttribute('data-key');

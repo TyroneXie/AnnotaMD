@@ -206,37 +206,6 @@
 }
 
 
-.mu-front-menu li .menu-symbol.insert-before::before,
-.mu-front-menu li .menu-symbol.insert-after::before {
-    top: 7.2px;
-    left: 1px;
-
-    width: 14px;
-    height: 1.6px;
-
-    background: currentcolor;
-    border-radius: 1px;
-}
-
-.mu-front-menu li .menu-symbol.insert-before::after,
-.mu-front-menu li .menu-symbol.insert-after::after {
-    left: 7.2px;
-
-    width: 1.6px;
-    height: 7px;
-
-    background: currentcolor;
-    border-radius: 1px;
-}
-
-.mu-front-menu li .menu-symbol.insert-before::after {
-    top: 0;
-}
-
-.mu-front-menu li .menu-symbol.insert-after::after {
-    bottom: 0;
-}
-
 .mu-front-menu li .menu-symbol.promote-section::before {
     font-size: 12px;
 

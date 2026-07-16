@@ -150,6 +150,7 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'window.toggle-full-screen': 'commands.window.toggleFullScreen',
 
   // Window zoom
+  'window.actualSize': 'commands.view.actualSize',
   'window.zoomIn': 'commands.window.zoomIn',
   'window.zoomOut': 'commands.window.zoomOut',
 

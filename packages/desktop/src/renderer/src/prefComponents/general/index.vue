@@ -13,54 +13,6 @@
           :bool="autoSave"
           :on-change="(value) => onSelectChange('autoSave', value)"
         />
-        <range
-          :description="t('preferences.general.autoSave.delayDescription')"
-          :value="autoSaveDelay"
-          :min="1000"
-          :max="10000"
-          unit="ms"
-          :step="100"
-          :on-change="(value) => onSelectChange('autoSaveDelay', value)"
-        />
-      </template>
-    </compound>
-
-    <compound>
-      <template #head>
-        <h6 class="title">
-          {{ t('preferences.general.window.title') }}
-        </h6>
-      </template>
-      <template #children>
-        <cur-select
-          v-if="!isOsx"
-          :description="t('preferences.general.window.titleBarStyle.title')"
-          :notes="t('preferences.general.window.requiresRestart')"
-          :value="titleBarStyle"
-          :options="getTitleBarStyleOptions()"
-          :on-change="(value) => onSelectChange('titleBarStyle', value)"
-        />
-        <bool
-          :description="t('preferences.general.window.hideScrollbars')"
-          :bool="hideScrollbar"
-          :on-change="(value) => onSelectChange('hideScrollbar', value)"
-        />
-        <bool
-          :description="t('preferences.general.window.openFilesInNewWindow')"
-          :bool="openFilesInNewWindow"
-          :on-change="(value) => onSelectChange('openFilesInNewWindow', value)"
-        />
-        <bool
-          :description="t('preferences.general.window.openFoldersInNewWindow')"
-          :bool="openFolderInNewWindow"
-          :on-change="(value) => onSelectChange('openFolderInNewWindow', value)"
-        />
-        <cur-select
-          :description="t('preferences.general.window.zoom')"
-          :value="zoom"
-          :options="zoomOptions"
-          :on-change="(value) => onSelectChange('zoom', value)"
-        />
       </template>
     </compound>
 
@@ -81,52 +33,14 @@
           :bool="openedFilesInSidebar"
           :on-change="(value) => onSelectChange('openedFilesInSidebar', value)"
         />
-
-        <text-box
-          :description="t('preferences.general.sidebar.excludePatterns')"
-          :notes="t('preferences.general.sidebar.excludePatternsNotes')"
-          :input="projectPaths.join(',')"
-          :on-change="(value) => onSelectChange('treePathExcludePatterns', value.split(','))"
-          more="https://github.com/isaacs/minimatch"
-        />
-
-        <cur-select
-          :description="t('preferences.general.sidebar.fileSortBy.title')"
-          :value="fileSortBy"
-          :options="getFileSortByOptions()"
-          :on-change="(value) => onSelectChange('fileSortBy', value)"
-        />
-        <cur-select
-          :description="t('preferences.general.sidebar.fileSortOrder.title')"
-          :value="fileSortOrder"
-          :options="getFileSortOrderOptions(String(fileSortBy))"
-          :on-change="(value) => onSelectChange('fileSortOrder', value)"
-        />
       </template>
     </compound>
 
     <compound>
       <template #children>
-        <h6>{{ t('preferences.general.startup.layoutOptions') }}</h6>
-        <section>
-          <el-radio-group
-            v-model="restoreLayoutState"
-            class="startup-action-ctrl"
-          >
-            <el-radio :label="true">
-              {{ t('preferences.general.startup.restorePreviousState') }}
-            </el-radio>
-            <el-radio :label="false">
-              {{ t('preferences.general.startup.openBlankState') }}
-            </el-radio>
-          </el-radio-group>
-        </section>
         <h6>{{ t('preferences.general.startup.startupFilesFolders') }}</h6>
         <section>
-          <el-radio-group
-            v-model="startUpAction"
-            class="startup-action-ctrl"
-          >
+          <el-radio-group v-model="startUpAction" class="startup-action-ctrl">
             <!--
               Hide "lastState" for now (#2064).
             <el-radio class="ag-underdevelop" label="lastState">Restore last editor session</el-radio>
@@ -142,10 +56,7 @@
                 {{ t('preferences.general.startup.openDefaultDirectory')
                 }}<span>: {{ defaultDirectoryToOpen }}</span>
               </el-radio>
-              <el-button
-                size="small"
-                @click="selectDefaultDirectoryToOpen"
-              >
+              <el-button size="small" @click="selectDefaultDirectoryToOpen">
                 {{ t('preferences.general.startup.selectFolder') }}
               </el-button>
             </div>
@@ -174,6 +85,64 @@
         />
       </template>
     </compound>
+
+    <advanced :title="t('preferences.advancedSettings')">
+      <compound>
+        <template #head>
+          <h6 class="title">
+            {{ t('preferences.general.window.title') }}
+          </h6>
+        </template>
+        <template #children>
+          <cur-select
+            v-if="!isOsx"
+            :description="t('preferences.general.window.titleBarStyle.title')"
+            :notes="t('preferences.general.window.requiresRestart')"
+            :value="titleBarStyle"
+            :options="getTitleBarStyleOptions()"
+            :on-change="(value) => onSelectChange('titleBarStyle', value)"
+          />
+          <bool
+            :description="t('preferences.general.window.openItemsInNewWindow')"
+            :bool="openItemsInNewWindow"
+            :on-change="(value) => (openItemsInNewWindow = value)"
+          />
+        </template>
+      </compound>
+
+      <compound>
+        <template #head>
+          <h6 class="title">
+            {{ t('preferences.general.sidebar.title') }}
+          </h6>
+        </template>
+        <template #children>
+          <text-box
+            :description="t('preferences.general.sidebar.excludePatterns')"
+            :notes="t('preferences.general.sidebar.excludePatternsNotes')"
+            :input="projectPaths.join(',')"
+            :on-change="(value) => onSelectChange('treePathExcludePatterns', value.split(','))"
+            more="https://github.com/isaacs/minimatch"
+          />
+        </template>
+      </compound>
+
+      <compound>
+        <template #children>
+          <h6>{{ t('preferences.general.startup.layoutOptions') }}</h6>
+          <section>
+            <el-radio-group v-model="restoreLayoutState" class="startup-action-ctrl">
+              <el-radio :label="true">
+                {{ t('preferences.general.startup.restorePreviousState') }}
+              </el-radio>
+              <el-radio :label="false">
+                {{ t('preferences.general.startup.openBlankState') }}
+              </el-radio>
+            </el-radio-group>
+          </section>
+        </template>
+      </compound>
+    </advanced>
   </div>
 </template>
 
@@ -184,39 +153,34 @@ import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
 import type { PreferencesState } from '@/store/preferences'
 import Compound from '../common/compound/index.vue'
-import Range from '../common/range/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
 import textBox from '../common/textBox/index.vue'
+import Advanced from '../common/advanced/index.vue'
 import { isOsx } from '@/util'
 
-import {
-  getTitleBarStyleOptions,
-  zoomOptions,
-  getFileSortByOptions,
-  getFileSortOrderOptions,
-  getLanguageOptions
-} from './config'
+import { getTitleBarStyleOptions, getLanguageOptions } from './config'
 
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
 
 const {
   autoSave,
-  autoSaveDelay,
   titleBarStyle,
   defaultDirectoryToOpen,
-  openFilesInNewWindow,
-  openFolderInNewWindow,
   treePathExcludePatterns: projectPaths,
-  zoom,
-  hideScrollbar,
   wordWrapInToc,
-  fileSortBy,
-  fileSortOrder,
   language,
   openedFilesInSidebar
 } = storeToRefs(preferenceStore)
+
+const openItemsInNewWindow = computed<boolean>({
+  get: () => preferenceStore.openFilesInNewWindow && preferenceStore.openFolderInNewWindow,
+  set: (value: boolean) => {
+    onSelectChange('openFilesInNewWindow', value)
+    onSelectChange('openFolderInNewWindow', value)
+  }
+})
 
 const startUpAction = computed<string>({
   get: () => preferenceStore.startUpAction,

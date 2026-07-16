@@ -3,29 +3,28 @@
     class="pref-switch-item"
     :class="{ 'ag-underdevelop': disable }"
   >
-    <div
-      class="description"
-      style="display: flex; align-items: center"
-    >
-      <span>{{ description }}:</span>
-      <LinkIcon
-        v-if="more"
-        :size="14"
-        class="link-icon"
-        @click="handleMoreClick"
-      />
-      <el-tooltip
-        v-else-if="detailedDescription"
-        :content="detailedDescription"
-        class="item"
-        effect="dark"
-        placement="top-start"
-      >
-        <InfoFilled
-          width="16"
-          height="16"
+    <div class="label-column">
+      <div class="description">
+        <span>{{ description }}:</span>
+        <LinkIcon
+          v-if="more"
+          :size="14"
+          class="link-icon"
+          @click="handleMoreClick"
         />
-      </el-tooltip>
+        <el-tooltip
+          v-else-if="detailedDescription"
+          :content="detailedDescription"
+          class="item"
+          effect="dark"
+          placement="top-start"
+        >
+          <InfoFilled
+            width="16"
+            height="16"
+          />
+        </el-tooltip>
+      </div>
       <span
         v-if="notes"
         class="notes"
@@ -85,15 +84,17 @@ const handleSwitchChange = (value: boolean | string | number) => {
 
 <style>
 .pref-switch-item {
-  font-size: 13px;
+  font-size: 14px;
   user-select: none;
-  margin: 8px 0;
+  margin: 4px 0;
   color: var(--editorColor);
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   & .description {
+    display: flex;
+    align-items: center;
     & svg {
       margin-left: 4px;
       cursor: pointer;
@@ -104,8 +105,7 @@ const handleSwitchChange = (value: boolean | string | number) => {
       color: var(--themeColor);
     }
     & > .notes {
-      display: inline;
-      margin: 0 0 0 8px;
+      margin-top: 2px;
     }
   }
 }

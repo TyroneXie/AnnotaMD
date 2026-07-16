@@ -60,6 +60,7 @@ onMounted(() => {
 <style>
 .pref-container {
   --prefSideBarWidth: 200px;
+  --prefControlWidth: 260px;
 
   width: 100vw;
   height: 100vh;

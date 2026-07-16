@@ -2,8 +2,8 @@
   <div class="pref-image">
     <h4>{{ t('preferences.image.title') }}</h4>
     <section class="image-ctrl">
-      <div>{{ t('preferences.image.defaultBehavior') }}</div>
       <CurSelect
+        :description="t('preferences.image.defaultBehavior')"
         :value="imageInsertAction"
         :options="imageActions"
         :on-change="(value) => onSelectChange('imageInsertAction', value)"
@@ -45,10 +45,6 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
     font-size: 14px;
     margin: 20px 0;
     color: var(--editorColor);
-    & label {
-      display: block;
-      margin: 20px 0;
-    }
   }
 }
 </style>

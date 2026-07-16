@@ -50,6 +50,9 @@ class Preference extends TypedEmitter<PreferenceEvents> {
           if (store.get('startUpAction') === 'lastState') {
             store.set('startUpAction', 'openLastFolder')
           }
+        },
+        '2.7.0': (store) => {
+          store.set('codeBlockLineNumbers', true)
         }
       },
       beforeEachMigration: (_store, context) => {

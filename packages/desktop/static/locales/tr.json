@@ -118,6 +118,7 @@
       "focusMode": "Odak Modu",
       "toggleTableOfContents": "İçindekileri Aç/Kapat",
       "reloadImages": "Görselleri Yeniden Yükle",
+      "showScrollbars": "Kaydırma çubuklarını göster",
       "showDeveloperTools": "Geliştirici Araçlarını Göster",
       "reloadWindow": "Pencereyi Yeniden Yükle"
     },
@@ -140,8 +141,8 @@
       "theme": "&Tema",
       "dark": "Koyu",
       "followThemDisabled": "Sistem temasını takip ederken tema seçimi devre dışı",
-      "lightThemes": "— Açık Temalar —",
-      "darkThemes": "— Koyu Temalar —",
+      "lightThemes": "Açık Temalar",
+      "darkThemes": "Koyu Temalar",
       "ayuDark": "Ayu Dark",
       "ayuLight": "Ayu Light",
       "ayuMirage": "Ayu Mirage",
@@ -432,6 +433,7 @@
         "openedFilesInSidebar": "Açık dosyaların kenar çubuğunda gösterilip gösterilmeyeceği."
       }
     },
+    "advancedSettings": "Gelişmiş ayarlar",
     "categories": {
       "general": "Genel",
       "editor": "Düzenleyici",
@@ -459,6 +461,7 @@
         "hideScrollbars": "Kaydırma çubuklarını gizle",
         "openFilesInNewWindow": "Dosyaları yeni pencerede aç",
         "openFoldersInNewWindow": "Klasörleri yeni pencerede aç",
+        "openItemsInNewWindow": "Dosyaları ve klasörleri yeni pencerelerde aç",
         "zoom": "Yakınlaştırma"
       },
       "startup": {

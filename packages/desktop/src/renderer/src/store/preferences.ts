@@ -141,8 +141,8 @@ const transientEditModes = new Set(['typewriter', 'focus', 'sourceCode'])
 
 export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
-    autoSave: false,
-    autoSaveDelay: 5000,
+    autoSave: true,
+    autoSaveDelay: 1000,
     titleBarStyle: 'custom',
     openFilesInNewWindow: false,
     openFolderInNewWindow: false,
@@ -159,7 +159,7 @@ export const usePreferencesStore = defineStore('preferences', {
     language: 'en',
 
     editorFontFamily: 'Open Sans',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1.6,
     codeFontSize: 14,
     codeFontFamily: 'DejaVu Sans Mono',

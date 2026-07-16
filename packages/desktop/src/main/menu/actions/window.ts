@@ -1,7 +1,7 @@
 import { Menu, ipcMain, type BrowserWindow } from 'electron'
 import { isOsx } from '../../config'
 import { COMMANDS } from '../../commands'
-import { zoomIn, zoomOut } from '../../windows/utils'
+import { actualSize, zoomIn, zoomOut } from '../../windows/utils'
 import type { CommandManager } from '../../commands'
 
 export const minimizeWindow = (win: BrowserWindow | null | undefined): void => {
@@ -30,6 +30,7 @@ export const toggleFullScreen = (win: BrowserWindow | null | undefined): void =>
 
 export const loadWindowCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.WINDOW_MINIMIZE, minimizeWindow)
+  commandManager.add(COMMANDS.WINDOW_ACTUAL_SIZE, actualSize)
   commandManager.add(COMMANDS.WINDOW_TOGGLE_ALWAYS_ON_TOP, toggleAlwaysOnTop)
   commandManager.add(COMMANDS.WINDOW_TOGGLE_FULL_SCREEN, toggleFullScreen)
   commandManager.add(COMMANDS.WINDOW_ZOOM_IN, zoomIn)

@@ -118,6 +118,7 @@
       "focusMode": "專注模式",
       "toggleTableOfContents": "切換目錄",
       "reloadImages": "重新載入圖片",
+      "showScrollbars": "顯示捲動軸",
       "showDeveloperTools": "顯示開發者工具",
       "reloadWindow": "重新載入視窗"
     },
@@ -140,8 +141,8 @@
       "theme": "主題(&T)",
       "dark": "深色",
       "followThemDisabled": "跟隨系統主題時無法選擇主題",
-      "lightThemes": "— 淺色主題 —",
-      "darkThemes": "— 深色主題 —",
+      "lightThemes": "淺色主題",
+      "darkThemes": "深色主題",
       "ayuDark": "Ayu 深色",
       "ayuLight": "Ayu 淺色",
       "ayuMirage": "Ayu Mirage",
@@ -432,6 +433,7 @@
         "openedFilesInSidebar": "是否在側邊欄中顯示已開啟的檔案"
       }
     },
+    "advancedSettings": "進階設定",
     "categories": {
       "general": "一般",
       "editor": "編輯器",
@@ -459,6 +461,7 @@
         "hideScrollbars": "隱藏捲軸",
         "openFilesInNewWindow": "在新視窗中開啟檔案",
         "openFoldersInNewWindow": "在新視窗中開啟資料夾",
+        "openItemsInNewWindow": "在新視窗中開啟檔案和資料夾",
         "zoom": "縮放"
       },
       "startup": {
@@ -624,7 +627,7 @@
         "neverDetected": "從未偵測",
         "neverSuccessful": "從未成功"
       },
-      "defaultBehavior": "貼上或拖曳圖片到 AnnotaMD 後的預設行為"
+      "defaultBehavior": "貼上或拖曳圖片到 AnnotaMD"
     },
     "markdown": {
       "title": "PicGo 設定",

@@ -70,6 +70,7 @@ class SettingWindow extends BaseWindow {
 
     win.once('ready-to-show', () => {
       this.lifecycle = WindowLifecycle.READY
+      win?.show()
       this.emit('window-ready')
     })
 

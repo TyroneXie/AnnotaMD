@@ -92,6 +92,8 @@ function renderMenuIcon({ label, icon }: { label: string; icon?: string }) {
         'move-section-up': 'move-up',
         'move-down': 'move-down',
         'move-section-down': 'move-down',
+        'insert-before': 'insert-above',
+        'insert-after': 'insert-below',
     };
     const actionIcon = sharedActions[label];
     return actionIcon

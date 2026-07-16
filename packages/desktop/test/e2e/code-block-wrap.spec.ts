@@ -78,17 +78,16 @@ test.describe('Code block wrap + line-numbers preferences', () => {
       })
     }
 
-    // Default is codeBlockLineNumbers: false.
-    await expect.poll(hasLineNumbers, { timeout: 10000 }).toBe(false)
-
-    // Enabling forces a re-render that re-creates the code block with the
-    // `mu-line-numbers` class on the pre.
-    await setPreference(app, page, { codeBlockLineNumbers: true })
+    // Line numbers are visible by default.
     await expect.poll(hasLineNumbers, { timeout: 10000 }).toBe(true)
 
-    // And toggling back off removes it.
+    // Disabling forces a re-render that removes the class.
     await setPreference(app, page, { codeBlockLineNumbers: false })
     await expect.poll(hasLineNumbers, { timeout: 10000 }).toBe(false)
+
+    // And toggling back on re-creates the line-number gutter.
+    await setPreference(app, page, { codeBlockLineNumbers: true })
+    await expect.poll(hasLineNumbers, { timeout: 10000 }).toBe(true)
   })
 
   // Item 44 (continued): both preferences take effect together and live — assert

@@ -118,6 +118,7 @@
       "focusMode": "Modo Foco",
       "toggleTableOfContents": "Alternar Índice",
       "reloadImages": "Recarregar Imagens",
+      "showScrollbars": "Mostrar barras de rolagem",
       "showDeveloperTools": "Mostrar Ferramentas de Desenvolvedor",
       "reloadWindow": "Recarregar Janela"
     },
@@ -140,8 +141,8 @@
       "theme": "&Tema",
       "dark": "Escuro",
       "followThemDisabled": "Seleção de tema desativada ao seguir o tema do sistema",
-      "lightThemes": "— Temas Claros —",
-      "darkThemes": "— Temas Escuros —",
+      "lightThemes": "Temas Claros",
+      "darkThemes": "Temas Escuros",
       "ayuDark": "Ayu Escuro",
       "ayuLight": "Ayu Claro",
       "ayuMirage": "Ayu Mirage",
@@ -432,6 +433,7 @@
         "openedFilesInSidebar": "Se os arquivos abertos são mostrados na barra lateral."
       }
     },
+    "advancedSettings": "Configurações avançadas",
     "categories": {
       "general": "Geral",
       "editor": "Editor",
@@ -459,6 +461,7 @@
         "hideScrollbars": "Ocultar barras de rolagem",
         "openFilesInNewWindow": "Abrir arquivos em nova janela",
         "openFoldersInNewWindow": "Abrir pastas em nova janela",
+        "openItemsInNewWindow": "Abrir arquivos e pastas em novas janelas",
         "zoom": "Zoom"
       },
       "startup": {

@@ -46,6 +46,13 @@ const THREE_LINE_FENCE = '```js\nconst a = 1\nconst b = 2\nconst c = 3\n```\n';
 
 describe('code-block line-numbers gutter', () => {
     describe('when codeBlockLineNumbers is true', () => {
+        it('defaults to on when the option is omitted', () => {
+            const muya = bootMuya(THREE_LINE_FENCE);
+            const pre = muya.domNode.querySelector<HTMLElement>('pre.mu-code-block');
+            expect(pre!.classList.contains('mu-line-numbers')).toBe(true);
+            expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(1);
+        });
+
         it('adds the mu-line-numbers class to the code-block <pre>', () => {
             const muya = bootMuya(THREE_LINE_FENCE, { codeBlockLineNumbers: true });
             const pre = muya.domNode.querySelector<HTMLElement>('pre.mu-code-block');
@@ -128,12 +135,6 @@ describe('code-block line-numbers gutter', () => {
             expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(0);
         });
 
-        it('defaults to off (option omitted behaves like false)', () => {
-            const muya = bootMuya(THREE_LINE_FENCE);
-            const pre = muya.domNode.querySelector<HTMLElement>('pre.mu-code-block');
-            expect(pre!.classList.contains('mu-line-numbers')).toBe(false);
-            expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(0);
-        });
     });
 
     describe('the gutter is exclusive to real code blocks', () => {

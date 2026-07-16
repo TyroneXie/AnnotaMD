@@ -6,7 +6,7 @@ import { launchWithMarkdown, waitForMenuReady } from './helpers'
 // #1861 — rewriting the open file on disk with byte-identical content (e.g. a
 // git checkout that left it unchanged) fires a watcher 'change', but must NOT
 // mark the tab unsaved or show the "file changed on disk" banner. A genuinely
-// different on-disk content must still warn.
+// different on-disk content reloads automatically without prompting.
 //
 // This drives the REAL watcher: it writes the actual file and lets the
 // main-process chokidar watcher -> loadMarkdownFile -> renderer handler run,
@@ -20,7 +20,7 @@ const isDirty = (page: Page) =>
 const WATCH_SETTLE = 2500
 
 test.describe('Issue #1861 — content-identical file change', () => {
-  test('an identical on-disk rewrite stays clean; a real change warns', async() => {
+  test('an identical rewrite stays clean; a real change reloads automatically', async() => {
     const { app, page, filePath } = await launchWithMarkdown('hello\nworld\n')
     await waitForMenuReady(app)
     await page.waitForTimeout(500)
@@ -31,9 +31,12 @@ test.describe('Issue #1861 — content-identical file change', () => {
     await page.waitForTimeout(WATCH_SETTLE)
     expect(await isDirty(page)).toBe(false)
 
-    // A genuine content change still marks the tab unsaved.
+    // A genuine content change is reloaded without marking the tab unsaved.
     fs.writeFileSync(filePath, 'hello\nworld\nchanged\n', 'utf-8')
-    await expect.poll(() => isDirty(page), { timeout: 8000 }).toBe(true)
+    await expect.poll(async() => {
+      return await page.locator('.mu-container').textContent()
+    }, { timeout: 8000 }).toContain('changed')
+    expect(await isDirty(page)).toBe(false)
 
     await app.close()
   })

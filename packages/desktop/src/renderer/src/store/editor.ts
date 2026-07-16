@@ -145,6 +145,7 @@ export interface EditorState {
 }
 
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const AUTO_SAVE_DELAY = 1000
 
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
@@ -1474,9 +1475,7 @@ export const useEditorStore = defineStore('editor', {
         throw new Error('HANDLE_AUTO_SAVE: Invalid tab.')
       }
 
-      const preferencesStore = usePreferencesStore()
       const projectStore = useProjectStore()
-      const { autoSaveDelay } = preferencesStore
 
       if (autoSaveTimers.has(id)) {
         const timer = autoSaveTimers.get(id)
@@ -1500,7 +1499,7 @@ export const useEditorStore = defineStore('editor', {
             defaultPath
           )
         }
-      }, autoSaveDelay)
+      }, AUTO_SAVE_DELAY)
       autoSaveTimers.set(id, timer)
     },
 
@@ -1650,14 +1649,13 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_FILE_CHANGE(): void {
-      const preferencesStore = usePreferencesStore()
       window.electron.ipcRenderer.on('mt::update-file', (_, payload) => {
         const { type, change } = payload
         const { tabs } = this
         const { pathname } = change
         const tab = tabs.find((t) => window.fileUtils.isSamePathSync(t.pathname, pathname))
         if (tab) {
-          const { id, isSaved, filename } = tab
+          const { id, filename } = tab
           switch (type) {
             case 'unlink': {
               tab.isSaved = false
@@ -1681,33 +1679,16 @@ export const useEditorStore = defineStore('editor', {
                 break
               }
 
-              const { autoSave } = preferencesStore
-              if (autoSave) {
-                if (autoSaveTimers.has(id)) {
-                  const timer = autoSaveTimers.get(id)
-                  if (timer) clearTimeout(timer)
-                  autoSaveTimers.delete(id)
-                }
-
-                if (isSaved) {
-                  this.loadChange(change as unknown as FileChangePayload)
-                  return
-                }
+              // Files are auto-saved, so an external writer (Agent, IDE, Git,
+              // etc.) is the newest source of truth. Cancel any delayed save
+              // before reloading so stale editor content cannot overwrite the
+              // freshly changed file after the watcher event.
+              if (autoSaveTimers.has(id)) {
+                const timer = autoSaveTimers.get(id)
+                if (timer) clearTimeout(timer)
+                autoSaveTimers.delete(id)
               }
-
-              tab.isSaved = false
-              this.pushTabNotification({
-                tabId: id,
-                msg: t('store.editor.fileChangedOnDisk', { name: filename }),
-                showConfirm: true,
-                exclusiveType: 'file_changed',
-                action: (status) => {
-                  if (status) {
-                    this.loadChange(change as unknown as FileChangePayload)
-                  }
-                }
-              })
-              debouncedSendBufferedState()
+              this.loadChange(change as unknown as FileChangePayload)
               break
             }
             default:

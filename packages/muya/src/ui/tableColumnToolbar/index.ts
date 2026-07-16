@@ -7,6 +7,7 @@ import { isMouseEvent, throttle } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
 import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
+import { isPointInsideEditorViewport } from '../tableHoverGuard';
 import icons from './config';
 import '../actionIcons.css';
 import '../tooltip/index.css';
@@ -57,6 +58,12 @@ export class TableColumnToolbar extends BaseFloat {
                 return;
 
             const { x, y } = event;
+            if (!isPointInsideEditorViewport(
+                { x, y },
+                this.muya.domNode.getBoundingClientRect(),
+            )) {
+                return this.hide();
+            }
             const eles = [...document.elementsFromPoint(x, y)];
             const bellowEles = [...document.elementsFromPoint(x, y + OFFSET)];
             if (isInsideFloatLayer(eles))

@@ -50,25 +50,24 @@
       </template>
     </compound>
 
-    <div class="custom-css">
-      <div class="description">
-        {{ t('preferences.theme.customCss') }}
+    <advanced :title="t('preferences.advancedSettings')">
+      <div class="custom-css">
+        <div class="description">
+          {{ t('preferences.theme.customCss') }}
+        </div>
+        <textarea
+          class="custom-css-input"
+          rows="10"
+          :value="customCss"
+          @change="
+            (event: Event) =>
+              onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
+          "
+        />
       </div>
-      <textarea
-        class="custom-css-input"
-        rows="10"
-        :value="customCss"
-        @change="
-          (event: Event) =>
-            onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
-        "
-      />
-    </div>
+    </advanced>
     <separator v-show="false" />
-    <section
-      v-show="false"
-      class="import-themes ag-underdevelop"
-    >
+    <section v-show="false" class="import-themes ag-underdevelop">
       <div>
         <span>{{ t('preferences.theme.openThemesFolder') }}</span>
         <el-button size="small">
@@ -99,6 +98,7 @@ import Bool from '../common/bool/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Separator from '../common/separator/index.vue'
 import Compound from '../common/compound/index.vue'
+import Advanced from '../common/advanced/index.vue'
 import type { PrefSelectOption } from '../common/types'
 
 interface ThemePreview {

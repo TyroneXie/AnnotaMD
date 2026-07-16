@@ -16,4 +16,17 @@ describe('AnnotaMD settings window defaults', () => {
     expect(preferences).toMatch(/width:\s*820/)
     expect(preferences).toMatch(/height:\s*580/)
   })
+
+  it('waits for the preferences route to paint before showing the window', () => {
+    const config = readFileSync(resolve(repoRoot, 'packages/desktop/src/main/config.ts'), 'utf8')
+    const settingWindow = readFileSync(
+      resolve(repoRoot, 'packages/desktop/src/main/windows/setting.ts'),
+      'utf8'
+    )
+
+    expect(config).toMatch(
+      /export const preferencesWinOptions:[\s\S]*?Object\.freeze\(\{[\s\S]*?show:\s*false/
+    )
+    expect(settingWindow).toMatch(/win\.once\('ready-to-show',[\s\S]*?win\?\.show\(\)/)
+  })
 })

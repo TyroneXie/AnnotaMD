@@ -19,6 +19,8 @@ export type ActionIconName
         | 'move-right'
         | 'insert-left'
         | 'insert-right'
+        | 'insert-above'
+        | 'insert-below'
         | 'align-left'
         | 'align-center'
         | 'align-right'
@@ -63,6 +65,8 @@ const PATHS: Partial<Record<ActionIconName, string[]>> = {
     'move-right': ['M2 8h11.5M9.3 3.8 13.5 8l-4.2 4.2'],
     'insert-left': ['M3 2.5v11M7 8h6M10 5l3 3-3 3'],
     'insert-right': ['M13 2.5v11M3 8h6M6 5l3 3-3 3'],
+    'insert-above': ['M2 12h12M5 5h6M8 2v6'],
+    'insert-below': ['M2 4h12M5 11h6M8 8v6'],
     'align-left': ['M2 3h12M2 7h7M2 11h12M2 15h8'],
     'align-center': ['M2 3h12M4.5 7h7M2 11h12M4 15h8'],
     'align-right': ['M2 3h12M7 7h7M2 11h12M6 15h8'],

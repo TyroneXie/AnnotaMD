@@ -44,7 +44,9 @@ export const preferencesWinOptions: Readonly<BrowserWindowConstructorOptions> = 
   fullscreen: false,
   minimizable: false,
   useContentSize: true,
-  show: true,
+  // Avoid exposing the empty BrowserWindow before Vue has painted the
+  // preferences route. SettingWindow shows it from `ready-to-show` instead.
+  show: false,
   frame: false,
   thickFrame: !isOsx,
   zoomFactor: 1.0

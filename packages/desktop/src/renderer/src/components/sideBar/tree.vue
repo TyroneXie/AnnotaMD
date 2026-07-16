@@ -1,7 +1,7 @@
 <template>
   <div class="tree-view">
     <div class="title">
-      <!-- Placeholder -->
+      <!-- Keep the editor title-bar spacing clear. -->
     </div>
 
     <!-- Opened tabs -->
@@ -21,30 +21,26 @@
         >{{
           t('sideBar.tree.openedFiles')
         }}</span>
-        <a
-          href="javascript:;"
-          :title="t('sideBar.tree.saveAll')"
-          @click.stop="saveAll(false)"
+        <el-tooltip
+          effect="dark"
+          :content="t('sideBar.tree.closeAll')"
+          placement="bottom"
+          :visible-arrow="false"
+          :open-delay="350"
         >
-          <svg
-            class="icon"
-            aria-hidden="true"
+          <a
+            href="javascript:;"
+            :aria-label="t('sideBar.tree.closeAll')"
+            @click.stop="closeAll"
           >
-            <use xlink:href="#icon-save-all" />
-          </svg>
-        </a>
-        <a
-          href="javascript:;"
-          :title="t('sideBar.tree.closeAll')"
-          @click.stop="saveAll(true)"
-        >
-          <svg
-            class="icon"
-            aria-hidden="true"
-          >
-            <use xlink:href="#icon-close-all" />
-          </svg>
-        </a>
+            <svg
+              class="icon"
+              aria-hidden="true"
+            >
+              <use xlink:href="#icon-close-all" />
+            </svg>
+          </a>
+        </el-tooltip>
       </div>
       <div
         v-show="showOpenedFiles"
@@ -84,6 +80,61 @@
             :title="projectTree.pathname"
             @click.stop="toggleDirectories(projectTree.pathname)"
           >{{ projectTree.name }}</span>
+          <el-popover
+            v-if="projectTree === projectTrees[0]"
+            placement="bottom-end"
+            :width="220"
+            trigger="click"
+            :visible-arrow="false"
+            popper-class="sidebar-sort-popover"
+          >
+            <template #reference>
+              <button
+                class="sort-trigger"
+                :aria-label="t('preferences.general.sidebar.fileSortBy.title')"
+                :title="t('preferences.general.sidebar.fileSortBy.title')"
+                @click.stop
+              >
+                <span class="sort-glyph" aria-hidden="true">
+                  <span class="sort-glyph-lines">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span class="sort-glyph-arrow" />
+                </span>
+              </button>
+            </template>
+            <div class="sort-menu">
+              <div class="sort-menu-label">
+                {{ t('preferences.general.sidebar.fileSortBy.title') }}
+              </div>
+              <button
+                v-for="option of fileSortByOptions"
+                :key="String(option.value)"
+                class="sort-menu-item"
+                :class="{ active: fileSortBy === option.value }"
+                @click="setFileSortBy(String(option.value))"
+              >
+                <span>{{ option.label }}</span>
+                <el-icon v-if="fileSortBy === option.value" :size="15"><Check /></el-icon>
+              </button>
+              <div class="sort-menu-divider" />
+              <div class="sort-menu-label">
+                {{ t('preferences.general.sidebar.fileSortOrder.title') }}
+              </div>
+              <button
+                v-for="option of fileSortOrderOptions"
+                :key="String(option.value)"
+                class="sort-menu-item"
+                :class="{ active: fileSortOrder === option.value }"
+                @click="setFileSortOrder(String(option.value))"
+              >
+                <span>{{ option.label }}</span>
+                <el-icon v-if="fileSortOrder === option.value" :size="15"><Check /></el-icon>
+              </button>
+            </div>
+          </el-popover>
           <button
             class="root-remove"
             :title="t('sideBar.tree.removeFolderFromWorkspace')"
@@ -173,7 +224,8 @@ import OpenedFile from './treeOpenedTab.vue'
 import bus from '../../bus'
 import { showRootContextMenu } from '../../contextMenu/sideBar'
 import { useI18n } from 'vue-i18n'
-import { ArrowRight, Close, Plus } from '@element-plus/icons-vue'
+import { ArrowRight, Check, Close, Plus } from '@element-plus/icons-vue'
+import { getFileSortByOptions, getFileSortOrderOptions } from '../../prefComponents/general/config'
 import type { TreeNode, TabDescriptor } from './types'
 
 const { t } = useI18n()
@@ -206,7 +258,9 @@ const preferencesStore = usePreferencesStore()
 // Computed properties
 const { createCache } = storeToRefs(projectStore)
 const { clipboard } = storeToRefs(projectStore)
-const { openedFilesInSidebar } = storeToRefs(preferencesStore)
+const { openedFilesInSidebar, fileSortBy, fileSortOrder } = storeToRefs(preferencesStore)
+const fileSortByOptions = computed(() => getFileSortByOptions())
+const fileSortOrderOptions = computed(() => getFileSortOrderOptions(String(fileSortBy.value)))
 
 // The createCache state is `{ dirname, type }` while an input is shown, and
 // `{}` otherwise. Expose a typed accessor for the template so we don't have
@@ -221,8 +275,16 @@ const openFolder = (): void => {
   projectStore.ASK_FOR_OPEN_PROJECT()
 }
 
-const saveAll = (isClose: boolean): void => {
-  editorStore.ASK_FOR_SAVE_ALL(isClose)
+const closeAll = (): void => {
+  editorStore.ASK_FOR_SAVE_ALL(true)
+}
+
+const setFileSortBy = (value: string): void => {
+  preferencesStore.SET_SINGLE_PREFERENCE({ type: 'fileSortBy', value })
+}
+
+const setFileSortOrder = (value: string): void => {
+  preferencesStore.SET_SINGLE_PREFERENCE({ type: 'fileSortOrder', value })
 }
 
 const createFile = (tree: TreeNode): void => {
@@ -330,6 +392,137 @@ onMounted(() => {
   flex-direction: row-reverse;
 }
 
+.sort-trigger {
+  width: 26px;
+  height: 26px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8f959e;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sort-trigger:hover,
+.sort-trigger:focus-visible {
+  color: #3370ff;
+  background: #eef3ff;
+  outline: none;
+}
+
+.sort-glyph {
+  width: 17px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.sort-glyph-lines {
+  width: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.sort-glyph-lines i {
+  display: block;
+  height: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.sort-glyph-lines i:nth-child(1) {
+  width: 10px;
+}
+
+.sort-glyph-lines i:nth-child(2) {
+  width: 10px;
+}
+
+.sort-glyph-lines i:nth-child(3) {
+  width: 7px;
+}
+
+.sort-glyph-arrow {
+  position: relative;
+  width: 5px;
+  height: 14px;
+  flex: none;
+}
+
+.sort-glyph-arrow::before {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 1px;
+  height: 11px;
+  border-radius: 1px;
+  background: currentColor;
+  content: '';
+}
+
+.sort-glyph-arrow::after {
+  position: absolute;
+  right: 0.5px;
+  bottom: 0.5px;
+  width: 4px;
+  height: 4px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+  content: '';
+}
+
+:global(.sidebar-sort-popover.el-popover) {
+  padding: 8px;
+  border-radius: 9px;
+  box-shadow: 0 6px 20px rgba(31, 35, 41, 0.14);
+}
+
+.sort-menu-label {
+  padding: 5px 10px 4px;
+  color: #8f959e;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.sort-menu-item {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #1f2329;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sort-menu-item:hover {
+  background: #f5f6f7;
+}
+
+.sort-menu-item.active {
+  color: #3370ff;
+  background: #eef3ff;
+}
+
+.sort-menu-divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: #e5e6eb;
+}
+
 .icon-arrow {
   margin-right: 5px;
   transition: transform 0.25s ease-out;
@@ -364,14 +557,20 @@ onMounted(() => {
 }
 
 .opened-files .title > a {
-  display: none;
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
   text-decoration: none;
   color: #8f959e;
   margin-left: 8px;
+  transition: opacity 0.12s ease;
 }
 .opened-files div.title:hover > a,
 .opened-files div.title > a:hover {
-  display: block;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .opened-files div.title:hover > a:hover,

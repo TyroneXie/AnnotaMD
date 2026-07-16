@@ -1,20 +1,22 @@
 <template>
   <section
     class="pref-select-item"
-    :class="{ 'ag-underdevelop': disable }"
+    :class="{ 'ag-underdevelop': disable, 'has-description': description }"
   >
     <div
       v-if="description"
-      class="description"
-      style="display: flex; align-items: center"
+      class="label-column"
     >
-      <span>{{ description }}:</span>
-      <LinkIcon
-        v-if="more"
-        :size="14"
-        class="link-icon"
-        @click="handleMoreClick"
-      />
+      <div class="description">
+        <span>{{ description }}:</span>
+        <LinkIcon
+          v-if="more"
+          :size="14"
+          class="link-icon"
+          @click="handleMoreClick"
+        />
+      </div>
+      <div v-if="notes" class="notes">{{ notes }}</div>
     </div>
     <el-select
       v-model="selectValue"
@@ -29,7 +31,7 @@
       />
     </el-select>
     <div
-      v-if="notes"
+      v-if="!description && notes"
       class="notes"
     >
       {{ notes }}
@@ -82,11 +84,17 @@ const select = (value: SelectValue) => {
 
 <style>
 .pref-select-item {
-  margin: 8px 0;
-  font-size: 13px;
+  margin: 4px 0;
+  font-size: 14px;
   color: var(--editorColor);
+  &.has-description {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--prefControlWidth);
+    align-items: center;
+    gap: 16px;
+  }
   & .el-select {
-    width: 100%;
+    width: var(--prefControlWidth);
   }
   & div {
     background: transparent;
@@ -105,7 +113,9 @@ const select = (value: SelectValue) => {
   }
 }
 .pref-select-item .description {
-  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
   & svg {
     margin-left: 4px;
     cursor: pointer;

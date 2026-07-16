@@ -5,36 +5,55 @@
   >
     <div
       class="description"
-      style="display: flex; align-items: center; justify-content: space-between"
     >
       <span>{{ description }}:</span>
-      <div style="display: flex; align-items: center">
-        <span
-          v-if="selectValue"
-          class="value"
-        >{{ selectValue }} <span v-if="unit">{{ unit }}</span></span>
+      <div class="number-control">
+        <div class="number-stepper">
+          <button
+            type="button"
+            class="stepper-button"
+            :aria-label="`${description} -`"
+            :disabled="!canDecrease || disable"
+            @click="stepBy(-step)"
+          >
+            <Minus />
+          </button>
+          <input
+            class="stepper-input"
+            type="number"
+            :value="selectValue"
+            :aria-label="description"
+            :min="min"
+            :max="max"
+            :step="step"
+            :disabled="disable"
+            @change="handleInput"
+          >
+          <button
+            type="button"
+            class="stepper-button"
+            :aria-label="`${description} +`"
+            :disabled="!canIncrease || disable"
+            @click="stepBy(step)"
+          >
+            <Plus />
+          </button>
+        </div>
+        <span v-if="unit" class="unit">{{ unit }}</span>
         <LinkIcon
           v-if="more"
           :size="14"
           class="link-icon"
-          style="margin-left: 4px"
           @click="handleMoreClick"
         />
       </div>
     </div>
-    <el-slider
-      v-model="selectValue"
-      :min="min"
-      :max="max"
-      :format-tooltip="(value: number) => value + (unit ? unit : '')"
-      :step="step"
-      @change="select"
-    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { Minus, Plus } from '@element-plus/icons-vue'
 import LinkIcon from '@/components/icons/LinkIcon.vue'
 import type { PrefControlBaseProps } from '../types'
 
@@ -51,10 +70,17 @@ const props = withDefaults(defineProps<RangeProps>(), {
   description: '',
   more: '',
   unit: '',
-  disable: false
+  disable: false,
+  step: 1
 })
 
 const selectValue = ref(props.value)
+const precision = computed(() => {
+  const decimal = String(props.step ?? 1).split('.')[1]
+  return decimal?.length ?? 0
+})
+const canDecrease = computed(() => props.min === undefined || selectValue.value > props.min)
+const canIncrease = computed(() => props.max === undefined || selectValue.value < props.max)
 
 watch(
   () => props.value,
@@ -71,40 +97,93 @@ const handleMoreClick = () => {
   }
 }
 
-const select = (value: number | number[]) => {
-  // el-slider may emit number[] in range mode; this control is single-value only.
-  if (typeof value === 'number') {
-    props.onChange(value)
+const clamp = (value: number) => {
+  const minimum = props.min ?? Number.NEGATIVE_INFINITY
+  const maximum = props.max ?? Number.POSITIVE_INFINITY
+  return Math.min(maximum, Math.max(minimum, value))
+}
+
+const updateValue = (value: number) => {
+  const nextValue = Number(clamp(value).toFixed(precision.value))
+  selectValue.value = nextValue
+  props.onChange(nextValue)
+}
+
+const stepBy = (amount: number) => updateValue(selectValue.value + amount)
+
+const handleInput = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const value = Number(input.value)
+  if (Number.isFinite(value)) {
+    updateValue(value)
+  } else {
+    input.value = String(selectValue.value)
   }
 }
 </script>
 
 <style>
 .pref-range-item {
-  margin: 8px 0;
-  font-size: 13px;
+  margin: 4px 0;
+  font-size: 14px;
   color: var(--editorColor);
   width: 100%;
-  & .value {
-    text-align: right;
-    font-style: italic;
-    float: right;
+  & .description,
+  & .number-control {
+    display: flex;
+    align-items: center;
   }
-  & .el-slider {
-    width: 100%;
+  & .description {
+    justify-content: space-between;
   }
-  & .el-slider__runway,
-  & .el-slider__bar {
-    height: 4px;
+  & .number-control {
+    gap: 6px;
   }
-  & .el-slider__button {
-    width: 12px;
-    height: 12px;
+  & .number-stepper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-  & .el-slider__button-wrapper {
-    width: 20px;
-    height: 20px;
-    top: -9px;
+  & .stepper-button,
+  & .stepper-input {
+    height: 30px;
+    border: 1px solid var(--el-border-color);
+    border-radius: 6px;
+    background: var(--editorBgColor);
+    color: var(--editorColor);
+  }
+  & .stepper-button {
+    display: grid;
+    width: 30px;
+    padding: 7px;
+    place-items: center;
+    cursor: pointer;
+  }
+  & .stepper-button:hover:not(:disabled),
+  & .stepper-input:focus {
+    border-color: var(--themeColor);
+  }
+  & .stepper-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+  & .stepper-input {
+    width: 56px;
+    padding: 0 6px;
+    text-align: center;
+    outline: none;
+    appearance: textfield;
+  }
+  & .stepper-input::-webkit-inner-spin-button,
+  & .stepper-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+  & .unit {
+    color: var(--editorColor80);
+  }
+  & .link-icon {
+    margin-left: 4px;
   }
 }
 .pref-select-item .description {
