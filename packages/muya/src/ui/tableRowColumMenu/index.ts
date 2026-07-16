@@ -197,7 +197,7 @@ export class TableRowColumMenu extends BaseFloat {
     }
 
     private _clearSelection() {
-        this._block?.table.domNode
+        this._block?.table?.domNode
             ?.querySelectorAll('.mu-table-axis-selected')
             .forEach((cell) => {
                 cell.classList.remove(
@@ -273,9 +273,21 @@ export class TableRowColumMenu extends BaseFloat {
         event.preventDefault();
         event.stopPropagation();
 
-        const { table, row } = this._block!;
-        const rowCount = (table.firstChild as TableInner).offset(row);
-        const columnCount = row.offset(this._block!);
+        const block = this._block;
+        const table = block?.table;
+        const row = block?.row;
+        const tableInner = table?.firstChild as TableInner | null;
+        if (!block || !table || !row || !tableInner) {
+            this.hide();
+            return;
+        }
+
+        const rowCount = tableInner.offset(row);
+        const columnCount = row.offset(block);
+        if (rowCount < 0 || columnCount < 0) {
+            this.hide();
+            return;
+        }
         const { location, action, target } = item;
 
         if (action === 'palette') {

@@ -128,6 +128,19 @@ describe('Feishu-style table axis selection', () => {
         }
     });
 
+    it('ignores a queued column action after the selected table was detached', () => {
+        select('bottom', 0, 1);
+        table().firstChild!.remove();
+
+        expect(() => menu.selectItem(new Event('click'), {
+            label: 'Delete Column',
+            action: 'remove',
+            target: 'column',
+            symbol: '',
+            group: 3,
+        })).not.toThrow();
+    });
+
     it('formats every non-empty cell in the selected axis', async () => {
         select('right', 1, 0);
         expect((menu as unknown as { _axisContents: () => unknown[] })._axisContents()).toHaveLength(2);
