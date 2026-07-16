@@ -955,9 +955,13 @@ li.mu-task-list-item > span.mu-checkbox-checked::before {
     text-align: left;
 }
 
-.mu-table-inner tr:first-child td {
+.mu-table-inner tr:first-of-type td {
     font-weight: bold;
     background: var(--code-block-bg-color);
+}
+
+.mu-table-inner tr:first-of-type .mu-table-cell-content {
+    white-space: nowrap;
 }
 
 .mu-table-inner tr th::before,
@@ -1574,7 +1578,7 @@ pre[data-role='vega-lite']::after {
     position: relative;
     z-index: 2;
 
-    min-width: 10em;
+    min-width: 10ch;
 }
 
 /* Footnote definition block — port of marktext's `figure[data-role='FOOTNOTE']`

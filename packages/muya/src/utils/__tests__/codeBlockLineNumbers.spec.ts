@@ -145,4 +145,34 @@ describe('repositionLineNumberSpans', () => {
         expect((wrapper.children[1] as HTMLElement).style.top).toBe('30px');
         expect((wrapper.children[2] as HTMLElement).style.top).toBe('60px');
     });
+
+    it('keeps line numbers inside their code block when an off-screen range jumps upward', () => {
+        const wrapper = document.createElement('span');
+        wrapper.style.lineHeight = '30px';
+        syncLineNumbersSpans(wrapper, 4);
+        const codeEl = document.createElement('code');
+        codeEl.appendChild(document.createTextNode('a\nb\nc\nd'));
+
+        const tops = [110, 140, -300, 200];
+        let call = 0;
+        const rangeProto = Range.prototype as unknown as {
+            getBoundingClientRect: () => { top: number };
+        };
+        const origRangeRect = rangeProto.getBoundingClientRect;
+        rangeProto.getBoundingClientRect = () => ({ top: tops[call++] });
+
+        try {
+            repositionLineNumberSpans(wrapper, codeEl);
+        }
+        finally {
+            rangeProto.getBoundingClientRect = origRangeRect;
+        }
+
+        expect(Array.from(wrapper.children, span => (span as HTMLElement).style.top)).toEqual([
+            '0px',
+            '30px',
+            '54px',
+            '90px',
+        ]);
+    });
 });

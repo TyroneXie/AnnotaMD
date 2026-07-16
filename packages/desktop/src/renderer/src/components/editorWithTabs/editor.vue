@@ -2385,6 +2385,10 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   border-right: 0;
 }
 
+.annotamd-sticky-table-header .mu-table-cell-content {
+  min-width: 0;
+}
+
 .editor-component .mu-container {
   width: min(100%, var(--annotamd-editor-area-width, 980px));
   max-width: 100%;
@@ -2550,8 +2554,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
 .editor-component .mu-container figure.mu-diagram-block .mu-diagram-preview > svg,
 .editor-component .mu-container figure.mu-diagram-block .mu-diagram-preview img {
   display: block;
-  width: 100% !important;
-  max-width: 100% !important;
+  max-width: 100%;
   height: auto !important;
   margin: 0 auto;
 }

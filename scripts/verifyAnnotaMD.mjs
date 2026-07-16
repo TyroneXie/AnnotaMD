@@ -37,6 +37,7 @@ const testPacks = {
     cwd: path.join(root, 'packages/muya'),
     command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
     files: [
+      'src/block/gfm/table/__tests__/tableLayoutCss.spec.ts',
       'src/ui/tableDragBar/__tests__/insertionSide.spec.ts',
       'src/ui/tableRowColumMenu/__tests__/axisSelection.spec.ts',
       'src/ui/tableRowColumMenu/__tests__/axisSelectionStyle.spec.ts',

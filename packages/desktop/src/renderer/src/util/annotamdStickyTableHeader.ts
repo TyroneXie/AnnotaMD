@@ -89,6 +89,7 @@ export class AnnotaMDStickyTableHeader {
 
     const cellWidths = Array.from(headerRow.cells, (cell) => cell.getBoundingClientRect().width)
     const tableWidth = Math.max(table.scrollWidth, table.getBoundingClientRect().width)
+    const headerStyle = getComputedStyle(headerRow.cells[0])
     const signature = `${headerRow.textContent ?? ''}|${cellWidths.join(',')}|${tableWidth}`
 
     if (this.activeFigure !== figure || this.renderedSignature !== signature) {
@@ -126,7 +127,9 @@ export class AnnotaMDStickyTableHeader {
       display: 'block',
       top: `${rootRect.top}px`,
       left: `${visibleLeft}px`,
-      width: `${visibleWidth}px`
+      width: `${visibleWidth}px`,
+      fontFamily: headerStyle.fontFamily,
+      fontSize: headerStyle.fontSize
     })
   }
 

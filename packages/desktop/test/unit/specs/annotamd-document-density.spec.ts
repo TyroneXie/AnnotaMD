@@ -21,7 +21,20 @@ describe('AnnotaMD document density', () => {
     const css = read('packages/muya/src/assets/styles/blockSyntax.css')
 
     expect(css).toMatch(
-      /\.mu-table-inner tr:first-child td\s*\{[^}]*background:\s*var\(--code-block-bg-color\);/s
+      /\.mu-table-inner tr:first-of-type td\s*\{[^}]*background:\s*var\(--code-block-bg-color\);/s
+    )
+  })
+
+  it('does not upscale narrow rendered diagrams beyond their intrinsic width', () => {
+    const editor = read(
+      'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
+    )
+
+    expect(editor).toMatch(
+      /figure\.mu-diagram-block \.mu-diagram-preview > svg,[^{]+\{[^}]*max-width:\s*100%;[^}]*height:\s*auto !important;[^}]*margin:\s*0 auto;/s
+    )
+    expect(editor).not.toMatch(
+      /figure\.mu-diagram-block \.mu-diagram-preview > svg,[^{]+\{[^}]*width:\s*100% !important;/s
     )
   })
 
@@ -48,6 +61,9 @@ describe('AnnotaMD document density', () => {
     expect(editor).toContain('stickyTableHeader?.destroy()')
     expect(editor).toMatch(
       /\.annotamd-sticky-table-header\s*\{[^}]*position:\s*fixed;[^}]*overflow:\s*hidden;[^}]*pointer-events:\s*none;/s
+    )
+    expect(editor).toMatch(
+      /\.annotamd-sticky-table-header \.mu-table-cell-content\s*\{[^}]*min-width:\s*0;/s
     )
   })
 

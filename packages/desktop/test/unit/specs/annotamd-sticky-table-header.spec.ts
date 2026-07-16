@@ -33,6 +33,8 @@ const mountTable = (tableRect: DOMRect) => {
   row.getBoundingClientRect = () => rect(tableRect.left, 20, tableRect.width, 40)
   Array.from(row.cells).forEach((cell, index) => {
     cell.getBoundingClientRect = () => rect(tableRect.left + index * 100, 20, 100, 40)
+    cell.style.fontFamily = 'Test Sans'
+    cell.style.fontSize = '18px'
   })
   Object.defineProperty(table, 'scrollWidth', { value: tableRect.width })
 
@@ -51,6 +53,8 @@ describe('AnnotaMDStickyTableHeader', () => {
 
     expect(overlay.style.left).toBe('105px')
     expect(overlay.style.width).toBe('380px')
+    expect(overlay.style.fontFamily).toBe('"Test Sans"')
+    expect(overlay.style.fontSize).toBe('18px')
     expect(overlay.querySelector<HTMLElement>('table')!.style.transform).toBe('translateX(0px)')
 
     stickyHeader.destroy()

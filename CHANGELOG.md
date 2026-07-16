@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.6.1 - 2026-07-16
+
+### Changed
+
+- Let compact table columns release unused width while preserving single-line header labels, reducing unnecessary horizontal scrolling.
+- Kept narrow Mermaid and other rendered diagrams at their intrinsic size while continuing to shrink diagrams that exceed the editor width.
+
+### Fixed
+
+- Fixed sticky table headers drifting from the inner table boundary or using mismatched typography after columns become compact.
+- Fixed off-screen code-block line numbers receiving negative offsets and leaking over unrelated rendered content.
+
 ## 2.6.0 - 2026-07-16
 
 ### Added
