@@ -80,6 +80,17 @@ describe('AnnotaMD preference styling', () => {
     expect(general).toContain('preferences.general.startup.startupFilesFolders')
   })
 
+  it('keeps startup choices compact and omits the sidebar exclude-pattern field', () => {
+    const general = readRepoFile(
+      'packages/desktop/src/renderer/src/prefComponents/general/index.vue'
+    )
+
+    expect(general).toContain('gap: 2px;')
+    expect(general).toMatch(/\.startup-action-ctrl :deep\(\.el-radio\)[\s\S]*height: 32px;/)
+    expect(general).not.toContain('preferences.general.sidebar.excludePatterns')
+    expect(general).not.toContain('treePathExcludePatterns')
+  })
+
   it('keeps zoom controls in the Window menu instead of duplicating them in Settings', () => {
     const general = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/general/index.vue'

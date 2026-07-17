@@ -71,6 +71,26 @@ describe('shared menu action icons', () => {
         setIconTheme('tabler');
     });
 
+    it('keeps every visible block-menu action visually distinct within each theme', () => {
+        const blockMenuIcons = [
+            'copy-plain-text', 'copy-markdown', 'copy', 'duplicate', 'cut',
+            'insert-above', 'insert-below', 'promote', 'demote',
+            'move-up', 'move-down', 'comment', 'delete',
+        ] as const;
+
+        for (const theme of getAllThemeNames()) {
+            setIconTheme(theme);
+            const signatures = blockMenuIcons.map((icon) => {
+                const definition = getIconDefinition(icon)!;
+                return Array.isArray(definition)
+                    ? JSON.stringify(definition)
+                    : `${definition.viewBox}|${definition.body}`;
+            });
+            expect(new Set(signatures).size, `${theme} repeats a block-menu glyph`).toBe(blockMenuIcons.length);
+        }
+        setIconTheme('tabler');
+    });
+
     it('uses each official library’s matched H1-H6 family instead of hand-drawn digits', () => {
         for (const theme of ['tabler', 'lucide', 'phosphor', 'remix', 'material', 'hugeicons', 'mdi', 'bootstrap'] as const) {
             setIconTheme(theme);

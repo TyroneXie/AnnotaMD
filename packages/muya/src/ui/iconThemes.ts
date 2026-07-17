@@ -360,7 +360,7 @@ const FEATHER_ICONS: Record<string, string[]> = {
  * toolbars; each theme still applies its own stroke weight, caps and joins.
  */
 const COMPLETE_MENU_ICONS: Record<string, string[]> = {
-    'copy': ['M9 9h10v10H9z', 'M5 15H4V5h10v1'],
+    'copy': ['M9 3h6v4H9z', 'M6 5h12v16H6z'],
     'wrap': ['M4 7h11a4 4 0 0 1 0 8H9', 'm12 12-3 3 3 3'],
     'heading-link': ['M9 15l6-6', 'M7 5H4v14h3', 'M17 5h3v14h-3'],
     'diagram-view': ['M4 5h16v14H4z', 'M4 10h16', 'M9 10v9'],
@@ -396,10 +396,10 @@ const COMPLETE_MENU_ICONS: Record<string, string[]> = {
     'footnote': ['M5 5h14v14H5z', 'M8 9h8', 'M8 13h5', 'M16 16h.01'],
     'copy-plain-text': ['M7 5h10', 'M12 5v14', 'M9 19h6'],
     'copy-markdown': ['M4 6h16v12H4z', 'M7 15V9l3 3 3-3v6', 'm15 12 2 2 2-2', 'M17 9v5'],
-    'duplicate': ['M8 8h11v11H8z', 'M5 16V5h11'],
+    'duplicate': ['M8 8h11v11H8z', 'M5 16V5h11', 'M13 14h4', 'M15 12v4'],
     'cut': ['M4 7l16 10', 'M4 17 20 7', 'M6 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0z', 'M6 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0z'],
-    'promote': ['M12 19V5', 'm6 11 6-6 6 6'],
-    'demote': ['M12 5v14', 'm18 13-6 6-6-6'],
+    'promote': ['m6 14 6-6 6 6', 'm6 19 6-6 6 6'],
+    'demote': ['m6 5 6 6 6-6', 'm6 10 6 6 6-6'],
 };
 
 const SVG_ICONS: Record<string, string[]> = {

@@ -297,9 +297,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><path d=\"M7 15V9l2 2l2-2v6m3-2l2 2l2-2m-2 2V9\"/></g>"
       },
       "duplicate": {
-        "source": "copy",
+        "source": "copy-plus",
         "viewBox": "0 0 24 24",
-        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M7 9.667A2.667 2.667 0 0 1 9.667 7h8.666A2.667 2.667 0 0 1 21 9.667v8.666A2.667 2.667 0 0 1 18.333 21H9.667A2.667 2.667 0 0 1 7 18.333z\"/><path d=\"M4.012 16.737A2 2 0 0 1 3 15V5c0-1.1.9-2 2-2h10c.75 0 1.158.385 1.5 1\"/></g>"
+        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M7 9.667A2.667 2.667 0 0 1 9.667 7h8.666A2.667 2.667 0 0 1 21 9.667v8.666A2.667 2.667 0 0 1 18.333 21H9.667A2.667 2.667 0 0 1 7 18.333z\"/><path d=\"M4.012 16.737A2 2 0 0 1 3 15V5c0-1.1.9-2 2-2h10c.75 0 1.158.385 1.5 1M11 14h6m-3-3v6\"/></g>"
       },
       "cut": {
         "source": "cut",
@@ -307,14 +307,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 17a3 3 0 1 0 6 0a3 3 0 1 0-6 0m10 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0m-4.85-2.15L18 4M6 4l8.85 10.85\"/>"
       },
       "promote": {
-        "source": "arrow-up",
+        "source": "chevrons-up",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 5v14m6-8l-6-6m-6 6l6-6\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m7 11l5-5l5 5M7 17l5-5l5 5\"/>"
       },
       "demote": {
-        "source": "arrow-down",
+        "source": "chevrons-down",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 5v14m6-6l-6 6m-6-6l6 6\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m7 7l5 5l5-5M7 13l5 5l5-5\"/>"
       },
       "heading-1": {
         "source": "h-1",
@@ -643,9 +643,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"/><path d=\"M14 2v5a1 1 0 0 0 1 1h5m-10 4.5L8 15l2 2.5m4-5l2 2.5l-2 2.5\"/></g>"
       },
       "duplicate": {
-        "source": "copy",
+        "source": "copy-plus",
         "viewBox": "0 0 24 24",
-        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></g>"
+        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M15 12v6m-3-3h6\"/><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></g>"
       },
       "cut": {
         "source": "scissors",
@@ -653,14 +653,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12L12 12m8-8L8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8L20 20\"/></g>"
       },
       "promote": {
-        "source": "arrow-up",
+        "source": "chevrons-up",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m5 12l7-7l7 7m-7 7V5\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m17 11l-5-5l-5 5m10 7l-5-5l-5 5\"/>"
       },
       "demote": {
-        "source": "arrow-down",
+        "source": "chevrons-down",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 5v14m7-7l-7 7l-7-7\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m7 6l5 5l5-5M7 13l5 5l5-5\"/>"
       },
       "heading-1": {
         "source": "heading-1",
@@ -989,9 +989,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M232 48H24A16 16 0 0 0 8 64v128a16 16 0 0 0 16 16h208a16 16 0 0 0 16-16V64a16 16 0 0 0-16-16m0 144H24V64h208zm-104-88v48a8 8 0 0 1-16 0v-28.69l-18.34 18.35a8 8 0 0 1-11.32 0L64 123.31V152a8 8 0 0 1-16 0v-48a8 8 0 0 1 13.66-5.66L88 124.69l26.34-26.35A8 8 0 0 1 128 104m77.66 18.34a8 8 0 0 1 0 11.32l-24 24a8 8 0 0 1-11.32 0l-24-24a8 8 0 0 1 11.32-11.32L168 132.69V104a8 8 0 0 1 16 0v28.69l10.34-10.35a8 8 0 0 1 11.32 0\"/>"
       },
       "duplicate": {
-        "source": "copy",
+        "source": "file-plus",
         "viewBox": "0 0 256 256",
-        "body": "<path fill=\"currentColor\" d=\"M216 32H88a8 8 0 0 0-8 8v40H40a8 8 0 0 0-8 8v128a8 8 0 0 0 8 8h128a8 8 0 0 0 8-8v-40h40a8 8 0 0 0 8-8V40a8 8 0 0 0-8-8m-56 176H48V96h112Zm48-48h-32V88a8 8 0 0 0-8-8H96V48h112Z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"m213.66 82.34l-56-56A8 8 0 0 0 152 24H56a16 16 0 0 0-16 16v176a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16V88a8 8 0 0 0-2.34-5.66M160 51.31L188.69 80H160ZM200 216H56V40h88v48a8 8 0 0 0 8 8h48zm-40-64a8 8 0 0 1-8 8h-16v16a8 8 0 0 1-16 0v-16h-16a8 8 0 0 1 0-16h16v-16a8 8 0 0 1 16 0v16h16a8 8 0 0 1 8 8\"/>"
       },
       "cut": {
         "source": "scissors",
@@ -999,14 +999,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M157.73 113.13a8 8 0 0 1 2.09-11.13l67.66-46.3a8 8 0 0 1 9 13.21l-67.67 46.3a7.9 7.9 0 0 1-4.51 1.4a8 8 0 0 1-6.57-3.48m80.87 85.09a8 8 0 0 1-11.12 2.08L136 137.7l-42.51 29.08a36 36 0 1 1-9-13.19L121.83 128l-37.39-25.59a35.86 35.86 0 1 1 9-13.19l143 97.87a8 8 0 0 1 2.16 11.13M80 180a20 20 0 1 0-5.86 14.14A19.85 19.85 0 0 0 80 180m-5.86-89.87a20 20 0 1 0-28.28 0a19.85 19.85 0 0 0 28.28 0\"/>"
       },
       "promote": {
-        "source": "arrow-up",
+        "source": "caret-double-up",
         "viewBox": "0 0 256 256",
-        "body": "<path fill=\"currentColor\" d=\"M205.66 117.66a8 8 0 0 1-11.32 0L136 59.31V216a8 8 0 0 1-16 0V59.31l-58.34 58.35a8 8 0 0 1-11.32-11.32l72-72a8 8 0 0 1 11.32 0l72 72a8 8 0 0 1 0 11.32\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M213.66 194.34a8 8 0 0 1-11.32 11.32L128 131.31l-74.34 74.35a8 8 0 0 1-11.32-11.32l80-80a8 8 0 0 1 11.32 0Zm-160-68.68L128 51.31l74.34 74.35a8 8 0 0 0 11.32-11.32l-80-80a8 8 0 0 0-11.32 0l-80 80a8 8 0 0 0 11.32 11.32\"/>"
       },
       "demote": {
-        "source": "arrow-down",
+        "source": "caret-double-down",
         "viewBox": "0 0 256 256",
-        "body": "<path fill=\"currentColor\" d=\"m205.66 149.66l-72 72a8 8 0 0 1-11.32 0l-72-72a8 8 0 0 1 11.32-11.32L120 196.69V40a8 8 0 0 1 16 0v156.69l58.34-58.35a8 8 0 0 1 11.32 11.32\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M213.66 130.34a8 8 0 0 1 0 11.32l-80 80a8 8 0 0 1-11.32 0l-80-80a8 8 0 0 1 11.32-11.32L128 204.69l74.34-74.35a8 8 0 0 1 11.32 0m-91.32 11.32a8 8 0 0 0 11.32 0l80-80a8 8 0 0 0-11.32-11.32L128 124.69L53.66 50.34a8 8 0 0 0-11.32 11.32Z\"/>"
       },
       "heading-1": {
         "source": "text-h-one",
@@ -1335,9 +1335,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M3 3h18a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m1 2v14h16V5zm3 10.5H5v-7h2l2 2l2-2h2v7h-2v-4l-2 2l-2-2zm11-3h2l-3 3l-3-3h2v-4h2z\"/>"
       },
       "duplicate": {
-        "source": "file-copy-line",
+        "source": "file-add-line",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21l.003-14c0-.552.45-1 1.006-1zM5.002 8L5 20h10V8zM9 6h8v10h2V4H9z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M15 4H5v16h14V8h-4zM3 2.992C3 2.444 3.447 2 3.999 2H16l5 5v13.993A1 1 0 0 1 20.007 22H3.993A1 1 0 0 1 3 21.008zM11 11V8h2v3h3v2h-3v3h-2v-3H8v-2z\"/>"
       },
       "cut": {
         "source": "scissors-line",
@@ -1345,14 +1345,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M9.446 8.029L12 10.582l6.728-6.727a2 2 0 0 1 2.828 0l-12.11 12.11a4 4 0 1 1-1.414-1.414l2.554-2.554l-2.554-2.554a4 4 0 1 1 1.414-1.414m5.38 5.379l6.73 6.73a2 2 0 0 1-2.828 0l-5.317-5.316zm-7.412 3.175a2 2 0 1 0-2.828 2.828a2 2 0 0 0 2.828-2.829m0-9.172a2 2 0 1 0-2.828-2.828A2 2 0 0 0 7.414 7.41\"/>"
       },
       "promote": {
-        "source": "arrow-up-line",
+        "source": "arrow-up-double-line",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M13 7.828V20h-2V7.828l-5.364 5.364l-1.414-1.414L12 4l7.778 7.778l-1.414 1.414z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"m12 4.836l-6.207 6.207l1.414 1.414L12 7.664l4.793 4.793l1.414-1.414zm0 5.65l-6.207 6.207l1.414 1.414L12 13.314l4.793 4.793l1.414-1.414z\"/>"
       },
       "demote": {
-        "source": "arrow-down-line",
+        "source": "arrow-down-double-line",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"m13 16.172l5.364-5.364l1.414 1.414L12 20l-7.778-7.778l1.414-1.414L11 16.172V4h2z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"m12 19.164l6.207-6.207l-1.414-1.414L12 16.336l-4.793-4.793l-1.414 1.414zm0-5.65l6.207-6.207l-1.414-1.414L12 10.686L7.207 5.893L5.793 7.307z\"/>"
       },
       "heading-1": {
         "source": "h-1",
@@ -1476,14 +1476,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M10 17V7l5 5z\"/>"
       },
       "insert-above": {
-        "source": "arrow-upward",
+        "source": "add-row-above-outline",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M11 20V7.825l-5.6 5.6L4 12l8-8l8 8l-1.4 1.425l-5.6-5.6V20z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M5 20h14v-6H5zm16 2H3V4h4v2H5v6h14V6h-2V4h4zm-9-8v-2zm-1-6V6H9V4h2V2h2v2h2v2h-2v2z\"/>"
       },
       "insert-below": {
-        "source": "arrow-downward",
+        "source": "add-row-below-outline",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M11 4v12.175l-5.6-5.6L4 12l8 8l8-8l-1.4-1.425l-5.6 5.6V4z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M5 10h14V4H5zM3 20V2h18v18h-4v-2h2v-6H5v6h2v2zm9-10v2zm-1 12v-2H9v-2h2v-2h2v2h2v2h-2v2z\"/>"
       },
       "align-left": {
         "source": "format-align-left",
@@ -1681,9 +1681,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"m16 15l3-3l-1.05-1.075l-1.2 1.2V9h-1.5v3.125l-1.2-1.2L13 12zM4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v12q0 .825-.587 1.413T20 20zm1.5-5H7v-4.5h1v3h1.5v-3h1V15H12v-5q0-.425-.288-.712T11 9H6.5q-.425 0-.712.288T5.5 10z\"/>"
       },
       "duplicate": {
-        "source": "content-copy",
+        "source": "library-add-outline",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M9 18q-.825 0-1.412-.587T7 16V4q0-.825.588-1.412T9 2h9q.825 0 1.413.588T20 4v12q0 .825-.587 1.413T18 18zm-4 4q-.825 0-1.412-.587T3 20V6h2v14h11v2z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M13 14h2v-3h3V9h-3V6h-2v3h-3v2h3zm-5 4q-.825 0-1.412-.587T6 16V4q0-.825.588-1.412T8 2h12q.825 0 1.413.588T22 4v12q0 .825-.587 1.413T20 18zm0-2h12V4H8zm-4 6q-.825 0-1.412-.587T2 20V6h2v14h14v2zM8 4v12z\"/>"
       },
       "cut": {
         "source": "cut",
@@ -1691,14 +1691,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"m19 21l-7-7l-2.35 2.35q.2.375.275.8T10 18q0 1.65-1.175 2.825T6 22t-2.825-1.175T2 18t1.175-2.825T6 14q.425 0 .85.075t.8.275L10 12L7.65 9.65q-.375.2-.8.275T6 10q-1.65 0-2.825-1.175T2 6t1.175-2.825T6 2t2.825 1.175T10 6q0 .425-.075.85t-.275.8L22 20v1zm-4-10l-2-2l6-6h3v1zM7.413 7.413Q8 6.825 8 6t-.587-1.412T6 4t-1.412.588T4 6t.588 1.413T6 8t1.413-.587m4.937 4.937q.15-.15.15-.35t-.15-.35t-.35-.15t-.35.15t-.15.35t.15.35t.35.15t.35-.15m-4.937 7.063Q8 18.825 8 18t-.587-1.412T6 16t-1.412.588T4 18t.588 1.413T6 20t1.413-.587\"/>"
       },
       "promote": {
-        "source": "arrow-upward",
+        "source": "keyboard-double-arrow-up-rounded",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M11 20V7.825l-5.6 5.6L4 12l8-8l8 8l-1.4 1.425l-5.6-5.6V20z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M12 13.825L8.1 17.7q-.275.275-.687.288T6.7 17.7q-.275-.275-.275-.7t.275-.7l4.6-4.6q.15-.15.325-.213t.375-.062t.375.062t.325.213l4.6 4.6q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275zm0-6L8.1 11.7q-.275.275-.687.288T6.7 11.7q-.275-.275-.275-.7t.275-.7l4.6-4.6q.15-.15.325-.212T12 5.425t.375.063t.325.212l4.6 4.6q.275.275.288.688t-.288.712q-.275.275-.7.275t-.7-.275z\"/>"
       },
       "demote": {
-        "source": "arrow-downward",
+        "source": "keyboard-double-arrow-down-rounded",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M11 4v12.175l-5.6-5.6L4 12l8 8l8-8l-1.4-1.425l-5.6 5.6V4z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"m12 16.175l3.9-3.875q.275-.275.688-.288t.712.288q.275.275.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062t-.375-.062t-.325-.213l-4.6-4.6q-.275-.275-.288-.687T6.7 12.3q.275-.275.7-.275t.7.275zm0-6L15.9 6.3q.275-.275.688-.287t.712.287q.275.275.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062t-.375-.062t-.325-.213L6.7 7.7q-.275-.275-.288-.687T6.7 6.3q.275-.275.7-.275t.7.275z\"/>"
       },
       "heading-1": {
         "source": "format-h1",
@@ -2027,9 +2027,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"><path d=\"M10 18s-2.5-1.841-2.5-2.5S10 13 10 13m4 5s2.5-1.841 2.5-2.5S14 13 14 13\"/><path d=\"M13 2.5V3c0 2.828 0 4.243.879 5.121C14.757 9 16.172 9 19 9h.5m.5 1.657V14c0 3.771 0 5.657-1.172 6.828S15.771 22 12 22s-5.657 0-6.828-1.172S4 17.771 4 14V9.456c0-3.245 0-4.868.886-5.967a4 4 0 0 1 .603-.603C6.59 2 8.211 2 11.456 2c.705 0 1.058 0 1.381.114q.1.036.197.082c.31.148.559.397 1.058.896l4.736 4.736c.579.578.867.868 1.02 1.235c.152.368.152.776.152 1.594\"/></g>"
       },
       "duplicate": {
-        "source": "copy",
+        "source": "copy-plus",
         "viewBox": "0 0 24 24",
-        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"><path d=\"M7 11V9c0-3.3 0-4.95 1.025-5.975S10.7 2 14 2s4.95 0 5.975 1.025S21 5.7 21 9v2c0 3.3 0 4.95-1.025 5.975S17.3 18 14 18s-4.95 0-5.975-1.025S7 14.3 7 11\"/><path d=\"M3 6v9c0 3.3 0 4.95 1.025 5.975S6.7 22 10 22h7\"/></g>"
+        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\"><path d=\"M14 7v6m3.005-3.005h-6M7 11V9c0-3.3 0-4.95 1.025-5.975S10.7 2 14 2s4.95 0 5.975 1.025S21 5.7 21 9v2c0 3.3 0 4.95-1.025 5.975S17.3 18 14 18s-4.95 0-5.975-1.025S7 14.3 7 11\"/><path d=\"M3 6v9c0 3.3 0 4.95 1.025 5.975S6.7 22 10 22h7\"/></g>"
       },
       "cut": {
         "source": "scissor-01",
@@ -2037,14 +2037,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M2.5 12c0-4.478 0-6.718 1.391-8.109S7.521 2.5 12 2.5c4.478 0 6.718 0 8.109 1.391S21.5 7.521 21.5 12c0 4.478 0 6.718-1.391 8.109S16.479 21.5 12 21.5c-4.478 0-6.718 0-8.109-1.391S2.5 16.479 2.5 12Z\"/><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M13.437 9.558L10.6 12m0 0L7 15m3.6-3l2.895 2.387M10.6 12L7 9m9-.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0m0 7a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0\"/></g>"
       },
       "promote": {
-        "source": "arrow-up-01",
+        "source": "arrow-up-double",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M18 15s-4.42-6-6-6s-6 6-6 6\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M18 11.5s-4.419-6-6-6s-6 6-6 6m12 7s-4.419-6-6-6s-6 6-6 6\"/>"
       },
       "demote": {
-        "source": "arrow-down-01",
+        "source": "arrow-down-double",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M18 9s-4.419 6-6 6s-6-6-6-6\"/>"
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M18 12.5s-4.42 6-6 6c-1.582 0-6-6-6-6m12-7s-4.42 6-6 6c-1.582 0-6-6-6-6\"/>"
       },
       "heading-1": {
         "source": "heading-01",
@@ -2383,14 +2383,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"m19 3l-6 6l2 2l7-7V3m-10 9.5a.5.5 0 0 1-.5-.5a.5.5 0 0 1 .5-.5a.5.5 0 0 1 .5.5a.5.5 0 0 1-.5.5M6 20a2 2 0 0 1-2-2a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2M6 8a2 2 0 0 1-2-2a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2m3.64-.36c.23-.5.36-1.05.36-1.64a4 4 0 0 0-4-4a4 4 0 0 0-4 4a4 4 0 0 0 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14a4 4 0 0 0-4 4a4 4 0 0 0 4 4a4 4 0 0 0 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1z\"/>"
       },
       "promote": {
-        "source": "arrow-up",
+        "source": "chevron-double-up",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M13 20h-2V8l-5.5 5.5l-1.42-1.42L12 4.16l7.92 7.92l-1.42 1.42L13 8z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M7.41 18.41L6 17l6-6l6 6l-1.41 1.41L12 13.83zm0-6L6 11l6-6l6 6l-1.41 1.41L12 7.83z\"/>"
       },
       "demote": {
-        "source": "arrow-down",
+        "source": "chevron-double-down",
         "viewBox": "0 0 24 24",
-        "body": "<path fill=\"currentColor\" d=\"M11 4h2v12l5.5-5.5l1.42 1.42L12 19.84l-7.92-7.92L5.5 10.5L11 16z\"/>"
+        "body": "<path fill=\"currentColor\" d=\"M16.59 5.59L18 7l-6 6l-6-6l1.41-1.41L12 10.17zm0 6L18 13l-6 6l-6-6l1.41-1.41L12 16.17z\"/>"
       },
       "heading-1": {
         "source": "format-header-1",
@@ -2719,9 +2719,9 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<g fill=\"currentColor\"><path d=\"M14 3a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z\"/><path fill-rule=\"evenodd\" d=\"M9.146 8.146a.5.5 0 0 1 .708 0L11.5 9.793l1.646-1.647a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 0-.708\"/><path fill-rule=\"evenodd\" d=\"M11.5 5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 1 .5-.5\"/><path d=\"M3.56 11V7.01h.056l1.428 3.239h.774l1.42-3.24h.056V11h1.073V5.001h-1.2l-1.71 3.894h-.039l-1.71-3.894H2.5V11z\"/></g>"
       },
       "duplicate": {
-        "source": "copy",
+        "source": "file-earmark-plus",
         "viewBox": "0 0 undefined undefined",
-        "body": "<path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z\"/>"
+        "body": "<g fill=\"currentColor\"><path d=\"M8 6.5a.5.5 0 0 1 .5.5v1.5H10a.5.5 0 0 1 0 1H8.5V11a.5.5 0 0 1-1 0V9.5H6a.5.5 0 0 1 0-1h1.5V7a.5.5 0 0 1 .5-.5\"/><path d=\"M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z\"/></g>"
       },
       "cut": {
         "source": "scissors",
@@ -2729,14 +2729,14 @@ export const OFFICIAL_ICON_THEMES: Record<string, OfficialIconTheme> = {
         "body": "<path fill=\"currentColor\" d=\"M3.5 3.5c-.614-.884-.074-1.962.858-2.5L8 7.226L11.642 1c.932.538 1.472 1.616.858 2.5L8.81 8.61l1.556 2.661a2.5 2.5 0 1 1-.794.637L8 9.73l-1.572 2.177a2.5 2.5 0 1 1-.794-.637L7.19 8.61zm2.5 10a1.5 1.5 0 1 0-3 0a1.5 1.5 0 0 0 3 0m7 0a1.5 1.5 0 1 0-3 0a1.5 1.5 0 0 0 3 0\"/>"
       },
       "promote": {
-        "source": "arrow-up",
+        "source": "chevron-double-up",
         "viewBox": "0 0 undefined undefined",
-        "body": "<path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5\"/>"
+        "body": "<g fill=\"currentColor\" fill-rule=\"evenodd\"><path d=\"M7.646 2.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 3.707L2.354 9.354a.5.5 0 1 1-.708-.708z\"/><path d=\"M7.646 6.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 7.707l-5.646 5.647a.5.5 0 0 1-.708-.708z\"/></g>"
       },
       "demote": {
-        "source": "arrow-down",
+        "source": "chevron-double-down",
         "viewBox": "0 0 undefined undefined",
-        "body": "<path fill=\"currentColor\" fill-rule=\"evenodd\" d=\"M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1\"/>"
+        "body": "<g fill=\"currentColor\" fill-rule=\"evenodd\"><path d=\"M1.646 6.646a.5.5 0 0 1 .708 0L8 12.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708\"/><path d=\"M1.646 2.646a.5.5 0 0 1 .708 0L8 8.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708\"/></g>"
       },
       "heading-1": {
         "source": "type-h1",

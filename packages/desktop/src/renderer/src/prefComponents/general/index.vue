@@ -97,23 +97,6 @@
 
     <compound>
       <template #head>
-        <h6 class="title">
-          {{ t('preferences.general.sidebar.title') }}
-        </h6>
-      </template>
-      <template #children>
-        <text-box
-          :description="t('preferences.general.sidebar.excludePatterns')"
-          :notes="t('preferences.general.sidebar.excludePatternsNotes')"
-          :input="projectPaths.join(',')"
-          :on-change="(value) => onSelectChange('treePathExcludePatterns', value.split(','))"
-          more="https://github.com/isaacs/minimatch"
-        />
-      </template>
-    </compound>
-
-    <compound>
-      <template #head>
         <h6 class="title">{{ t('preferences.general.startup.layoutOptions') }}</h6>
       </template>
       <template #children>
@@ -141,7 +124,6 @@ import type { PreferencesState } from '@/store/preferences'
 import Compound from '../common/compound/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
-import textBox from '../common/textBox/index.vue'
 import { isOsx } from '@/util'
 
 import { getTitleBarStyleOptions } from './config'
@@ -149,14 +131,8 @@ import { getTitleBarStyleOptions } from './config'
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
 
-const {
-  autoSave,
-  titleBarStyle,
-  defaultDirectoryToOpen,
-  treePathExcludePatterns: projectPaths,
-  wordWrapInToc,
-  openedFilesInSidebar
-} = storeToRefs(preferenceStore)
+const { autoSave, titleBarStyle, defaultDirectoryToOpen, wordWrapInToc, openedFilesInSidebar } =
+  storeToRefs(preferenceStore)
 
 const openItemsInNewWindow = computed<boolean>({
   get: () => preferenceStore.openFilesInNewWindow && preferenceStore.openFolderInNewWindow,
@@ -203,13 +179,16 @@ const selectDefaultDirectoryToOpen = (): void => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  gap: 2px;
 }
 
 .pref-general .startup-action-ctrl .el-button--small {
   margin-left: 10px;
 }
 
-.pref-general .startup-action-ctrl label {
-  margin: 5px 0;
+.pref-general .startup-action-ctrl :deep(.el-radio) {
+  height: 32px;
+  margin: 0;
+  line-height: 32px;
 }
 </style>
