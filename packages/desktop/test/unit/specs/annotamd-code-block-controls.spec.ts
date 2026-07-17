@@ -6,12 +6,15 @@ const repoRoot = resolve(__dirname, '../../../../..')
 const readRepoFile = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
 
 describe('AnnotaMD code block controls', () => {
-  it('keeps code-block controls together in Markdown and shares the editor font size', () => {
+  it('keeps code-block controls together in Appearance and shares the editor font size', () => {
     const editor = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/editor/index.vue'
     )
     const markdown = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/markdown/index.vue'
+    )
+    const appearance = readRepoFile(
+      'packages/desktop/src/renderer/src/prefComponents/theme/index.vue'
     )
 
     expect(editor).not.toContain("onSelectChange('codeFontSize', value)")
@@ -20,11 +23,15 @@ describe('AnnotaMD code block controls', () => {
     expect(editor).not.toContain("onSelectChange('codeBlockLineNumbers', value)")
     expect(editor).not.toContain("onSelectChange('wrapCodeBlocks', value)")
     expect(markdown).not.toContain("onSelectChange('codeFontSize', value)")
-    expect(markdown).toContain("onSelectChange('codeFontFamily', value)")
-    expect(markdown).toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
-    expect(markdown).toContain("onSelectChange('codeBlockLineNumbers', value)")
-    expect(markdown).toContain("onSelectChange('wrapCodeBlocks', value)")
-    expect(markdown).toContain("preferences.markdown.codeBlock.title")
+    expect(markdown).not.toContain("onSelectChange('codeFontFamily', value)")
+    expect(markdown).not.toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
+    expect(markdown).not.toContain("onSelectChange('codeBlockLineNumbers', value)")
+    expect(markdown).not.toContain("onSelectChange('wrapCodeBlocks', value)")
+    expect(appearance).toContain("onSelectChange('codeFontFamily', value)")
+    expect(appearance).toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
+    expect(appearance).toContain("onSelectChange('codeBlockLineNumbers', value)")
+    expect(appearance).toContain("onSelectChange('wrapCodeBlocks', value)")
+    expect(appearance).toContain("preferences.markdown.codeBlock.title")
   })
 
   it('shows code line numbers by default in every preference source', () => {

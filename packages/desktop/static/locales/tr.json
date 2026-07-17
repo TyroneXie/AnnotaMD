@@ -439,7 +439,7 @@
       "editor": "Düzenleyici",
       "markdown": "Markdown",
       "spelling": "Yazım",
-      "theme": "Tema",
+      "theme": "Görünüm",
       "image": "Görsel",
       "keybindings": "Kısayol Tuşları"
     },
@@ -683,7 +683,9 @@
       }
     },
     "theme": {
-      "title": "Tema",
+      "title": "Görünüm",
+      "documentTheme": "Tema",
+      "currentTheme": "Tema",
       "followSystemTheme": "Sistem Temasını Takip Et",
       "modeThemes": "Tema Seçimi",
       "lightModeTheme": "Açık mod teması",

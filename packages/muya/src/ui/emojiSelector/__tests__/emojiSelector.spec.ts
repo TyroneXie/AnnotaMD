@@ -54,6 +54,10 @@ function localeT(resource: Record<string, string>): (s: string) => string {
     return (key: string) => resource[key] || key;
 }
 
+async function waitForPicker() {
+    await new Promise(resolve => setTimeout(resolve, 0));
+}
+
 const selectors: EmojiSelector[] = [];
 
 afterEach(() => {
@@ -79,20 +83,22 @@ describe('emojiSelector — render on muya-emoji-picker event', () => {
         selectors.push(selector);
     });
 
-    it('searches matches, marks the first item active, and shows the float', () => {
+    it('searches matches, marks the first item active, and shows the float', async () => {
         const reference = stubReference();
         const setEmoji = vi.fn();
 
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji } });
+        await waitForPicker();
 
         expect(selector.renderArray.length).toBeGreaterThan(0);
         expect(selector.activeItem).toBe(selector.renderArray[0]);
         expect(selector.status).toBe(true);
     });
 
-    it('groups results under category sections and renders one .item per emoji with a span', () => {
+    it('groups results under category sections and renders one .item per emoji with a span', async () => {
         const reference = stubReference();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji: vi.fn() } });
+        await waitForPicker();
 
         const sections = selector.floatBox!.querySelectorAll('section');
         expect(sections.length).toBeGreaterThan(0);
@@ -113,6 +119,23 @@ describe('emojiSelector — render on muya-emoji-picker event', () => {
 
         expect(selector.status).toBe(false);
         expect(selector.renderArray.length).toBe(0);
+    });
+
+    it('shows a browsable starter set when a lone colon requests all emoji', async () => {
+        const reference = stubReference();
+        const setEmoji = vi.fn();
+        eventCenter.emit('muya-emoji-picker', {
+            reference,
+            emojiText: '',
+            block: { setEmoji },
+            showAll: true,
+        });
+        await waitForPicker();
+
+        expect(selector.status).toBe(true);
+        expect(selector.renderArray.length).toBeGreaterThan(0);
+        selector.selectItem(selector.renderArray[0]);
+        expect(setEmoji).toHaveBeenCalledWith(selector.renderArray[0].aliases[0]);
     });
 
     it('hides when the search yields no matches', () => {
@@ -138,10 +161,11 @@ describe('emojiSelector — selection', () => {
         selectors.push(selector);
     });
 
-    it('selectItem calls block.setEmoji with the item\'s first alias', () => {
+    it('selectItem calls block.setEmoji with the item\'s first alias', async () => {
         const reference = stubReference();
         const setEmoji = vi.fn();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji } });
+        await waitForPicker();
 
         const item = selector.renderArray[0];
         selector.selectItem(item);
@@ -150,10 +174,11 @@ describe('emojiSelector — selection', () => {
         expect(setEmoji).toHaveBeenCalledWith(item.aliases[0]);
     });
 
-    it('clicking a rendered item fires setEmoji with that item\'s alias', () => {
+    it('clicking a rendered item fires setEmoji with that item\'s alias', async () => {
         const reference = stubReference();
         const setEmoji = vi.fn();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji } });
+        await waitForPicker();
 
         const items = selector.floatBox!.querySelectorAll('div.item');
         const second = (items[1] ?? items[0]) as HTMLElement;
@@ -164,10 +189,11 @@ describe('emojiSelector — selection', () => {
         expect(setEmoji).toHaveBeenCalledWith(expectedAlias);
     });
 
-    it('step("next") advances activeItem and selecting it routes through setEmoji', () => {
+    it('step("next") advances activeItem and selecting it routes through setEmoji', async () => {
         const reference = stubReference();
         const setEmoji = vi.fn();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji } });
+        await waitForPicker();
 
         const first = selector.renderArray[0];
         selector.step('next');
@@ -179,26 +205,28 @@ describe('emojiSelector — selection', () => {
 });
 
 describe('emojiSelector — localized category titles', () => {
-    it('renders the en category title verbatim', () => {
+    it('renders the en category title verbatim', async () => {
         const { muya, eventCenter } = makeFakeMuya(localeT(en.resource));
         const selector = new EmojiSelector(muya);
         selectors.push(selector);
 
         const reference = stubReference();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji: vi.fn() } });
+        await waitForPicker();
 
         const titles = [...selector.floatBox!.querySelectorAll('section .title')].map(t => t.textContent);
         const category = selector.renderArray[0].category;
         expect(titles).toContain((en.resource as Record<string, string>)[category]);
     });
 
-    it('renders the zh-CN translation for a matched category via i18n.t', () => {
+    it('renders the zh-CN translation for a matched category via i18n.t', async () => {
         const { muya, eventCenter } = makeFakeMuya(localeT(zhCN.resource));
         const selector = new EmojiSelector(muya);
         selectors.push(selector);
 
         const reference = stubReference();
         eventCenter.emit('muya-emoji-picker', { reference, emojiText: 'smile', block: { setEmoji: vi.fn() } });
+        await waitForPicker();
 
         const category = selector.renderArray[0].category;
         const translated = (zhCN.resource as Record<string, string>)[category];

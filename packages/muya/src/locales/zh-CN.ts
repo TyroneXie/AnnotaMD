@@ -35,6 +35,7 @@ export const zhCN = {
         'Code Block': '代码块',
         'Quote Block': '引用',
         'Highlight Block': '高亮块',
+        'Emoji': '表情',
         'Order List': '有序列表',
         'Bullet List': '无序列表',
         'To-do List': '任务列表',
@@ -158,5 +159,7 @@ export const zhCN = {
         'Input Front Matter...': '输入页眉...',
         'Invalid Mathematical Formula': '数学公式错误',
         'Empty Mathematical Formula': '空数学公式',
+        'Edit Block': '编辑块',
+        'Delete Block': '删除块',
     },
 };

@@ -2,8 +2,10 @@ import type { Muya } from '../../../muya';
 import type { IHtmlBlockState, TState } from '../../../state/types';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
+import sanitizeHtml from '../../../utils/dompurify';
 import { getImageSrc } from '../../../utils/image';
 import logger from '../../../utils/logger';
+import { getHighlightHtml } from '../../../utils/marked/getHighlightHtml';
 import Parent from '../../base/parent';
 
 const debug = logger('htmlPreview:');
@@ -18,6 +20,57 @@ export function isEmptyHtmlBlock(html: string): boolean {
     // eslint-disable-next-line regexp/no-super-linear-backtracking, regexp/optimal-quantifier-concatenation
     const match = html.trim().match(/^<([a-z][a-z\d]*)[^>]*>\s*<\/\1>$/);
     return !!match && !SELF_CONTAINED_MEDIA.has(match[1]);
+}
+
+export function renderMarkdownInDetails(doc: Document): void {
+    for (const details of doc.querySelectorAll('details')) {
+        const summary = Array.from(details.children)
+            .find(child => child.tagName.toLowerCase() === 'summary');
+        if (!summary)
+            continue;
+
+        const bodyNodes: ChildNode[] = [];
+        let node = summary.nextSibling;
+        while (node) {
+            bodyNodes.push(node);
+            node = node.nextSibling;
+        }
+
+        const markdown = bodyNodes.map((child) => {
+            return child instanceof Element ? child.outerHTML : child.textContent ?? '';
+        }).join('');
+        if (!markdown.trim())
+            continue;
+
+        const lines = markdown.split('\n');
+        while (lines.length && !lines[0].trim())
+            lines.shift();
+        while (lines.length && !lines.at(-1)!.trim())
+            lines.pop();
+        const indentation = Math.min(...lines
+            .filter(line => line.trim())
+            .map(line => line.match(/^\s*/)?.[0].length ?? 0));
+        const normalizedMarkdown = lines
+            .map(line => line.slice(indentation))
+            .join('\n');
+
+        const rendered = sanitizeHtml(
+            getHighlightHtml(normalizedMarkdown),
+            PREVIEW_DOMPURIFY_CONFIG,
+        ) as string;
+        const renderedBody = doc.createElement('div');
+        renderedBody.innerHTML = rendered;
+        const topLevelListItems = Array.from(renderedBody.children)
+            .filter(child => child.tagName.toLowerCase() === 'li');
+        if (topLevelListItems.length) {
+            const list = doc.createElement('ul');
+            topLevelListItems[0].before(list);
+            topLevelListItems.forEach(item => list.appendChild(item));
+        }
+
+        bodyNodes.forEach(child => child.remove());
+        details.append(...Array.from(renderedBody.childNodes));
+    }
 }
 
 class HTMLPreview extends Parent {
@@ -64,6 +117,7 @@ class HTMLPreview extends Parent {
         else {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlContent, 'text/html');
+            renderMarkdownInDetails(doc);
             const imgs = doc.documentElement.querySelectorAll('img');
 
             for (const img of imgs) {

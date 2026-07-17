@@ -15,12 +15,12 @@ class SetextHeading extends Parent {
     static create(muya: Muya, state: ISetextHeadingState) {
         const heading = new SetextHeading(muya, state);
 
-        heading.appendAttachment(
-            ScrollPage.loadBlock('heading-copy-link').create(muya, null),
-        );
-
         heading.append(
             ScrollPage.loadBlock('setextheading.content').create(muya, state.text),
+        );
+
+        heading.appendAttachment(
+            ScrollPage.loadBlock('heading-copy-link').create(muya, null),
         );
 
         return heading;

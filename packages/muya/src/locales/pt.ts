@@ -35,6 +35,7 @@ export const pt = {
         'Code Block': 'Bloco de código',
         'Quote Block': 'Citação',
         'Highlight Block': 'Bloco destacado',
+        'Emoji': 'Emoji',
         'Order List': 'Lista ordenada',
         'Bullet List': 'Lista com marcadores',
         'To-do List': 'Lista de tarefas',
@@ -136,6 +137,8 @@ export const pt = {
         'Delete': 'Excluir',
         // imageToolbar
         'Edit Image': 'Editar imagem',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': 'Imagem em linha',
         'Remove Image': 'Remover imagem',
         // ImageSelector

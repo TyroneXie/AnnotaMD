@@ -1,51 +1,137 @@
 <template>
   <div class="pref-theme">
     <h4>{{ t('preferences.theme.title') }}</h4>
-    <section class="offcial-themes">
-      <div
-        v-for="themeItem of themes"
-        :key="themeItem.name"
-        class="theme"
-        :class="[
-          themeItem.name,
-          {
-            active: themeItem.name === theme,
-            disabled: followSystemTheme
-          }
-        ]"
-        @click="!followSystemTheme && onSelectChange('theme', themeItem.name)"
-      >
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-html="themeItem.html" />
-      </div>
-    </section>
-    <separator />
-
-    <Bool
-      :description="t('preferences.theme.followSystemTheme')"
-      :bool="followSystemTheme"
-      :on-change="(value) => onSelectChange('followSystemTheme', value)"
-    />
-
-    <compound v-if="followSystemTheme">
+    <compound>
       <template #head>
         <h6 class="title">
-          {{ t('preferences.theme.modeThemes') }}
+          {{ t('preferences.theme.documentTheme') }}
         </h6>
       </template>
       <template #children>
-        <cur-select
+        <Bool
+          :description="t('preferences.theme.followSystemTheme')"
+          :bool="followSystemTheme"
+          :on-change="(value) => onSelectChange('followSystemTheme', value)"
+        />
+        <theme-select
+          v-if="!followSystemTheme"
+          :description="t('preferences.theme.currentTheme')"
+          :value="theme"
+          :options="themeOptions"
+          :on-change="(value) => onSelectChange('theme', value)"
+          @preview="showThemePreview"
+          @clear-preview="clearThemePreview"
+        />
+        <theme-select
+          v-if="followSystemTheme"
           :description="t('preferences.theme.lightModeTheme')"
           :value="lightModeTheme"
           :options="themeOptions"
           :on-change="(value) => onSelectChange('lightModeTheme', value)"
+          @preview="showThemePreview"
+          @clear-preview="clearThemePreview"
         />
-
-        <cur-select
+        <theme-select
+          v-if="followSystemTheme"
           :description="t('preferences.theme.darkModeTheme')"
           :value="darkModeTheme"
           :options="themeOptions"
           :on-change="(value) => onSelectChange('darkModeTheme', value)"
+          @preview="showThemePreview"
+          @clear-preview="clearThemePreview"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.general.misc.language.title') }}</h6>
+      </template>
+      <template #children>
+        <cur-select
+          :description="t('preferences.general.misc.language.title')"
+          :value="language"
+          :options="getLanguageOptions()"
+          :on-change="(value) => onSelectChange('language', value)"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.editor.textEditor.title') }}</h6>
+      </template>
+      <template #children>
+        <range
+          :description="t('preferences.editor.textEditor.fontSize')"
+          :value="fontSize"
+          :min="12"
+          :max="32"
+          :step="1"
+          :on-change="(value) => onSelectChange('fontSize', value)"
+        />
+        <range
+          :description="t('preferences.editor.textEditor.lineHeight')"
+          :value="lineHeight"
+          :min="1.2"
+          :max="2.0"
+          :step="0.1"
+          :on-change="(value) => onSelectChange('lineHeight', value)"
+        />
+        <font-text-box
+          :description="t('preferences.editor.textEditor.fontFamily')"
+          :value="editorFontFamily"
+          :on-change="(value) => onSelectChange('editorFontFamily', value)"
+        />
+        <text-box
+          :description="t('preferences.editor.textEditor.maxWidth')"
+          :notes="t('preferences.editor.textEditor.maxWidthNotes')"
+          :input="editorLineWidth"
+          :regex-validator="/^(?:$|[0-9]+(?:ch|px|%)$)/"
+          :on-change="(value) => onSelectChange('editorLineWidth', value)"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.editor.textEditor.iconTheme') }}</h6>
+      </template>
+      <template #children>
+        <cur-select
+          :description="t('preferences.editor.textEditor.iconTheme')"
+          :value="iconTheme"
+          :options="iconThemeOptions"
+          :on-change="(value) => onSelectChange('iconTheme', value)"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.markdown.codeBlock.title') }}</h6>
+      </template>
+      <template #children>
+        <font-text-box
+          :description="t('preferences.editor.codeBlock.fontFamily')"
+          :only-monospace="true"
+          :value="codeFontFamily"
+          :on-change="(value) => onSelectChange('codeFontFamily', value)"
+        />
+        <Bool
+          :description="t('preferences.markdown.codeBlock.showLineNumbers')"
+          :bool="codeBlockLineNumbers"
+          :on-change="(value) => onSelectChange('codeBlockLineNumbers', value)"
+        />
+        <Bool
+          :description="t('preferences.markdown.codeBlock.wrap')"
+          :bool="wrapCodeBlocks"
+          :on-change="(value) => onSelectChange('wrapCodeBlocks', value)"
+        />
+        <Bool
+          :description="t('preferences.editor.codeBlock.removeEmptyLines')"
+          :bool="trimUnnecessaryCodeBlockEmptyLines"
+          :on-change="(value) => onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)"
         />
       </template>
     </compound>
@@ -82,11 +168,23 @@
         </el-button>
       </div>
     </section>
+    <Teleport to="body">
+      <section
+        v-if="hoveredTheme"
+        class="offcial-themes theme-hover-preview"
+        :style="previewPosition"
+      >
+        <div class="theme" :class="hoveredTheme.name">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div v-html="hoveredTheme.html" />
+        </div>
+      </section>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { usePreferencesStore } from '@/store/preferences'
 import type { PreferencesState } from '@/store/preferences'
 import { storeToRefs } from 'pinia'
@@ -99,7 +197,13 @@ import CurSelect from '../common/select/index.vue'
 import Separator from '../common/separator/index.vue'
 import Compound from '../common/compound/index.vue'
 import Advanced from '../common/advanced/index.vue'
+import Range from '../common/range/index.vue'
+import FontTextBox from '../common/fontTextBox/index.vue'
+import TextBox from '../common/textBox/index.vue'
+import ThemeSelect from './themeSelect.vue'
 import type { PrefSelectOption } from '../common/types'
+import { getLanguageOptions } from '../general/config'
+import { iconThemeOptions } from '../editor/config'
 
 interface ThemePreview {
   name: string
@@ -107,12 +211,33 @@ interface ThemePreview {
 }
 
 const themes = ref<ThemePreview[]>([])
+const hoveredThemeName = ref('')
+const previewPosition = ref({ left: '0px', top: '0px' })
 
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
 
-const { followSystemTheme, lightModeTheme, darkModeTheme, theme, customCss } =
-  storeToRefs(preferenceStore)
+const {
+  followSystemTheme,
+  lightModeTheme,
+  darkModeTheme,
+  theme,
+  customCss,
+  language,
+  fontSize,
+  editorFontFamily,
+  lineHeight,
+  editorLineWidth,
+  iconTheme,
+  codeFontFamily,
+  codeBlockLineNumbers,
+  wrapCodeBlocks,
+  trimUnnecessaryCodeBlockEmptyLines
+} = storeToRefs(preferenceStore)
+
+const hoveredTheme = computed(() =>
+  themes.value.find((themeItem) => themeItem.name === hoveredThemeName.value)
+)
 
 // Generate dropdown options from configThemes
 const themeOptions: PrefSelectOption<string>[] = configThemes.map((theme) => ({
@@ -137,6 +262,26 @@ onMounted(async () => {
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
+}
+
+const showThemePreview = (themeName: string, anchor: DOMRect): void => {
+  const previewWidth = 280
+  const previewHeight = 110
+  const gap = 12
+  const left =
+    anchor.right + gap + previewWidth <= window.innerWidth
+      ? anchor.right + gap
+      : Math.max(gap, anchor.left - previewWidth - gap)
+  const top = Math.min(
+    Math.max(gap, anchor.top - (previewHeight - anchor.height) / 2),
+    window.innerHeight - previewHeight - gap
+  )
+  previewPosition.value = { left: `${left}px`, top: `${top}px` }
+  hoveredThemeName.value = themeName
+}
+
+const clearThemePreview = (): void => {
+  hoveredThemeName.value = ''
 }
 </script>
 
@@ -441,6 +586,22 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+.offcial-themes.theme-hover-preview {
+  position: fixed;
+  z-index: 4000;
+  display: block;
+  width: 280px;
+  margin: 0;
+  pointer-events: none;
+
+  & .theme {
+    width: 280px;
+    height: 110px;
+    box-shadow: var(--floatShadow);
+    outline: 1px solid var(--floatBorderColor);
   }
 }
 

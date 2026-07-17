@@ -61,8 +61,10 @@ describe('parity PG11: heading hover-to-copy-anchor affordance', () => {
         () => {
             const muya = bootMuya('# Getting Started\n');
             const affordance = muya.domNode.querySelector(COPY_LINK_SELECTOR);
+            const heading = muya.domNode.querySelector('h1');
 
             expect(affordance).toBeTruthy();
+            expect(heading?.lastElementChild).toBe(affordance);
         },
     );
 
@@ -99,10 +101,9 @@ describe('parity PG11: heading hover-to-copy-anchor affordance', () => {
             expect(affordance.getAttribute('role')).toBe('button');
             expect(affordance.getAttribute('tabindex')).toBe('0');
             expect(affordance.getAttribute('aria-label')).toBeTruthy();
-            // The icon image is decorative — the button carries the label — so
-            // it must expose an (empty) alt to satisfy the image-alt a11y rule.
-            const img = affordance.querySelector('img')!;
-            expect(img.getAttribute('alt')).toBe('');
+            const icon = affordance.querySelector('svg');
+            expect(icon).not.toBeNull();
+            expect(icon?.getAttribute('aria-hidden')).toBe('true');
         },
     );
 

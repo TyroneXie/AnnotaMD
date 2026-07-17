@@ -10,6 +10,7 @@ import { deepClone } from '../../utils';
 import { query } from '../../utils/dom';
 import { h, patch } from '../../utils/snabbdom';
 import BaseScrollFloat from '../baseScrollFloat';
+import { renderActionIcon } from '../actionIcons';
 import {
     getLabelFromEvent,
     MENU_CONFIG,
@@ -123,22 +124,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
 
             for (const item of section.children) {
                 const { title, subTitle, label, icon, shortCut } = item;
-                const iconVnode = h(
-                    'div.icon-container',
-                    h(
-                        'i.icon',
-                        h(
-                            `i.icon-${label.replace(/\s/g, '-')}`,
-                            {
-                                style: {
-                                    'background': `url(${icon}) no-repeat`,
-                                    'background-size': '100%',
-                                },
-                            },
-                            '',
-                        ),
-                    ),
-                );
+                const iconVnode = h('div.icon-container', renderActionIcon(icon));
 
                 const description = h('div.description', [
                     h(
@@ -231,6 +217,21 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
 
     override selectItem({ label }: IQuickInsertMenuItem['children'][number]) {
         const { _block: block, muya } = this;
+        if (label === 'emoji-picker') {
+            block!.text = '';
+            block!.update();
+            block!.setCursor(0, 0, true);
+            this.hide();
+            requestAnimationFrame(() => {
+                muya.eventCenter.emit('muya-emoji-picker', {
+                    reference: block!.domNode!,
+                    emojiText: '',
+                    block,
+                    showAll: true,
+                });
+            });
+            return;
+        }
         replaceBlockByLabel({
             label,
             block: block!.parent!,

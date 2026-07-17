@@ -269,11 +269,14 @@ describe('AnnotaMD paragraph front menu actions', () => {
 
         await vi.waitFor(() => expect(blocks(muya)[0].blockName).toBe('paragraph'));
         const paragraph = blocks(muya)[0];
-        expect(canTurnIntoMenu(paragraph).map(item => item.label)).toContain('block-quote');
+        const quoteItem = canTurnIntoMenu(paragraph).find(item => item.label === 'block-quote');
+        expect(quoteItem?.icon).toBe('quote');
 
         openOn(menu, paragraph);
         menu.render();
-        expect(document.querySelector('.turn-into-item.block-quote .mu-quote-turn-into-icon')).not.toBeNull();
+        const quoteIcon = document.querySelector<HTMLElement>('.turn-into-item.block-quote .mu-action-icon-quote');
+        expect(quoteIcon).not.toBeNull();
+        expect(quoteIcon?.querySelector('svg')).not.toBeNull();
 
         await new Promise(resolve => setTimeout(resolve, 130));
         menu.selectItem(new Event('click'), { label: 'block-quote' });

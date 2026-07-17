@@ -70,22 +70,6 @@
       </template>
     </compound>
 
-    <compound>
-      <template #head>
-        <h6 class="title">
-          {{ t('preferences.general.misc.title') }}
-        </h6>
-      </template>
-      <template #children>
-        <cur-select
-          :description="t('preferences.general.misc.language.title')"
-          :value="language"
-          :options="getLanguageOptions()"
-          :on-change="(value) => onSelectChange('language', value)"
-        />
-      </template>
-    </compound>
-
     <advanced :title="t('preferences.advancedSettings')">
       <compound>
         <template #head>
@@ -159,7 +143,7 @@ import textBox from '../common/textBox/index.vue'
 import Advanced from '../common/advanced/index.vue'
 import { isOsx } from '@/util'
 
-import { getTitleBarStyleOptions, getLanguageOptions } from './config'
+import { getTitleBarStyleOptions } from './config'
 
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
@@ -170,7 +154,6 @@ const {
   defaultDirectoryToOpen,
   treePathExcludePatterns: projectPaths,
   wordWrapInToc,
-  language,
   openedFilesInSidebar
 } = storeToRefs(preferenceStore)
 

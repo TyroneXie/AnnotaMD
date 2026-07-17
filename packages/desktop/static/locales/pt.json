@@ -439,7 +439,7 @@
       "editor": "Editor",
       "markdown": "Markdown",
       "spelling": "Ortografia",
-      "theme": "Tema",
+      "theme": "Aparência",
       "image": "Imagem",
       "keybindings": "Atalhos de Teclado"
     },
@@ -683,7 +683,9 @@
       }
     },
     "theme": {
-      "title": "Tema",
+      "title": "Aparência",
+      "documentTheme": "Tema",
+      "currentTheme": "Tema",
       "followSystemTheme": "Seguir tema do sistema",
       "modeThemes": "Seleção de Tema",
       "lightModeTheme": "Tema do modo claro",

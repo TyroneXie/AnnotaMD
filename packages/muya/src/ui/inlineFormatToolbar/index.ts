@@ -309,17 +309,14 @@ export class InlineFormatToolbar extends BaseFloat {
     private _createIconItem(icon: FormatToolIcon, formats: Token[], i18n: typeof this.muya.i18n) {
         const textStyle = this._currentTextStyle();
         const actionIcon = icon.type === 'text_style'
-            ? renderActionIcon(
-                    'text-style',
-                    TEXT_STYLE_OPTIONS.find(option => option.type === textStyle)!.label,
-                )
+            ? renderActionIcon('text-style')
             : icon.type === 'color_palette'
                 ? renderActionIcon('color')
                 : icon.type === 'annotamd_comment'
                     ? renderActionIcon('comment')
                     : icon.type === 'annotamd_delete_selection'
                         ? renderActionIcon('delete')
-                        : renderActionIcon(formatActionIcon(icon.type)!, icon.label);
+                        : renderActionIcon(formatActionIcon(icon.type)!);
 
         const iconWrapper = h('div.icon-wrapper', icon.type === 'text_style'
             ? [actionIcon, h('span.mu-text-style-chevron', '⌄')]

@@ -391,6 +391,19 @@ class Format extends Content {
             const offset = start + text.length + 2;
             this.setCursor(offset, offset, true);
         }
+        else if (anchor) {
+            const { focus } = this.selection;
+            const anchorOffset = anchor.offset;
+            const focusOffset = focus?.offset ?? anchorOffset;
+            let start = Math.min(anchorOffset, focusOffset);
+            const end = Math.max(anchorOffset, focusOffset);
+            if (start === end && this.text.charAt(start - 1) === ':')
+                start -= 1;
+            const oldText = this.text;
+            this.text = `${oldText.substring(0, start)}:${text}:${oldText.substring(end)}`;
+            const offset = start + text.length + 2;
+            this.setCursor(offset, offset, true);
+        }
     }
 
     replaceImage({ token }: IImageInfo, { alt = '', src = '', title = '' }) {
@@ -701,7 +714,17 @@ class Format extends Content {
                 start.offset,
                 'emoji',
             );
-            if (emojiToken && isEmojiToken(emojiToken)) {
+            if (inputData === ':') {
+                const reference = getCursorReference();
+
+                this.muya.eventCenter.emit('muya-emoji-picker', {
+                    reference,
+                    emojiText: '',
+                    block: this,
+                    showAll: true,
+                });
+            }
+            else if (emojiToken && isEmojiToken(emojiToken)) {
                 const { content: emojiText } = emojiToken;
                 const reference = getCursorReference();
 

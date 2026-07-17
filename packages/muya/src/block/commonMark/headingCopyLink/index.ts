@@ -1,10 +1,11 @@
 import type { Muya } from '../../../muya';
-import formatLinkIcon from '../../../assets/icons/format_link/2.png';
 import { CLASS_NAMES } from '../../../config';
 import { stableSlug } from '../../../state/getTOC';
 import { isKeyboardEvent } from '../../../utils';
 import logger from '../../../utils/logger';
+import { createActionIconElement } from '../../../ui/actionIcons';
 import TreeNode from '../../base/treeNode';
+import '../../../ui/actionIcons.css';
 import '../../../ui/tooltip/index.css';
 
 const debug = logger('headingCopyLink:');
@@ -54,11 +55,9 @@ class HeadingCopyLink extends TreeNode {
         // The button carries the accessible label, so the icon image is purely
         // decorative — an empty `alt` keeps screen readers from announcing it
         // twice and satisfies the `image-alt` a11y rule.
-        const img = document.createElement('img');
-        img.classList.add('mu-icon-inner');
-        img.setAttribute('src', formatLinkIcon);
-        img.setAttribute('alt', '');
-        this.domNode!.appendChild(img);
+        const icon = createActionIconElement('heading-link');
+        icon.classList.add('mu-icon-inner');
+        this.domNode!.appendChild(icon);
 
         this._listen();
     }

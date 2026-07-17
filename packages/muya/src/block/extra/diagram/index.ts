@@ -5,6 +5,8 @@ import logger from '../../../utils/logger';
 import { loadLanguage } from '../../../utils/prism';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
+import { createActionIconElement } from '../../../ui/actionIcons';
+import '../../../ui/actionIcons.css';
 
 const debug = logger('diagram:');
 
@@ -80,84 +82,23 @@ function createSpan(className: string, text: string) {
 }
 
 function createFullscreenIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('mu-diagram-control-svg', 'mu-diagram-fullscreen-icon');
-    svg.setAttribute('viewBox', '0 0 20 20');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M7 3H3v4M13 3h4v4M7 17H3v-4M13 17h4v-4');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', '1.6');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(path);
-    return svg;
+    const icon = createActionIconElement('fullscreen');
+    icon.classList.add('mu-diagram-fullscreen-icon');
+    return icon;
 }
 
 function createPaletteIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('mu-diagram-control-svg', 'mu-diagram-palette-icon');
-    svg.setAttribute('viewBox', '0 0 20 20');
-    svg.setAttribute('aria-hidden', 'true');
-    const outline = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    outline.setAttribute('d', 'M10 2.5a7.5 7.5 0 1 0 0 15h1.1c1.1 0 1.7-1.3 1-2.2-.5-.7 0-1.8.9-1.8h1.5c1.7 0 3-1.4 3-3.1A7.5 7.5 0 0 0 10 2.5Z');
-    outline.setAttribute('fill', 'none');
-    outline.setAttribute('stroke', 'currentColor');
-    outline.setAttribute('stroke-width', '1.5');
-    outline.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(outline);
-    [[6, 7], [9.5, 5.5], [13, 7]].forEach(([cx, cy]) => {
-        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        dot.setAttribute('cx', `${cx}`);
-        dot.setAttribute('cy', `${cy}`);
-        dot.setAttribute('r', '1');
-        dot.setAttribute('fill', 'currentColor');
-        svg.appendChild(dot);
-    });
-    return svg;
+    const icon = createActionIconElement('palette');
+    icon.classList.add('mu-diagram-palette-icon');
+    return icon;
 }
 
 function createCopyIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('mu-diagram-control-svg');
-    svg.setAttribute('viewBox', '0 0 20 20');
-    svg.setAttribute('aria-hidden', 'true');
-    const back = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    back.setAttribute('x', '3');
-    back.setAttribute('y', '3');
-    back.setAttribute('width', '10');
-    back.setAttribute('height', '10');
-    back.setAttribute('rx', '2');
-    const front = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    front.setAttribute('x', '7');
-    front.setAttribute('y', '7');
-    front.setAttribute('width', '10');
-    front.setAttribute('height', '10');
-    front.setAttribute('rx', '2');
-    [back, front].forEach((rect) => {
-        rect.setAttribute('fill', 'white');
-        rect.setAttribute('stroke', 'currentColor');
-        rect.setAttribute('stroke-width', '1.5');
-        svg.appendChild(rect);
-    });
-    return svg;
+    return createActionIconElement('copy');
 }
 
 function createDownloadIcon() {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('mu-diagram-control-svg');
-    svg.setAttribute('viewBox', '0 0 20 20');
-    svg.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M10 3v9m-3-3 3 3 3-3M4 16h12');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', '1.6');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    svg.appendChild(path);
-    return svg;
+    return createActionIconElement('download');
 }
 
 export function diagramPreviewDataUrl(preview: HTMLElement, background: string): string | null {
@@ -249,7 +190,7 @@ class DiagramBlock extends Parent {
         const viewControl = document.createElement('div');
         viewControl.className = 'mu-diagram-control mu-diagram-view-control';
         const viewToggle = createButton('mu-diagram-view-toggle', '', [
-            createSpan('mu-diagram-control-icon', '▤'),
+            createActionIconElement('diagram-view'),
             createSpan('mu-diagram-control-label', i18n.t('Diagram View')),
             createSpan('mu-diagram-control-chevron', '⌄'),
         ]);

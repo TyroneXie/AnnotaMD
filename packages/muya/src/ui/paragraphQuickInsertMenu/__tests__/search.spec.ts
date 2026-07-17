@@ -65,6 +65,7 @@ interface IMenuView {
     renderArray: ParagraphQuickInsertMenu['renderArray'];
     scrollElement: ParagraphQuickInsertMenu['scrollElement'];
     activeItem: ParagraphQuickInsertMenu['activeItem'];
+    selectItem: ParagraphQuickInsertMenu['selectItem'];
 }
 
 function bootMenu(): { muya: Muya; menu: IMenuView } {
@@ -141,6 +142,16 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
         expect(best.score).toBeLessThan(0.001);
     });
 
+    it('finds the emoji picker by its localized Chinese title', () => {
+        const { menu } = bootMenu();
+
+        menu._search('表情');
+
+        expect(menu.renderData[0].name).toBe('advanced blocks');
+        expect(menu.renderData[0].children[0].label).toBe('emoji-picker');
+        expect(menu.renderData[0].children[0].i18nTitle).toBe('表情');
+    });
+
     it('a multi-section match is sorted by best child score (best section first)', () => {
         const { menu } = bootMenu();
 
@@ -166,6 +177,28 @@ describe('paragraphQuickInsertMenu search() — zh-CN localized matching', () =>
 
         expect(menu.renderData).toEqual([]);
         expect(menu.renderArray).toEqual([]);
+    });
+});
+
+describe('paragraphQuickInsertMenu emoji action', () => {
+    it('clears the slash trigger and opens the full emoji picker without converting the paragraph', async () => {
+        const { muya, menu } = bootMenu();
+        const payloads: Array<{ showAll?: boolean; block?: ParagraphContent }> = [];
+        muya.eventCenter.on('muya-emoji-picker', payload => payloads.push(payload));
+
+        menu.selectItem({
+            title: 'Emoji',
+            subTitle: 'Insert an emoji',
+            label: 'emoji-picker',
+            icon: 'emoji',
+        });
+
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+
+        expect(payloads).toHaveLength(1);
+        expect(payloads[0].showAll).toBe(true);
+        expect(payloads[0].block?.text).toBe('');
+        expect(muya.editor.scrollPage!.firstChild.blockName).toBe('paragraph');
     });
 });
 

@@ -35,6 +35,7 @@ export const en = {
         'Code Block': 'Code Block',
         'Quote Block': 'Quote Block',
         'Highlight Block': 'Highlight Block',
+        'Emoji': 'Emoji',
         'Order List': 'Order List',
         'Bullet List': 'Bullet List',
         'To-do List': 'To-do List',
@@ -52,6 +53,8 @@ export const en = {
         'Copy anchor link to this heading': 'Copy anchor link to this heading',
         'Click to add an image': 'Click to add an image',
         'Load image failed': 'Load image failed',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         // formatPicker
         'Emphasize': 'Emphasize',
         'Italic': 'Italic',

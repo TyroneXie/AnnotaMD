@@ -30,6 +30,23 @@ describe('multi-root sidebar integration', () => {
     expect(tree).toContain("t('sideBar.tree.addFolder')")
   })
 
+  it('lets opened files fill an otherwise empty sidebar and reveals the active file', () => {
+    const tree = read('packages/desktop/src/renderer/src/components/sideBar/tree.vue')
+    const openedTab = read(
+      'packages/desktop/src/renderer/src/components/sideBar/treeOpenedTab.vue'
+    )
+
+    expect(tree).toContain("'fills-sidebar': showOpenedFiles && projectTrees.length === 0")
+    expect(tree).toMatch(
+      /\.opened-files\.fills-sidebar \.opened-files-list\s*\{[^}]*max-height:\s*none;[^}]*min-height:\s*0;/s
+    )
+    expect(tree).toMatch(
+      /\.tree-view\.without-projects \.open-project\s*\{[^}]*flex:\s*none;/s
+    )
+    expect(openedTab).toContain('openedFileEl.value?.scrollIntoView({ block: \'nearest\' })')
+    expect(openedTab).toContain('{ immediate: true }')
+  })
+
   it('moves file sorting from preferences into the project sidebar toolbar', () => {
     const tree = read('packages/desktop/src/renderer/src/components/sideBar/tree.vue')
     const preferences = read('packages/desktop/src/renderer/src/prefComponents/general/index.vue')

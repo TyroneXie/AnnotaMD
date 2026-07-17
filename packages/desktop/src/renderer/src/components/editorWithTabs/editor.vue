@@ -240,6 +240,7 @@ const {
   imageRelativeDirectoryName,
   imageFolderPath,
   theme,
+  iconTheme,
   sequenceTheme,
   hideScrollbar,
   spellcheckerEnabled,
@@ -691,6 +692,12 @@ watch(theme, (value, oldValue) => {
 watch(sequenceTheme, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
     editor.value.setOptions({ sequenceTheme: value }, true)
+  }
+})
+
+watch(iconTheme, (value, oldValue) => {
+  if (value !== oldValue && editor.value) {
+    editor.value.setOptions({ iconTheme: value }, true)
   }
 })
 
@@ -1944,6 +1951,7 @@ onMounted(() => {
     hideLinkPopup: hideLinkPopup.value,
     autoCheck: autoCheck.value,
     sequenceTheme: sequenceTheme.value,
+    iconTheme: iconTheme.value,
     plantumlServer: preferencesStore.plantumlServer,
     spellcheckEnabled: spellcheckerEnabled.value,
     spellcheckHideMarks: spellcheckerNoUnderline.value,

@@ -439,7 +439,7 @@
       "editor": "편집기",
       "markdown": "마크다운",
       "spelling": "맞춤법",
-      "theme": "테마",
+      "theme": "외관",
       "image": "이미지",
       "keybindings": "키 바인딩"
     },
@@ -683,7 +683,9 @@
       }
     },
     "theme": {
-      "title": "테마",
+      "title": "외관",
+      "documentTheme": "테마",
+      "currentTheme": "테마",
       "followSystemTheme": "시스템 테마 따르기",
       "modeThemes": "테마 선택",
       "lightModeTheme": "라이트 모드 테마",

@@ -439,7 +439,7 @@
       "editor": "編輯器",
       "markdown": "Markdown",
       "spelling": "拼字",
-      "theme": "主題",
+      "theme": "外觀",
       "image": "圖片",
       "keybindings": "按鍵綁定"
     },
@@ -683,7 +683,9 @@
       }
     },
     "theme": {
-      "title": "主題",
+      "title": "外觀",
+      "documentTheme": "主題",
+      "currentTheme": "主題",
       "followSystemTheme": "跟隨系統主題",
       "modeThemes": "主題選擇",
       "lightModeTheme": "淺色模式主題",

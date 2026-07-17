@@ -336,40 +336,8 @@
     font-size: 18px;
 }
 
-.mu-link-tools .link-menu-item.title .link-menu-icon::before {
-    position: absolute;
-    top: 10px;
-    left: 2px;
-
-    width: 20px;
-    height: 2px;
-
-    background: currentcolor;
-
-    content: '';
-}
-
-.mu-link-tools .link-menu-item.link .link-menu-icon::before,
-.mu-link-tools .link-menu-item.link .link-menu-icon::after {
-    position: absolute;
-
-    box-sizing: border-box;
-    width: 13px;
-    height: 8px;
-
-    border: 2px solid currentcolor;
-    border-radius: 5px;
-    transform: rotate(-45deg);
-
-    content: '';
-}
-
-.mu-link-tools .link-menu-item.link .link-menu-icon::before {
-    top: 4px;
-    left: 2px;
-}
-
-.mu-link-tools .link-menu-item.link .link-menu-icon::after {
-    right: 2px;
-    bottom: 4px;
+.mu-link-tools .link-menu-icon .mu-action-icon,
+.mu-link-tools .view-mode-mark .mu-action-icon {
+    width: 18px;
+    height: 18px;
 }

@@ -4,44 +4,6 @@
     <compound>
       <template #head>
         <h6 class="title">
-          {{ t('preferences.editor.textEditor.title') }}
-        </h6>
-      </template>
-      <template #children>
-        <range
-          :description="t('preferences.editor.textEditor.fontSize')"
-          :value="fontSize"
-          :min="12"
-          :max="32"
-          :step="1"
-          :on-change="(value) => onSelectChange('fontSize', value)"
-        />
-        <range
-          :description="t('preferences.editor.textEditor.lineHeight')"
-          :value="lineHeight"
-          :min="1.2"
-          :max="2.0"
-          :step="0.1"
-          :on-change="(value) => onSelectChange('lineHeight', value)"
-        />
-        <font-text-box
-          :description="t('preferences.editor.textEditor.fontFamily')"
-          :value="editorFontFamily"
-          :on-change="(value) => onSelectChange('editorFontFamily', value)"
-        />
-        <text-box
-          :description="t('preferences.editor.textEditor.maxWidth')"
-          :notes="t('preferences.editor.textEditor.maxWidthNotes')"
-          :input="editorLineWidth"
-          :regex-validator="/^(?:$|[0-9]+(?:ch|px|%)$)/"
-          :on-change="(value) => onSelectChange('editorLineWidth', value)"
-        />
-      </template>
-    </compound>
-
-    <compound>
-      <template #head>
-        <h6 class="title">
           {{ t('preferences.editor.writingBehavior.title') }}
         </h6>
       </template>
@@ -149,11 +111,8 @@ import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
 import type { PreferencesState } from '@/store/preferences'
 import Compound from '../common/compound/index.vue'
-import FontTextBox from '../common/fontTextBox/index.vue'
-import Range from '../common/range/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
-import TextBox from '../common/textBox/index.vue'
 import Advanced from '../common/advanced/index.vue'
 import {
   tabSizeOptions,
@@ -169,9 +128,6 @@ const preferenceStore = usePreferencesStore()
 const defaultEncodingOptions = getDefaultEncodingOptions()
 
 const {
-  fontSize,
-  editorFontFamily,
-  lineHeight,
   autoPairBracket,
   autoPairMarkdownSyntax,
   autoPairQuote,
@@ -182,7 +138,6 @@ const {
   hideLinkPopup,
   autoCheck,
   autoNormalizeLineEndings,
-  editorLineWidth,
   defaultEncoding,
   autoGuessEncoding,
   trimTrailingNewline

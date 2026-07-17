@@ -293,6 +293,11 @@
     "type": "string",
     "default": "light"
   },
+  "iconTheme": {
+    "description": "Theme--Select the icon theme used in editor menus",
+    "enum": ["tabler", "lucide", "heroicons", "feather", "svg", "phosphor", "remix", "material", "hugeicons", "mdi", "bootstrap"],
+    "default": "tabler"
+  },
   "followSystemTheme": {
     "description": "Theme--Use separate theme in dark mode.",
     "type": "boolean",

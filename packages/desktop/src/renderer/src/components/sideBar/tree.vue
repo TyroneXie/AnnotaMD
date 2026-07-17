@@ -1,11 +1,18 @@
 <template>
-  <div class="tree-view">
+  <div
+    class="tree-view"
+    :class="{ 'without-projects': projectTrees.length === 0 }"
+  >
     <div class="title">
       <!-- Keep the editor title-bar spacing clear. -->
     </div>
 
     <!-- Opened tabs -->
-    <div v-if="openedFilesInSidebar" class="opened-files">
+    <div
+      v-if="openedFilesInSidebar"
+      class="opened-files"
+      :class="{ 'fills-sidebar': showOpenedFiles && projectTrees.length === 0 }"
+    >
       <div class="title">
         <el-icon
           class="icon-arrow"
@@ -581,6 +588,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
 }
+.opened-files.fills-sidebar {
+  flex: 1;
+  min-height: 0;
+}
 .default-cursor {
   cursor: pointer;
 }
@@ -589,6 +600,11 @@ onMounted(() => {
   overflow: auto;
   flex: 1;
   padding: 0 8px;
+}
+
+.opened-files.fills-sidebar .opened-files-list {
+  max-height: none;
+  min-height: 0;
 }
 
 .opened-files .opened-files-list::-webkit-scrollbar:vertical {
@@ -686,6 +702,12 @@ onMounted(() => {
   padding-bottom: 100px;
 }
 
+.tree-view.without-projects .open-project {
+  flex: none;
+  justify-content: flex-end;
+  padding: 8px 12px 18px;
+}
+
 .open-project .centered-group {
   display: flex;
   flex-direction: column;
@@ -694,6 +716,9 @@ onMounted(() => {
 
 .open-project .el-button {
   margin-top: 20px;
+}
+.tree-view.without-projects .open-project .el-button {
+  margin-top: 0;
 }
 .open-project .el-button.is-text.is-has-bg,
 .empty-project .el-button.is-text.is-has-bg {

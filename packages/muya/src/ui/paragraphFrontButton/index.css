@@ -63,6 +63,19 @@
     filter: none;
 }
 
+.mu-block-type-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.mu-block-label-glyph .mu-action-icon,
+.mu-block-label-glyph .mu-action-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
 .mu-block-label::before,
 .mu-block-label::after {
     content: none !important;
@@ -86,10 +99,15 @@
     letter-spacing: -0.04em;
 }
 
-.mu-block-label.quote .mu-block-label-glyph {
-    width: 17px;
-    height: 17px;
+.mu-block-label.html .mu-block-label-glyph {
+    color: #7c5ce7;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: -0.08em;
+}
 
+.mu-block-label.quote .mu-block-label-glyph {
     color: #3370ff;
 }
 

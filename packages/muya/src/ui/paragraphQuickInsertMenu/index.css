@@ -71,30 +71,18 @@
     background: #f5f7fa;
 }
 
-.mu-quick-insert .icon-container > i.icon {
-    position: relative;
-
-    display: inline-block;
+.mu-quick-insert .icon-container > .mu-action-icon {
+    display: inline-flex;
     width: 16px;
     height: 16px;
-    overflow: hidden;
-
     color: #646a73;
-
     opacity: 0.8;
-
     transition: all 0.25s ease-in-out;
 }
 
-.mu-quick-insert .icon-container > i.icon > i[class^='icon-'] {
-    position: relative;
-    left: -20px;
-
-    display: inline-block;
+.mu-quick-insert .icon-container > .mu-action-icon svg {
     width: 100%;
     height: 100%;
-
-    filter: drop-shadow(20px 0 currentcolor);
 }
 
 .mu-quick-insert .description {

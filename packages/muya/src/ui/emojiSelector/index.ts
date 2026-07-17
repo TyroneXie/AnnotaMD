@@ -24,6 +24,7 @@ export class EmojiSelector extends BaseScrollFloat {
     private _renderObj: Record<string, EmojiType[]> | null = null;
     private _oldVNode: VNode | null = null;
     private _emoji: Emoji = new Emoji();
+    private _showTimer: ReturnType<typeof setTimeout> | null = null;
     public override renderArray: EmojiType[] = [];
     public override activeItem: EmojiType | null = null;
 
@@ -56,20 +57,31 @@ export class EmojiSelector extends BaseScrollFloat {
     override listen() {
         super.listen();
         const { eventCenter } = this.muya;
-        eventCenter.on('muya-emoji-picker', ({ reference, emojiText, block }) => {
-            if (!emojiText)
+        eventCenter.on('muya-emoji-picker', ({ reference, emojiText, block, showAll }) => {
+            if (this._showTimer) {
+                clearTimeout(this._showTimer);
+                this._showTimer = null;
+            }
+            if (!emojiText && !showAll)
                 return this.hide();
             const text = emojiText.trim();
-            if (text) {
-                this.renderObj = this._emoji.search(text);
+            if (text || showAll) {
+                this.renderObj = showAll ? this._emoji.all() : this._emoji.search(text);
                 const cb: (item: EmojiType) => void = (item) => {
                     if (block && block.setEmoji)
                         block.setEmoji(item.aliases[0]);
                 };
 
                 if (this.renderArray.length) {
-                    this.show(reference, cb);
-                    this.render();
+                    // Let the input/click that requested the picker finish
+                    // before opening it. Otherwise BaseFloat's document-click
+                    // guard or the trailing content-change pass can close the
+                    // picker in the same frame that created it.
+                    this._showTimer = setTimeout(() => {
+                        this._showTimer = null;
+                        this.show(reference, cb);
+                        this.render();
+                    }, 0);
                 }
                 else {
                     this.hide();
@@ -122,6 +134,8 @@ export class EmojiSelector extends BaseScrollFloat {
     }
 
     override destroy() {
+        if (this._showTimer)
+            clearTimeout(this._showTimer);
         super.destroy();
         this._emoji.destroy();
     }

@@ -35,6 +35,7 @@ export const tr = {
         'Code Block': 'Kod Bloğu',
         'Quote Block': 'Alıntı Bloğu',
         'Highlight Block': 'Vurgu Bloğu',
+        'Emoji': 'Emoji',
         'Order List': 'Sıralı Liste',
         'Bullet List': 'Sırasız Liste',
         'To-do List': 'Yapılacaklar Listesi',
@@ -125,6 +126,8 @@ export const tr = {
         'Delete': 'Sil',
         // imageToolbar
         'Edit Image': 'Görseli Düzenle',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': 'Satır İçi Görsel',
         'Remove Image': 'Görseli Kaldır',
         // ImageSelector

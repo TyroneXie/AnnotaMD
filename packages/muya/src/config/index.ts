@@ -329,6 +329,7 @@ export const MUYA_DEFAULT_OPTIONS = {
     vegaTheme: 'latimes', // excel / ggplot2 / quartz / vox / fivethirtyeight / dark / latimes
     plantumlServer: 'https://www.plantuml.com/plantuml',
     sequenceTheme: 'hand' as 'hand' | 'simple', // hand / simple
+    iconTheme: 'tabler' as 'tabler' | 'lucide' | 'heroicons' | 'feather' | 'svg' | 'phosphor' | 'remix' | 'material' | 'hugeicons' | 'mdi' | 'bootstrap',
     hideQuickInsertHint: false,
     hideLinkPopup: false,
     autoCheck: false,

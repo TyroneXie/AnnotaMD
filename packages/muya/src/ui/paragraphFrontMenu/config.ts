@@ -202,5 +202,5 @@ export const FRONT_MENU = [
 export type FrontMenuIcon = (typeof FRONT_MENU)[number];
 
 export function canTurnIntoMenu(block: Parent) {
-    return ALL_MENU_CONFIG.filter(item => canTurnInto(block, item.label));
+    return ALL_MENU_CONFIG.filter(item => item.label !== 'emoji-picker' && canTurnInto(block, item.label));
 }

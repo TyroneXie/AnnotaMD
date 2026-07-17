@@ -236,7 +236,7 @@ class LinkTools extends BaseFloat {
                                     },
                                 },
                                 [
-                                    h('span.view-mode-mark', '−−'),
+                                    h('span.view-mode-mark', renderActionIcon('title-view')),
                                     h('span.view-mode-label', i18n.t('Title View')),
                                     h('span.view-mode-chevron'),
                                 ],
@@ -313,7 +313,7 @@ class LinkTools extends BaseFloat {
                 },
             },
                 [
-                    h('span.link-menu-icon'),
+                    h('span.link-menu-icon', renderActionIcon(mode.type === 'link' ? 'link-view' : 'title-view')),
                     h('span.link-menu-label', i18n.t(mode.label)),
                     ...(mode.selected ? [h('span.link-menu-check', '✓')] : []),
                 ],

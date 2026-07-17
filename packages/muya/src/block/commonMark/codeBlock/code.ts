@@ -4,32 +4,21 @@ import type { CodeContentState, TState } from '../../../state/types';
 import type { Nullable } from '../../../types';
 import type CodeBlock from './index';
 import { fromEvent } from 'rxjs';
-import copyIcon from '../../../assets/icons/copy/2.png';
 import { CopyType } from '../../../clipboard/types';
 import { LINE_NUMBERS_ROWS_CLASS, lineNumbersWrapperHTML } from '../../../utils/codeBlockLineNumbers';
 import logger from '../../../utils/logger';
 import { languageDisplayName } from '../../../utils/prism';
 import { h, toHTML } from '../../../utils/snabbdom';
+import { renderActionIcon } from '../../../ui/actionIcons';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
+import '../../../ui/actionIcons.css';
 
 const debug = logger('code:');
 
 function renderCopyButton(i18n: I18n) {
     const selector = 'a.mu-code-copy';
-    const iconVnode = h(
-        'i.icon',
-        h(
-            'i.icon-inner',
-            {
-                style: {
-                    'background': `url(${copyIcon}) no-repeat`,
-                    'background-size': '100%',
-                },
-            },
-            '',
-        ),
-    );
+    const iconVnode = h('i.icon', renderActionIcon('copy'));
 
     return h(
         selector,
@@ -73,7 +62,7 @@ function renderWrapButton(i18n: I18n, wrapped: boolean) {
             },
         },
         [
-            h('span.mu-code-action-icon', '↵'),
+            h('span.mu-code-action-icon', renderActionIcon('wrap')),
             h('span.mu-code-action-label', label),
         ],
     );

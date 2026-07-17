@@ -445,4 +445,23 @@ describe('markdownToState — HTML block vs single-image paragraph', () => {
         expect(states[0].name).toBe('html-block');
         expect(states[0].text).toBe('<div>x</div>');
     });
+
+    it('keeps a GitHub details section and its Markdown body in one HTML block', () => {
+        const markdown = [
+            '<details>',
+            '<summary><strong>更多能力</strong></summary>',
+            '',
+            '- **完整 Markdown 支持**',
+            '- 第二项',
+            '',
+            '</details>',
+            '',
+        ].join('\n');
+        const states = generate(markdown);
+
+        expect(states).toHaveLength(1);
+        expect(states[0].name).toBe('html-block');
+        expect(states[0].text).toContain('- **完整 Markdown 支持**');
+        expect(states[0].text).toContain('</details>');
+    });
 });

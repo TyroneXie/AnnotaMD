@@ -176,27 +176,35 @@
     opacity: 1;
 }
 
-/* heading copy-anchor affordance — revealed on heading hover, sits in the
-   left gutter (matches the legacy `ag-copy-header-link` placement). */
+/* Keep the copy-anchor action beside the heading text. The left gutter is
+   reserved for the section disclosure and paragraph front button. */
+.mu-container h1 > .mu-content,
+.mu-container h2 > .mu-content,
+.mu-container h3 > .mu-content,
+.mu-container h4 > .mu-content,
+.mu-container h5 > .mu-content,
+.mu-container h6 > .mu-content {
+    display: inline;
+}
+
 .mu-container h1 > .mu-copy-header-link,
 .mu-container h2 > .mu-copy-header-link,
 .mu-container h3 > .mu-copy-header-link,
 .mu-container h4 > .mu-copy-header-link,
 .mu-container h5 > .mu-copy-header-link,
 .mu-container h6 > .mu-copy-header-link {
-    position: absolute;
-    top: 0;
-    left: -40px;
+    position: relative;
 
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 18px;
     height: 18px;
+    margin-left: 6px;
+    vertical-align: -2px;
 
     cursor: pointer;
 
-    transform: translateY(calc(0.7em - 9px));
     opacity: 0;
 
     transition: opacity 0.2s ease;
@@ -590,6 +598,7 @@
 }
 
 .mu-code-action-icon {
+    display: inline-flex;
     color: #8f959e;
     font-size: 14px;
     line-height: 1;
@@ -617,14 +626,10 @@
     overflow: hidden;
 }
 
-.mu-code-copy i.icon > i[class^='icon-'] {
-    position: absolute;
-    left: -14px;
-
+.mu-code-copy i.icon .mu-action-icon,
+.mu-code-action-icon .mu-action-icon {
     width: 100%;
     height: 100%;
-
-    filter: drop-shadow(14px 0 #8f959e);
 }
 
 /* code block line numbers (option: codeBlockLineNumbers) */
@@ -1386,6 +1391,12 @@ figure.mu-diagram-block:hover > .mu-diagram-toolbar,
     width: 14px;
     height: 14px;
     color: #8f959e;
+}
+
+.mu-diagram-toolbar .mu-action-icon,
+.mu-diagram-toolbar .mu-action-icon svg {
+    width: 14px;
+    height: 14px;
 }
 
 .mu-diagram-control-icon {

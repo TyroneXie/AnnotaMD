@@ -36,6 +36,13 @@ class Emoji {
         return result;
     }
 
+    all(limitPerCategory = 12): Record<string, EmojiType[]> {
+        return Object.fromEntries(
+            Object.entries(emojisForSearch)
+                .map(([category, items]) => [category, items.slice(0, limitPerCategory)]),
+        );
+    }
+
     destroy() {
         return this._cache.clear();
     }

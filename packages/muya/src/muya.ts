@@ -18,6 +18,7 @@ import {
     MUYA_DEFAULT_OPTIONS,
     URL_REG,
 } from './config/index';
+import { setIconTheme } from './ui/iconThemes';
 
 import { Editor } from './editor/index';
 import EventCenter from './event/index';
@@ -148,6 +149,7 @@ export class Muya {
 
     constructor(element: HTMLElement, options?: Partial<IMuyaOptions>) {
         this.options = Object.assign({}, MUYA_DEFAULT_OPTIONS, options ?? {});
+        setIconTheme(this.options.iconTheme);
         this.eventCenter = new EventCenter();
         this.domNode = getContainer(element, this.options);
         // this.domNode[BLOCK_DOM_PROPERTY] = this;
@@ -332,6 +334,10 @@ export class Muya {
                 CLASS_NAMES.MU_SHOW_QUICK_INSERT_HINT,
                 !options.hideQuickInsertHint,
             );
+        }
+
+        if ('iconTheme' in options && options.iconTheme) {
+            setIconTheme(options.iconTheme);
         }
 
         if ('wrapCodeBlocks' in options) {

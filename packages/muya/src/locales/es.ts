@@ -35,6 +35,7 @@ export const es = {
         'Code Block': 'Bloque de código',
         'Quote Block': 'Cita',
         'Highlight Block': 'Bloque destacado',
+        'Emoji': 'Emoji',
         'Order List': 'Lista ordenada',
         'Bullet List': 'Lista con viñetas',
         'To-do List': 'Lista de tareas',
@@ -136,6 +137,8 @@ export const es = {
         'Delete': 'Eliminar',
         // imageToolbar
         'Edit Image': 'Editar imagen',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': 'Imagen en línea',
         'Remove Image': 'Eliminar imagen',
         // ImageSelector

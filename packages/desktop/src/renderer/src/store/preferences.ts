@@ -84,6 +84,7 @@ export interface PreferencesState {
 
   // ----- Theme -----
   theme: string
+  iconTheme: string
   followSystemTheme: boolean
   lightModeTheme: string
   darkModeTheme: string
@@ -201,6 +202,7 @@ export const usePreferencesStore = defineStore('preferences', {
     plantumlServer: 'https://www.plantuml.com/plantuml',
 
     theme: 'light',
+    iconTheme: 'tabler',
     followSystemTheme: true,
     lightModeTheme: 'light',
     darkModeTheme: 'dark',

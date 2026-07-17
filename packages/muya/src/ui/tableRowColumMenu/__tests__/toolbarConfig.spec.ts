@@ -66,9 +66,8 @@ describe('feishu-style table axis toolbar configuration', () => {
         );
     });
 
-    it('keeps the inline-code glyph narrow inside the shared icon canvas', () => {
-        expect(sharedIconCss).toMatch(
-            /\.mu-action-icon-inline-code\s*\{[^}]*font-size:\s*12px;[^}]*transform:\s*scaleX\(0\.9\);/,
-        );
+    it('uses SVG stroke-based icons instead of text glyphs', () => {
+        expect(sharedIconCss).not.toMatch(/\.mu-action-icon svg\s*\{[^}]*(?:fill|stroke):/s);
+        expect(sharedIconCss).not.toContain('.mu-action-icon-inline-code');
     });
 });

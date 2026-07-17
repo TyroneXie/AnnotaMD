@@ -43,6 +43,42 @@ const CONTAINER_TOKEN_TYPES = new Set([
     'footnote',
 ]);
 
+export function mergeDetailsHtmlTokens(tokens: TBlockToken[]): TBlockToken[] {
+    const merged: TBlockToken[] = [];
+
+    for (let index = 0; index < tokens.length; index++) {
+        const token = tokens[index];
+        if (token.type !== 'html' || !/<details\b/i.test(token.raw) || /<\/details>/i.test(token.raw)) {
+            merged.push(token);
+            continue;
+        }
+
+        const parts = [token.raw];
+        let depth = (token.raw.match(/<details\b/gi)?.length ?? 0)
+            - (token.raw.match(/<\/details>/gi)?.length ?? 0);
+        let cursor = index + 1;
+        for (; cursor < tokens.length && depth > 0; cursor++) {
+            const current = tokens[cursor];
+            if (!('raw' in current))
+                break;
+            parts.push(current.raw);
+            depth += (current.raw.match(/<details\b/gi)?.length ?? 0)
+                - (current.raw.match(/<\/details>/gi)?.length ?? 0);
+        }
+
+        if (depth === 0) {
+            const text = parts.join('');
+            merged.push({ ...token, raw: text, text });
+            index = cursor - 1;
+        }
+        else {
+            merged.push(token);
+        }
+    }
+
+    return merged;
+}
+
 export class MarkdownToState {
     constructor(private _options: IMarkdownToStateOptions = DEFAULT_OPTIONS) {}
 
@@ -88,12 +124,12 @@ export class MarkdownToState {
         // markdownToState injects synthetic `block-end` markers (see the
         // blockquote/list/list_item/footnote cases below) to pop the parent
         // stack, so the working stream is wider than what `lexBlock` returns.
-        const tokens: TBlockToken[] = lexBlock(markdown, {
+        const tokens: TBlockToken[] = mergeDetailsHtmlTokens(lexBlock(markdown, {
             footnote,
             math,
             frontMatter,
             isGitlabCompatibilityEnabled,
-        });
+        }));
 
         const states: TState[] = [];
         let token: TBlockToken | undefined;

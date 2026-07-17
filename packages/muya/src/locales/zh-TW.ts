@@ -35,6 +35,7 @@ export const zhTW = {
         'Code Block': '程式碼區塊',
         'Quote Block': '引言',
         'Highlight Block': '高亮區塊',
+        'Emoji': 'Emoji',
         'Order List': '有序清單',
         'Bullet List': '無序清單',
         'To-do List': '待辦清單',
@@ -136,6 +137,8 @@ export const zhTW = {
         'Delete': '刪除段落',
         // imageToolbar
         'Edit Image': '編輯圖片',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': '行內圖片',
         'Remove Image': '刪除圖片',
         // ImageSelector

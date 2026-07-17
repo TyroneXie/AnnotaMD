@@ -1,48 +1,7 @@
 <template>
   <div class="pref-markdown">
     <h4>{{ t('preferences.markdown.title') }}</h4>
-    <compound>
-      <template #head>
-        <h6 class="title">
-          {{ t('preferences.markdown.codeBlock.title') }}
-        </h6>
-      </template>
-      <template #children>
-        <font-text-box
-          :description="t('preferences.editor.codeBlock.fontFamily')"
-          :only-monospace="true"
-          :value="codeFontFamily"
-          :on-change="(value) => onSelectChange('codeFontFamily', value)"
-        />
-        <bool
-          :description="t('preferences.markdown.codeBlock.showLineNumbers')"
-          :bool="codeBlockLineNumbers"
-          :on-change="(value) => onSelectChange('codeBlockLineNumbers', value)"
-        />
-        <bool
-          :description="t('preferences.markdown.codeBlock.wrap')"
-          :bool="wrapCodeBlocks"
-          :on-change="(value) => onSelectChange('wrapCodeBlocks', value)"
-        />
-      </template>
-    </compound>
-
     <advanced :title="t('preferences.advancedSettings')">
-      <compound>
-        <template #head>
-          <h6 class="title">
-            {{ t('preferences.markdown.codeBlock.title') }}
-          </h6>
-        </template>
-        <template #children>
-          <bool
-            :description="t('preferences.editor.codeBlock.removeEmptyLines')"
-            :bool="trimUnnecessaryCodeBlockEmptyLines"
-            :on-change="(value) => onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)"
-          />
-        </template>
-      </compound>
-
       <compound>
         <template #head>
           <h6 class="title">
@@ -162,7 +121,6 @@ import type { PreferencesState } from '@/store/preferences'
 import Bool from '../common/bool/index.vue'
 import CurSelect from '../common/select/index.vue'
 import TextBox from '../common/textBox/index.vue'
-import FontTextBox from '../common/fontTextBox/index.vue'
 import Advanced from '../common/advanced/index.vue'
 import {
   bulletListMarkerOptions,
@@ -187,10 +145,6 @@ const {
   footnote,
   isHtmlEnabled,
   isGitlabCompatibilityEnabled,
-  codeBlockLineNumbers,
-  wrapCodeBlocks,
-  codeFontFamily,
-  trimUnnecessaryCodeBlockEmptyLines,
   sequenceTheme,
   plantumlServer
 } = storeToRefs(preferenceStore)

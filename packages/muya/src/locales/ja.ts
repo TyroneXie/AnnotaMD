@@ -35,6 +35,7 @@ export const ja = {
         'Code Block': 'コードブロック',
         'Quote Block': '引用',
         'Highlight Block': 'ハイライトブロック',
+        'Emoji': 'Emoji',
         'Order List': '秩序リスト',
         'Bullet List': '無秩序リスト',
         'To-do List': 'タスクリスト',
@@ -136,6 +137,8 @@ export const ja = {
         'Delete': '段落を削除する',
         // imageToolbar
         'Edit Image': '画像を編集する',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': '行内画像',
         'Remove Image': '画像を削除する',
         // ImageSelector

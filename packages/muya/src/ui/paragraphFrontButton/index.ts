@@ -9,7 +9,10 @@ import OrderList from '../../block/commonMark/orderList';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isMouseEvent, throttle, verticalPositionInRect } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import { renderActionIcon } from '../actionIcons';
+import { getIcon } from './config';
 
+import '../actionIcons.css';
 import './index.css';
 
 const LEFT_OFFSET = 100;
@@ -149,7 +152,7 @@ export function frontButtonMainAxis(
     return (isLooseList ? paddingTop * 2 : paddingTop) + 8 + (isCollapsedSection ? 18 : 0);
 }
 
-function blockLabel(block: Parent) {
+export function frontButtonBlockLabel(block: Parent) {
     switch (block.blockName) {
         case 'atx-heading':
         case 'setext-heading':
@@ -164,12 +167,14 @@ function blockLabel(block: Parent) {
             return '✦';
         case 'code-block':
             return '</>';
+        case 'html-block':
+            return '<>';
         default:
             return 'T';
     }
 }
 
-function blockKind(block: Parent) {
+export function frontButtonBlockKind(block: Parent) {
     switch (block.blockName) {
         case 'atx-heading':
         case 'setext-heading':
@@ -190,103 +195,18 @@ function blockKind(block: Parent) {
             return 'quote';
         case 'highlight-block':
             return 'highlight';
+        case 'html-block':
+            return 'html';
+        case 'thematic-break':
+            return 'thematic-break';
         default:
             return 'text';
     }
 }
 
-function renderListIcon(kind: 'order-list' | 'bullet-list') {
+function renderBlockLabel(kind: string, label: string, block: Parent) {
     return h(`span.mu-block-label.${kind}`, [
-        h('span.mu-block-label-glyph.mu-list-icon', [1, 2, 3].map(index => h('span.mu-list-icon-row', [
-            h('span.mu-list-icon-marker', kind === 'order-list' ? `${index}` : ''),
-            h('span.mu-list-icon-line'),
-        ]))),
-    ]);
-}
-
-function renderTableIcon() {
-    return h('span.mu-block-label.table', [
-        h('span.mu-block-label-glyph.mu-table-icon', Array.from({ length: 9 }, () => h('i'))),
-    ]);
-}
-
-function renderDiagramIcon() {
-    return h('span.mu-block-label.diagram', [
-        h('span.mu-block-label-glyph.mu-diagram-icon', [
-            h('i.node.root'),
-            h('i.node.left'),
-            h('i.node.right'),
-            h('i.link.stem'),
-            h('i.link.branch'),
-        ]),
-    ]);
-}
-
-function renderQuoteIcon() {
-    const pathAttrs = {
-        fill: 'none',
-        stroke: 'currentColor',
-        'stroke-width': '1.7',
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-    };
-    return h('span.mu-block-label.quote', [
-        h(
-            'svg.mu-block-label-glyph.mu-quote-icon',
-            {
-                attrs: {
-                    viewBox: '0 0 20 20',
-                    'aria-hidden': 'true',
-                },
-            },
-            [
-                h('path', { attrs: { ...pathAttrs, d: 'M4.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
-                h('path', { attrs: { ...pathAttrs, d: 'M11.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
-            ],
-        ),
-    ]);
-}
-
-function renderImageIcon() {
-    const pathAttrs = {
-        fill: 'none',
-        stroke: 'currentColor',
-        'stroke-width': '1.8',
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-    };
-    return h('span.mu-block-label.image', [
-        h(
-            'svg.mu-block-label-glyph.mu-image-block-icon',
-            {
-                attrs: {
-                    viewBox: '0 0 24 24',
-                    'aria-hidden': 'true',
-                },
-            },
-            [
-                h('rect', { attrs: { ...pathAttrs, x: '4', y: '4.5', width: '16', height: '15', rx: '1.8' } }),
-                h('circle', { attrs: { ...pathAttrs, cx: '15.8', cy: '8.8', r: '1.3' } }),
-                h('path', { attrs: { ...pathAttrs, d: 'M6.5 16.8 10.2 12.7l2.6 2.7 2-2 2.8 3.4' } }),
-            ],
-        ),
-    ]);
-}
-
-function renderBlockLabel(kind: string, label: string) {
-    if (kind === 'order-list' || kind === 'bullet-list')
-        return renderListIcon(kind);
-    if (kind === 'table')
-        return renderTableIcon();
-    if (kind === 'diagram')
-        return renderDiagramIcon();
-    if (kind === 'quote')
-        return renderQuoteIcon();
-    if (kind === 'image')
-        return renderImageIcon();
-
-    return h(`span.mu-block-label.${kind}`, [
-        h('span.mu-block-label-glyph', label),
+        h('span.mu-block-label-glyph', renderActionIcon(kind === 'image' ? 'inline-image' : getIcon(block))),
     ]);
 }
 
@@ -664,13 +584,13 @@ export class ParagraphFrontButton {
         const { _container: container, _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
 
         const visualBlock = displayBlock(block!);
-        const kind = this._kindOverride ?? blockKind(visualBlock);
-        const label = blockLabel(visualBlock);
+        const kind = this._kindOverride ?? frontButtonBlockKind(visualBlock);
+        const label = frontButtonBlockLabel(visualBlock);
         const iconWrapperSelector = `div.mu-icon-wrapper.${kind}`;
         const vnode = h(
             iconWrapperSelector,
             [
-                renderBlockLabel(kind, label),
+                renderBlockLabel(kind, label, visualBlock),
                 renderGrip(),
             ],
         );

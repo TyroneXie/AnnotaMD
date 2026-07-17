@@ -442,7 +442,7 @@
       "editor": "Editor",
       "markdown": "Markdown",
       "spelling": "Spelling",
-      "theme": "Theme",
+      "theme": "Appearance",
       "image": "Image",
       "keybindings": "Keybindings"
     },
@@ -524,7 +524,8 @@
         "lineHeight": "Line height",
         "fontFamily": "Font family",
         "maxWidth": "Max width",
-        "maxWidthNotes": "Maximum width of editor content"
+        "maxWidthNotes": "Maximum width of editor content",
+        "iconTheme": "Icon theme"
       },
       "codeBlock": {
         "title": "Code Block",
@@ -691,7 +692,9 @@
       }
     },
     "theme": {
-      "title": "Theme",
+      "title": "Appearance",
+      "documentTheme": "Theme",
+      "currentTheme": "Theme",
       "followSystemTheme": "Follow System Theme",
       "modeThemes": "Theme Selection",
       "lightModeTheme": "Light mode theme",

@@ -35,6 +35,7 @@ export const ko = {
         'Code Block': '코드 블록',
         'Quote Block': '인용',
         'Highlight Block': '강조 블록',
+        'Emoji': 'Emoji',
         'Order List': '번호 목록',
         'Bullet List': '글머리 기호 목록',
         'To-do List': '할 일 목록',
@@ -136,6 +137,8 @@ export const ko = {
         'Delete': '단락 삭제',
         // imageToolbar
         'Edit Image': '이미지 편집',
+        'Edit Block': 'Edit Block',
+        'Delete Block': 'Delete Block',
         'Inline Image': '인라인 이미지',
         'Remove Image': '이미지 삭제',
         // ImageSelector

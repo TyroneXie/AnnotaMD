@@ -439,7 +439,7 @@
       "editor": "Editor",
       "markdown": "Markdown",
       "spelling": "Rechtschreibung",
-      "theme": "Design",
+      "theme": "Erscheinungsbild",
       "image": "Bild",
       "keybindings": "Tastenkürzel"
     },
@@ -683,7 +683,9 @@
       }
     },
     "theme": {
-      "title": "Design",
+      "title": "Erscheinungsbild",
+      "documentTheme": "Design",
+      "currentTheme": "Design",
       "followSystemTheme": "Systemdesign folgen",
       "modeThemes": "Design-Auswahl",
       "lightModeTheme": "Helles Modus-Design",

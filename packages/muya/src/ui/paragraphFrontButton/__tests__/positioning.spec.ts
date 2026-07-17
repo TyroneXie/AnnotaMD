@@ -8,6 +8,8 @@ import { BLOCK_DOM_PROPERTY } from '../../../config';
 import { Muya } from '../../../muya';
 import {
     frontButtonElementsForEditor,
+    frontButtonBlockKind,
+    frontButtonBlockLabel,
     frontButtonMainAxis,
     frontButtonTarget,
     imageFrontButtonWrapper,
@@ -27,6 +29,17 @@ afterEach(() => {
 });
 
 describe('paragraph front button positioning', () => {
+    it('identifies raw HTML blocks instead of presenting them as plain text', () => {
+        const block = { blockName: 'html-block' } as unknown as Parent;
+        expect(frontButtonBlockKind(block)).toBe('html');
+        expect(frontButtonBlockLabel(block)).toBe('<>');
+    });
+
+    it('identifies thematic breaks so they use the shared horizontal-line icon instead of T', () => {
+        const block = { blockName: 'thematic-break' } as unknown as Parent;
+        expect(frontButtonBlockKind(block)).toBe('thematic-break');
+    });
+
     it('keeps the code-block menu next to the block despite its tall header padding', () => {
         expect(frontButtonMainAxis('code-block', 40, false)).toBe(8);
     });

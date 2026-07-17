@@ -1,27 +1,4 @@
-import bulletListIcon from '../../assets/icons/bullet_list/2.png';
-import vegaIcon from '../../assets/icons/chart/2.png';
-import codeIcon from '../../assets/icons/code/2.png';
-import flowchartIcon from '../../assets/icons/flowchart/2.png';
-import frontMatterIcon from '../../assets/icons/front_matter/2.png';
-import header1Icon from '../../assets/icons/heading_1/2.png';
-import header2Icon from '../../assets/icons/heading_2/2.png';
-import header3Icon from '../../assets/icons/heading_3/2.png';
-import header4Icon from '../../assets/icons/heading_4/2.png';
-import header5Icon from '../../assets/icons/heading_5/2.png';
-import header6Icon from '../../assets/icons/heading_6/2.png';
-import highlightIcon from '../../assets/icons/highlight/2.png';
-import hrIcon from '../../assets/icons/horizontal_line/2.png';
-import htmlIcon from '../../assets/icons/html/2.png';
-import mathBlockIcon from '../../assets/icons/math/2.png';
-import mermaidIcon from '../../assets/icons/mermaid/2.png';
-import newTableIcon from '../../assets/icons/new_table/2.png';
-import orderListIcon from '../../assets/icons/order_list/2.png';
-import paragraphIcon from '../../assets/icons/paragraph/2.png';
-import plantumlIcon from '../../assets/icons/plantuml/2.png';
-import quoteIcon from '../../assets/icons/quote_block/2.png';
-import sequenceIcon from '../../assets/icons/sequence/2.png';
-
-import todoListIcon from '../../assets/icons/todolist/2.png';
+import type { ActionIconName } from '../actionIcons';
 import { isOsx } from '../../config';
 import { isKeyboardEvent } from '../../utils';
 
@@ -42,7 +19,7 @@ export interface IQuickInsertMenuItem {
         title: string;
         subTitle: string;
         label: string;
-        icon: string;
+        icon: ActionIconName;
         score?: number;
         i18nTitle?: string;
         shortCut?: string;
@@ -70,7 +47,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit0',
                 },
-                icon: paragraphIcon,
+                icon: 'paragraph',
             },
             {
                 title: 'Horizontal Line',
@@ -83,7 +60,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Minus',
                 },
-                icon: hrIcon,
+                icon: 'horizontal-line',
             },
             {
                 title: 'Front Matter',
@@ -96,7 +73,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyY',
                 },
-                icon: frontMatterIcon,
+                icon: 'frontmatter',
             },
         ],
     },
@@ -114,7 +91,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit1',
                 },
-                icon: header1Icon,
+                icon: 'heading-1',
             },
             {
                 title: 'Heading 2',
@@ -127,7 +104,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit2',
                 },
-                icon: header2Icon,
+                icon: 'heading-2',
             },
             {
                 title: 'Heading 3',
@@ -140,7 +117,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit3',
                 },
-                icon: header3Icon,
+                icon: 'heading-3',
             },
             {
                 title: 'Heading 4',
@@ -153,7 +130,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit4',
                 },
-                icon: header4Icon,
+                icon: 'heading-4',
             },
             {
                 title: 'Heading 5',
@@ -166,7 +143,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit5',
                 },
-                icon: header5Icon,
+                icon: 'heading-5',
             },
             {
                 title: 'Heading 6',
@@ -179,7 +156,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'Digit6',
                 },
-                icon: header6Icon,
+                icon: 'heading-6',
             },
         ],
     },
@@ -198,7 +175,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyT',
                 },
-                icon: newTableIcon,
+                icon: 'table',
             },
             {
                 title: 'Display Math',
@@ -211,7 +188,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyM',
                 },
-                icon: mathBlockIcon,
+                icon: 'math',
             },
             {
                 title: 'HTML Block',
@@ -224,7 +201,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyJ',
                 },
-                icon: htmlIcon,
+                icon: 'html',
             },
             {
                 title: 'Code Block',
@@ -237,7 +214,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyC',
                 },
-                icon: codeIcon,
+                icon: 'code',
             },
             {
                 title: 'Quote Block',
@@ -251,13 +228,19 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyQ',
                 },
-                icon: quoteIcon,
+                icon: 'quote',
             },
             {
                 title: 'Highlight Block',
                 subTitle: 'A nested note container',
                 label: 'highlight-block',
-                icon: highlightIcon,
+                icon: 'highlight',
+            },
+            {
+                title: 'Emoji',
+                subTitle: 'Insert an emoji',
+                label: 'emoji-picker',
+                icon: 'emoji',
             },
         ],
     },
@@ -275,7 +258,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyO',
                 },
-                icon: orderListIcon,
+                icon: 'ordered-list',
             },
             {
                 title: 'Bullet List',
@@ -288,7 +271,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyU',
                 },
-                icon: bulletListIcon,
+                icon: 'bullet-list',
             },
             {
                 title: 'To-do List',
@@ -301,7 +284,7 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                     metaKey: true,
                     code: 'KeyX',
                 },
-                icon: todoListIcon,
+                icon: 'task-list',
             },
         ],
     },
@@ -312,31 +295,31 @@ export const MENU_CONFIG: IQuickInsertMenuItem[] = [
                 title: 'Vega Chart',
                 subTitle: 'By vega-lite.js',
                 label: 'diagram vega-lite',
-                icon: vegaIcon,
+                icon: 'chart',
             },
             {
                 title: 'Mermaid',
                 subTitle: 'By mermaid',
                 label: 'diagram mermaid',
-                icon: mermaidIcon,
+                icon: 'mermaid',
             },
             {
                 title: 'Plantuml',
                 subTitle: 'By plantuml',
                 label: 'diagram plantuml',
-                icon: plantumlIcon,
+                icon: 'plantuml',
             },
             {
                 title: 'Flowchart',
                 subTitle: 'By flowchart.js',
                 label: 'diagram flowchart',
-                icon: flowchartIcon,
+                icon: 'flowchart',
             },
             {
                 title: 'Sequence',
                 subTitle: 'By js-sequence-diagrams',
                 label: 'diagram sequence',
-                icon: sequenceIcon,
+                icon: 'sequence',
             },
         ],
     },

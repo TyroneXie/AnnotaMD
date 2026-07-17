@@ -32,59 +32,22 @@ import '../actionIcons.css';
 import '../tooltip/index.css';
 import './index.css';
 
-function renderQuoteTurnIntoIcon() {
-    const pathAttrs = {
-        fill: 'none',
-        stroke: 'currentColor',
-        'stroke-width': '1.7',
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-    };
-
-    return h(
-        'i.icon.mu-quote-turn-into-icon',
-        h(
-            'svg',
-            {
-                attrs: {
-                    viewBox: '0 0 20 20',
-                    'aria-hidden': 'true',
-                },
-            },
-            [
-                h('path', { attrs: { ...pathAttrs, d: 'M4.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
-                h('path', { attrs: { ...pathAttrs, d: 'M11.5 5.5h3v4.2c0 2.4-1.1 3.8-3.4 4.8' } }),
-            ],
-        ),
-    );
+function renderIcon({ icon }: { label: string; icon: ActionIconName }) {
+    return h('i.icon', renderActionIcon(icon));
 }
 
-function renderIcon({ label, icon }: { label: string; icon: string }) {
-    if (label === 'block-quote')
-        return renderQuoteTurnIntoIcon();
-    if (label === 'highlight-block')
-        return h('i.icon.mu-highlight-turn-into-icon', '✦');
-
-    return h(
-        'i.icon',
-        h(
-            `i.icon-${label.replace(/\s/g, '-')}`,
-            {
-                style: {
-                    'background': `url(${icon}) no-repeat`,
-                    'background-size': '100%',
-                },
-            },
-            '',
-        ),
-    );
-}
-
-function renderMenuIcon({ label, icon }: { label: string; icon?: string }) {
+function renderMenuIcon({ label, icon }: { label: string; icon?: ActionIconName }) {
     if (icon)
         return renderIcon({ label, icon });
 
     const sharedActions: Partial<Record<string, ActionIconName>> = {
+        'copy-plain-text': 'copy-plain-text',
+        'copy-markdown': 'copy-markdown',
+        'copy-section': 'copy',
+        'duplicate': 'duplicate',
+        'duplicate-section': 'duplicate',
+        'cut': 'cut',
+        'cut-section': 'cut',
         'comment': 'comment',
         'delete': 'delete',
         'delete-section': 'delete',
@@ -94,6 +57,8 @@ function renderMenuIcon({ label, icon }: { label: string; icon?: string }) {
         'move-section-down': 'move-down',
         'insert-before': 'insert-above',
         'insert-after': 'insert-below',
+        'promote-section': 'promote',
+        'demote-section': 'demote',
     };
     const actionIcon = sharedActions[label];
     return actionIcon
@@ -364,7 +329,7 @@ export class ParagraphFrontMenu extends BaseFloat {
             if (this._kind === 'image' && label === 'delete')
                 return;
             const icon = 'icon' in menuItem && typeof menuItem.icon === 'string'
-                ? menuItem.icon
+                ? menuItem.icon as ActionIconName
                 : undefined;
             if (visible && !visible(block!))
                 return;

@@ -79,3 +79,50 @@ export const getDefaultEncodingOptions = (): PrefSelectOption<string>[] => {
   defaultEncodingOptions = options
   return defaultEncodingOptions
 }
+
+export const iconThemeOptions: PrefSelectOption<string>[] = [
+  {
+    label: 'Tabler',
+    value: 'tabler'
+  },
+  {
+    label: 'Lucide',
+    value: 'lucide'
+  },
+  {
+    label: 'Heroicons',
+    value: 'heroicons'
+  },
+  {
+    label: 'Feather',
+    value: 'feather'
+  },
+  {
+    label: 'SVG',
+    value: 'svg'
+  },
+  {
+    label: 'Phosphor',
+    value: 'phosphor'
+  },
+  {
+    label: 'Remix Icon',
+    value: 'remix'
+  },
+  {
+    label: 'Material Symbols',
+    value: 'material'
+  },
+  {
+    label: 'Hugeicons',
+    value: 'hugeicons'
+  },
+  {
+    label: 'Material Design Icons',
+    value: 'mdi'
+  },
+  {
+    label: 'Bootstrap Icons',
+    value: 'bootstrap'
+  }
+]

@@ -23,6 +23,11 @@ import { attachDragDropImageHandlers } from './dragDropImage';
 import { attachLinkMouseHandlers } from './linkMouseEvents';
 
 const debug = logger('editor:');
+const PREVIEW_ONLY_BLOCKS = new Set(['html-block', 'math-block', 'diagram']);
+
+export function isPreviewOnlyContent(block: Content): boolean {
+    return block.getAncestors().some(parent => PREVIEW_ONLY_BLOCKS.has(parent.blockName));
+}
 
 // The pick/drop walkers operate on live block-tree nodes (ScrollPage,
 // Parent, Content). The tree's instance methods (queryBlock, find,
@@ -376,6 +381,12 @@ export class Editor {
         const firstLeafBlock = scrollPage?.firstContentInDescendant();
 
         if (firstLeafBlock == null)
+            return;
+
+        // Opening a document should not turn a rendered HTML/math/diagram
+        // preview into source merely because it happens to be the first block.
+        // The preview toolbar remains the explicit way to enter source editing.
+        if (isPreviewOnlyContent(firstLeafBlock))
             return;
 
         const cursor = {
