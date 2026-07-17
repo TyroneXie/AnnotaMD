@@ -37,8 +37,10 @@
     </compound>
 
     <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.general.startup.startupFilesFolders') }}</h6>
+      </template>
       <template #children>
-        <h6>{{ t('preferences.general.startup.startupFilesFolders') }}</h6>
         <section>
           <el-radio-group v-model="startUpAction" class="startup-action-ctrl">
             <!--
@@ -70,63 +72,63 @@
       </template>
     </compound>
 
-    <advanced :title="t('preferences.advancedSettings')">
-      <compound>
-        <template #head>
-          <h6 class="title">
-            {{ t('preferences.general.window.title') }}
-          </h6>
-        </template>
-        <template #children>
-          <cur-select
-            v-if="!isOsx"
-            :description="t('preferences.general.window.titleBarStyle.title')"
-            :notes="t('preferences.general.window.requiresRestart')"
-            :value="titleBarStyle"
-            :options="getTitleBarStyleOptions()"
-            :on-change="(value) => onSelectChange('titleBarStyle', value)"
-          />
-          <bool
-            :description="t('preferences.general.window.openItemsInNewWindow')"
-            :bool="openItemsInNewWindow"
-            :on-change="(value) => (openItemsInNewWindow = value)"
-          />
-        </template>
-      </compound>
+    <compound>
+      <template #head>
+        <h6 class="title">
+          {{ t('preferences.general.window.title') }}
+        </h6>
+      </template>
+      <template #children>
+        <cur-select
+          v-if="!isOsx"
+          :description="t('preferences.general.window.titleBarStyle.title')"
+          :notes="t('preferences.general.window.requiresRestart')"
+          :value="titleBarStyle"
+          :options="getTitleBarStyleOptions()"
+          :on-change="(value) => onSelectChange('titleBarStyle', value)"
+        />
+        <bool
+          :description="t('preferences.general.window.openItemsInNewWindow')"
+          :bool="openItemsInNewWindow"
+          :on-change="(value) => (openItemsInNewWindow = value)"
+        />
+      </template>
+    </compound>
 
-      <compound>
-        <template #head>
-          <h6 class="title">
-            {{ t('preferences.general.sidebar.title') }}
-          </h6>
-        </template>
-        <template #children>
-          <text-box
-            :description="t('preferences.general.sidebar.excludePatterns')"
-            :notes="t('preferences.general.sidebar.excludePatternsNotes')"
-            :input="projectPaths.join(',')"
-            :on-change="(value) => onSelectChange('treePathExcludePatterns', value.split(','))"
-            more="https://github.com/isaacs/minimatch"
-          />
-        </template>
-      </compound>
+    <compound>
+      <template #head>
+        <h6 class="title">
+          {{ t('preferences.general.sidebar.title') }}
+        </h6>
+      </template>
+      <template #children>
+        <text-box
+          :description="t('preferences.general.sidebar.excludePatterns')"
+          :notes="t('preferences.general.sidebar.excludePatternsNotes')"
+          :input="projectPaths.join(',')"
+          :on-change="(value) => onSelectChange('treePathExcludePatterns', value.split(','))"
+          more="https://github.com/isaacs/minimatch"
+        />
+      </template>
+    </compound>
 
-      <compound>
-        <template #children>
-          <h6>{{ t('preferences.general.startup.layoutOptions') }}</h6>
-          <section>
-            <el-radio-group v-model="restoreLayoutState" class="startup-action-ctrl">
-              <el-radio :label="true">
-                {{ t('preferences.general.startup.restorePreviousState') }}
-              </el-radio>
-              <el-radio :label="false">
-                {{ t('preferences.general.startup.openBlankState') }}
-              </el-radio>
-            </el-radio-group>
-          </section>
-        </template>
-      </compound>
-    </advanced>
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.general.startup.layoutOptions') }}</h6>
+      </template>
+      <template #children>
+        <section>
+          <el-radio-group v-model="restoreLayoutState" class="startup-action-ctrl">
+            <el-radio :label="true">
+              {{ t('preferences.general.startup.restorePreviousState') }}
+            </el-radio>
+            <el-radio :label="false">
+              {{ t('preferences.general.startup.openBlankState') }}
+            </el-radio>
+          </el-radio-group>
+        </section>
+      </template>
+    </compound>
   </div>
 </template>
 
@@ -140,7 +142,6 @@ import Compound from '../common/compound/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
 import textBox from '../common/textBox/index.vue'
-import Advanced from '../common/advanced/index.vue'
 import { isOsx } from '@/util'
 
 import { getTitleBarStyleOptions } from './config'

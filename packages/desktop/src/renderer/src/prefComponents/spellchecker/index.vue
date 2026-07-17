@@ -3,13 +3,14 @@
     <h4>{{ t('preferences.spellchecker.title') }}</h4>
     <compound>
       <template #head>
+        <h6 class="title">{{ t('preferences.categories.spelling') }}</h6>
+      </template>
+      <template #children>
         <bool
           :description="t('preferences.spellchecker.enableSpellChecking')"
           :bool="spellcheckerEnabled"
           :on-change="handleSpellcheckerEnabled"
         />
-      </template>
-      <template #children>
         <bool
           :description="t('preferences.spellchecker.hideMarksForErrors')"
           :bool="spellcheckerNoUnderline"

@@ -1,8 +1,5 @@
 <template>
-  <section
-    class="pref-font-input-item"
-    :class="{ 'ag-underdevelop': disable }"
-  >
+  <section class="pref-font-input-item" :class="{ 'ag-underdevelop': disable }">
     <div class="description">
       <span>{{ description }}:</span>
       <LinkIcon
@@ -22,11 +19,7 @@
       @select="handleSelect"
     >
       <template #suffix>
-        <ArrowDown
-          width="16"
-          height="16"
-          class="el-input__icon"
-        />
+        <ArrowDown width="16" height="16" class="el-input__icon" />
       </template>
       <template #default="{ item }">
         <div class="family">
@@ -141,6 +134,12 @@ onMounted(async () => {
   & .font-autocomplete {
     width: var(--prefControlWidth);
   }
+  & .font-autocomplete,
+  & .font-autocomplete .el-input__wrapper,
+  & input.el-input__inner,
+  & .el-input__icon {
+    cursor: pointer;
+  }
   & input.el-input__inner {
     height: 28px;
     background: transparent;
@@ -169,6 +168,7 @@ onMounted(async () => {
 }
 .pref-font-input-item .font-autocomplete-popper {
   li {
+    cursor: pointer;
     line-height: normal;
     padding: 7px;
     .value {

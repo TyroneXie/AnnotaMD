@@ -97,7 +97,7 @@
     "default": true
   },
   "editorLineWidth": {
-    "description": "Editor--Defines the maximum editor area width. An empty string or suffixes of ch (characters), px (pixels) or % (percentage) are allowed.",
+    "description": "Theme--Maximum editor width in pixels.",
     "type": "string",
     "pattern": "^(?:$|[0-9]+(?:ch|px|%)$)",
     "default": ""
@@ -304,7 +304,7 @@
     "default": false
   },
   "lightModeTheme": {
-    "description": "Theme--Theme to use when system is in light mode.",
+    "description": "Theme--Theme to use when system is in light mode.--internal",
     "type": "string",
     "default": "light"
   },
@@ -314,7 +314,7 @@
     "default": true
   },
   "darkModeTheme": {
-    "description": "Theme--Theme to use when system is in dark mode.",
+    "description": "Theme--Theme to use when system is in dark mode.--internal",
     "type": "string",
     "default": "dark"
   },

@@ -1,10 +1,8 @@
 import {
   Setting as GeneralIcon,
   Edit as EditorIcon,
-  Document as MarkdownIcon,
   Brush as ThemeIcon,
   Picture as ImageIcon,
-  Reading as SpellIcon,
   Operation as KeyBindingIcon
 } from '@element-plus/icons-vue'
 
@@ -79,18 +77,6 @@ export const getCategory = (): PrefCategory[] => [
     path: '/preference/editor'
   },
   {
-    name: t('preferences.categories.markdown'),
-    label: 'markdown',
-    icon: MarkdownIcon,
-    path: '/preference/markdown'
-  },
-  {
-    name: t('preferences.categories.spelling'),
-    label: 'spelling',
-    icon: SpellIcon,
-    path: '/preference/spelling'
-  },
-  {
     name: t('preferences.categories.theme'),
     label: 'theme',
     icon: ThemeIcon,
@@ -142,13 +128,13 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
       let mappedCategory = categoryName.toLowerCase()
       if (categoryName === 'General') mappedCategory = 'general'
       else if (categoryName === 'Editor') mappedCategory = 'editor'
-      else if (categoryName === 'Markdown') mappedCategory = 'markdown'
+      else if (categoryName === 'Markdown') mappedCategory = 'editor'
       else if (categoryName === 'Theme') mappedCategory = 'theme'
       else if (categoryName === 'Image') mappedCategory = 'image'
       else if (categoryName === 'View') mappedCategory = 'view'
       else if (categoryName === 'Searcher') mappedCategory = 'searcher'
       else if (categoryName === 'Watcher') mappedCategory = 'watcher'
-      else if (categoryName === 'Spelling') mappedCategory = 'spelling'
+      else if (categoryName === 'Spelling') mappedCategory = 'editor'
       else if (categoryName === 'Custom CSS') mappedCategory = 'custom css'
       else {
         // Handle special category names
@@ -160,8 +146,6 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
       const validRoutes = [
         'general',
         'editor',
-        'markdown',
-        'spelling',
         'theme',
         'image',
         'keybindings'

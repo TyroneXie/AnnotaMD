@@ -5,9 +5,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import App from '@/pages/app.vue'
 import Preference from '@/pages/preference.vue'
 import General from '@/prefComponents/general/index.vue'
-import Editor from '@/prefComponents/editor/index.vue'
-import Markdown from '@/prefComponents/markdown/index.vue'
-import SpellChecker from '@/prefComponents/spellchecker/index.vue'
+import Editing from '@/prefComponents/editing/index.vue'
 import Theme from '@/prefComponents/theme/index.vue'
 import Image from '@/prefComponents/image/index.vue'
 import Keybindings from '@/prefComponents/keybindings/index.vue'
@@ -44,18 +42,16 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
       },
       {
         path: 'editor',
-        component: Editor,
+        component: Editing,
         name: 'editor'
       },
       {
         path: 'markdown',
-        component: Markdown,
-        name: 'markdown'
+        redirect: '/preference/editor'
       },
       {
         path: 'spelling',
-        component: SpellChecker,
-        name: 'spelling'
+        redirect: '/preference/editor'
       },
       {
         path: 'theme',

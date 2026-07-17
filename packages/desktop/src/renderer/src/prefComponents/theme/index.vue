@@ -14,29 +14,11 @@
           :on-change="(value) => onSelectChange('followSystemTheme', value)"
         />
         <theme-select
-          v-if="!followSystemTheme"
           :description="t('preferences.theme.currentTheme')"
           :value="theme"
           :options="themeOptions"
+          :disable="followSystemTheme"
           :on-change="(value) => onSelectChange('theme', value)"
-          @preview="showThemePreview"
-          @clear-preview="clearThemePreview"
-        />
-        <theme-select
-          v-if="followSystemTheme"
-          :description="t('preferences.theme.lightModeTheme')"
-          :value="lightModeTheme"
-          :options="themeOptions"
-          :on-change="(value) => onSelectChange('lightModeTheme', value)"
-          @preview="showThemePreview"
-          @clear-preview="clearThemePreview"
-        />
-        <theme-select
-          v-if="followSystemTheme"
-          :description="t('preferences.theme.darkModeTheme')"
-          :value="darkModeTheme"
-          :options="themeOptions"
-          :on-change="(value) => onSelectChange('darkModeTheme', value)"
           @preview="showThemePreview"
           @clear-preview="clearThemePreview"
         />
@@ -78,17 +60,18 @@
           :step="0.1"
           :on-change="(value) => onSelectChange('lineHeight', value)"
         />
+        <range
+          :description="t('preferences.editor.textEditor.maxWidth')"
+          :value="editorWidthValue"
+          :min="600"
+          :max="1600"
+          :step="20"
+          :on-change="setEditorWidthPreference"
+        />
         <font-text-box
           :description="t('preferences.editor.textEditor.fontFamily')"
           :value="editorFontFamily"
           :on-change="(value) => onSelectChange('editorFontFamily', value)"
-        />
-        <text-box
-          :description="t('preferences.editor.textEditor.maxWidth')"
-          :notes="t('preferences.editor.textEditor.maxWidthNotes')"
-          :input="editorLineWidth"
-          :regex-validator="/^(?:$|[0-9]+(?:ch|px|%)$)/"
-          :on-change="(value) => onSelectChange('editorLineWidth', value)"
         />
       </template>
     </compound>
@@ -136,22 +119,24 @@
       </template>
     </compound>
 
-    <advanced :title="t('preferences.advancedSettings')">
-      <div class="custom-css">
-        <div class="description">
-          {{ t('preferences.theme.customCss') }}
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('preferences.theme.customCss') }}</h6>
+      </template>
+      <template #children>
+        <div class="custom-css">
+          <textarea
+            class="custom-css-input"
+            rows="10"
+            :value="customCss"
+            @change="
+              (event: Event) =>
+                onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
+            "
+          />
         </div>
-        <textarea
-          class="custom-css-input"
-          rows="10"
-          :value="customCss"
-          @change="
-            (event: Event) =>
-              onSelectChange('customCss', (event.target as HTMLTextAreaElement).value)
-          "
-        />
-      </div>
-    </advanced>
+      </template>
+    </compound>
     <separator v-show="false" />
     <section v-show="false" class="import-themes ag-underdevelop">
       <div>
@@ -196,10 +181,8 @@ import Bool from '../common/bool/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Separator from '../common/separator/index.vue'
 import Compound from '../common/compound/index.vue'
-import Advanced from '../common/advanced/index.vue'
 import Range from '../common/range/index.vue'
 import FontTextBox from '../common/fontTextBox/index.vue'
-import TextBox from '../common/textBox/index.vue'
 import ThemeSelect from './themeSelect.vue'
 import type { PrefSelectOption } from '../common/types'
 import { getLanguageOptions } from '../general/config'
@@ -211,6 +194,7 @@ interface ThemePreview {
 }
 
 const themes = ref<ThemePreview[]>([])
+const DEFAULT_EDITOR_WIDTH = 980
 const hoveredThemeName = ref('')
 const previewPosition = ref({ left: '0px', top: '0px' })
 
@@ -219,8 +203,6 @@ const preferenceStore = usePreferencesStore()
 
 const {
   followSystemTheme,
-  lightModeTheme,
-  darkModeTheme,
   theme,
   customCss,
   language,
@@ -234,6 +216,11 @@ const {
   wrapCodeBlocks,
   trimUnnecessaryCodeBlockEmptyLines
 } = storeToRefs(preferenceStore)
+
+const editorWidthValue = computed(() => {
+  const match = editorLineWidth.value.match(/^(\d+)px$/)
+  return match?.[1] ? Number(match[1]) : DEFAULT_EDITOR_WIDTH
+})
 
 const hoveredTheme = computed(() =>
   themes.value.find((themeItem) => themeItem.name === hoveredThemeName.value)
@@ -262,6 +249,10 @@ onMounted(async () => {
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
+}
+
+const setEditorWidthPreference = (value: number): void => {
+  onSelectChange('editorLineWidth', `${value}px`)
 }
 
 const showThemePreview = (themeName: string, anchor: DOMRect): void => {
@@ -606,12 +597,9 @@ const clearThemePreview = (): void => {
 }
 
 .custom-css {
-  margin: 20px 0;
+  margin: 4px 0;
   font-size: 14px;
   color: var(--editorColor);
-  & .description {
-    margin-bottom: 10px;
-  }
   & .custom-css-input {
     width: 100%;
     background: transparent;

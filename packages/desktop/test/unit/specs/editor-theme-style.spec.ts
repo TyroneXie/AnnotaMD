@@ -77,16 +77,13 @@ describe('theme.ts style injection helpers', () => {
   describe('setEditorWidth', () => {
     const WIDTH_STYLE_ID = 'editor-width'
 
-    it.each(['60ch', '800px', '50%'])(
-      'writes a calc() override for the valid value %s',
-      (value) => {
-        setEditorWidth(value)
+    it.each(['60ch', '800px', '50%'])('writes the valid value %s directly', (value) => {
+      setEditorWidth(value)
 
-        expect(styleHtml(WIDTH_STYLE_ID)).toBe(
-          `:root { --editorAreaWidth: calc(100px + ${value}); --editor-area-width: calc(100px + ${value}); --annotamd-editor-area-width: calc(100px + ${value}); }`
-        )
-      }
-    )
+      expect(styleHtml(WIDTH_STYLE_ID)).toBe(
+        `:root { --editorAreaWidth: ${value}; --editor-area-width: ${value}; --annotamd-editor-area-width: ${value}; }`
+      )
+    })
 
     it('overrides the active @muyajs/core width variable, not only the legacy one', () => {
       // The WYSIWYG engine reads the kebab-case `--editor-area-width`
@@ -95,7 +92,7 @@ describe('theme.ts style injection helpers', () => {
       // on the default theme (issue #4828).
       setEditorWidth('60%')
 
-      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: calc(100px + 60%);')
+      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: 60%;')
     })
 
     it('clears the override (empty innerHTML) for an empty string', () => {
@@ -105,14 +102,11 @@ describe('theme.ts style injection helpers', () => {
       expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
     })
 
-    it.each(['abc', '10', '10em'])(
-      'rejects the invalid value %s and writes nothing',
-      (value) => {
-        setEditorWidth(value)
+    it.each(['abc', '10', '10em'])('rejects the invalid value %s and writes nothing', (value) => {
+      setEditorWidth(value)
 
-        expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
-      }
-    )
+      expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
+    })
 
     it('reuses a single style element across calls', () => {
       setEditorWidth('60ch')

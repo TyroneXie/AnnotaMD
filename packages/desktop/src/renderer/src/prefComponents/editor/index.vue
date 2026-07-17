@@ -23,85 +23,73 @@
           :bool="autoPairQuote"
           :on-change="(value) => onSelectChange('autoPairQuote', value)"
         />
+        <bool
+          :description="t('preferences.editor.misc.hideQuickInsertHint')"
+          :bool="hideQuickInsertHint"
+          :on-change="(value) => onSelectChange('hideQuickInsertHint', value)"
+        />
+        <bool
+          :description="t('preferences.editor.misc.hideLinkPopup')"
+          :bool="hideLinkPopup"
+          :on-change="(value) => onSelectChange('hideLinkPopup', value)"
+        />
+        <bool
+          :description="t('preferences.editor.misc.autoCheck')"
+          :bool="autoCheck"
+          :on-change="(value) => onSelectChange('autoCheck', value)"
+        />
       </template>
     </compound>
 
-    <advanced :title="t('preferences.advancedSettings')">
-      <compound>
-        <template #head>
-          <h6 class="title">
-            {{ t('preferences.editor.fileRepresentation.title') }}
-          </h6>
-        </template>
-        <template #children>
-          <cur-select
-            :description="t('preferences.editor.fileRepresentation.tabWidth')"
-            :value="tabSize"
-            :options="tabSizeOptions"
-            :on-change="(value) => onSelectChange('tabSize', value)"
-          />
-          <cur-select
-            :description="t('preferences.editor.fileRepresentation.lineSeparator')"
-            :value="endOfLine"
-            :options="getEndOfLineOptions()"
-            :on-change="(value) => onSelectChange('endOfLine', value)"
-          />
-          <cur-select
-            :description="t('preferences.editor.fileRepresentation.defaultEncoding')"
-            :value="defaultEncoding"
-            :options="defaultEncodingOptions"
-            :on-change="(value) => onSelectChange('defaultEncoding', value)"
-          />
-          <bool
-            :description="t('preferences.editor.fileRepresentation.autoDetectEncoding')"
-            :bool="autoGuessEncoding"
-            :on-change="(value) => onSelectChange('autoGuessEncoding', value)"
-          />
-          <bool
-            :description="t('preferences.editor.misc.autoNormalizeLineEndings')"
-            :bool="autoNormalizeLineEndings"
-            :on-change="(value) => onSelectChange('autoNormalizeLineEndings', value)"
-          />
-          <cur-select
-            :description="t('preferences.editor.fileRepresentation.trailingNewlines.title')"
-            :value="trimTrailingNewline"
-            :options="getTrimTrailingNewlineOptions()"
-            :on-change="(value) => onSelectChange('trimTrailingNewline', value)"
-          />
-        </template>
-      </compound>
-
-      <compound>
-        <template #head>
-          <h6 class="title">
-            {{ t('preferences.editor.misc.title') }}
-          </h6>
-        </template>
-        <template #children>
-          <cur-select
-            :description="t('preferences.editor.misc.textDirection.title')"
-            :value="textDirection"
-            :options="getTextDirectionOptions()"
-            :on-change="(value) => onSelectChange('textDirection', value)"
-          />
-          <bool
-            :description="t('preferences.editor.misc.hideQuickInsertHint')"
-            :bool="hideQuickInsertHint"
-            :on-change="(value) => onSelectChange('hideQuickInsertHint', value)"
-          />
-          <bool
-            :description="t('preferences.editor.misc.hideLinkPopup')"
-            :bool="hideLinkPopup"
-            :on-change="(value) => onSelectChange('hideLinkPopup', value)"
-          />
-          <bool
-            :description="t('preferences.editor.misc.autoCheck')"
-            :bool="autoCheck"
-            :on-change="(value) => onSelectChange('autoCheck', value)"
-          />
-        </template>
-      </compound>
-    </advanced>
+    <compound>
+      <template #head>
+        <h6 class="title">
+          {{ t('preferences.editor.fileRepresentation.title') }}
+        </h6>
+      </template>
+      <template #children>
+        <cur-select
+          :description="t('preferences.editor.fileRepresentation.tabWidth')"
+          :value="tabSize"
+          :options="tabSizeOptions"
+          :on-change="(value) => onSelectChange('tabSize', value)"
+        />
+        <cur-select
+          :description="t('preferences.editor.fileRepresentation.lineSeparator')"
+          :value="endOfLine"
+          :options="getEndOfLineOptions()"
+          :on-change="(value) => onSelectChange('endOfLine', value)"
+        />
+        <cur-select
+          :description="t('preferences.editor.fileRepresentation.defaultEncoding')"
+          :value="defaultEncoding"
+          :options="defaultEncodingOptions"
+          :on-change="(value) => onSelectChange('defaultEncoding', value)"
+        />
+        <bool
+          :description="t('preferences.editor.fileRepresentation.autoDetectEncoding')"
+          :bool="autoGuessEncoding"
+          :on-change="(value) => onSelectChange('autoGuessEncoding', value)"
+        />
+        <bool
+          :description="t('preferences.editor.misc.autoNormalizeLineEndings')"
+          :bool="autoNormalizeLineEndings"
+          :on-change="(value) => onSelectChange('autoNormalizeLineEndings', value)"
+        />
+        <cur-select
+          :description="t('preferences.editor.fileRepresentation.trailingNewlines.title')"
+          :value="trimTrailingNewline"
+          :options="getTrimTrailingNewlineOptions()"
+          :on-change="(value) => onSelectChange('trimTrailingNewline', value)"
+        />
+        <cur-select
+          :description="t('preferences.editor.misc.textDirection.title')"
+          :value="textDirection"
+          :options="getTextDirectionOptions()"
+          :on-change="(value) => onSelectChange('textDirection', value)"
+        />
+      </template>
+    </compound>
   </div>
 </template>
 
@@ -113,7 +101,6 @@ import type { PreferencesState } from '@/store/preferences'
 import Compound from '../common/compound/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
-import Advanced from '../common/advanced/index.vue'
 import {
   tabSizeOptions,
   getEndOfLineOptions,

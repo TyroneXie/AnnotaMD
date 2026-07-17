@@ -436,7 +436,7 @@
     "advancedSettings": "進階設定",
     "categories": {
       "general": "一般",
-      "editor": "編輯器",
+      "editor": "編輯",
       "markdown": "Markdown",
       "spelling": "拼字",
       "theme": "外觀",
@@ -514,7 +514,7 @@
       }
     },
     "editor": {
-      "title": "編輯器",
+      "title": "編輯",
       "textEditor": {
         "title": "文字編輯器",
         "fontSize": "字型大小",

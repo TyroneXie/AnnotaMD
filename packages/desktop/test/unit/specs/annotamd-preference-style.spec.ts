@@ -53,9 +53,7 @@ describe('AnnotaMD preference styling', () => {
     const range = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/common/range/index.vue'
     )
-    const editor = readRepoFile(
-      'packages/desktop/src/renderer/src/prefComponents/editor/index.vue'
-    )
+    const editor = readRepoFile('packages/desktop/src/renderer/src/prefComponents/editor/index.vue')
 
     expect(range).toContain('class="number-stepper"')
     expect(range).toContain('class="stepper-button"')
@@ -64,16 +62,12 @@ describe('AnnotaMD preference styling', () => {
     expect(range).not.toContain('<el-slider')
     expect(range).not.toContain('<el-input-number')
     expect(editor).not.toContain('unit="px"')
-    const preferencePage = readRepoFile(
-      'packages/desktop/src/renderer/src/pages/preference.vue'
-    )
+    const preferencePage = readRepoFile('packages/desktop/src/renderer/src/pages/preference.vue')
     expect(preferencePage).toContain('--prefControlWidth: 260px;')
     const imagePreferences = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/image/index.vue'
     )
-    expect(imagePreferences).toContain(
-      ':description="t(\'preferences.image.defaultBehavior\')"'
-    )
+    expect(imagePreferences).toContain(':description="t(\'preferences.image.defaultBehavior\')"')
   })
 
   it('does not render a redundant Startup heading above its two labeled option groups', () => {
@@ -96,11 +90,9 @@ describe('AnnotaMD preference styling', () => {
     const windowMenu = readRepoFile('packages/desktop/src/main/menu/templates/window.ts')
     const windowUtils = readRepoFile('packages/desktop/src/main/windows/utils.ts')
     const windowActions = readRepoFile('packages/desktop/src/main/menu/actions/window.ts')
-    const macKeybindings = readRepoFile(
-      'packages/desktop/src/main/keyboard/keybindingsDarwin.ts'
-    )
+    const macKeybindings = readRepoFile('packages/desktop/src/main/keyboard/keybindingsDarwin.ts')
 
-    expect(general).not.toContain("preferences.general.window.zoom")
+    expect(general).not.toContain('preferences.general.window.zoom')
     expect(config).not.toContain('zoomOptions')
     expect(windowMenu).toContain("t('commands.view.actualSize')")
     expect(windowMenu).toContain("getAccelerator('window.actualSize')")
@@ -128,19 +120,14 @@ describe('AnnotaMD preference styling', () => {
     const locales = ['de', 'en', 'es', 'fr', 'ja', 'ko', 'pt', 'tr', 'zh-CN', 'zh-TW']
 
     for (const locale of locales) {
-      const messages = JSON.parse(
-        readRepoFile(`packages/desktop/static/locales/${locale}.json`)
-      )
+      const messages = JSON.parse(readRepoFile(`packages/desktop/static/locales/${locale}.json`))
 
       expect(messages.menu.theme.lightThemes).not.toMatch(/^—|—$/)
       expect(messages.menu.theme.darkThemes).not.toMatch(/^—|—$/)
     }
   })
 
-  it('keeps low-frequency settings behind a shared advanced disclosure', () => {
-    const advanced = readRepoFile(
-      'packages/desktop/src/renderer/src/prefComponents/common/advanced/index.vue'
-    )
+  it('shows all preference sections directly without advanced disclosures', () => {
     const general = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/general/index.vue'
     )
@@ -152,15 +139,16 @@ describe('AnnotaMD preference styling', () => {
     )
     const theme = readRepoFile('packages/desktop/src/renderer/src/prefComponents/theme/index.vue')
 
-    expect(advanced).toContain('<details>')
-    expect(advanced).toContain('<summary>')
     for (const page of [general, editorPreferences, markdown, theme]) {
-      expect(page).toContain('preferences.advancedSettings')
-      expect(page).toContain('<advanced')
+      expect(page).not.toContain('preferences.advancedSettings')
+      expect(page).not.toContain('<advanced')
     }
     expect(general).toContain('openItemsInNewWindow')
     expect(general).not.toContain("t('preferences.general.window.openFilesInNewWindow')")
     expect(general).not.toContain("t('preferences.general.window.openFoldersInNewWindow')")
+    expect(general).toMatch(
+      /<template #head>\s*<h6[^>]*>\s*\{\{ t\('preferences\.general\.startup\.layoutOptions'\) \}\}/s
+    )
   })
 
   it('removes dead controls and uses the editor font size for code', () => {

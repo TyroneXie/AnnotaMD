@@ -439,7 +439,7 @@
     "advancedSettings": "高级设置",
     "categories": {
       "general": "通用",
-      "editor": "编辑器",
+      "editor": "编辑",
       "markdown": "Markdown",
       "spelling": "拼写",
       "theme": "外观",
@@ -517,7 +517,7 @@
       }
     },
     "editor": {
-      "title": "编辑器",
+      "title": "编辑",
       "textEditor": {
         "title": "文本编辑器",
         "fontSize": "字体大小",

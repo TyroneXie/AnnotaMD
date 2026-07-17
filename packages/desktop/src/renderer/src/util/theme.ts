@@ -201,10 +201,10 @@ export const setEditorWidth = (value: string): void => {
   const EDITOR_WIDTH_STYLE_ID = 'editor-width'
   let result = ''
   if (value && /^[0-9]+(?:ch|px|%)$/.test(value)) {
-    // Add 100px for the container's horizontal padding. Set both the legacy
-    // camelCase var (source mode) and the kebab-case var the active
-    // @muyajs/core engine reads for `.mu-container` max-width (issue #4828).
-    const width = `calc(100px + ${value})`
+    // Keep all editor modes on the same explicit outer width. The previous
+    // control described content width and added padding invisibly, which made
+    // its displayed value differ from the actual editor width.
+    const width = value
     result = `:root { --editorAreaWidth: ${width}; --editor-area-width: ${width}; --annotamd-editor-area-width: ${width}; }`
   }
   let styleEle = document.querySelector(`#${EDITOR_WIDTH_STYLE_ID}`) as HTMLStyleElement | null
