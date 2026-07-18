@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.1 - 2026-07-18
+
+### Fixed
+
+- Synchronized pnpm override metadata into the lockfile so frozen dependency installation succeeds on every release platform.
+
 ## 2.8.0 - 2026-07-18
 
 ### Added
