@@ -21,7 +21,9 @@ const diagramSource = readFileSync(
 
 describe('AnnotaMD diagram controls', () => {
   it('passes the selected diagram background into the fullscreen image viewer', () => {
-    expect(editorSource).toMatch(/constructor \(container: HTMLElement, \{ url, background = 'transparent' \}/)
+    expect(editorSource).toMatch(
+      /constructor\s*\(\s*container: HTMLElement,\s*\{ url, background = 'transparent' \}/
+    )
     expect(editorSource).toContain('this.img.style.backgroundColor = background')
     expect(editorSource).toMatch(/preview-image[\s\S]*background[\s\S]*new SimpleImageViewer/)
   })

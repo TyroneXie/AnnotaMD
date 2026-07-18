@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.8.0 - 2026-07-18
+
+### Added
+
+- Added an Emoji block picker and reliable emoji insertion in WYSIWYG documents.
+- Added rendered HTML block previews with safe handling for empty HTML blocks.
+- Added eleven switchable action-icon themes backed by local official icon libraries, with a shared icon system across editor menus and toolbars.
+- Added live theme previews and consolidated appearance controls for themes, language, typography, code blocks, and icon style.
+
+### Changed
+
+- Reorganized Settings into clearer Appearance, Editing, General, Image, and Custom CSS sections, with denser aligned controls and fewer redundant expert options.
+- Unified paragraph, heading, quote, highlight, HTML, code, list, diagram, image, and toolbar block glyphs across quick-insert and block menus.
+- Kept opened-file navigation synchronized with the active document and let the opened-file list use the available sidebar height.
+- Distinguished copy, duplicate, insert, heading-level, and section-move actions in every icon theme so adjacent block-menu actions no longer reuse the same glyph.
+
+### Fixed
+
+- Fixed Emoji content disappearing after reopening a document.
+- Fixed HTML and other rendered blocks exposing incorrect text-block controls or source-only presentation in WYSIWYG mode.
+- Fixed heading block-menu labels and icons briefly overlapping while the pointer entered the paragraph gutter.
+- Fixed settings list spacing and removed the obsolete sidebar exclude-pattern field.
+
 ## 2.7.1 - 2026-07-17
 
 ### Fixed

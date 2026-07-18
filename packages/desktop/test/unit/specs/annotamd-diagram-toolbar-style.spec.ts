@@ -21,7 +21,7 @@ describe('AnnotaMD diagram toolbar styling', () => {
       /\.mu-diagram-toolbar button\s*\{[^}]*height:\s*26px;[^}]*padding:\s*0 6px;[^}]*font-size:\s*12px;[^}]*line-height:\s*26px;/s
     )
     expect(css).toMatch(
-      /\.mu-diagram-fullscreen,\s*\.mu-diagram-color-toggle\s*\{[^}]*width:\s*28px;[^}]*padding:\s*0;/s
+      /\.mu-diagram-fullscreen,\s*\.mu-diagram-color-toggle,\s*\.mu-diagram-copy,\s*\.mu-diagram-download\s*\{[^}]*width:\s*28px;[^}]*padding:\s*0;/s
     )
     expect(css).toMatch(/\.mu-diagram-control-svg\s*\{[^}]*width:\s*14px;[^}]*height:\s*14px;/s)
     expect(css).toMatch(
