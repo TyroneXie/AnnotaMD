@@ -27,8 +27,22 @@ describe('performance regression guards', () => {
     const main = read('packages/desktop/src/renderer/src/main.ts')
 
     expect(main).not.toContain("import ElementPlus from 'element-plus'")
+    expect(main).not.toContain("import 'element-plus/dist/index.css'")
     expect(main).toContain('const elementPlusComponents = [')
     expect(main).toContain('elementPlusComponents.forEach((component) => app.use(component))')
+    expect(main).toContain("import 'element-plus/es/components/button/style/css'")
+  })
+
+  it('keeps comments and the MCP bridge off the default main-process startup path', () => {
+    const main = read('packages/desktop/src/main/index.ts')
+    const commentIpc = read('packages/desktop/src/main/ipc/comments.ts')
+
+    expect(main).not.toMatch(/^import .*['"]\.\/comments(?:\/AgentBridgeServer)?['"]/m)
+    expect(main).toContain("agentBridgeModule ??= import('./comments/AgentBridgeServer')")
+    expect(main).toContain('if (!nextEnabled && !agentBridgeModule) return')
+    expect(commentIpc).not.toMatch(/^import .*['"]\.\.\/comments/m)
+    expect(commentIpc).toContain("await import('../comments')")
+    expect(commentIpc).toContain("await import('../comments/AgentBridgeServer')")
   })
 
   it('does not poll the preference locale', () => {

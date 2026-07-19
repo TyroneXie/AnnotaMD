@@ -3,16 +3,20 @@ import type {
   AnnotaMDCommentReplaceRequest,
   AnnotaMDLegacyCommentMigration
 } from '@shared/types/comments'
-import { broadcastCommentsChanged, getCommentService } from '../comments'
-import { getAgentBridgeStatus } from '../comments/AgentBridgeServer'
 
 export const registerCommentHandlers = (): void => {
-  ipcMain.handle('mt::comments::mcp-status', () => getAgentBridgeStatus())
+  ipcMain.handle('mt::comments::mcp-status', async () => {
+    const { getAgentBridgeStatus } = await import('../comments/AgentBridgeServer')
+    return getAgentBridgeStatus()
+  })
 
-  ipcMain.handle('mt::comments::load', (_event, filePath: string, markdown = '') =>
-    getCommentService().load(filePath, markdown))
+  ipcMain.handle('mt::comments::load', async (_event, filePath: string, markdown = '') => {
+    const { getCommentService } = await import('../comments')
+    return getCommentService().load(filePath, markdown)
+  })
 
-  ipcMain.handle('mt::comments::replace', (_event, request: AnnotaMDCommentReplaceRequest) => {
+  ipcMain.handle('mt::comments::replace', async (_event, request: AnnotaMDCommentReplaceRequest) => {
+    const { broadcastCommentsChanged, getCommentService } = await import('../comments')
     const document = getCommentService().replace(request)
     broadcastCommentsChanged(request.filePath)
     return document
@@ -20,10 +24,14 @@ export const registerCommentHandlers = (): void => {
 
   ipcMain.handle(
     'mt::comments::migrate',
-    (_event, entries: AnnotaMDLegacyCommentMigration[]) => getCommentService().migrate(entries)
+    async (_event, entries: AnnotaMDLegacyCommentMigration[]) => {
+      const { getCommentService } = await import('../comments')
+      return getCommentService().migrate(entries)
+    }
   )
 
-  ipcMain.handle('mt::comments::mark-missing', (_event, filePath: string) => {
+  ipcMain.handle('mt::comments::mark-missing', async (_event, filePath: string) => {
+    const { getCommentService } = await import('../comments')
     getCommentService().markMissing(filePath)
   })
 }

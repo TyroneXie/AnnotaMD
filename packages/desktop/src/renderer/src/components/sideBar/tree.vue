@@ -734,9 +734,9 @@ onBeforeUnmount(() => {
 }
 .open-project .el-button.is-text.is-has-bg,
 .empty-project .el-button.is-text.is-has-bg {
-  color: var(--editorColor);
-  background-color: transparent;
-  border-color: var(--borderColor);
+  color: var(--buttonPrimaryFontColor);
+  background-color: var(--buttonPrimaryBgColor);
+  border: var(--buttonPrimaryBorder);
 }
 .open-project .el-button.is-text.is-has-bg:hover,
 .open-project .el-button.is-text.is-has-bg:focus,

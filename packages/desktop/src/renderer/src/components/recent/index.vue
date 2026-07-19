@@ -150,9 +150,9 @@ const newFile = (): void => {
 }
 
 .start-primary {
-  color: var(--editorColor);
-  background: transparent;
-  border: 1px solid var(--borderColor);
+  color: var(--buttonPrimaryFontColor);
+  background: var(--buttonPrimaryBgColor);
+  border: var(--buttonPrimaryBorder);
 }
 
 .start-secondary {

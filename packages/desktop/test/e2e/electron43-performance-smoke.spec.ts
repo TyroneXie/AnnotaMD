@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import {
   launchElectron,
   launchWithMarkdown,
@@ -49,6 +51,43 @@ test.describe('Electron 43 performance smoke', () => {
 
     await expect(settingPage.locator('.pref-container')).toBeAttached({ timeout: 15000 })
     await expect(settingPage.locator('.pref-general')).toBeAttached({ timeout: 15000 })
+  })
+
+  test('loads the disabled MCP bridge status on demand', async() => {
+    const status = await page.evaluate(() => {
+      return (window as unknown as {
+        electron: {
+          ipcRenderer: {
+            invoke: (channel: 'mt::comments::mcp-status') => Promise<{
+              enabled: boolean
+              running: boolean
+              clients: unknown[]
+            }>
+          }
+        }
+      }).electron.ipcRenderer.invoke('mt::comments::mcp-status')
+    })
+
+    expect(status).toEqual({ enabled: false, running: false, clients: [] })
+  })
+
+  test('flushes asynchronous main-process logs', async() => {
+    const userDataPath = await app.evaluate(({ app }) => app.getPath('userData'))
+    const now = new Date()
+    const logPath = join(
+      userDataPath,
+      'logs',
+      `${now.getFullYear()}${now.getMonth() + 1}`,
+      'main.log'
+    )
+
+    await expect.poll(async() => {
+      try {
+        return (await readFile(logPath)).byteLength
+      } catch {
+        return 0
+      }
+    }).toBeGreaterThan(0)
   })
 
   test('serializes the json-change snapshot after input', async() => {

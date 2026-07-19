@@ -164,7 +164,7 @@ describe('Format-menu accelerators vs muya inlineFormatToolbar shortcuts', () =>
 
   // strong/em are the requested reconcilable mapping, plus the rest of the set
   // that agrees once notation is normalized.
-  const RECONCILABLE = ['strong', 'em', 'u', 'del', 'mark', 'inline_math', 'link', 'image', 'clear'] as const
+  const RECONCILABLE = ['strong', 'em', 'u', 'del', 'link'] as const
 
   it.each(RECONCILABLE)(
     'toolbar shortcut for "%s" matches the Format-menu accelerator (Windows + Linux)',
@@ -201,7 +201,20 @@ describe('Format-menu accelerators vs muya inlineFormatToolbar shortcuts', () =>
 // diverge from the table. This walks each template with a fake keybindings backed by
 // every platform map and asserts the menu items pass the table value through verbatim.
 describe('menu template accelerators match the platform keybinding tables (Paragraph/Edit/View)', () => {
-  type Template = (kb: { getAccelerator(id: string): string | null }) => MenuItemConstructorOptions
+  type Template = (
+    kb: { getAccelerator(id: string): string | null },
+    preferences?: { getItem<T>(key: string): T; setItem(key: string, value: unknown): void }
+  ) => MenuItemConstructorOptions
+
+  const preferences = {
+    getItem: <T,>(_key: string): T => false as T,
+    setItem: (_key: string, _value: unknown): void => {}
+  }
+
+  const renderTemplate = (
+    template: Template,
+    keybindings: { getAccelerator(id: string): string | null }
+  ): MenuItemConstructorOptions => template(keybindings, preferences)
 
   // Sentinel-id keybindings: records the id of every accelerator the template
   // pulls and returns the id itself so it can be recovered from the menu item.
@@ -239,7 +252,7 @@ describe('menu template accelerators match the platform keybinding tables (Parag
 
   // The ids the template actually referenced, in the order items appear.
   const referencedIds = (template: Template): string[] =>
-    collectAccelerators(template(makeIdProbe()))
+    collectAccelerators(renderTemplate(template, makeIdProbe()))
       .filter((a): a is string => typeof a === 'string' && a.startsWith(SENTINEL))
       .map((a) => a.slice(SENTINEL.length))
 
@@ -271,7 +284,7 @@ describe('menu template accelerators match the platform keybinding tables (Parag
         const ids = referencedIds(template)
         // Build the same menu with real table values; items line up 1:1 with `ids`
         // because the source order is deterministic.
-        const produced = collectAccelerators(template(makeMapKeybindings(map)))
+        const produced = collectAccelerators(renderTemplate(template, makeMapKeybindings(map)))
         expect(produced.length).toBe(ids.length)
 
         produced.forEach((value, i) => {

@@ -8,6 +8,11 @@ const __dirname = dirname(__filename)
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: { url: 'http://localhost/' },
+      happyDOM: { url: 'http://localhost/' }
+    },
+    setupFiles: ['test/unit/setup.ts'],
     include: ['test/unit/specs/**/*.spec.ts'],
     globals: true
   },

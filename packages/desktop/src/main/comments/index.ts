@@ -3,11 +3,23 @@ import { join } from 'node:path'
 import { CommentService } from './CommentService'
 
 let service: CommentService | null = null
+let closeListenerRegistered = false
+
+const handleBeforeQuit = (): void => {
+  closeListenerRegistered = false
+  closeCommentService()
+}
 
 export const getCommentService = (): CommentService => {
-  service ??= new CommentService({
-    databasePath: join(app.getPath('userData'), 'annotations.sqlite')
-  })
+  if (!service) {
+    service = new CommentService({
+      databasePath: join(app.getPath('userData'), 'annotations.sqlite')
+    })
+    if (!closeListenerRegistered) {
+      closeListenerRegistered = true
+      app.once('before-quit', handleBeforeQuit)
+    }
+  }
   return service
 }
 

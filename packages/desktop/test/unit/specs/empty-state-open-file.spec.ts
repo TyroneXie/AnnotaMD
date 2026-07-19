@@ -21,15 +21,15 @@ describe('empty editor start actions', () => {
     expect(recentComponent).toContain("t('recent.dragHint')")
   })
 
-  it('shows green action blocks only while each empty-state option is hovered', () => {
+  it('uses the contrast-controlled primary theme pair for primary actions', () => {
     expect(recentComponent).toMatch(
-      /\.start-primary\s*\{[^}]*background:\s*transparent;/s
+      /\.start-primary\s*\{[^}]*background:\s*var\(--buttonPrimaryBgColor\);/s
     )
     expect(recentComponent).toMatch(
       /\.start-primary:hover,[\s\S]*?\.start-secondary:hover,[\s\S]*?\{[^}]*background:\s*var\(--buttonPrimaryBgColor\);/s
     )
     expect(sidebarTree).toMatch(
-      /\.open-project \.el-button\.is-text\.is-has-bg,[\s\S]*?\{[^}]*background-color:\s*transparent;/s
+      /\.open-project \.el-button\.is-text\.is-has-bg,[\s\S]*?\{[^}]*background-color:\s*var\(--buttonPrimaryBgColor\);/s
     )
     expect(sidebarTree).toMatch(
       /\.open-project \.el-button\.is-text\.is-has-bg:hover,[\s\S]*?\{[^}]*background-color:\s*var\(--buttonPrimaryBgColor\);/s

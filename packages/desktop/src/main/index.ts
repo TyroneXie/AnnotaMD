@@ -15,8 +15,6 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { scheduleMcpClientInspection } from './ipc/mcpClients'
-import { closeCommentService } from './comments'
-import { setAgentBridgeEnabled } from './comments/AgentBridgeServer'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -45,7 +43,7 @@ const initializeLogger = (env: AppEnvironment): void => {
     return path.join(env.paths.logPath, 'main.log')
   }
   log.transports.file.level = getLogLevel()
-  log.transports.file.sync = true
+  log.transports.file.sync = false
   log.errorHandler.startCatching({
     onError(error: unknown) {
       // This callback receives the full Error object with stack
@@ -124,10 +122,17 @@ try {
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()
 
+let agentBridgeModule: Promise<typeof import('./comments/AgentBridgeServer')> | null = null
 const syncAgentBridge = (nextEnabled: boolean): void => {
-  void setAgentBridgeEnabled(nextEnabled).catch((error) => {
-    log.error('Failed to update AnnotaMD MCP comment service:', error)
-  })
+  // MCP is disabled by default. Do not parse the HTTP bridge, crypto helpers,
+  // or comment database stack merely to call its no-op stop path at startup.
+  if (!nextEnabled && !agentBridgeModule) return
+  agentBridgeModule ??= import('./comments/AgentBridgeServer')
+  void agentBridgeModule
+    .then(({ setAgentBridgeEnabled }) => setAgentBridgeEnabled(nextEnabled))
+    .catch((error) => {
+      log.error('Failed to update AnnotaMD MCP comment service:', error)
+    })
 }
 
 void app.whenReady().then(() => {
@@ -139,7 +144,13 @@ onInternalChannel('broadcast-preferences-changed', (change: Record<string, unkno
   }
 })
 app.once('before-quit', () => {
-  void setAgentBridgeEnabled(false).finally(closeCommentService)
+  if (agentBridgeModule) {
+    void agentBridgeModule
+      .then(({ setAgentBridgeEnabled }) => setAgentBridgeEnabled(false))
+      .catch((error) => {
+        log.error('Failed to stop AnnotaMD MCP comment service:', error)
+      })
+  }
 })
 
 // Quit when all windows are closed (except on macOS)
