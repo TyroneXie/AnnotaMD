@@ -153,7 +153,8 @@ run(`"${patchPackageBin}"`, { cwd: desktopRoot })
 
 // ── 4. Rebuild native modules for Electron ABI ──────────────────────────────
 console.log('Rebuilding native modules for Electron...')
-run(`"${electronRebuildBin}" -f`, { cwd: desktopRoot })
+const electronClangFlag = process.env.USE_ELECTRON_CLANG === '1' ? ' --use-electron-clang' : ''
+run(`"${electronRebuildBin}" -f${electronClangFlag}`, { cwd: desktopRoot })
 
 // ── 5. Generate minified locale files ───────────────────────────────────────
 console.log('Minifying locales...')

@@ -56,12 +56,16 @@
    - 界面或交互改动必须在 Electron 中打开真实文档验证，不能只凭单元测试。发布前使用 `npm --prefix packages/desktop run build:mac:arm64`（Apple Silicon）或 `build:mac:x64`（Intel）打包当前架构，并从该新产物启动一次，核对版本号和本次核心场景。
    - 任一与本次改动相关的检查失败时不得创建 tag；先修复并重新验证。既有且确认无关的失败要明确记录，不能静默忽略。
 
-4. **提交与推送**
+4. **提交并执行远程跨平台预检**
    - 只暂存本次发布范围，提交信息统一为 `release: prepare AnnotaMD vX.Y.Z`。
-   - 创建 annotated tag：`git tag -a vX.Y.Z -m "AnnotaMD vX.Y.Z"`。
-   - 最后核对 tag 指向发布提交，再使用 `git push --atomic origin main vX.Y.Z` 同时推送分支和 tag。
+   - 先只推送 `main`，不要创建 tag；执行 `gh workflow run build.yml --ref main`，并记录本次运行 ID。
+   - 等待该 `PR Build` 运行结束，确认其 `headSha` 与待发布 `HEAD` 完全一致，Linux、Windows x64/arm64、macOS x64/arm64 五个平台全部成功且均上传产物。失败时直接在 `main` 修复并重新预检，不占用新版本号。
 
-5. **等待并验收正式 Release**
+5. **创建并推送不可变 tag**
+   - 只有第 4 步精确提交的五平台预检全部通过后，才创建 annotated tag：`git tag -a vX.Y.Z -m "AnnotaMD vX.Y.Z"`。
+   - 核对 tag 指向已通过预检的提交，再单独执行 `git push origin vX.Y.Z`。不得为了维持原子推送而跳过 tag 前预检。
+
+6. **等待并验收正式 Release**
    - 持续监控 tag 触发的 `Release AnnotaMD` GitHub Actions，直到流水线明确成功或失败；不能在排队或运行中就宣称发布完成。
    - 成功标准：GitHub Release 不是 draft/prerelease（预发布除外），macOS x64/arm64、Windows x64/arm64、Linux 产物均已上传，并存在 `SHA256SUMS.txt`。
    - 检查 Release 页面正文。若自动正文只有安装提示和比较链接，使用本次 `docs/releases/release-notes-vX.Y.Z.md` 补齐详细中文更新日志，同时保留下载校验说明和完整变更链接。
@@ -117,3 +121,31 @@
 - 根因：只验证了实验 worktree，没有把对应提交合入当前发布分支，或构建时使用了另一份源码/旧产物。
 - 推荐做法：开始修改前确认仓库路径、分支和 `HEAD`；完成后用 `git diff`/`git log --contains <commit>` 确认代码归属；发布前确认目标提交可从发布 `HEAD` 到达，并对新生成的安装包而不是开发版或旧 DMG 进行冒烟验证。
 - 验证方式：至少记录并核对 `pwd`、`git branch --show-current`、`git rev-parse HEAD`、`git merge-base --is-ancestor <目标提交> HEAD`、`git status --short`；安装产物后复测本次修复的核心场景。
+
+### Electron 大版本与 Linux 原生模块工具链
+
+- 现象：Electron 大版本升级后，macOS 和 Windows 能完成原生模块重建，但 Linux 在 `native-keymap` 包含 V8 头文件时出现 `V8_EXPORT`/`expected identifier` 编译错误。
+- 根因：Electron 43 的 Linux V8 二进制使用 Clang 构建；仅设置 C++20 仍会让 `electron-rebuild` 默认调用 GCC，而 workflow 中未被脚本读取的环境变量不能改变编译器。
+- 推荐做法：Linux CI 设置 `USE_ELECTRON_CLANG=1`，并由 `scripts/postinstall.ts` 将其转换为 `electron-rebuild --use-electron-clang`，使用与 Electron 匹配的 Clang 和 sysroot；macOS、Windows 保持现有工具链。
+- 验证方式：确认 Release、Build 和 E2E 三条 Linux workflow 的 postinstall 均启用该开关，并以 GitHub Actions 中 `native-keymap` 重建和 Linux 全量打包通过为准。
+
+### pnpm 冻结锁文件与配置一致性
+
+- 现象：所有平台在构建前同时报 `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH`，Release 尚未进入编译阶段就失败。
+- 根因：`package.json` 或 workspace 的 overrides 等依赖配置已变化，但 `pnpm-lock.yaml` 的 settings 没有同步更新；CI 使用 frozen lockfile，不会代为修复。
+- 推荐做法：任何依赖声明、overrides、patchedDependencies 或 workspace 配置变更，都必须同步提交重新生成的 `pnpm-lock.yaml`；不要用关闭 frozen lockfile 掩盖不一致。
+- 验证方式：发布候选提交执行 `pnpm install --frozen-lockfile --ignore-scripts` 必须通过，并由 tag 前五平台预检再次验证。
+
+### Linux 多格式打包缓存竞争
+
+- 现象：Linux 同时生成 AppImage 与 Snap 等格式时，在 `~/.cache/electron-builder/appimage-*` 下出现随机 `ENOENT`，而其他平台正常。
+- 根因：多个 electron-builder 目标并发下载或解压同一份 AppImage 工具缓存，发生目录创建与清理竞争。
+- 推荐做法：Linux 主格式与 Snap 保持为顺序执行的 electron-builder 调用，不要为了缩短时间改回并发；共享缓存的新增目标也应串行验证。
+- 验证方式：tag 前 Linux 预检必须完整产出 AppImage、deb、rpm、tar.gz 和 snap，不能只以编译通过作为成功标准。
+
+### 不可变 tag 前的跨平台门禁
+
+- 现象：macOS 本机验证通过，但 tag 触发 Release 后才暴露 Linux 或 Windows 问题；由于远程 tag 不得移动，修复只能再发布 patch 版本。
+- 根因：本机验证覆盖不了其他平台，而旧流程把五平台构建放在 tag 创建之后；原有 `build.yml` 又只由 PR 触发，直接从 `main` 发布时没有远程预检。
+- 推荐做法：`build.yml` 保留 `workflow_dispatch` 入口；发布候选提交先推送 `main`，对其精确 SHA 手动运行五平台 Build，全部成功后再创建和推送 tag。
+- 验证方式：发布记录中必须同时保留 tag 前 Build run ID，并确认其 `headSha` 等于 tag commit；缺少这一证据不得创建 tag。

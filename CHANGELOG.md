@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.10.1 - 2026-07-19
+
+### Changed
+
+- Added a mandatory five-platform preflight build on the exact release commit before creating an immutable version tag.
+
+### Fixed
+
+- Fixed Linux release builds for Electron 43 by rebuilding native modules with Electron's matching Clang toolchain and sysroot instead of GCC.
+
 ## 2.10.0 - 2026-07-19
 
 ### Changed
