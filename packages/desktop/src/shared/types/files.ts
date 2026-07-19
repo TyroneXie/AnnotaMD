@@ -73,6 +73,8 @@ export interface IFileState {
   pathname: string
   markdown: string
   isSaved: boolean
+  // The editor buffer still exists, but its backing file no longer does.
+  isMissingOnDisk: boolean
   encoding: FileEncoding
   lineEnding: LineEnding | string
   adjustLineEndingOnSave: boolean

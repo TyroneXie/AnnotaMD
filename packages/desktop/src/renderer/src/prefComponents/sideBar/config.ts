@@ -3,7 +3,8 @@ import {
   Edit as EditorIcon,
   Brush as ThemeIcon,
   Picture as ImageIcon,
-  Operation as KeyBindingIcon
+  Operation as KeyBindingIcon,
+  Connection as AgentIcon
 } from '@element-plus/icons-vue'
 
 import preferences from '../../../../main/preferences/schema.json'
@@ -89,6 +90,12 @@ export const getCategory = (): PrefCategory[] => [
     path: '/preference/image'
   },
   {
+    name: t('preferences.categories.agent'),
+    label: 'agent',
+    icon: AgentIcon,
+    path: '/preference/agent'
+  },
+  {
     name: t('preferences.categories.keybindings'),
     label: 'keybindings',
     icon: KeyBindingIcon,
@@ -148,7 +155,8 @@ export const getTranslatedSearchContent: CachedTranslator = (() => {
         'editor',
         'theme',
         'image',
-        'keybindings'
+        'keybindings',
+        'agent'
       ]
       if (!validRoutes.includes(routeCategory)) routeCategory = 'general'
 

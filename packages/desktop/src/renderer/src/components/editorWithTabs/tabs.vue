@@ -13,13 +13,17 @@
           v-for="file of tabs"
           :key="file.id"
           :title="file.pathname"
-          :class="{ active: currentFile?.id === file.id, unsaved: !file.isSaved }"
+          :class="{
+            active: currentFile?.id === file.id,
+            unsaved: !file.isSaved,
+            'missing-on-disk': file.isMissingOnDisk
+          }"
           :data-id="file.id"
           @click.stop="selectFile(file)"
           @click.middle="closeTab(file.id)"
           @contextmenu.prevent="handleContextMenu($event, file)"
         >
-          <span>{{ file.filename }}</span>
+          <span class="filename">{{ file.filename }}</span>
           <span class="unsaved-dot" />
           <el-icon
             class="close-icon"
@@ -406,6 +410,11 @@ onBeforeUnmount(() => {
     &:hover > .unsaved-dot {
       display: none;
     }
+  }
+  & > li.missing-on-disk > .filename {
+    color: var(--notificationErrorBg);
+    text-decoration-line: line-through;
+    text-decoration-thickness: 1px;
   }
   & > li.active {
     background: var(--itemBgColor);

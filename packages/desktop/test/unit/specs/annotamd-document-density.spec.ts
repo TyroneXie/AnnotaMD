@@ -79,6 +79,9 @@ describe('AnnotaMD document density', () => {
     expect(toc).toMatch(
       /\.side-bar-toc-wordwrap \.el-tree-node__content\s*\{[^}]*min-height:\s*24px;/s
     )
+    expect(toc).toMatch(
+      /\.side-bar-toc-overflow \.el-tree-node__label\s*\{[^}]*text-overflow:\s*clip;[^}]*white-space:\s*nowrap;/s
+    )
     expect(file).toMatch(/\.side-bar-file\s*\{[^}]*font-size:\s*12px;/s)
     expect(folder).toMatch(/\.folder-name\s*\{[^}]*font-size:\s*12px;/s)
     expect(opened).toMatch(/\.opened-file\s*\{[^}]*font-size:\s*12px;/s)

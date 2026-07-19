@@ -17,6 +17,7 @@ export type { IFileState }
 
 const defaultFileStateWithoutId = {
   isSaved: true,
+  isMissingOnDisk: false,
   pathname: '',
   filename: 'Untitled-1',
   markdown: '',
@@ -70,6 +71,7 @@ export const getOptionsFromState = (
 
 const documentStateKeys = [
   'isSaved',
+  'isMissingOnDisk',
   'pathname',
   'filename',
   'markdown',

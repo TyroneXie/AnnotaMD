@@ -121,6 +121,7 @@ import {
   buildAnnotaMDCommentAnchorRects,
   clearAnnotaMDCommentHighlights,
   findAnnotaMDCommentAtPosition,
+  readAnnotaMDCommentText,
   syncAnnotaMDCommentHighlights
 } from '@/util/annotamdCommentHighlights'
 import { addCommonStyle, setEditorWidth } from '@/util/theme'
@@ -168,6 +169,7 @@ const getMuyaLocale = (language: string): ILocale => MUYA_LOCALES[language] ?? e
 // duplicate UI handlers. The per-plugin option closures (imageAction/jumpClick)
 // only read app-singleton Pinia stores, so capturing them once is correct.
 let muyaPluginsRegistered = false
+let skipNextCommentOtTransform = false
 
 // The `@muyajs/core` `Muya` surface is deliberately permissive (`[key: string]:
 // any` in muya-core.d.ts); everything that crosses the editor boundary leans on
@@ -192,6 +194,13 @@ interface MuyaChange {
   cursorCoords?: { y?: number } | null
   formats?: SelectionFormatLike[]
   [key: string]: unknown
+}
+
+interface MuyaJsonChange {
+  op: import('ot-json1').JSONOp
+  source: string
+  prevDoc: unknown
+  doc: unknown
 }
 
 const props = defineProps<{
@@ -305,6 +314,7 @@ let pendingCommentHoverPoint: { clientX: number; clientY: number } | null = null
 let documentCommentFooterObserver: MutationObserver | null = null
 let commentHighlightFrame: number | null = null
 let stopCommentHighlightSubscription: (() => void) | null = null
+let stopAgentEditSubscription: (() => void) | null = null
 let stickyTableHeader: AnnotaMDStickyTableHeader | null = null
 
 // The engine's undo/redo history (`getHistory()`) has a different shape than
@@ -458,32 +468,38 @@ const getAnnotaMDSelection = (changes: MuyaChange): AnnotaMDSelection | null => 
   const isCrossBlock = anchorKey !== focusKey
   const anchorBlock = changes.anchorBlock as { text?: string } | null | undefined
 
-  let quote = ''
+  let exactQuote = window.getSelection()?.toString() ?? ''
   if (!isCrossBlock && anchorBlock?.text) {
     const start = Math.min(anchorOffset, focusOffset)
     const end = Math.max(anchorOffset, focusOffset)
-    quote = anchorBlock.text.slice(start, end)
-  } else {
-    quote = window.getSelection()?.toString() ?? ''
+    exactQuote ||= anchorBlock.text.slice(start, end)
   }
 
-  quote = quote.replace(/\s+/g, ' ').trim()
+  const quote = exactQuote.replace(/\s+/g, ' ').trim()
   if (!quote) return null
 
   return {
     quote,
+    exactQuote,
     anchor: {
       key: anchorKey,
+      path: anchorPath,
       offset: anchorOffset
     },
     focus: {
       key: focusKey,
+      path: focusPath,
       offset: focusOffset
     },
     isCrossBlock,
     capturedAt: Date.now()
   }
 }
+
+const parsePersistedPath = (key: string): Array<string | number> => key.split('/').map((part) => {
+  const numeric = Number(part)
+  return Number.isInteger(numeric) && String(numeric) === part ? numeric : part
+})
 
 // Build a JSON-serializable cursor from the engine selection (drop the live
 // block references so it survives the buffered-state round-trip). `setCursor`
@@ -1353,7 +1369,14 @@ const handleCommentHighlightHover = (event: MouseEvent): void => {
   })
 }
 
-watch(() => currentFile.value?.pathname, queueAnnotaMDCommentHighlights)
+watch(() => currentFile.value?.pathname, (filePath) => {
+  if (filePath) {
+    void annotaMDCommentsStore.loadForFile(filePath, editor.value?.getMarkdown() ?? '')
+      .then(queueAnnotaMDCommentHighlights)
+  } else {
+    queueAnnotaMDCommentHighlights()
+  }
+})
 stopCommentHighlightSubscription = annotaMDCommentsStore.$subscribe(
   () => queueAnnotaMDCommentHighlights(),
   { detached: true }
@@ -1738,7 +1761,17 @@ const handleFileChange = (payload: unknown) => {
       // document is unchanged this is a no-op (returns false) and the existing
       // history/content already match — either way the caret still needs
       // remapping below.
+      const previousDocument = editor.value.getState()
+      skipNextCommentOtTransform = true
       editor.value.replaceContent(newMarkdown, preSourceModeSelection)
+      skipNextCommentOtTransform = false
+      if (currentFile.value?.pathname) {
+        annotaMDCommentsStore.remapSelectionAnchorsBetweenDocuments(
+          currentFile.value.pathname,
+          previousDocument,
+          editor.value.getState()
+        )
+      }
       preSourceModeSelection = null
       editorStore.UPDATE_TOC(editor.value.getTOC())
       // Map the CodeMirror `{ line, ch }` cursor onto a block-key cursor so the
@@ -1761,7 +1794,17 @@ const handleFileChange = (payload: unknown) => {
       if (id) {
         resetSyntheticHistory(id, newMarkdown)
       }
+      const previousDocument = editor.value.getState()
+      skipNextCommentOtTransform = true
       editor.value.replaceContent(newMarkdown)
+      skipNextCommentOtTransform = false
+      if (currentFile.value?.pathname) {
+        annotaMDCommentsStore.remapSelectionAnchorsBetweenDocuments(
+          currentFile.value.pathname,
+          previousDocument,
+          editor.value.getState()
+        )
+      }
       editorStore.UPDATE_TOC(editor.value.getTOC())
       if (newCursor) {
         applyCursor(editor.value, newCursor)
@@ -1995,6 +2038,10 @@ onMounted(() => {
   editorStore.UPDATE_TOC(muya.getTOC())
   observeDocumentCommentFooterTarget()
   queueAnnotaMDCommentHighlights()
+  if (currentFile.value?.pathname) {
+    void annotaMDCommentsStore.loadForFile(currentFile.value.pathname, muya.getMarkdown())
+      .then(queueAnnotaMDCommentHighlights)
+  }
 
   // Seed the save-tracking baseline for the mount-loaded document (from the
   // engine's OWN serialization, same reason as setMarkdownToEditor). Without
@@ -2061,13 +2108,30 @@ onMounted(() => {
   // derived document snapshot (markdown / word count / cursor / history / TOC /
   // block AST), so we compute it here — mirroring the legacy engine's
   // `dispatchChange` payload.
-  editor.value.on('json-change', () => {
+  editor.value.on('json-change', ({ op, prevDoc, doc }: MuyaJsonChange) => {
     // There is a chance that this event is fired AFTER the tab is switched. If we purely rely on this.currentFile later on
     // it can cause invalid updates. Hence, we need the id to identify changes as part of each tab
     if (!currentFile.value || !editor.value) return
     const { id } = currentFile.value
     if (!id) return
     const markdown = editor.value.getMarkdown()
+    const filePath = currentFile.value.pathname
+    if (filePath) {
+      annotaMDCommentsStore.markdownByFile[filePath] = markdown
+      if (skipNextCommentOtTransform) {
+        skipNextCommentOtTransform = false
+      } else {
+        annotaMDCommentsStore.transformSelectionAnchors(filePath, op, prevDoc, doc)
+      }
+      requestAnimationFrame(() => {
+        const root = getScrollContainer()
+        if (!root) return
+        annotaMDCommentsStore.removeCommentsWithChangedText(
+          filePath,
+          (comment) => readAnnotaMDCommentText(root, comment)
+        )
+      })
+    }
     // Stash the real engine history for in-session tab-switch restoration. The
     // synthetic save-tracking id is derived from the live document content (a
     // monotonic, never-reused id — see `syntheticHistory.ts`), NOT the engine
@@ -2092,6 +2156,61 @@ onMounted(() => {
     ensureDocumentCommentFooterTarget()
     queueAnnotaMDCommentHighlights()
   })
+
+  stopAgentEditSubscription?.()
+  stopAgentEditSubscription = window.electron.ipcRenderer.on(
+    'mt::comments::apply-edit',
+    async(_event, request) => {
+      if (!editor.value || currentFile.value?.pathname !== request.filePath) return
+      const comment = currentFileComments.value.find((item) => item.id === request.commentId)
+      if (!comment?.anchor?.path || !comment.focus?.path) {
+        await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
+          requestId: request.requestId,
+          success: false,
+          error: 'Comment anchor is unavailable'
+        })
+        return
+      }
+      if ((annotaMDCommentsStore.revisionByFile[request.filePath] ?? 0) !== request.expectedRevision) {
+        await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
+          requestId: request.requestId,
+          success: false,
+          error: 'Comment revision changed; read the comment again'
+        })
+        return
+      }
+      skipNextCommentOtTransform = true
+      let success = false
+      try {
+        success = editor.value.replaceTextRangeExact({
+          anchor: { offset: comment.anchor.offset },
+          focus: { offset: comment.focus.offset },
+          anchorPath: comment.anchor.path,
+          focusPath: comment.focus.path
+        }, comment.exactQuote ?? comment.quote, request.replacement)
+      } finally {
+        skipNextCommentOtTransform = false
+      }
+      if (success) {
+        await annotaMDCommentsStore.completeAgentEdit(
+          request.filePath,
+          request.commentId,
+          request.summary?.trim() || t('annotamd.comments.agentEditReply')
+        )
+        void notice.notify({
+          title: t('annotamd.comments.agentEditCompletedTitle'),
+          message: t('annotamd.comments.agentEditCompletedMessage'),
+          type: 'primary',
+          time: 5000
+        })
+      }
+      await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
+        requestId: request.requestId,
+        success,
+        error: success ? undefined : 'Commented text changed or the range cannot be edited'
+      })
+    }
+  )
 
   // The engine does not emit `scroll`; listen on the scroll container directly
   // so the desktop can persist each tab's scroll position.
@@ -2155,8 +2274,27 @@ onMounted(() => {
   )
 
   editor.value.on('annotamd-comment-selection', (selection?: AnnotaMDSelection) => {
-    if (selection?.quote) {
-      annotaMDCommentsStore.setActiveSelection(selection)
+    if (selection?.quote && selection.anchor && selection.focus) {
+      const anchorPath = selection.anchor.path ?? parsePersistedPath(selection.anchor.key)
+      const focusPath = selection.focus.path ?? parsePersistedPath(selection.focus.key)
+      const anchor = { ...selection.anchor, path: anchorPath }
+      const focus = { ...selection.focus, path: focusPath }
+      const root = getScrollContainer()
+      const exactQuote = root
+        ? readAnnotaMDCommentText(root, {
+            scope: 'selection',
+            resolved: false,
+            anchor,
+            focus
+          })
+        : null
+      annotaMDCommentsStore.setActiveSelection({
+        ...selection,
+        quote: (exactQuote ?? selection.exactQuote ?? selection.quote).replace(/\s+/g, ' ').trim(),
+        exactQuote: exactQuote ?? selection.exactQuote ?? selection.quote,
+        anchor,
+        focus
+      })
     }
     annotaMDCommentsStore.requestComposer('selection')
   })
@@ -2279,6 +2417,8 @@ onBeforeUnmount(() => {
   commentHighlightFrame = null
   stopCommentHighlightSubscription?.()
   stopCommentHighlightSubscription = null
+  stopAgentEditSubscription?.()
+  stopAgentEditSubscription = null
   clearAnnotaMDCommentHighlights()
 
   if (imageViewer) {

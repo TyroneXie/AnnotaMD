@@ -589,7 +589,7 @@ onMounted(() => {
   flex-direction: column;
 }
 .opened-files.fills-sidebar {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
 }
 .default-cursor {
@@ -703,9 +703,10 @@ onMounted(() => {
 }
 
 .tree-view.without-projects .open-project {
-  flex: none;
-  justify-content: flex-end;
-  padding: 8px 12px 18px;
+  flex: 1 1 0;
+  min-height: 80px;
+  justify-content: center;
+  padding: 8px 12px;
 }
 
 .open-project .centered-group {

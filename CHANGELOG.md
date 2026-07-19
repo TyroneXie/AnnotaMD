@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.9.0 - 2026-07-19
+
+### Added
+
+- Added local SQLite comment storage so selection comments, full-document comments, replies, and resolution state remain private without changing Markdown files or creating sidecar folders.
+- Added stable comment anchors that follow ordinary document edits and section movement, distinguish repeated text, and discard a comment when its own quoted text changes.
+- Added the AnnotaMD MCP service with tools for discovering commented documents, reading complete Markdown and comment threads, replying to comments, applying exact anchored edits, and resolving discussions.
+- Added Agent settings with ChatGPT and Claude Code detection/configuration plus a copyable standard configuration for other local STDIO MCP clients.
+
+### Changed
+
+- Preserved comments when the same file is renamed or moved, kept copied files clean, and automatically removed missing-document records after seven days.
+- Refined the right comment pane with a compact header, narrower default width, clearer comment count, Agent reply labels, and direct MCP settings access.
+- Let the opened-file sidebar use its available height while keeping the “Open Folder” action centered in the remaining blank area.
+- Let long document-outline entries scroll horizontally instead of hiding their full titles.
+
+### Fixed
+
+- Fixed comment persistence failures caused by passing Vue reactive proxies across Electron IPC boundaries.
+- Fixed ChatGPT and Claude Code rows appearing late or briefly exposing untranslated detection placeholders when opening Agent settings.
+- Fixed stale or missing file tabs remaining active after files changed outside the application.
+- Fixed the settings window failing to surface when it was already open but hidden or minimized.
+
 ## 2.8.1 - 2026-07-18
 
 ### Fixed

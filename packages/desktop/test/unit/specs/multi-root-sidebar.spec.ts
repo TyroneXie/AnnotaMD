@@ -30,7 +30,7 @@ describe('multi-root sidebar integration', () => {
     expect(tree).toContain("t('sideBar.tree.addFolder')")
   })
 
-  it('lets opened files fill an otherwise empty sidebar and reveals the active file', () => {
+  it('lets opened files grow while centering the folder action in the remaining space', () => {
     const tree = read('packages/desktop/src/renderer/src/components/sideBar/tree.vue')
     const openedTab = read(
       'packages/desktop/src/renderer/src/components/sideBar/treeOpenedTab.vue'
@@ -41,7 +41,10 @@ describe('multi-root sidebar integration', () => {
       /\.opened-files\.fills-sidebar \.opened-files-list\s*\{[^}]*max-height:\s*none;[^}]*min-height:\s*0;/s
     )
     expect(tree).toMatch(
-      /\.tree-view\.without-projects \.open-project\s*\{[^}]*flex:\s*none;/s
+      /\.opened-files\.fills-sidebar\s*\{[^}]*flex:\s*0 1 auto;[^}]*min-height:\s*0;/s
+    )
+    expect(tree).toMatch(
+      /\.tree-view\.without-projects \.open-project\s*\{[^}]*flex:\s*1 1 0;[^}]*justify-content:\s*center;/s
     )
     expect(openedTab).toContain('openedFileEl.value?.scrollIntoView({ block: \'nearest\' })')
     expect(openedTab).toContain('{ immediate: true }')

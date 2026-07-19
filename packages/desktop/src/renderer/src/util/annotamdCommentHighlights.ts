@@ -113,6 +113,14 @@ const rangeForComment = (
   return range.collapsed ? null : range
 }
 
+export const readAnnotaMDCommentText = (
+  root: HTMLElement,
+  comment: CommentHighlightSource
+): string | null => {
+  const range = rangeForComment(contentBlocksByPath(root), comment)
+  return range?.toString() ?? null
+}
+
 export const buildAnnotaMDCommentRanges = (
   root: HTMLElement,
   comments: CommentHighlightSource[]

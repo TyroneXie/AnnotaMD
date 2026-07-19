@@ -1075,6 +1075,51 @@ export class Muya {
         );
     }
 
+    /**
+     * Replace one exact editor range. Agent integrations pass a persisted
+     * comment anchor, never a quote occurrence, so repeated text is safe.
+     * Returns false when either endpoint is stale or the visible text changed.
+     */
+    replaceTextRangeExact(
+        cursor: IPublicCursorInput,
+        expectedText: string,
+        replacement: string,
+    ): boolean {
+        const { scrollPage } = this.editor;
+        if (!scrollPage)
+            return false;
+        const { anchor, focus, anchorPath, focusPath }
+            = this._normalizeCursorEndpoints(cursor);
+        if (!anchor || !focus)
+            return false;
+        const { anchorBlock, focusBlock } = this._resolveCursorBlocks(
+            cursor,
+            scrollPage,
+            anchorPath,
+            focusPath,
+        );
+        if (!anchorBlock?.isContent() || !focusBlock?.isContent())
+            return false;
+
+        if (anchorBlock === focusBlock) {
+            const begin = Math.min(anchor.offset, focus.offset);
+            const end = Math.max(anchor.offset, focus.offset);
+            if (anchorBlock.text.slice(begin, end) !== expectedText)
+                return false;
+            anchorBlock.text
+                = anchorBlock.text.slice(0, begin) + replacement + anchorBlock.text.slice(end);
+            const caret = begin + replacement.length;
+            anchorBlock.setCursor(caret, caret, true);
+            return true;
+        }
+
+        this.setCursor(cursor);
+        if (window.getSelection()?.toString() !== expectedText)
+            return false;
+        return typeof document.execCommand === 'function'
+            && document.execCommand('insertText', false, replacement);
+    }
+
     // Accept both the `{ anchor, focus, anchorPath, focusPath }` and the
     // `{ start, end, path }`/`block` shapes of IPublicCursorInput.
     private _normalizeCursorEndpoints(cursor: IPublicCursorInput) {

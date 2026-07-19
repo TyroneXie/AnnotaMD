@@ -8,6 +8,12 @@ export { renderToStaticHTML } from './state/renderToStaticHTML';
 export type { IRenderToStaticHTMLOptions } from './state/renderToStaticHTML';
 export type { TState } from './state/types';
 export type { IMuyaOptions } from './types';
+export {
+    transformAnnotationPoint,
+    transformAnnotationPointUtf16,
+    mapAnnotationPointBetweenDocumentsUtf16,
+    type IAnnotationPoint,
+} from './annotations/transformAnchor';
 
 export { CodeBlockLanguageSelector } from './ui/codeBlockLanguageSelector';
 // Export ui tools.

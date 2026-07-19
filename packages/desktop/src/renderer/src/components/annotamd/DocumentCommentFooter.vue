@@ -43,6 +43,10 @@
           v-for="reply in comment.replies"
           :key="reply.id"
         >
+          <span
+            v-if="reply.author === 'agent'"
+            class="annotamd-document-reply-author"
+          >{{ t('annotamd.comments.agentAuthor') }}</span>
           {{ reply.body }}
         </p>
       </div>
@@ -262,6 +266,18 @@ const saveReply = (id: string): void => {
 .annotamd-document-replies p {
   padding: 0;
   font-size: 13px;
+}
+
+.annotamd-document-reply-author {
+  display: inline-flex;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #eaf2ff;
+  color: #3370ff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .annotamd-document-actions {

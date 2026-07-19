@@ -370,7 +370,7 @@ onBeforeUnmount(() => stopCommentPaneResize?.())
   background: var(--annotamd-surface);
 }
 .editor-container.comment-pane-open {
-  --annotamd-comment-pane-width: 330px;
+  --annotamd-comment-pane-width: 310px;
 }
 .annotamd-comment-pane-resizer {
   position: fixed;

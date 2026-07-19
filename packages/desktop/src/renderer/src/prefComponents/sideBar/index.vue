@@ -48,6 +48,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
+let stopCategoryListener: (() => void) | null = null
+
 interface SearchEntry {
   key: string
   category: string
@@ -139,7 +141,10 @@ onMounted(() => {
   if (route.name) {
     currentCategory.value = String(route.name)
   }
-  window.electron.ipcRenderer.on('settings::change-tab', onIpcCategoryChange)
+  stopCategoryListener = window.electron.ipcRenderer.on(
+    'settings::change-tab',
+    onIpcCategoryChange
+  )
   // Listen for language changes and refresh the search index
   const languageChanged = (): void => {
     restaurants.value = loadAll()
@@ -150,11 +155,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // removeAllListeners takes a single channel argument. The handler ref was
-  // passed historically but ignored by the typed bridge; removing only the
-  // handler we registered would require holding the unsubscribe callback
-  // returned by `.on`, which is not yet plumbed through here.
-  window.electron.ipcRenderer.removeAllListeners('settings::change-tab')
+  stopCategoryListener?.()
+  stopCategoryListener = null
 })
 </script>
 

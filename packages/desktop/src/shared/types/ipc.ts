@@ -32,12 +32,54 @@ import type {
 } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
+import type {
+  AnnotaMDCommentDocument,
+  AnnotaMDCommentReplaceRequest,
+  AnnotaMDLegacyCommentMigration,
+  AnnotaMDCommentMigrationResult,
+  AnnotaMDAgentEditResult,
+  AnnotaMDAgentEditRequest,
+  AnnotaMDMcpStatus
+} from './comments'
+import type {
+  AnnotaMDMcpClientConfigureResult,
+  AnnotaMDMcpClientId,
+  AnnotaMDMcpClientState,
+  AnnotaMDMcpManualConfigResult
+} from './mcpClients'
 
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
 
 export interface IpcInvokeChannels {
+  'mt::mcp-clients::inspect': {
+    args: [forceRefresh?: boolean]
+    ret: AnnotaMDMcpClientState[]
+  }
+  'mt::mcp-clients::configure': {
+    args: [id: AnnotaMDMcpClientId]
+    ret: AnnotaMDMcpClientConfigureResult
+  }
+  'mt::mcp-clients::manual-config': {
+    args: []
+    ret: AnnotaMDMcpManualConfigResult
+  }
+  'mt::comments::mcp-status': { args: []; ret: AnnotaMDMcpStatus }
+  'mt::comments::load': {
+    args: [filePath: string, markdown?: string]
+    ret: AnnotaMDCommentDocument
+  }
+  'mt::comments::replace': {
+    args: [request: AnnotaMDCommentReplaceRequest]
+    ret: AnnotaMDCommentDocument
+  }
+  'mt::comments::migrate': {
+    args: [entries: AnnotaMDLegacyCommentMigration[]]
+    ret: AnnotaMDCommentMigrationResult
+  }
+  'mt::comments::mark-missing': { args: [filePath: string]; ret: void }
+  'mt::comments::apply-edit-result': { args: [result: AnnotaMDAgentEditResult]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -131,7 +173,7 @@ export interface IpcSendChannels {
   'mt::open-file': [filePath: string, options?: unknown]
   'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
   'mt::open-keybindings-config': []
-  'mt::open-setting-window': []
+  'mt::open-setting-window': [category?: string]
   'mt::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
   'mt::request-keybindings': []
   'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
@@ -217,6 +259,9 @@ export interface IpcSyncChannels {
 // =================================================================
 
 export interface IpcMainEventChannels {
+  'mt::comments::changed': [filePath: string]
+  'mt::comments::apply-edit': [request: AnnotaMDAgentEditRequest]
+  'mt::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
   'language-changed': [language: string]
   'mt::UPDATE_AVAILABLE': [info?: unknown]
   'mt::UPDATE_DOWNLOADED': [info?: unknown]

@@ -9,11 +9,13 @@ import Editing from '@/prefComponents/editing/index.vue'
 import Theme from '@/prefComponents/theme/index.vue'
 import Image from '@/prefComponents/image/index.vue'
 import Keybindings from '@/prefComponents/keybindings/index.vue'
+import Agent from '@/prefComponents/agent/index.vue'
 
 const parseSettingsPage = (type: string | null | undefined): string => {
   let pageUrl = '/preference'
-  if (type && /\/spelling$/.test(type)) {
-    pageUrl += '/spelling'
+  const category = type?.match(/\/([^/]+)$/)?.[1]
+  if (category) {
+    pageUrl += `/${category}`
   }
   return pageUrl
 }
@@ -67,6 +69,11 @@ const routes = (type: string | null | undefined): RouteRecordRaw[] => [
         path: 'keybindings',
         component: Keybindings,
         name: 'keybindings'
+      },
+      {
+        path: 'agent',
+        component: Agent,
+        name: 'agent'
       }
     ]
   }

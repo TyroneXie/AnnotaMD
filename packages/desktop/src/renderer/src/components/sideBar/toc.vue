@@ -147,6 +147,30 @@ const handleClick = (data: { slug?: unknown }): void => {
 .side-bar-toc-overflow {
   overflow: auto;
 }
+
+.side-bar-toc-overflow .el-tree {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.side-bar-toc-overflow .el-tree-node,
+.side-bar-toc-overflow .el-tree-node__content {
+  width: max-content;
+  min-width: 100%;
+}
+
+.side-bar-toc-overflow .el-tree-node__content {
+  box-sizing: border-box;
+  padding-right: 8px;
+}
+
+.side-bar-toc-overflow .el-tree-node__label {
+  flex: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .side-bar-toc-wordwrap {
   overflow-x: hidden;
   overflow-y: auto;

@@ -1,6 +1,6 @@
-export const COMMENT_PANE_DEFAULT_WIDTH = 330
+export const COMMENT_PANE_DEFAULT_WIDTH = 310
 export const COMMENT_PANE_MIN_WIDTH = 280
-export const COMMENT_PANE_MAX_WIDTH = 560
+export const COMMENT_PANE_MAX_WIDTH = 500
 
 const COMMENT_PANE_WIDTH_KEY = 'annotamd-comment-pane-width'
 

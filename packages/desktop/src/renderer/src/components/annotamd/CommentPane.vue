@@ -1,37 +1,35 @@
 <template>
   <aside class="annotamd-comment-pane">
     <header class="annotamd-comment-header">
-      <div>
-        <div class="annotamd-comment-title">{{ t('annotamd.comments.title') }}</div>
-        <div class="annotamd-comment-subtitle">
-          {{ pendingSummary }}
-        </div>
+      <div class="annotamd-comment-title">
+        {{ t('annotamd.comments.titleWithCount', { count: selectionComments.length }) }}
       </div>
-      <button
-        class="annotamd-pane-close"
-        type="button"
-        :aria-label="t('annotamd.comments.closePane')"
-        @click="commentStore.setPaneVisible(false)"
-      >
-        ×
-      </button>
+      <div class="annotamd-comment-header-actions">
+        <button
+          class="annotamd-mcp-status"
+          :class="mcpStatusClass"
+          type="button"
+          :title="mcpStatusTitle"
+          :aria-label="mcpStatusTitle"
+          @click="openAgentSettings"
+        >
+          <span class="annotamd-mcp-status-dot" />
+          <span>MCP</span>
+        </button>
+        <button
+          class="annotamd-pane-close"
+          type="button"
+          :title="t('annotamd.comments.closePane')"
+          :aria-label="t('annotamd.comments.closePane')"
+          @click="commentStore.setPaneVisible(false)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 5 7 7-7 7" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </button>
+      </div>
     </header>
-
-    <section class="annotamd-agent-card">
-      <button
-        class="annotamd-toggle"
-        :class="{ on: agentReadable }"
-        type="button"
-        :aria-label="t('annotamd.comments.toggleAgentAccess')"
-        @click="agentReadable = !agentReadable"
-      >
-        <span />
-      </button>
-      <div>
-        <strong>{{ t('annotamd.comments.connectLocalAgent') }}</strong>
-        <small>{{ t('annotamd.comments.storageDescription') }}</small>
-      </div>
-    </section>
 
     <section
       ref="commentList"
@@ -96,6 +94,7 @@
           <span class="annotamd-comment-scope">{{ t('annotamd.comments.selectionScope') }}</span>
           <div class="annotamd-comment-card-actions">
             <button
+              v-if="!comment.resolved || (comment.anchor && comment.focus)"
               type="button"
               @click="commentStore.toggleResolved(filePath, comment.id)"
             >
@@ -122,6 +121,10 @@
             v-for="reply in comment.replies"
             :key="reply.id"
           >
+            <span
+              v-if="reply.author === 'agent'"
+              class="annotamd-reply-author"
+            >{{ t('annotamd.comments.agentAuthor') }}</span>
             {{ reply.body }}
           </p>
         </div>
@@ -199,6 +202,7 @@ import {
 } from '@/util/commentBubbleLayout'
 import type { CommentAnchorRect } from '@/util/annotamdCommentHighlights'
 import { useI18n } from 'vue-i18n'
+import type { AnnotaMDMcpStatus } from '@shared/types/comments'
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
@@ -208,7 +212,6 @@ const { currentFile } = storeToRefs(editorStore)
 const {
   activeSelection,
   activeCommentId,
-  agentReadable,
   composerRequest,
   commentFocusRequest
 } = storeToRefs(commentStore)
@@ -224,19 +227,22 @@ const commentList = ref<HTMLElement | null>(null)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
 let commentListResizeObserver: ResizeObserver | null = null
+let stopMcpStatusListener: (() => void) | null = null
+const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clients: [] })
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
 const selectionComments = computed(() => comments.value.filter((comment) => comment.scope === 'selection'))
-const unresolvedCount = computed(() => selectionComments.value.filter((comment) => !comment.resolved).length)
-const pendingSummary = computed(() =>
-  t('annotamd.comments.pendingSummary', {
-    count: unresolvedCount.value,
-    access: t(
-      agentReadable.value ? 'annotamd.comments.accessAllowed' : 'annotamd.comments.accessDenied'
-    )
-  })
-)
+const mcpStatusClass = computed(() => ({
+  disabled: !mcpStatus.value.enabled,
+  error: mcpStatus.value.enabled && !mcpStatus.value.running,
+  enabled: mcpStatus.value.enabled && mcpStatus.value.running
+}))
+const mcpStatusTitle = computed(() => {
+  if (!mcpStatus.value.enabled) return t('annotamd.comments.mcpDisabled')
+  if (!mcpStatus.value.running) return t('annotamd.comments.mcpError')
+  return t('annotamd.comments.mcpEnabled')
+})
 const anchoredLayoutEnabled = computed(() =>
   !composerOpen.value && Object.keys(commentLayout.value.positions).length > 0
 )
@@ -274,6 +280,10 @@ const handleCommentAnchors = (payload: unknown): void => {
 
 const clearActiveComment = (commentId: string): void => {
   if (activeCommentId.value === commentId) commentStore.setActiveComment(null)
+}
+
+const openAgentSettings = (): void => {
+  window.electron.ipcRenderer.send('mt::open-setting-window', 'agent')
 }
 
 const openComposer = (): void => {
@@ -358,6 +368,15 @@ watch(filePath, () => {
 })
 
 onMounted(() => {
+  void window.electron.ipcRenderer.invoke('mt::comments::mcp-status').then((status) => {
+    mcpStatus.value = status
+  })
+  stopMcpStatusListener = window.electron.ipcRenderer.on(
+    'mt::comments::mcp-status-changed',
+    (_event, status) => {
+      mcpStatus.value = status
+    }
+  )
   bus.on('annotamd-comment-anchors', handleCommentAnchors)
   if (commentList.value) {
     commentListResizeObserver = new ResizeObserver(() => void updateCommentBubbleLayout())
@@ -366,6 +385,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopMcpStatusListener?.()
+  stopMcpStatusListener = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
   commentListResizeObserver?.disconnect()
   commentListResizeObserver = null
@@ -391,10 +412,10 @@ onBeforeUnmount(() => {
   top: var(--titleBarHeight);
   right: 0;
   bottom: 0;
-  flex: 0 0 var(--annotamd-comment-pane-width, 336px);
+  flex: 0 0 var(--annotamd-comment-pane-width, 310px);
   flex-direction: column;
-  width: var(--annotamd-comment-pane-width, 336px);
-  min-width: var(--annotamd-comment-pane-width, 336px);
+  width: var(--annotamd-comment-pane-width, 310px);
+  min-width: var(--annotamd-comment-pane-width, 310px);
   height: auto;
   overflow: hidden;
   border-left: 1px solid var(--annotamd-border-soft);
@@ -407,13 +428,58 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--annotamd-border-soft);
 }
 
 .annotamd-comment-title {
   color: var(--annotamd-ink);
   font-weight: 700;
+}
+
+.annotamd-comment-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.annotamd-mcp-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--annotamd-muted);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.annotamd-mcp-status:hover {
+  background: #eef1f5;
+}
+
+.annotamd-mcp-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b5bac3;
+}
+
+.annotamd-mcp-status.error .annotamd-mcp-status-dot {
+  background: #d64545;
+}
+
+.annotamd-mcp-status.enabled {
+  color: #16794c;
+}
+
+.annotamd-mcp-status.enabled .annotamd-mcp-status-dot {
+  background: var(--annotamd-green);
+  box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
 }
 
 .annotamd-pane-close {
@@ -425,10 +491,18 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #8f959e;
-  font-size: 20px;
-  line-height: 1;
+  color: var(--annotamd-blue);
   cursor: pointer;
+}
+
+.annotamd-pane-close svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
 }
 
 .annotamd-pane-close:hover {
@@ -436,74 +510,11 @@ onBeforeUnmount(() => {
   color: var(--annotamd-blue);
 }
 
-.annotamd-comment-subtitle {
-  margin-top: 4px;
-  color: var(--annotamd-muted);
-  font-size: 12px;
-}
-
-.annotamd-agent-card {
-  display: flex;
-  gap: 10px;
-  margin: 14px;
-  padding: 12px 13px;
-  border: 1px solid var(--annotamd-border);
-  border-radius: 10px;
-  background: var(--annotamd-surface);
-}
-
-.annotamd-agent-card strong,
-.annotamd-agent-card small {
-  display: block;
-}
-
-.annotamd-agent-card strong {
-  color: var(--annotamd-ink);
-  font-size: 13px;
-}
-
-.annotamd-agent-card small {
-  margin-top: 3px;
-  color: var(--annotamd-muted);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.annotamd-toggle {
-  position: relative;
-  flex: 0 0 auto;
-  width: 34px;
-  height: 20px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--annotamd-border);
-}
-
-.annotamd-toggle span {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--annotamd-surface);
-  box-shadow: 0 1px 3px rgba(31, 35, 41, 0.24);
-  transition: transform 120ms ease;
-}
-
-.annotamd-toggle.on {
-  background: var(--annotamd-blue);
-}
-
-.annotamd-toggle.on span {
-  transform: translateX(14px);
-}
-
 .annotamd-comment-list {
   position: relative;
   flex: 1;
   overflow: auto;
-  padding: 0 14px 80px;
+  padding: 14px 14px 80px;
 }
 
 .annotamd-comment-list.anchored::after {
@@ -661,6 +672,18 @@ onBeforeUnmount(() => {
   padding: 0;
   color: var(--annotamd-text);
   font-size: 13px;
+}
+
+.annotamd-reply-author {
+  display: inline-flex;
+  margin-right: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--annotamd-surface-blue);
+  color: var(--annotamd-blue);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .annotamd-reply-editor {

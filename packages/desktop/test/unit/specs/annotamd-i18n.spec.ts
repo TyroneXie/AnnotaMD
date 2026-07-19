@@ -22,6 +22,7 @@ const annotaMDKeys = [
   'annotamd.mode.blockEdit',
   'annotamd.mode.source',
   'annotamd.comments.title',
+  'annotamd.comments.titleWithCount',
   'annotamd.comments.pendingSummary',
   'annotamd.comments.documentTitle',
   'annotamd.comments.selectionScope',

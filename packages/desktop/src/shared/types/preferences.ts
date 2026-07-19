@@ -19,6 +19,7 @@ export interface IUserPreferences {
   startUpAction?: string
   defaultDirectoryToOpen?: string
   language?: string
+  commentMcpEnabled?: boolean
   editorFontFamily?: string
   fontSize?: number
   lineHeight?: number

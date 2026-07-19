@@ -56,8 +56,12 @@ const testPacks = {
     files: [
       'test/unit/specs/annotamd-comment-highlights.spec.ts',
       'test/unit/specs/annotamd-comment-navigation.spec.ts',
+      'test/unit/specs/annotamd-comment-anchor-lifecycle.spec.ts',
+      'test/unit/specs/annotamd-comment-storage.spec.ts',
       'test/unit/specs/comment-bubble-layout.spec.ts',
-      'test/unit/specs/comment-pane-resize.spec.ts'
+      'test/unit/specs/comment-pane-resize.spec.ts',
+      'test/unit/specs/annotamd-mcp-clients.spec.ts',
+      'test/unit/specs/mcp-client-initial-render.spec.ts'
     ]
   },
   editor: {
@@ -100,6 +104,20 @@ for (const name of selectedPacks) {
     command: testPack.command,
     args: ['run', ...testPack.files],
     cwd: testPack.cwd,
+    env: { ...process.env, CI: '1' }
+  })
+}
+
+if (selectedPacks.includes('comments')) {
+  checks.push({
+    label: 'comment anchor OT tests',
+    command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
+    args: [
+      'run',
+      'src/annotations/__tests__/transformAnchor.spec.ts',
+      'src/__tests__/replaceTextRangeExact.spec.ts'
+    ],
+    cwd: path.join(root, 'packages/muya'),
     env: { ...process.env, CI: '1' }
   })
 }

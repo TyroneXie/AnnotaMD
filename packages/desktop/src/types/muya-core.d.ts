@@ -48,6 +48,16 @@ declare module '@muyajs/core' {
     static use(plugin: any, options?: Record<string, unknown>): void
     constructor(element: HTMLElement, options?: Record<string, unknown>)
     init(): void
+    replaceTextRangeExact(
+      cursor: {
+        anchor: { offset: number }
+        focus: { offset: number }
+        anchorPath: Array<string | number>
+        focusPath: Array<string | number>
+      },
+      expectedText: string,
+      replacement: string
+    ): boolean
     [key: string]: any
   }
 
@@ -88,6 +98,19 @@ declare module '@muyajs/core' {
   export function unescapeHTML(str: string): string
   export function sanitize(html: string, config?: any, isInline?: boolean): string
   export function generateGithubSlug(text: string): string
+  export function transformAnnotationPointUtf16(
+    point: { path: Array<string | number>; offset: number },
+    operation: unknown,
+    previousDocument: unknown,
+    nextDocument: unknown,
+    affinity?: 'left' | 'right'
+  ): { path: Array<string | number>; offset: number } | null
+  export function mapAnnotationPointBetweenDocumentsUtf16(
+    point: { path: Array<string | number>; offset: number },
+    previousDocument: unknown,
+    nextDocument: unknown,
+    affinity?: 'left' | 'right'
+  ): { path: Array<string | number>; offset: number } | null
   export function getImageInfo(src: string): { isUnknownType: boolean; src: string; [key: string]: any }
   export function wordCount(markdown: string): {
     word: number

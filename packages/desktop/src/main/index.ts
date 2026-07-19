@@ -1,6 +1,6 @@
 import './globalSetting'
 import path from 'path'
-import { app, dialog, crashReporter } from 'electron'
+import { app, dialog, crashReporter, ipcMain } from 'electron'
 import log from 'electron-log'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 
@@ -9,10 +9,13 @@ import setupExceptionHandler, { initExceptionLogger } from './exceptionHandler'
 import setupEnvironment from './app/env'
 import type { AppEnvironment } from './app/env'
 import { getLogLevel } from './utils'
+import { onInternalChannel } from './utils/internalIpc'
 import Accessor from './app/accessor'
 import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
+import { closeCommentService } from './comments'
+import { setAgentBridgeEnabled } from './comments/AgentBridgeServer'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -116,6 +119,24 @@ try {
 }
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()
+
+const syncAgentBridge = (nextEnabled: boolean): void => {
+  void setAgentBridgeEnabled(nextEnabled).catch((error) => {
+    log.error('Failed to update AnnotaMD MCP comment service:', error)
+  })
+}
+
+void app.whenReady().then(() => {
+  syncAgentBridge(accessor.preferences.getItem<boolean>('commentMcpEnabled'))
+})
+onInternalChannel('broadcast-preferences-changed', (change: Record<string, unknown>) => {
+  if (typeof change.commentMcpEnabled === 'boolean') {
+    syncAgentBridge(change.commentMcpEnabled)
+  }
+})
+app.once('before-quit', () => {
+  void setAgentBridgeEnabled(false).finally(closeCommentService)
+})
 
 // Quit when all windows are closed (except on macOS)
 app.on('window-all-closed', () => {

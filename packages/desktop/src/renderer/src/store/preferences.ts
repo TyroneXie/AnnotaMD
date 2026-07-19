@@ -37,6 +37,7 @@ export interface PreferencesState {
   lastOpenedFolder: string
   treePathExcludePatterns: string[]
   language: string
+  commentMcpEnabled: boolean
 
   // ----- Editor / typography -----
   editorFontFamily: string
@@ -158,6 +159,7 @@ export const usePreferencesStore = defineStore('preferences', {
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
     language: 'en',
+    commentMcpEnabled: false,
 
     editorFontFamily: 'Open Sans',
     fontSize: 15,
@@ -247,8 +249,6 @@ export const usePreferencesStore = defineStore('preferences', {
 
   actions: {
     SET_USER_PREFERENCE(preference: Partial<PreferencesState> | Record<string, unknown>): void {
-      const oldLanguage = this.language
-
       Object.keys(preference).forEach((key) => {
         if (transientEditModes.has(key)) return
 
@@ -261,9 +261,11 @@ export const usePreferencesStore = defineStore('preferences', {
         }
       })
 
-      // Update i18n language if language preference changed
+      // Re-apply the persisted language after preferences load. The settings
+      // window may receive the main-process locale before this payload, so
+      // comparing only against the store default can leave vue-i18n in English.
       const lang = (preference as { language?: string }).language
-      if (lang && lang !== oldLanguage) {
+      if (lang) {
         setLanguage(lang)
       }
     },

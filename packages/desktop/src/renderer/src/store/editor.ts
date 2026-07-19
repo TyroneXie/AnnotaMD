@@ -147,6 +147,16 @@ export interface EditorState {
 const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const AUTO_SAVE_DELAY = 1000
 
+const clearMissingOnDiskState = (tab: IFileState): void => {
+  tab.isMissingOnDisk = false
+  const notificationIndex = tab.notifications.findIndex(
+    (notification) => notification.exclusiveType === 'file_changed'
+  )
+  if (notificationIndex >= 0) {
+    tab.notifications.splice(notificationIndex, 1)
+  }
+}
+
 export const useEditorStore = defineStore('editor', {
   state: (): EditorState => ({
     currentFile: null,
@@ -364,6 +374,7 @@ export const useEditorStore = defineStore('editor', {
       Object.assign(tab, newFileState)
       tab.id = oldId
       tab.notifications = oldNotifications
+      clearMissingOnDiskState(tab)
       tab.scrollTop = oldScrollTop
       if (oldHistory) {
         tab.history = oldHistory
@@ -597,6 +608,7 @@ export const useEditorStore = defineStore('editor', {
         }
         if (tab) {
           Object.assign(tab, { filename, pathname, isSaved: true })
+          clearMissingOnDiskState(tab)
           debouncedSendBufferedState()
         }
       })
@@ -616,6 +628,7 @@ export const useEditorStore = defineStore('editor', {
             }
           }
           tab.isSaved = true
+          clearMissingOnDiskState(tab)
           debouncedSendBufferedState()
         }
       })
@@ -1360,14 +1373,19 @@ export const useEditorStore = defineStore('editor', {
     },
 
     SET_SAVE_STATUS_WHEN_REMOVE({ pathname }: { pathname: string }): void {
-      let didUpdateSaveStatus = false
+      let didUpdateMissingStatus = false
       this.tabs.forEach((f) => {
         if (f.pathname === pathname) {
-          f.isSaved = false
-          didUpdateSaveStatus = true
+          if (autoSaveTimers.has(f.id)) {
+            const timer = autoSaveTimers.get(f.id)
+            if (timer) clearTimeout(timer)
+            autoSaveTimers.delete(f.id)
+          }
+          f.isMissingOnDisk = true
+          didUpdateMissingStatus = true
         }
       })
-      if (didUpdateSaveStatus) {
+      if (didUpdateMissingStatus) {
         debouncedSendBufferedState()
       }
     },
@@ -1453,7 +1471,7 @@ export const useEditorStore = defineStore('editor', {
       const isDirty = history === undefined ? markdown !== oldMarkdown : historyMarksDirty
       if (isDirty) {
         tab.isSaved = false
-        if (pathname && autoSave) {
+        if (pathname && autoSave && !tab.isMissingOnDisk) {
           const options = getOptionsFromState(tab)
           this.HANDLE_AUTO_SAVE({
             id,
@@ -1487,7 +1505,7 @@ export const useEditorStore = defineStore('editor', {
         autoSaveTimers.delete(id)
 
         const tab = this.tabs.find((t) => t.id === id)
-        if (tab && !tab.isSaved) {
+        if (tab && !tab.isSaved && !tab.isMissingOnDisk) {
           const defaultPath = getRootFolderFromState(projectStore)
           window.electron.ipcRenderer.send(
             'mt::response-file-save',
@@ -1658,7 +1676,12 @@ export const useEditorStore = defineStore('editor', {
           const { id, filename } = tab
           switch (type) {
             case 'unlink': {
-              tab.isSaved = false
+              if (autoSaveTimers.has(id)) {
+                const timer = autoSaveTimers.get(id)
+                if (timer) clearTimeout(timer)
+                autoSaveTimers.delete(id)
+              }
+              tab.isMissingOnDisk = true
               this.pushTabNotification({
                 tabId: id,
                 msg: t('store.editor.fileRemovedOnDisk', { name: filename }),
@@ -1675,7 +1698,12 @@ export const useEditorStore = defineStore('editor', {
               // that left the content byte-identical) — there is nothing to
               // reload and no reason to warn the user (#1861).
               const newMarkdown = (change as unknown as FileChangePayload).data?.markdown
-              if (typeof newMarkdown === 'string' && newMarkdown === tab.markdown) {
+              if (
+                type === 'change' &&
+                !tab.isMissingOnDisk &&
+                typeof newMarkdown === 'string' &&
+                newMarkdown === tab.markdown
+              ) {
                 break
               }
 
@@ -1994,6 +2022,7 @@ interface BufferedTabState {
   filename: string
   markdown: string
   isSaved: boolean
+  isMissingOnDisk: boolean
   encoding: IFileState['encoding']
   lineEnding: IFileState['lineEnding']
   trimTrailingNewline: number
@@ -2011,6 +2040,7 @@ const createBufferedTabState = (tab: Partial<IFileState> & { id: string }): Buff
     filename: tab.filename ?? defaultFileState.filename,
     markdown: typeof tab.markdown === 'string' ? tab.markdown : defaultFileState.markdown,
     isSaved: tab.isSaved ?? defaultFileState.isSaved,
+    isMissingOnDisk: tab.isMissingOnDisk ?? defaultFileState.isMissingOnDisk,
     encoding: toSerializableValue(tab.encoding, defaultFileState.encoding),
     lineEnding: tab.lineEnding ?? defaultFileState.lineEnding,
     trimTrailingNewline:

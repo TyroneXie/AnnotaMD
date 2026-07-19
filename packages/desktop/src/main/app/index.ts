@@ -683,11 +683,10 @@ class App {
       // A setting window is already created
       const browserSettingWindow = settingWins[0].win.browserWindow!
       browserSettingWindow.webContents.send('settings::change-tab', category)
-      if (isLinux) {
-        browserSettingWindow.focus()
-      } else {
-        browserSettingWindow.moveTop()
-      }
+      if (browserSettingWindow.isMinimized()) browserSettingWindow.restore()
+      if (!browserSettingWindow.isVisible()) browserSettingWindow.show()
+      if (!isLinux) browserSettingWindow.moveTop()
+      browserSettingWindow.focus()
       return
     }
     this._createSettingWindow(category)
@@ -836,8 +835,8 @@ class App {
       }
     })
 
-    ipcMain.on('mt::open-setting-window', () => {
-      this._openSettingsWindow()
+    ipcMain.on('mt::open-setting-window', (_event, category?: string) => {
+      this._openSettingsWindow(category)
     })
 
     ipcMain.on('mt::make-screenshot', (e) => {

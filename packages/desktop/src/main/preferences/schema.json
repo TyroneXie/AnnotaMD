@@ -71,6 +71,11 @@
     "type": "string",
     "default": "en"
   },
+  "commentMcpEnabled": {
+    "description": "Agent--Allow MCP clients to access AnnotaMD comments.",
+    "type": "boolean",
+    "default": false
+  },
   "editorFontFamily": {
     "description": "Editor--editor font family",
     "type": "string",
