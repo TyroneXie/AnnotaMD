@@ -69,7 +69,13 @@ jobs:
 
       - name: Install Linux Build Dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+        run: sudo apt-get update && sudo apt-get install -y clang icnsutils graphicsmagick xz-utils libx11-dev libxkbfile-dev gnome-keyring libsecret-1-dev libfontconfig-dev rpm
+
+      - name: Configure Linux Clang
+        if: matrix.platform == 'linux'
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
 
       - name: Install Python 3.12
         uses: actions/setup-python@v5.6.0
@@ -106,7 +112,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_user_agent: 'pnpm'
-          USE_ELECTRON_CLANG: ${{ matrix.platform == 'linux' && '1' || '' }}
 
       - name: build-linux
         if: matrix.platform == 'linux'

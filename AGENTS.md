@@ -125,9 +125,9 @@
 ### Electron 大版本与 Linux 原生模块工具链
 
 - 现象：Electron 大版本升级后，macOS 和 Windows 能完成原生模块重建，但 Linux 在 `native-keymap` 包含 V8 头文件时出现 `V8_EXPORT`/`expected identifier` 编译错误。
-- 根因：Electron 43 的 Linux V8 二进制使用 Clang 构建；仅设置 C++20 仍会让 `electron-rebuild` 默认调用 GCC，而 workflow 中未被脚本读取的环境变量不能改变编译器。
-- 推荐做法：Linux CI 设置 `USE_ELECTRON_CLANG=1`，并由 `scripts/postinstall.ts` 将其转换为 `electron-rebuild --use-electron-clang`，使用与 Electron 匹配的 Clang 和 sysroot；macOS、Windows 保持现有工具链。
-- 验证方式：确认 Release、Build 和 E2E 三条 Linux workflow 的 postinstall 均启用该开关，并以 GitHub Actions 中 `native-keymap` 重建和 Linux 全量打包通过为准。
+- 根因：Electron 43 的 Linux V8 二进制使用 Clang 构建；仅设置 C++20 仍会让 `electron-rebuild` 默认调用 GCC。Electron 43 对应的 Chromium 150 又把预编译 Clang 包从 `.tgz` 改为 `.tar.xz`，当前 `@electron/rebuild` 4.0.4 至 4.2.0 的 `--use-electron-clang` 仍请求旧格式并返回 404。
+- 推荐做法：Linux CI 显式安装系统 Clang，并在 job 级别把 `CC=clang`、`CXX=clang++` 写入 `$GITHUB_ENV`，确保 postinstall 和 `build:linux` 内再次执行的 electron-rebuild 都继承 Clang；在上游支持 `.tar.xz` 前不要使用 `--use-electron-clang`。macOS、Windows 保持现有工具链。
+- 验证方式：确认 Release、Build 和 E2E 三条 Linux workflow 均在所有 Node 构建步骤前导出 CC/CXX，并以两次 `native-keymap` 重建及 AppImage、deb、rpm、tar.gz、snap 全量打包通过为准。
 
 ### pnpm 冻结锁文件与配置一致性
 

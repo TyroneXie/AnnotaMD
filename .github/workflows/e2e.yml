@@ -22,9 +22,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            clang \
             libx11-dev libxkbfile-dev libsecret-1-dev libfontconfig-dev \
             xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
             libdrm2 libgtk-3-0 libgbm1 libasound2t64
+
+      - name: Configure Linux Clang
+        run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
 
       - uses: ./.github/actions/setup
 
@@ -35,7 +41,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           npm_config_user_agent: 'pnpm'
-          USE_ELECTRON_CLANG: '1'
 
       - name: Build app
         run: pnpm build

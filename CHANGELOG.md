@@ -8,7 +8,7 @@
 
 ### Fixed
 
-- Fixed Linux release builds for Electron 43 by rebuilding native modules with Electron's matching Clang toolchain and sysroot instead of GCC.
+- Fixed Linux release builds for Electron 43 by rebuilding native modules with Clang instead of GCC.
 
 ## 2.10.0 - 2026-07-19
 
