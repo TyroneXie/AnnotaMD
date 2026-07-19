@@ -124,8 +124,8 @@ appController.init()
 
 let agentBridgeModule: Promise<typeof import('./comments/AgentBridgeServer')> | null = null
 const syncAgentBridge = (nextEnabled: boolean): void => {
-  // MCP is disabled by default. Do not parse the HTTP bridge, crypto helpers,
-  // or comment database stack merely to call its no-op stop path at startup.
+  // Avoid parsing the HTTP bridge, crypto helpers, or comment database stack
+  // merely to call its no-op stop path when the user has disabled MCP access.
   if (!nextEnabled && !agentBridgeModule) return
   agentBridgeModule ??= import('./comments/AgentBridgeServer')
   void agentBridgeModule

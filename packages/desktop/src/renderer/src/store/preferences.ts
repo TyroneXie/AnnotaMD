@@ -159,7 +159,7 @@ export const usePreferencesStore = defineStore('preferences', {
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
     language: 'en',
-    commentMcpEnabled: false,
+    commentMcpEnabled: true,
 
     editorFontFamily: 'Open Sans',
     fontSize: 15,
