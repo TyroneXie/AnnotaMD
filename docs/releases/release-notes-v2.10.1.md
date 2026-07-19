@@ -46,7 +46,7 @@
 - 跨模块功能验证：menu、table、comments、editor 与批注 OT 共 325 项通过。
 - AnnotaMD TypeScript 检查和 Electron production build 已通过。
 - 已从新生成的 macOS Apple Silicon 应用产物启动表格密集真实文档，确认包内版本 2.10.1、Electron 43.1.1、51 张原始表格、长文档滚动吸顶和窗口显示正常。
-- GitHub Actions 将重新构建并验收 Linux、macOS x64/arm64、Windows x64/arm64 产物与 `SHA256SUMS.txt`。
+- GitHub Actions 已完成 Linux、macOS x64/arm64、Windows x64/arm64 构建，全部产物与 `SHA256SUMS.txt` 已发布。
 
 ## macOS 安装提示
 
