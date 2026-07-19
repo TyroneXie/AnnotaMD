@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { buildAnnotaMDCommentRanges } from '@/util/annotamdCommentHighlights'
+import {
+  buildAnnotaMDCommentRangeLayout,
+  buildAnnotaMDCommentRanges,
+  createAnnotaMDCommentTextReader
+} from '@/util/annotamdCommentHighlights'
 
 const repoRoot = resolve(__dirname, '../../../../..')
 
@@ -51,6 +55,33 @@ describe('AnnotaMD selection comment highlights', () => {
     ])
 
     expect(ranges).toHaveLength(0)
+  })
+
+  it('reuses one content-block index for ranges, anchors and text reads', () => {
+    const root = document.createElement('div')
+    root.append(contentBlock([0, 0], 'hello commented text'))
+    const comments = [
+      {
+        id: 'comment-1',
+        scope: 'selection' as const,
+        resolved: false,
+        anchor: { key: '0/0', offset: 6 },
+        focus: { key: '0/0', offset: 15 }
+      }
+    ]
+    const querySelectorAll = vi.spyOn(root, 'querySelectorAll')
+
+    const layout = buildAnnotaMDCommentRangeLayout(root, comments)
+
+    expect(layout.ranges[0]?.toString()).toBe('commented')
+    expect(layout.anchorRects).toHaveLength(1)
+    expect(querySelectorAll).toHaveBeenCalledTimes(1)
+
+    querySelectorAll.mockClear()
+    const readText = createAnnotaMDCommentTextReader(root)
+    expect(readText(comments[0])).toBe('commented')
+    expect(readText(comments[0])).toBe('commented')
+    expect(querySelectorAll).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the browser highlight registry synced without writing markup', () => {

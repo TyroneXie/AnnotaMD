@@ -108,6 +108,13 @@ interface ContentChangePayload {
   blocks?: unknown
 }
 
+interface DerivedDocumentStatePayload {
+  id: string
+  markdown: string
+  wordCount: IFileState['wordCount']
+  toc?: TocItem[]
+}
+
 interface AffiliationEntry {
   type: string
   functionType?: string
@@ -1405,6 +1412,25 @@ export const useEditorStore = defineStore('editor', {
     UPDATE_TOC(toc: TocItem[]): void {
       this.listToc = toc ?? []
       this.toc = listToTree<TocItem>(toc ?? [])
+    },
+
+    UPDATE_DERIVED_DOCUMENT_STATE({
+      id,
+      markdown,
+      wordCount,
+      toc
+    }: DerivedDocumentStatePayload): void {
+      const tabIndex = this.tabIdToIndex[id]
+      const tab = tabIndex === undefined ? undefined : this.tabs[tabIndex]
+      // A delayed calculation must never overwrite a newer edit or a reused
+      // tab. The content snapshot is the inexpensive freshness token.
+      if (!tab || tab.markdown !== markdown) return
+
+      tab.wordCount = wordCount
+      if (id === this.currentFile?.id && toc && !equal(toc, this.listToc)) {
+        this.listToc = toc
+        this.toc = listToTree<TocItem>(toc)
+      }
     },
 
     // Content change from realtime preview editor and source code editor

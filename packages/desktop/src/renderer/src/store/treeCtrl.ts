@@ -126,6 +126,67 @@ export const addFile = (tree: TreeFolder, file: AddFileInput, sortBy: string = '
 }
 
 /**
+ * Add a burst of files and sort the resulting tree once. Directory watcher
+ * startup can deliver thousands of entries in one renderer task; inserting
+ * every file into an already-sorted array turns that path quadratic.
+ */
+export const addFiles = (
+  tree: TreeFolder,
+  files: AddFileInput[],
+  sortBy: string = 'title',
+  sortOrder: string = 'asc'
+): void => {
+  const knownNames = new Map<TreeFolder, Set<string>>()
+
+  for (const file of files) {
+    const dirname = window.path.dirname(file.pathname)
+    const subDirectories = getSubdirectoriesFromRoot(tree.pathname, dirname)
+    let currentPath = tree.pathname
+    let currentFolder = tree
+
+    for (const directoryName of subDirectories) {
+      let childFolder = currentFolder.folders.find((folder) => folder.name === directoryName)
+      if (!childFolder) {
+        childFolder = {
+          id: getUniqueId(),
+          pathname: `${currentPath}${PATH_SEPARATOR}${directoryName}`,
+          name: directoryName,
+          isCollapsed: true,
+          isDirectory: true,
+          isFile: false,
+          isMarkdown: false,
+          folders: [],
+          files: []
+        }
+        currentFolder.folders.push(childFolder)
+      }
+      currentPath = childFolder.pathname
+      currentFolder = childFolder
+    }
+
+    let names = knownNames.get(currentFolder)
+    if (!names) {
+      names = new Set(currentFolder.files.map((entry) => entry.name))
+      knownNames.set(currentFolder, names)
+    }
+    if (names.has(file.name)) continue
+    names.add(file.name)
+    currentFolder.files.push({
+      id: getUniqueId(),
+      birthTime: file.birthTime,
+      mtimeMs: file.mtimeMs,
+      isDirectory: file.isDirectory,
+      isFile: file.isFile,
+      isMarkdown: file.isMarkdown,
+      name: file.name,
+      pathname: file.pathname
+    })
+  }
+
+  resortTree(tree, sortBy, sortOrder)
+}
+
+/**
  * Add a new directory to the tree list.
  */
 export const addDirectory = (tree: TreeFolder, dir: { pathname: string }): void => {

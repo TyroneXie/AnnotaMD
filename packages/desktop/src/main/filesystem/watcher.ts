@@ -23,6 +23,13 @@ const EVENT_NAME = {
 
 type WatchType = 'dir' | 'file'
 
+interface TreeUpdate {
+  type: 'add' | 'unlink' | 'addDir' | 'unlinkDir' | 'change'
+  change: Record<string, unknown>
+}
+
+type TreeUpdateEmitter = (update: TreeUpdate) => void
+
 interface IgnoreEntry {
   windowId: number
   pathname: string
@@ -45,7 +52,8 @@ const add = async(
   endOfLine: LineEnding,
   autoGuessEncoding: boolean,
   trimTrailingNewline: number,
-  autoNormalizeLineEndings: boolean
+  autoNormalizeLineEndings: boolean,
+  emitTreeUpdate: TreeUpdateEmitter
 ): Promise<void> => {
   const stats = await fsPromises.stat(pathname)
   const birthTime = stats.birthtime
@@ -92,19 +100,22 @@ const add = async(
         return
       }
     }
-    win.webContents.send(EVENT_NAME[type], {
-      type: 'add',
-      change: file
-    })
+    const update = { type: 'add' as const, change: file }
+    if (type === 'dir') emitTreeUpdate(update)
+    else win.webContents.send(EVENT_NAME[type], update)
   }
 }
 
-const unlink = (win: BrowserWindow, pathname: string, type: WatchType): void => {
+const unlink = (
+  win: BrowserWindow,
+  pathname: string,
+  type: WatchType,
+  emitTreeUpdate: TreeUpdateEmitter
+): void => {
   const file = { pathname }
-  win.webContents.send(EVENT_NAME[type], {
-    type: 'unlink',
-    change: file
-  })
+  const update = { type: 'unlink' as const, change: file }
+  if (type === 'dir') emitTreeUpdate(update)
+  else win.webContents.send(EVENT_NAME[type], update)
 }
 
 const change = async(
@@ -114,13 +125,14 @@ const change = async(
   endOfLine: LineEnding,
   autoGuessEncoding: boolean,
   trimTrailingNewline: number,
-  autoNormalizeLineEndings: boolean
+  autoNormalizeLineEndings: boolean,
+  emitTreeUpdate: TreeUpdateEmitter
 ): Promise<void> => {
   if (type === 'dir') {
     // Only send mtimeMs so the sidebar can re-sort; skip loading file content.
     try {
       const stats = await fsPromises.stat(pathname)
-      win.webContents.send('mt::update-object-tree', {
+      emitTreeUpdate({
         type: 'change',
         change: { pathname, mtimeMs: stats.mtimeMs }
       })
@@ -154,7 +166,11 @@ const change = async(
   }
 }
 
-const addDir = (win: BrowserWindow, pathname: string, type: WatchType): void => {
+const addDir = (
+  pathname: string,
+  type: WatchType,
+  emitTreeUpdate: TreeUpdateEmitter
+): void => {
   if (type === 'file') return
 
   const directory = {
@@ -168,17 +184,21 @@ const addDir = (win: BrowserWindow, pathname: string, type: WatchType): void => 
     files: []
   }
 
-  win.webContents.send('mt::update-object-tree', {
+  emitTreeUpdate({
     type: 'addDir',
     change: directory
   })
 }
 
-const unlinkDir = (win: BrowserWindow, pathname: string, type: WatchType): void => {
+const unlinkDir = (
+  pathname: string,
+  type: WatchType,
+  emitTreeUpdate: TreeUpdateEmitter
+): void => {
   if (type === 'file') return
 
   const directory = { pathname }
-  win.webContents.send('mt::update-object-tree', {
+  emitTreeUpdate({
     type: 'unlinkDir',
     change: directory
   })
@@ -251,6 +271,21 @@ class Watcher {
     let disposed = false
     let enospcReached = false
     let renameTimer: NodeJS.Timeout | null = null
+    let treeUpdateTimer: NodeJS.Timeout | null = null
+    let treeUpdates: TreeUpdate[] = []
+
+    const flushTreeUpdates = (): void => {
+      treeUpdateTimer = null
+      if (disposed || treeUpdates.length === 0) return
+      const updates = treeUpdates
+      treeUpdates = []
+      win.webContents.send('mt::update-object-tree-batch', updates)
+    }
+
+    const emitTreeUpdate: TreeUpdateEmitter = (update) => {
+      treeUpdates.push(update)
+      if (!treeUpdateTimer) treeUpdateTimer = setTimeout(flushTreeUpdates, 16)
+    }
 
     watcher
       .on('add', async(pathname: string) => {
@@ -269,7 +304,8 @@ class Watcher {
             eol,
             autoGuessEncoding,
             trimTrailingNewline,
-            autoNormalizeLineEndings
+            autoNormalizeLineEndings,
+            emitTreeUpdate
           )
         }
       })
@@ -289,13 +325,14 @@ class Watcher {
             eol,
             autoGuessEncoding,
             trimTrailingNewline,
-            autoNormalizeLineEndings
+            autoNormalizeLineEndings,
+            emitTreeUpdate
           )
         }
       })
-      .on('unlink', (pathname: string) => unlink(win, pathname, type))
-      .on('addDir', (pathname: string) => addDir(win, pathname, type))
-      .on('unlinkDir', (pathname: string) => unlinkDir(win, pathname, type))
+      .on('unlink', (pathname: string) => unlink(win, pathname, type, emitTreeUpdate))
+      .on('addDir', (pathname: string) => addDir(pathname, type, emitTreeUpdate))
+      .on('unlinkDir', (pathname: string) => unlinkDir(pathname, type, emitTreeUpdate))
       .on('raw', (event: string, subpath: string, details: unknown) => {
         if (
           globalThis.MARKTEXT_DEBUG_VERBOSE >= 3
@@ -343,6 +380,9 @@ class Watcher {
 
     const closeFn = (): void => {
       disposed = true
+      if (treeUpdateTimer) clearTimeout(treeUpdateTimer)
+      treeUpdateTimer = null
+      treeUpdates = []
       if (this.watchers[id]) {
         delete this.watchers[id]
       }

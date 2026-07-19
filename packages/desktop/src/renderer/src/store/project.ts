@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { addFile, unlinkFile, addDirectory, unlinkDirectory, resortTree, updateFileMtime } from './treeCtrl'
+import { addFile, addFiles, unlinkFile, addDirectory, unlinkDirectory, resortTree, updateFileMtime } from './treeCtrl'
 import { usePreferencesStore } from './preferences'
 import bus from '../bus'
 import { create, paste, rename, type FileCreateType, type PasteOptions } from '../util/fileSystem'
@@ -123,9 +123,9 @@ export const useProjectStore = defineStore('project', () => {
     layoutStore.DISPATCH_LAYOUT_MENU_ITEMS()
 
     // Process pending events that arrived before projectTree was initialized.
-    pendingTreeEvents.value = pendingTreeEvents.value.filter(
-      (event) => !_processTreeEvent(event.type, event.change)
-    )
+    const pending = pendingTreeEvents.value
+    pendingTreeEvents.value = []
+    _processTreeEventBatch(pending)
 
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
@@ -193,6 +193,53 @@ export const useProjectStore = defineStore('project', () => {
       }
       _processTreeEvent(type, change)
     })
+    window.electron.ipcRenderer.on('mt::update-object-tree-batch', (_e, payload) => {
+      _processTreeEventBatch((payload as PendingEvent[] | undefined) ?? [])
+    })
+  }
+
+  function _processTreeEventBatch(events: PendingEvent[]): void {
+    if (events.length === 0) return
+
+    // Initial directory scans contain only additions. Group them per root,
+    // append synchronously, and sort once. Mixed rename/delete/change bursts
+    // retain their original order through the existing single-event path.
+    if (events.every(({ type }) => type === 'add' || type === 'addDir')) {
+      const additions = new Map<ProjectTree, { directories: TreeChange[]; files: TreeChange[] }>()
+      for (const event of events) {
+        const rootPath = findProjectRootForPath(
+          projectTrees.value.map((tree) => tree.pathname),
+          event.change.pathname
+        )
+        const tree = projectTrees.value.find((item) => item.pathname === rootPath)
+        if (!tree) {
+          pendingTreeEvents.value.push(event)
+          continue
+        }
+        let group = additions.get(tree)
+        if (!group) {
+          group = { directories: [], files: [] }
+          additions.set(tree, group)
+        }
+        if (event.type === 'addDir') group.directories.push(event.change)
+        else group.files.push(event.change)
+      }
+
+      for (const [tree, group] of additions) {
+        group.directories.forEach((directory) => addDirectory(tree, directory))
+        addFiles(
+          tree,
+          group.files as Parameters<typeof addFiles>[1],
+          String(preferencesStore.fileSortBy),
+          String(preferencesStore.fileSortOrder)
+        )
+      }
+      return
+    }
+
+    for (const event of events) {
+      if (!_processTreeEvent(event.type, event.change)) pendingTreeEvents.value.push(event)
+    }
   }
 
   function _processTreeEvent(type: string, change: TreeChange): boolean {

@@ -38,6 +38,17 @@ export interface CommentAnchorRect {
   bottom: number
 }
 
+interface CommentRangeEntry {
+  comment: CommentHighlightSource
+  range: Range
+}
+
+export interface CommentRangeLayout {
+  entries: CommentRangeEntry[]
+  ranges: Range[]
+  anchorRects: CommentAnchorRect[]
+}
+
 const pathKey = (path: Array<string | number>): string => path.join('/')
 
 const textBoundaryAt = (element: HTMLElement, rawOffset: number): TextBoundary | null => {
@@ -117,8 +128,43 @@ export const readAnnotaMDCommentText = (
   root: HTMLElement,
   comment: CommentHighlightSource
 ): string | null => {
-  const range = rangeForComment(contentBlocksByPath(root), comment)
-  return range?.toString() ?? null
+  return createAnnotaMDCommentTextReader(root)(comment)
+}
+
+export const createAnnotaMDCommentTextReader = (
+  root: HTMLElement
+): ((comment: CommentHighlightSource) => string | null) => {
+  const blocks = contentBlocksByPath(root)
+  return (comment) => rangeForComment(blocks, comment)?.toString() ?? null
+}
+
+export const buildAnnotaMDCommentRangeLayout = (
+  root: HTMLElement,
+  comments: CommentHighlightSource[]
+): CommentRangeLayout => {
+  const blocks = contentBlocksByPath(root)
+  const entries: CommentRangeEntry[] = []
+  const anchorRects: CommentAnchorRect[] = []
+
+  comments.forEach((comment) => {
+    const range = rangeForComment(blocks, comment)
+    if (!range) return
+    entries.push({ comment, range })
+    if (comment.id) {
+      // happy-dom/jsdom do not implement Range geometry; production Chromium
+      // does. Keep range lookup testable without changing browser behavior.
+      const rect = typeof range.getBoundingClientRect === 'function'
+        ? range.getBoundingClientRect()
+        : { top: 0, bottom: 0 }
+      anchorRects.push({ id: comment.id, top: rect.top, bottom: rect.bottom })
+    }
+  })
+
+  return {
+    entries,
+    ranges: entries.map(({ range }) => range),
+    anchorRects
+  }
 }
 
 export const buildAnnotaMDCommentRanges = (
@@ -140,28 +186,21 @@ export const buildAnnotaMDCommentAnchorRects = (
   root: HTMLElement,
   comments: CommentHighlightSource[]
 ): CommentAnchorRect[] => {
-  const blocks = contentBlocksByPath(root)
-  return comments.flatMap((comment) => {
-    if (!comment.id) return []
-    const range = rangeForComment(blocks, comment)
-    if (!range) return []
-    const rect = range.getBoundingClientRect()
-    return [{ id: comment.id, top: rect.top, bottom: rect.bottom }]
-  })
+  return buildAnnotaMDCommentRangeLayout(root, comments).anchorRects
 }
 
 export const findAnnotaMDCommentAtPosition = (
   root: HTMLElement,
   comments: CommentHighlightSource[],
   node: Node,
-  offset: number
+  offset: number,
+  layout?: CommentRangeLayout | null
 ): CommentHighlightSource | null => {
   if (!root.contains(node)) return null
-  const blocks = contentBlocksByPath(root)
+  const entries = layout?.entries ?? buildAnnotaMDCommentRangeLayout(root, comments).entries
 
-  for (const comment of comments) {
-    const range = rangeForComment(blocks, comment)
-    if (range?.isPointInRange(node, offset)) return comment
+  for (const { comment, range } of entries) {
+    if (range.isPointInRange(node, offset)) return comment
   }
 
   return null
@@ -179,26 +218,27 @@ const highlightApi = (): {
 export const syncAnnotaMDCommentHighlights = (
   root: HTMLElement,
   comments: CommentHighlightSource[],
-  activeCommentId: string | null = null
+  activeCommentId: string | null = null,
+  layout?: CommentRangeLayout
 ): void => {
   const api = highlightApi()
   if (!api) return
 
   api.registry.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
   api.registry.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
-  const ranges = buildAnnotaMDCommentRanges(root, comments)
+  const resolvedLayout = layout ?? buildAnnotaMDCommentRangeLayout(root, comments)
+  const { ranges } = resolvedLayout
   if (ranges.length) {
     api.registry.set(ANNOTAMD_COMMENT_HIGHLIGHT, new api.HighlightClass(...ranges))
   }
-  const activeComment = comments.find((comment) => comment.id === activeCommentId)
-  if (activeComment) {
-    const activeRange = rangeForComment(contentBlocksByPath(root), activeComment)
-    if (activeRange) {
-      api.registry.set(
-        ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT,
-        new api.HighlightClass(activeRange)
-      )
-    }
+  const activeRange = resolvedLayout.entries.find(
+    ({ comment }) => comment.id === activeCommentId
+  )?.range
+  if (activeRange) {
+    api.registry.set(
+      ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT,
+      new api.HighlightClass(activeRange)
+    )
   }
 }
 

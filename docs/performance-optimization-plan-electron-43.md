@@ -1,6 +1,6 @@
 # AnnotaMD 性能优化方案：Electron 43 与应用层热点
 
-> 状态：实施中（批次 A、B 与批次 C 第一阶段已完成，尚未合并发布）
+> 状态：P0 优化已完成并验证，尚未合并发布；P1 保留为安装包测量后的独立迭代
 > 形成日期：2026-07-19
 > 适用基线：AnnotaMD 2.9.0 工作树、Electron 42.1.0
 > 目标：下一版本集中改善冷启动、首次绘制、大文档输入、批注文档输入和大型目录加载性能。
@@ -278,10 +278,11 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
 - [Node 主进程启动快照基准](https://releases.electronjs.org/pr/51703)
 - [沙箱 preload 与首次绘制优化](https://releases.electronjs.org/pr/51602)
 
-## 14. 2026-07-19 第一阶段实施结果
+## 14. 2026-07-19 实施结果
 
 本节记录 `codex/performance-electron-43` 分支的实际结果。它不是发布结论；合入 `main` 和
-正式打包仍需完成剩余优化、全量回归和用户确认。
+正式打包仍需完成发布级全量回归和用户确认。第一阶段已提交为 `e0732a7`，其后的第二阶段
+继续完成 P0 剩余热点。
 
 ### 已完成
 
@@ -290,36 +291,48 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
 - 编辑器、设置容器和各设置分类已改成动态路由；为避免懒加载组件错过一次性启动 IPC，
   renderer 首入口会暂存 bootstrap，主进程收到 renderer 初始化确认后才发送打开文件和目录
   事件。
-- renderer 初始 JavaScript 从约 7.34 MB、gzip 1.52 MB 降到 2.83 MB、gzip 0.619 MB，
-  分别下降约 61% 和 59%。JavaScript 总量仍约 18.45 MB，说明本阶段收益来自减少首屏解析，
-  不是隐藏总依赖体积。
+- renderer 初始 JavaScript 先通过路由拆分降到约 2.83 MB、gzip 0.619 MB；Element Plus 再从
+  全量插件注册改为只注册实际使用的 22 个组件，最终入口约 1.62 MB、gzip 0.379 MB。相对
+  7.34 MB、gzip 1.52 MB 的基线分别下降约 78% 和 75%。全局 CSS 暂时保留，避免按需样式
+  遗漏；JavaScript 总量没有等比例消失，收益主要来自减少首屏解析和执行。
 - 移除了设置模块永久的 1 秒语言轮询，改用 i18n locale 响应式更新。
 - 文件树组件卸载时会成对移除 bus、document 和 DOM 监听，避免反复挂载后重复响应。
 - 外部 MCP 客户端 CLI 探测从 IPC 注册阶段延迟到首个窗口完成加载之后，降低冷启动竞争。
 - `json-change` 直接复用事件携带的 post-edit state 生成 Markdown 和 blocks，不再额外执行两次
   全文 state 深拷贝。
+- Markdown、dirty 状态和自动保存继续同步更新；全文字数统计和 TOC 改为输入停止 180 ms 后
+  合并刷新，完整 engine undo/redo 序列化只在保存、切换标签和进入源码模式前执行，不再在
+  每个按键上深拷贝历史栈。
 - dirty tracker 从逐字符 BigInt 哈希改为两个 32 位 `Math.imul` 哈希通道。1 MB 文本微基准
   从约 16.1 ms 降到约 1.61 ms，哈希成本下降约 90%。
 - 批注坐标实际未变化时不再刷新 `updatedAt` 和写数据库；连续写入合并为“一个运行中任务 +
   一个最新状态”，不再为每个中间按键排队 SQLite 事务。
+- 批注高亮、活动批注和评论栏锚点复用同一份内容块索引与 Range 集合；一次输入后校验多条
+  批注文本也只扫描一次内容块 DOM，不再为每条批注重新遍历整篇文档。
 - 目录 watcher 初次发现 Markdown 文件时只读取 stat 元数据，不再读取全部文件内容；应用内
   新建文件改为创建成功后直接打开，已通过真实 Electron 新建文件回归。
+- 目录 watcher 将 16 ms 内的树事件合并为一次 IPC；renderer 对纯新增批次统一插入并只排序
+  一次，混合的重命名、删除和修改事件仍按原顺序处理。微基准中 1,000 文件从约 11.22 ms
+  降至 2.82 ms，10,000 文件从约 309.17 ms 降至 19.59 ms。
 
 ### 当前验证
 
-- `npm run verify:feature`：通过，覆盖 menu、table、comments、editor 和批注 OT，共 324 个测试。
+- `npm run verify:feature`：通过，覆盖 menu、table、comments、editor 和批注 OT，共 325 个测试。
 - AnnotaMD desktop TypeScript 检查：通过。
 - Electron production build：通过；main 约 1.096 MB，preload 约 24 KB。
 - Electron 43.1.1 production 实机：编辑器懒加载、设置页懒加载、真实长文档
   `design.md`、输入后 Markdown 快照、批注锚点、语言切换和侧栏新建文件均已完成冒烟。
+- desktop 完整单测共 825 项，818 项通过；7 项既有失败来自测试环境缺失完整 `localStorage`
+  mock，以及三条旧按钮对比度源码规则。它们与性能改动无调用链关系，未在本分支顺带修改。
 - Muya 全包 `tsc --noEmit` 仍存在一组本分支修改前已有的类型错误，需作为独立基线债务处理；
   本次受影响的 desktop 类型检查和定向 Muya/desktop 测试已通过。
 
-### 下一阶段
+### 发布前剩余工作
 
-1. 根据 bundle trace 决定 Element Plus 按需注册方式；必须保持全局 locale 和所有现有控件样式。
-2. 将 word count、TOC 和 engine history 的全文计算按变更类型拆分或调度到空闲阶段。
-3. 合并批注 DOM Range 构建，避免文本校验、高亮、hover 和定位重复扫描同一批内容块。
-4. 对目录初次事件做批量发送、批量插入和统一排序，并补充 1,000/10,000 文件基准。
-5. 发布前补齐安装包冷/热启动和 key-to-paint p50/p95；当前构建体积和微基准不能替代最终
-   安装包性能结论。
+1. 合并到 `main` 后按发布规则运行各 package 全量测试和当前架构打包。
+2. 从新生成的安装包执行冷/热启动、key-to-paint p50/p95 和真实长文档滚动验证；当前构建
+   体积与微基准不能替代安装包性能结论。
+3. 验证 macOS x64/arm64、Windows x64/arm64 和 Linux 产物，特别检查 Electron 43 的窗口、
+   下载目录、图像色彩和原生依赖兼容性。
+4. 第 10 节的日志异步化、main 服务延迟构造和 watcher 策略属于 P1；只有 trace 证明仍是
+   主要瓶颈时再单独实施，避免在本轮 P0 已获得明显收益后扩大正确性风险。

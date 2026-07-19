@@ -326,6 +326,7 @@ export interface IpcMainEventChannels {
   'mt::toggle-view-mode-entry': [entry: string]
   'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
   'mt::update-object-tree': [payload: unknown]
+  'mt::update-object-tree-batch': [payload: unknown]
   'mt::user-preference': [partial: unknown]
   'mt::window-active-status': [active: boolean]
   'mt::window-enter-full-screen': []

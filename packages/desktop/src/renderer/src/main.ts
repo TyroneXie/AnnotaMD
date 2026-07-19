@@ -5,10 +5,34 @@ import axios from './axios'
 import pinia from './store'
 import './assets/symbolIcon'
 
-// Element Plus instead of Element UI for Vue 3
-import ElementPlus from 'element-plus'
+// Register only the Element Plus components used by renderer templates. The
+// full installer eagerly registers every component in both editor and settings
+// windows, defeating the route split at startup.
+import {
+  ElAutocomplete,
+  ElButton,
+  ElCol,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElIcon,
+  ElInput,
+  ElInputNumber,
+  ElOption,
+  ElPopover,
+  ElRadio,
+  ElRadioGroup,
+  ElRow,
+  ElSelect,
+  ElSwitch,
+  ElTabPane,
+  ElTable,
+  ElTableColumn,
+  ElTabs,
+  ElTooltip,
+  ElTree
+} from 'element-plus'
 import 'element-plus/dist/index.css'
-import en from 'element-plus/es/locale/lang/en'
 
 // I18n translation system
 import i18nPlugin from './i18n'
@@ -32,10 +56,31 @@ bootstrapRenderer()
 // Create Vue app
 const app: App<Element> = createApp(Main)
 
-// Configure Element Plus with locale
-app.use(ElementPlus, {
-  locale: en
-})
+const elementPlusComponents = [
+  ElAutocomplete,
+  ElButton,
+  ElCol,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElIcon,
+  ElInput,
+  ElInputNumber,
+  ElOption,
+  ElPopover,
+  ElRadio,
+  ElRadioGroup,
+  ElRow,
+  ElSelect,
+  ElSwitch,
+  ElTabPane,
+  ElTable,
+  ElTableColumn,
+  ElTabs,
+  ElTooltip,
+  ElTree
+]
+elementPlusComponents.forEach((component) => app.use(component))
 
 const envType = window.marktext?.env?.type as string | undefined
 

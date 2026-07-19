@@ -23,6 +23,14 @@ describe('performance regression guards', () => {
     expect(editorWindow).toContain('this._doOpenFilesToOpen()')
   })
 
+  it('registers only the Element Plus components used by renderer templates', () => {
+    const main = read('packages/desktop/src/renderer/src/main.ts')
+
+    expect(main).not.toContain("import ElementPlus from 'element-plus'")
+    expect(main).toContain('const elementPlusComponents = [')
+    expect(main).toContain('elementPlusComponents.forEach((component) => app.use(component))')
+  })
+
   it('does not poll the preference locale', () => {
     const config = read(
       'packages/desktop/src/renderer/src/prefComponents/sideBar/config.ts'
@@ -66,6 +74,22 @@ describe('performance regression guards', () => {
     )
   })
 
+  it('moves display-only derived state and history cloning off the keystroke path', () => {
+    const editor = read(
+      'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
+    )
+    const jsonChange = editor.match(
+      /editor\.value\.on\('json-change',[\s\S]*?scheduleDerivedDocumentState\(id, markdown\)/
+    )?.[0]
+
+    expect(jsonChange).toBeTruthy()
+    expect(jsonChange).not.toContain('muyaWordCount(markdown)')
+    expect(jsonChange).not.toContain('editor.value.getTOC()')
+    expect(jsonChange).not.toContain('editor.value.getHistory()')
+    expect(editor).toContain('setTimeout(flushDerivedDocumentState, DERIVED_STATE_DELAY)')
+    expect(editor).toContain('captureActiveEngineHistory()')
+  })
+
   it('does not use BigInt hashing in the per-keystroke dirty tracker', () => {
     const history = read(
       'packages/desktop/src/renderer/src/components/editorWithTabs/syntheticHistory.ts'
@@ -81,7 +105,22 @@ describe('performance regression guards', () => {
     const project = read('packages/desktop/src/renderer/src/store/project.ts')
 
     expect(watcher).toMatch(/if \(type === 'file'\) \{[\s\S]*?loadMarkdownFile\(/)
+    expect(watcher).toContain("win.webContents.send('mt::update-object-tree-batch', updates)")
+    expect(project).toContain("ipcRenderer.on('mt::update-object-tree-batch'")
+    expect(project).toContain('addFiles(')
     expect(project).toContain('editorStore.UPDATE_CURRENT_FILE(getFileStateFromData({')
     expect(project).not.toContain('newFileNameCache')
+  })
+
+  it('reuses one comment range layout for highlights, anchors and text validation', () => {
+    const editor = read(
+      'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
+    )
+
+    expect(editor).toContain(
+      'commentRangeLayout = buildAnnotaMDCommentRangeLayout(root, currentFileComments.value)'
+    )
+    expect(editor).toContain("bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)")
+    expect(editor).toContain('const readCommentText = createAnnotaMDCommentTextReader(root)')
   })
 })

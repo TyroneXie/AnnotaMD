@@ -118,11 +118,13 @@ import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
 import { resolveTocHeadingElement } from '@/util/tocNavigation'
 import {
-  buildAnnotaMDCommentAnchorRects,
+  buildAnnotaMDCommentRangeLayout,
   clearAnnotaMDCommentHighlights,
+  createAnnotaMDCommentTextReader,
   findAnnotaMDCommentAtPosition,
   readAnnotaMDCommentText,
-  syncAnnotaMDCommentHighlights
+  syncAnnotaMDCommentHighlights,
+  type CommentRangeLayout
 } from '@/util/annotamdCommentHighlights'
 import { addCommonStyle, setEditorWidth } from '@/util/theme'
 import { AnnotaMDStickyTableHeader } from '@/util/annotamdStickyTableHeader'
@@ -313,9 +315,14 @@ let commentHoverFrame: number | null = null
 let pendingCommentHoverPoint: { clientX: number; clientY: number } | null = null
 let documentCommentFooterObserver: MutationObserver | null = null
 let commentHighlightFrame: number | null = null
+let commentRangeLayout: CommentRangeLayout | null = null
 let stopCommentHighlightSubscription: (() => void) | null = null
 let stopAgentEditSubscription: (() => void) | null = null
 let stickyTableHeader: AnnotaMDStickyTableHeader | null = null
+let derivedStateTimer: ReturnType<typeof setTimeout> | null = null
+let pendingDerivedState: { id: string; markdown: string } | null = null
+
+const DERIVED_STATE_DELAY = 180
 
 // The engine's undo/redo history (`getHistory()`) has a different shape than
 // the desktop store's `tab.history` (which drives the save/dirty tracking and
@@ -323,6 +330,38 @@ let stickyTableHeader: AnnotaMDStickyTableHeader | null = null
 // per-tab map here for restoration across in-session tab switches, and feed the
 // store a SYNTHETIC desktop-shaped history.
 const engineHistoryByTab = new Map<string, unknown>()
+
+const captureActiveEngineHistory = (): void => {
+  const id = currentFile.value?.id
+  if (id && editor.value) {
+    engineHistoryByTab.set(id, editor.value.getHistory())
+  }
+}
+
+const flushDerivedDocumentState = (): void => {
+  if (derivedStateTimer) {
+    clearTimeout(derivedStateTimer)
+    derivedStateTimer = null
+  }
+  const pending = pendingDerivedState
+  pendingDerivedState = null
+  if (!pending) return
+
+  const toc = currentFile.value?.id === pending.id && editor.value
+    ? editor.value.getTOC()
+    : undefined
+  editorStore.UPDATE_DERIVED_DOCUMENT_STATE({
+    ...pending,
+    wordCount: muyaWordCount(pending.markdown),
+    toc
+  })
+}
+
+const scheduleDerivedDocumentState = (id: string, markdown: string): void => {
+  pendingDerivedState = { id, markdown }
+  if (derivedStateTimer) clearTimeout(derivedStateTimer)
+  derivedStateTimer = setTimeout(flushDerivedDocumentState, DERIVED_STATE_DELAY)
+}
 
 // The WYSIWYG caret captured the instant the user switches INTO source mode.
 // Focus moves to CodeMirror while source mode is up, so by the time the tab is
@@ -900,6 +939,8 @@ watch(
     if (value && value !== oldValue) {
       if (editor.value) {
         editor.value.hideAllFloatTools()
+        flushDerivedDocumentState()
+        captureActiveEngineHistory()
         // Compute the WYSIWYG caret as a source-markdown `{ line, ch }` index
         // cursor JUST-IN-TIME, only when entering source mode (Phase G — G7),
         // and write it to the tab before sourceCode.vue mounts (`flush: 'sync'`
@@ -1296,18 +1337,18 @@ const observeDocumentCommentFooterTarget = (): void => {
 const refreshAnnotaMDCommentHighlights = (): void => {
   const root = getScrollContainer()
   if (!root) return
+  commentRangeLayout = buildAnnotaMDCommentRangeLayout(root, currentFileComments.value)
   syncAnnotaMDCommentHighlights(
     root,
     currentFileComments.value,
-    annotaMDCommentsStore.activeCommentId
+    annotaMDCommentsStore.activeCommentId,
+    commentRangeLayout
   )
-  bus.emit(
-    'annotamd-comment-anchors',
-    buildAnnotaMDCommentAnchorRects(root, currentFileComments.value)
-  )
+  bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)
 }
 
 const queueAnnotaMDCommentHighlights = (): void => {
+  commentRangeLayout = null
   if (commentHighlightFrame != null) cancelAnimationFrame(commentHighlightFrame)
   commentHighlightFrame = requestAnimationFrame(() => {
     commentHighlightFrame = null
@@ -1330,10 +1371,6 @@ const caretPositionFromPoint = (point: {
 }
 
 const handleCommentHighlightClick = (event: MouseEvent): void => {
-  // Muya may replace the clicked text node while it updates the caret. Rebuild
-  // the CSS Highlight ranges after that DOM update so inactive annotations do
-  // not lose their persistent underline.
-  requestAnimationFrame(queueAnnotaMDCommentHighlights)
   const root = getScrollContainer()
   const position = caretPositionFromPoint(event)
   if (!root || !position) return
@@ -1341,8 +1378,13 @@ const handleCommentHighlightClick = (event: MouseEvent): void => {
     root,
     currentFileComments.value,
     position.node,
-    position.offset
+    position.offset,
+    commentRangeLayout
   )
+  // Muya may replace the clicked text node while it updates the caret. Rebuild
+  // the CSS Highlight ranges after that DOM update so inactive annotations do
+  // not lose their persistent underline.
+  requestAnimationFrame(queueAnnotaMDCommentHighlights)
   if (comment?.id) {
     annotaMDCommentsStore.setActiveComment(comment.id)
     annotaMDCommentsStore.requestCommentFocus(comment.id)
@@ -1363,7 +1405,8 @@ const handleCommentHighlightHover = (event: MouseEvent): void => {
       root,
       currentFileComments.value,
       position.node,
-      position.offset
+      position.offset,
+      commentRangeLayout
     )
     annotaMDCommentsStore.setActiveComment(comment?.id ?? null)
   })
@@ -1865,6 +1908,8 @@ const blurEditor = () => {
 
 const flushActiveEditor = () => {
   editor.value?.flush()
+  flushDerivedDocumentState()
+  captureActiveEngineHistory()
 }
 
 const focusEditor = () => {
@@ -2129,30 +2174,27 @@ onMounted(() => {
       requestAnimationFrame(() => {
         const root = getScrollContainer()
         if (!root) return
+        const readCommentText = createAnnotaMDCommentTextReader(root)
         annotaMDCommentsStore.removeCommentsWithChangedText(
           filePath,
-          (comment) => readAnnotaMDCommentText(root, comment)
+          readCommentText
         )
       })
     }
-    // Stash the real engine history for in-session tab-switch restoration. The
-    // synthetic save-tracking id is derived from the live document content (a
-    // monotonic, never-reused id — see `syntheticHistory.ts`), NOT the engine
-    // undo-stack depth, which is reused and falsely showed a divergently
-    // re-edited tab as clean (Phase G — G6).
-    const engineHistory = editor.value.getHistory()
-    engineHistoryByTab.set(id, engineHistory)
+    // Markdown, dirty tracking and autosave remain synchronous. Word count and
+    // TOC are display-only derived state, so coalesce them after an input burst.
+    // The real engine history is captured at save/tab/source-mode boundaries
+    // instead of deep-cloning the entire undo stack on every keystroke.
     editorStore.LISTEN_FOR_CONTENT_CHANGE({
       id,
       markdown,
-      wordCount: muyaWordCount(markdown),
       cursor: serializeCursor(editor.value.getSelection()),
       // Synthetic, desktop-shaped history so the store's save/dirty tracking
       // keeps working (the engine history shape is incompatible).
       history: makeSyntheticHistory(id, markdown),
-      toc: editor.value.getTOC(),
       blocks: doc
     })
+    scheduleDerivedDocumentState(id, markdown)
 
     // Ensure the document-level comment mount stays at the end of the
     // rendered document after every content mutation.
@@ -2347,6 +2389,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (derivedStateTimer) clearTimeout(derivedStateTimer)
+  derivedStateTimer = null
+  pendingDerivedState = null
+  commentRangeLayout = null
   document.body.classList.remove('annotamd-image-viewer-open')
   bus.off('file-loaded', setMarkdownToEditor)
   bus.off('invalidate-image-cache', handleInvalidateImageCache)
