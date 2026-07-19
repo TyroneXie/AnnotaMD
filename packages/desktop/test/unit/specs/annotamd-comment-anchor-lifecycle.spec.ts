@@ -66,7 +66,7 @@ describe('AnnotaMD live comment anchors', () => {
     }])
   })
 
-  it('does not bind to another identical quote when that block changes', () => {
+  it('does not bind or persist when an unrelated identical quote changes', async() => {
     const store = useAnnotaMDCommentsStore()
     store.commentsByFile[filePath] = [commentAtSecondBlock()]
     store.revisionByFile[filePath] = 0
@@ -88,6 +88,54 @@ describe('AnnotaMD live comment anchors', () => {
 
     expect(store.commentsByFile[filePath][0].anchor?.path).toEqual([1, 'text'])
     expect(store.commentsByFile[filePath][0].focus?.path).toEqual([1, 'text'])
+    await Promise.resolve()
+    expect(window.electron.ipcRenderer.invoke).not.toHaveBeenCalledWith(
+      'mt::comments::replace',
+      expect.anything()
+    )
+  })
+
+  it('coalesces repeated persistence requests to the latest state', async() => {
+    const store = useAnnotaMDCommentsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
+    store.markdownByFile[filePath] = 'first'
+    store.revisionByFile[filePath] = 0
+
+    let releaseFirst: ((value: unknown) => void) | undefined
+    let revision = 0
+    const invoke = vi.mocked(window.electron.ipcRenderer.invoke)
+    invoke.mockImplementation((channel: string, request: { comments?: AnnotaMDComment[] }) => {
+      if (channel !== 'mt::comments::replace') {
+        return Promise.resolve({ comments: [], revision })
+      }
+      revision += 1
+      const response = {
+        documentId: 'document-1',
+        filePath,
+        revision,
+        comments: request.comments ?? []
+      }
+      if (revision === 1) {
+        return new Promise((resolve) => { releaseFirst = resolve }).then(() => response)
+      }
+      return Promise.resolve(response)
+    })
+
+    const pending = store.persistFile(filePath)
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledTimes(1))
+    store.markdownByFile[filePath] = 'latest'
+    store.persistFile(filePath)
+    store.persistFile(filePath)
+    expect(invoke).toHaveBeenCalledTimes(1)
+
+    releaseFirst?.(undefined)
+    await pending
+
+    const replaceCalls = invoke.mock.calls.filter(([channel]) => (
+      channel === 'mt::comments::replace'
+    ))
+    expect(replaceCalls).toHaveLength(2)
+    expect(replaceCalls[1][1]).toMatchObject({ markdown: 'latest' })
   })
 
   it('removes a comment as soon as its selected visible text changes', () => {

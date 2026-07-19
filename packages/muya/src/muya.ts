@@ -213,6 +213,13 @@ export class Muya {
         return this.editor.jsonState.getMarkdown();
     }
 
+    // Serialize an existing JSON-state snapshot without cloning the live
+    // document again. `json-change` already carries a detached `doc` snapshot,
+    // so desktop consumers can reuse it for markdown and persisted blocks.
+    getMarkdownFromState(state: TState[]) {
+        return this.editor.jsonState.getMarkdownFromState(state);
+    }
+
     // Flush queued edits synchronously; call before swapping the document out
     // (e.g. a tab switch) so a same-frame keystroke isn't lost (#2938).
     flush() {

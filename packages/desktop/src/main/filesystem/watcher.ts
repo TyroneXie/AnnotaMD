@@ -70,19 +70,20 @@ const add = async(
     isMarkdown
   }
   if (isMarkdown) {
-    // HACK: But this should be removed completely in #1034/#1035.
-    try {
-      const data = await loadMarkdownFile(
-        pathname,
-        endOfLine,
-        autoGuessEncoding,
-        trimTrailingNewline,
-        autoNormalizeLineEndings
-      )
-      file.data = data
-    } catch (err) {
-      // Only notify user about opened files.
-      if (type === 'file') {
+    // Directory watchers only need metadata to populate the sidebar. Reading
+    // every Markdown document here makes opening a large workspace scale with
+    // the total file contents instead of the number of entries.
+    if (type === 'file') {
+      try {
+        const data = await loadMarkdownFile(
+          pathname,
+          endOfLine,
+          autoGuessEncoding,
+          trimTrailingNewline,
+          autoNormalizeLineEndings
+        )
+        file.data = data
+      } catch (err) {
         win.webContents.send('mt::show-notification', {
           title: 'Watcher I/O error',
           type: 'error',

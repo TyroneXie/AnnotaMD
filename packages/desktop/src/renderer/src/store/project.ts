@@ -80,7 +80,6 @@ export const useProjectStore = defineStore('project', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeItem = ref<any>({})
   const createCache = ref<CreateCacheEntry | Record<string, never>>({})
-  const newFileNameCache = ref<string>('')
   const renameCache = ref<string | null>(null)
   const clipboard = ref<ClipboardEntry | null>(null)
   const projectTrees = ref<ProjectTree[]>([])
@@ -207,13 +206,7 @@ export const useProjectStore = defineStore('project', () => {
 
     switch (type) {
       case 'add': {
-        const { pathname, data, isMarkdown } = change
         addFile(tree, change as Parameters<typeof addFile>[1], String(preferencesStore.fileSortBy), String(preferencesStore.fileSortOrder))
-        if (isMarkdown && newFileNameCache.value && pathname === newFileNameCache.value) {
-          const fileState = getFileStateFromData(data as Record<string, unknown>)
-          editorStore.UPDATE_CURRENT_FILE(fileState)
-          newFileNameCache.value = ''
-        }
         break
       }
       case 'unlink':
@@ -344,20 +337,27 @@ export const useProjectStore = defineStore('project', () => {
       return
     }
 
-    create(fullName, type as FileCreateType)
-      .then(() => {
-        createCache.value = {}
-        if (type === 'file') {
-          newFileNameCache.value = fullName
-        }
+    try {
+      await create(fullName, type as FileCreateType)
+      createCache.value = {}
+      if (type === 'file') {
+        // Open the empty document directly. The directory watcher now sends
+        // metadata only, so new-file activation cannot depend on it reading
+        // the file back from disk.
+        const editorStore = useEditorStore()
+        editorStore.UPDATE_CURRENT_FILE(getFileStateFromData({
+          pathname: fullName,
+          filename: name,
+          markdown: ''
+        }))
+      }
+    } catch (err) {
+      notice.notify({
+        title: 'Error in Side Bar',
+        type: 'error',
+        message: err instanceof Error ? err.message : String(err)
       })
-      .catch((err) => {
-        notice.notify({
-          title: 'Error in Side Bar',
-          type: 'error',
-          message: err instanceof Error ? err.message : String(err)
-        })
-      })
+    }
   }
 
   function RENAME_IN_SIDEBAR(name: string): void {
@@ -378,7 +378,6 @@ export const useProjectStore = defineStore('project', () => {
   return {
     activeItem,
     createCache,
-    newFileNameCache,
     renameCache,
     clipboard,
     projectTrees,

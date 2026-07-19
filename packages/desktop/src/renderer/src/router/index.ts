@@ -1,15 +1,17 @@
 import type { RouteRecordRaw } from 'vue-router'
-// .vue extensions are explicit so TS resolves them through the *.vue module
-// shim in src/types/renderer.d.ts. Vite handles extension-less imports at
-// runtime, but vue-tsc needs the suffix.
-import App from '@/pages/app.vue'
-import Preference from '@/pages/preference.vue'
-import General from '@/prefComponents/general/index.vue'
-import Editing from '@/prefComponents/editing/index.vue'
-import Theme from '@/prefComponents/theme/index.vue'
-import Image from '@/prefComponents/image/index.vue'
-import Keybindings from '@/prefComponents/keybindings/index.vue'
-import Agent from '@/prefComponents/agent/index.vue'
+
+// Editor and preferences share one renderer entry but never appear in the same
+// window. Keep their code in separate chunks so each window only parses the
+// route it actually renders. Preference categories are split for the same
+// reason: opening General should not eagerly load Agent, Theme, or Image.
+const App = () => import('@/pages/app.vue')
+const Preference = () => import('@/pages/preference.vue')
+const General = () => import('@/prefComponents/general/index.vue')
+const Editing = () => import('@/prefComponents/editing/index.vue')
+const Theme = () => import('@/prefComponents/theme/index.vue')
+const Image = () => import('@/prefComponents/image/index.vue')
+const Keybindings = () => import('@/prefComponents/keybindings/index.vue')
+const Agent = () => import('@/prefComponents/agent/index.vue')
 
 const parseSettingsPage = (type: string | null | undefined): string => {
   let pageUrl = '/preference'

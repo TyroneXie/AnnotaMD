@@ -6,8 +6,18 @@ import {
   inspectMcpClients
 } from '../mcpClients'
 
+let inspectionScheduled = false
+
+export const scheduleMcpClientInspection = (delayMs = 1_000): void => {
+  if (inspectionScheduled) return
+  inspectionScheduled = true
+  const timer = setTimeout(() => {
+    void inspectMcpClients()
+  }, delayMs)
+  timer.unref()
+}
+
 export const registerMcpClientHandlers = (): void => {
-  void inspectMcpClients()
   ipcMain.handle(
     'mt::mcp-clients::inspect',
     (_event, forceRefresh = false) => inspectMcpClients(forceRefresh)

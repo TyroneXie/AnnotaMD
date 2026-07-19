@@ -145,13 +145,10 @@ onMounted(() => {
     'settings::change-tab',
     onIpcCategoryChange
   )
-  // Listen for language changes and refresh the search index
-  const languageChanged = (): void => {
-    restaurants.value = loadAll()
-  }
-  window.addEventListener('languageChanged', languageChanged)
-  // Remove listener on unmount
-  onUnmounted(() => window.removeEventListener('languageChanged', languageChanged))
+})
+
+watch(locale, () => {
+  restaurants.value = loadAll()
 })
 
 onUnmounted(() => {

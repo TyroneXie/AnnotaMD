@@ -1,6 +1,6 @@
 import path from 'path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import type { BrowserWindowConstructorOptions } from 'electron'
+import type { BrowserWindowConstructorOptions, IpcMainEvent } from 'electron'
 import log from 'electron-log'
 import windowStateKeeper from 'electron-window-state'
 import { isChildOfDirectory } from 'common/filesystem/paths'
@@ -146,6 +146,21 @@ class EditorWindow extends BaseWindow {
 
     this.id = win.id
 
+    // did-finish-load can fire before a lazy editor route mounts and registers
+    // its IPC consumers. Send only the small bootstrap payload at that point;
+    // wait for the renderer acknowledgement before opening files/directories.
+    const handleWindowInitialized = (event: IpcMainEvent): void => {
+      if (!win || event.sender !== win.webContents) return
+      ipcMain.off('mt::window-initialized', handleWindowInitialized)
+      if (this.bufferStoreInfo!.filePath) {
+        this._restoreAllState()
+      } else {
+        this._doOpenFilesToOpen()
+        this._markdownToOpen!.length = 0
+      }
+    }
+    ipcMain.on('mt::window-initialized', handleWindowInitialized)
+
     if (spellcheckerEnabled && !isOsx) {
       try {
         switchLanguage(win, spellcheckerLanguage as string)
@@ -179,13 +194,6 @@ class EditorWindow extends BaseWindow {
         tabBarVisibility,
         sourceCodeModeEnabled: false
       })
-
-      if (this.bufferStoreInfo!.filePath) {
-        this._restoreAllState()
-      } else {
-        this._doOpenFilesToOpen()
-        this._markdownToOpen!.length = 0
-      }
 
       // Listen on default system mouse zoom event (e.g. Ctrl+MouseWheel on Linux/Windows).
       win!.webContents.on('zoom-changed', (_event, zoomDirection) => {
@@ -264,6 +272,7 @@ class EditorWindow extends BaseWindow {
 
     // The window is now destroyed.
     win.on('closed', () => {
+      ipcMain.off('mt::window-initialized', handleWindowInitialized)
       this.lifecycle = WindowLifecycle.QUITTED
       this.emit('window-closed')
 

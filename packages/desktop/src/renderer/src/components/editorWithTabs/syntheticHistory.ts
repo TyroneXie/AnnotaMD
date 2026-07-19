@@ -39,25 +39,24 @@
 const stripTrailingNewlines = (content: string): string =>
   content.replace(/[\r\n]+$/, '')
 
-// A fast, stable 64-bit string hash (FNV-1a) over the trailing-newline-normalized
-// content. Used so the content -> id map stores short keys instead of whole
-// documents; a collision would map two genuinely different documents to the same
-// id and could reintroduce the false-clean it guards against. 64 bits keeps the
-// collision probability negligible even for a long editing session with many
-// thousands of distinct snapshots (a 32-bit hash hits ~50% collision odds near
-// ~77k snapshots via the birthday bound — realistic over a long session — so the
-// extra width is worth the BigInt key).
-const FNV64_OFFSET = 0xcbf29ce484222325n
-const FNV64_PRIME = 0x100000001b3n
-const MASK64 = 0xffffffffffffffffn
-const hashContent = (content: string): bigint => {
+// Two independent 32-bit lanes keep a 64-bit signature without BigInt
+// multiplication on every UTF-16 code unit. A single 32-bit hash is not enough
+// for a long editing session; the paired lanes retain negligible collision
+// probability while keeping large-document typing on optimized number paths.
+const hashContent = (content: string): string => {
   const normalized = stripTrailingNewlines(content)
-  let hash = FNV64_OFFSET
+  let first = 0xdeadbeef ^ normalized.length
+  let second = 0x41c6ce57 ^ normalized.length
   for (let i = 0; i < normalized.length; i++) {
-    hash ^= BigInt(normalized.charCodeAt(i))
-    hash = (hash * FNV64_PRIME) & MASK64
+    const code = normalized.charCodeAt(i)
+    first = Math.imul(first ^ code, 2654435761)
+    second = Math.imul(second ^ code, 1597334677)
   }
-  return hash
+  first = Math.imul(first ^ (first >>> 16), 2246822507)
+    ^ Math.imul(second ^ (second >>> 13), 3266489909)
+  second = Math.imul(second ^ (second >>> 16), 2246822507)
+    ^ Math.imul(first ^ (first >>> 13), 3266489909)
+  return `${second >>> 0}:${first >>> 0}`
 }
 
 export interface IFileHistoryLike {
@@ -73,7 +72,7 @@ export interface IFileHistoryLike {
 // store's seeded `lastSavedHistoryId: 0` for a freshly loaded/clean document.
 export class SyntheticHistory {
   private counter = 0
-  private readonly idByContent = new Map<bigint, number>()
+  private readonly idByContent = new Map<string, number>()
 
   constructor(baselineContent: string = '') {
     // The freshly-loaded document is its own clean baseline; the store seeds

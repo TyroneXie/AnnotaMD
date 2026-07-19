@@ -22,6 +22,7 @@ import { useLayoutStore } from './layout'
 import { useMainStore } from '.'
 import { t } from '../i18n'
 import { debouncedSendBufferedState, sendBufferedState } from './bufferedState'
+import { listenForEditorBootstrap } from '../editorBootstrap'
 import type {
   IFileState,
   FileNotification,
@@ -901,7 +902,7 @@ export const useEditorStore = defineStore('editor', {
         }, 100)
       }, 400)
 
-      window.electron.ipcRenderer.on('mt::bootstrap-editor', (_, config) => {
+      listenForEditorBootstrap((config) => {
         const {
           addBlankTab,
           markdownList,

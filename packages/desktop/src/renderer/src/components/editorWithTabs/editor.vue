@@ -200,7 +200,7 @@ interface MuyaJsonChange {
   op: import('ot-json1').JSONOp
   source: string
   prevDoc: unknown
-  doc: unknown
+  doc: unknown[]
 }
 
 const props = defineProps<{
@@ -2114,7 +2114,10 @@ onMounted(() => {
     if (!currentFile.value || !editor.value) return
     const { id } = currentFile.value
     if (!id) return
-    const markdown = editor.value.getMarkdown()
+    // `doc` is already the detached post-edit snapshot produced by JSONState.
+    // Reuse it instead of cloning the live state once for getMarkdown() and a
+    // second time for getState() below.
+    const markdown = editor.value.getMarkdownFromState(doc)
     const filePath = currentFile.value.pathname
     if (filePath) {
       annotaMDCommentsStore.markdownByFile[filePath] = markdown
@@ -2148,7 +2151,7 @@ onMounted(() => {
       // keeps working (the engine history shape is incompatible).
       history: makeSyntheticHistory(id, markdown),
       toc: editor.value.getTOC(),
-      blocks: editor.value.getState()
+      blocks: doc
     })
 
     // Ensure the document-level comment mount stays at the end of the

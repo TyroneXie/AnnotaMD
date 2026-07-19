@@ -14,6 +14,7 @@ import Accessor from './app/accessor'
 import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
+import { scheduleMcpClientInspection } from './ipc/mcpClients'
 import { closeCommentService } from './comments'
 import { setAgentBridgeEnabled } from './comments/AgentBridgeServer'
 
@@ -94,6 +95,9 @@ electronApp.setAppUserModelId('com.electron.marktext')
 // Dev shortcuts and reload suppression
 app.on('browser-window-created', (_, window) => {
   optimizer.watchWindowShortcuts(window)
+  window.webContents.once('did-finish-load', () => {
+    scheduleMcpClientInspection()
+  })
 })
 
 // Instantiate and start the main App controller

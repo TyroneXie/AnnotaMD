@@ -1,5 +1,6 @@
 import log from 'electron-log/renderer'
 import RendererPaths from './node/paths'
+import { captureEditorBootstrap } from './editorBootstrap'
 
 let exceptionLogger: (s: unknown) => void = (s) => console.error(s)
 
@@ -119,6 +120,15 @@ const bootstrapRenderer = (): void => {
   // `global` is not available in a sandboxed renderer — attach to window.
   // RendererPaths has no string index signature, so widen through `unknown`.
   window.marktext = marktext as unknown as Window['marktext']
+
+  // The main process sends this once at did-finish-load. Editor routes are
+  // lazy-loaded, so capture the payload in the eager renderer entry and hand
+  // it to the store after the editor chunk mounts.
+  if (type === 'editor') {
+    window.electron.ipcRenderer.on('mt::bootstrap-editor', (_event, config) => {
+      captureEditorBootstrap(config)
+    })
+  }
 
   configureLogger()
 }

@@ -50,6 +50,7 @@ interface AnnotaMDCommentsState {
 
 const STORAGE_KEY = 'annotamd.comments.v2'
 const persistQueue = new Map<string, Promise<void>>()
+const persistRequested = new Set<string>()
 const synchronizingFiles = new Set<string>()
 let stopMainCommentSync: (() => void) | null = null
 
@@ -200,34 +201,48 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     },
 
     persistFile(filePath: string): Promise<void> {
-      const previous = persistQueue.get(filePath) ?? Promise.resolve()
-      const next = previous.then(async() => {
+      persistRequested.add(filePath)
+      const running = persistQueue.get(filePath)
+      if (running) {
+        // Keep only the newest state while a write is in flight. The running
+        // task will loop once more after it finishes instead of serializing
+        // every intermediate keystroke into a separate SQLite transaction.
+        return running
+      }
+
+      const next = (async() => {
         synchronizingFiles.add(filePath)
         try {
-          const document = await window.electron.ipcRenderer.invoke('mt::comments::replace', {
-            filePath,
-            markdown: this.markdownByFile[filePath] ?? '',
-            expectedRevision: this.revisionByFile[filePath] ?? 0,
-            comments: (this.commentsByFile[filePath] ?? []).map(cloneCommentForIpc)
-          })
-          this.revisionByFile[filePath] = document.revision
-        } catch (error) {
-          console.error('[AnnotaMD] Failed to persist comments; reloading the latest revision.', error)
-          const document = await window.electron.ipcRenderer.invoke(
-            'mt::comments::load',
-            filePath,
-            this.markdownByFile[filePath] ?? ''
-          )
-          this.commentsByFile[filePath] = document.comments
-          this.revisionByFile[filePath] = document.revision
+          while (persistRequested.delete(filePath)) {
+            try {
+              const document = await window.electron.ipcRenderer.invoke('mt::comments::replace', {
+                filePath,
+                markdown: this.markdownByFile[filePath] ?? '',
+                expectedRevision: this.revisionByFile[filePath] ?? 0,
+                comments: (this.commentsByFile[filePath] ?? []).map(cloneCommentForIpc)
+              })
+              this.revisionByFile[filePath] = document.revision
+            } catch (error) {
+              console.error(
+                '[AnnotaMD] Failed to persist comments; reloading the latest revision.',
+                error
+              )
+              const document = await window.electron.ipcRenderer.invoke(
+                'mt::comments::load',
+                filePath,
+                this.markdownByFile[filePath] ?? ''
+              )
+              this.commentsByFile[filePath] = document.comments
+              this.revisionByFile[filePath] = document.revision
+            }
+          }
         } finally {
           synchronizingFiles.delete(filePath)
+          persistQueue.delete(filePath)
+          persistRequested.delete(filePath)
         }
-      })
+      })()
       persistQueue.set(filePath, next)
-      void next.finally(() => {
-        if (persistQueue.get(filePath) === next) persistQueue.delete(filePath)
-      })
       return next
     },
 
@@ -264,6 +279,11 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           changed = true
           return []
         }
+        const anchorChanged = comparePaths(anchor.path, anchorPath) !== 0
+          || anchor.offset !== comment.anchor.offset
+        const focusChanged = comparePaths(focus.path, focusPath) !== 0
+          || focus.offset !== comment.focus.offset
+        if (!anchorChanged && !focusChanged) return [comment]
         changed = true
         return [{
           ...comment,

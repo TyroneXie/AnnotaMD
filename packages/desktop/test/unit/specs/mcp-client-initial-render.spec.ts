@@ -15,6 +15,10 @@ const ipcSource = readFileSync(
   resolve(repoRoot, 'packages/desktop/src/main/ipc/mcpClients.ts'),
   'utf8'
 )
+const bootstrapSource = readFileSync(
+  resolve(repoRoot, 'packages/desktop/src/main/index.ts'),
+  'utf8'
+)
 
 describe('MCP client initial rendering', () => {
   it('renders both supported Agents before asynchronous detection completes', () => {
@@ -30,6 +34,10 @@ describe('MCP client initial rendering', () => {
     expect(source).toContain('@click="refresh(true)"')
     expect(mainSource).toContain('if (!forceRefresh && cachedInspection) return cachedInspection')
     expect(mainSource).toContain('if (!forceRefresh && inspectionInFlight) return inspectionInFlight')
-    expect(ipcSource).toContain('void inspectMcpClients()')
+    expect(ipcSource).not.toMatch(/registerMcpClientHandlers[\s\S]*?void inspectMcpClients\(\)/)
+    expect(ipcSource).toContain('export const scheduleMcpClientInspection')
+    expect(bootstrapSource).toMatch(
+      /webContents\.once\('did-finish-load',[\s\S]*?scheduleMcpClientInspection\(\)/
+    )
   })
 })

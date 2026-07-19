@@ -6,12 +6,14 @@ import { createPinia, setActivePinia } from 'pinia'
 // runtime. Stub the surfaces before the hoisted imports run.
 vi.hoisted(() => {
   const w = globalThis as unknown as {
+    localStorage?: { getItem: (key: string) => string | null; setItem: () => void }
     window?: {
       path?: { sep: string; normalize: (p: string) => string; basename: (p: string) => string; dirname: (p: string) => string }
       fileUtils?: { hasMarkdownExtension: (n: string) => boolean; pathExists: (p: string) => Promise<boolean> }
       electron?: { ipcRenderer: { send: (...a: unknown[]) => void; on: (...a: unknown[]) => void } }
     }
   }
+  w.localStorage = { getItem: () => null, setItem: () => {} }
   w.window ??= {}
   w.window.path ??= { sep: '/', normalize: (p) => p, basename: (p) => p, dirname: (p) => p }
   w.window.fileUtils ??= {
@@ -32,6 +34,7 @@ vi.mock('@/util/fileSystem', async(orig) => {
 })
 
 import { useProjectStore } from '@/store/project'
+import { useEditorStore } from '@/store/editor'
 import { create } from '@/util/fileSystem'
 import notice from '@/services/notification'
 
@@ -60,6 +63,8 @@ describe('CREATE_FILE_DIRECTORY — name conflict guard (#1946)', () => {
     await store.CREATE_FILE_DIRECTORY('fresh')
 
     expect(create).toHaveBeenCalledWith('/docs/fresh.md', 'file')
+    expect(useEditorStore().currentFile.pathname).toBe('/docs/fresh.md')
+    expect(useEditorStore().currentFile.markdown).toBe('')
     expect(notice.notify).not.toHaveBeenCalled()
   })
 })

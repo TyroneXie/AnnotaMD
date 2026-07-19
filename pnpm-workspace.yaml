@@ -6,6 +6,12 @@ packages:
   - 'packages/muya/examples'
   - 'packages/muya/e2e'
 
+# pnpm 11 reads workspace-wide overrides from pnpm-workspace.yaml rather than
+# the legacy package.json "pnpm" field.
+overrides:
+  postcss: 8.5.15
+  'esbuild@>=0.27.0 <0.28.1': 0.28.1
+
 allowBuilds:
   ced: true
   electron-winstaller: true
