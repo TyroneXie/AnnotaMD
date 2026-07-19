@@ -90,6 +90,29 @@ test.describe('Code block wrap + line-numbers preferences', () => {
     await expect.poll(hasLineNumbers, { timeout: 10000 }).toBe(true)
   })
 
+  test('copy icon fits inside its clipping wrapper', async() => {
+    const bounds = await page.evaluate(() => {
+      const wrapper = document.querySelector<HTMLElement>('.mu-code-copy i.icon')
+      const svg = wrapper?.querySelector<SVGElement>('.mu-action-icon svg')
+      if (!wrapper || !svg) return null
+      const wrapperRect = wrapper.getBoundingClientRect()
+      const svgRect = svg.getBoundingClientRect()
+      return {
+        wrapperLeft: wrapperRect.left,
+        wrapperRight: wrapperRect.right,
+        wrapperWidth: wrapperRect.width,
+        svgLeft: svgRect.left,
+        svgRight: svgRect.right,
+        svgWidth: svgRect.width
+      }
+    })
+
+    expect(bounds).not.toBeNull()
+    expect(bounds!.svgLeft).toBeGreaterThanOrEqual(bounds!.wrapperLeft - 0.5)
+    expect(bounds!.svgRight).toBeLessThanOrEqual(bounds!.wrapperRight + 0.5)
+    expect(bounds!.svgWidth).toBeLessThanOrEqual(bounds!.wrapperWidth + 0.5)
+  })
+
   // Item 44 (continued): both preferences take effect together and live — assert
   // the wrap CSS still resolves after a line-numbers forceRender re-creates the
   // code DOM (regression guard: a re-render must not orphan the injected style).

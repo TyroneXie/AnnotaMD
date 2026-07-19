@@ -29,6 +29,7 @@ export const fr = {
         'Heading 4': 'Titre 4',
         'Heading 5': 'Titre 5',
         'Heading 6': 'Titre 6',
+        'Set Number': 'Définir la numérotation',
         'Table Block': 'Tableau',
         'Display Math': 'Formule mathématique',
         'HTML Block': 'Bloc HTML',

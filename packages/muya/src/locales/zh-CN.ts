@@ -29,6 +29,7 @@ export const zhCN = {
         'Heading 4': '标题 4',
         'Heading 5': '标题 5',
         'Heading 6': '标题 6',
+        'Set Number': '设置编号',
         'Table Block': '表格',
         'Display Math': '数学公式',
         'HTML Block': 'HTML块',

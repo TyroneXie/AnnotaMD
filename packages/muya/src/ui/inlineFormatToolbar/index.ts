@@ -353,6 +353,9 @@ export class InlineFormatToolbar extends BaseFloat {
     }
 
     private _currentTextStyle(): TextStyleType {
+        if (this._block?.closestBlock('code-block'))
+            return 'pre';
+
         const parent = this._block?.parent;
         if (parent?.blockName === 'atx-heading') {
             const state = parent.getState();

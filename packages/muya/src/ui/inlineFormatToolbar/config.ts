@@ -10,6 +10,7 @@ export const TEXT_STYLE_OPTIONS = [
     { type: 'heading 4', title: 'Heading 4', label: 'H4', shortcut: `${COMMAND_KEY}+4` },
     { type: 'heading 5', title: 'Heading 5', label: 'H5', shortcut: `${COMMAND_KEY}+5` },
     { type: 'heading 6', title: 'Heading 6', label: 'H6', shortcut: `${COMMAND_KEY}+6` },
+    { type: 'pre', title: 'Code Block', label: '{}', shortcut: '' },
 ] as const;
 
 export type TextStyleType = typeof TEXT_STYLE_OPTIONS[number]['type'];

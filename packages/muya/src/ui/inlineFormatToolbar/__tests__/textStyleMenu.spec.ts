@@ -81,7 +81,7 @@ describe('inline format toolbar text-style menu', () => {
         await vi.waitFor(() => expect(muya.getMarkdown()).toBe('first end\n'));
     });
 
-    it('offers paragraph and H1-H6, then converts the selected block', async () => {
+    it('offers paragraph, H1-H6 and code block, then converts the selected block', async () => {
         const muya = bootMuya('hello world\n');
         const content = muya.editor.scrollPage!.firstContentInDescendant()!;
         content.setCursor(0, 5, true);
@@ -104,6 +104,7 @@ describe('inline format toolbar text-style menu', () => {
             'heading 4',
             'heading 5',
             'heading 6',
+            'pre',
         ]);
 
         toolbar.container!
@@ -114,6 +115,30 @@ describe('inline format toolbar text-style menu', () => {
             const state = muya.getState()[0] as { name: string; meta?: { level?: number } };
             expect(state.name).toBe('atx-heading');
             expect(state.meta?.level).toBe(2);
+        });
+    });
+
+    it('converts a selected paragraph to a code block without losing text', async () => {
+        const muya = bootMuya('hello world\n');
+        const content = muya.editor.scrollPage!.firstContentInDescendant()!;
+        content.setCursor(0, 5, true);
+        const toolbar = new InlineFormatToolbar(muya);
+        const internals = toolbar as unknown as {
+            _block: typeof content;
+            _render: () => void;
+        };
+        internals._block = content;
+        internals._render();
+
+        toolbar.container!.querySelector<HTMLElement>('li.item.text_style')!.click();
+        toolbar.container!
+            .querySelector<HTMLElement>('[data-paragraph-type="pre"]')!
+            .click();
+
+        await vi.waitFor(() => {
+            const state = muya.getState()[0] as { name: string; text?: string };
+            expect(state.name).toBe('code-block');
+            expect(state.text).toBe('hello world');
         });
     });
 

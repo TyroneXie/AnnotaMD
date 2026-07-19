@@ -36,7 +36,12 @@ test.describe('Paragraph block transforms', () => {
 
   test('Heading 1', async() => {
     await clickMenuById(app, 'heading1MenuItem')
-    await page.waitForSelector('.editor-component h1', { state: 'attached', timeout: 5000 })
+    const heading = page.locator('.editor-component h1')
+    await expect(heading).toBeVisible()
+    const copyAnchor = heading.locator('.mu-copy-header-link')
+    await expect(copyAnchor).toBeHidden()
+    await heading.hover()
+    await expect(copyAnchor).toBeHidden()
   })
 
   test('Heading 2', async() => {

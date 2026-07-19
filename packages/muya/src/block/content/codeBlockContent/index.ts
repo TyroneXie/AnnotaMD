@@ -14,6 +14,7 @@ import { computeLineCount, repositionLineNumberSpans, syncLineNumbersSpans } fro
 import { getHighlightHtml, MARKER_HASH } from '../../../utils/highlightHTML';
 import prism, { loadedLanguages, transformAliasToOrigin, walkTokens } from '../../../utils/prism/index';
 import Content from '../../base/content';
+import Format from '../../base/format';
 import { ScrollPage } from '../../scrollPage';
 
 function checkAutoIndent(text: string, offset: number) {
@@ -85,7 +86,10 @@ function hasStateMeta(
     return /code-block|diagram|frontmatter/.test(state.name);
 }
 
-class CodeBlockContent extends Content {
+const RICH_CODE_FORMAT_REG
+    = /\*\*(?=\S)[\s\S]*?\S\*\*|~~(?=[\s\S]*?\S)[\s\S]*?~~|(?:^|[^*])\*(?=\S)[\s\S]*?\S\*(?!\*)|`[^`\n]+`|\[[^\]\n]+\]\([^\n)]*\)|<u>[\s\S]*?<\/u>|<span\s+style=["'][^"']*(?:color|background-color)\s*:/i;
+
+class CodeBlockContent extends Format {
     private _initialLang: string;
     public override parent: Code | null = null;
 
@@ -113,6 +117,10 @@ class CodeBlockContent extends Content {
      */
     private get _codeContainer() {
         return this.parent?.parent;
+    }
+
+    private get _isCodeBlock() {
+        return this._codeContainer?.blockName === 'code-block';
     }
 
     get outContainer() {
@@ -166,6 +174,13 @@ class CodeBlockContent extends Content {
 
     override update(_cursor?: IRenderCursor, highlights = []) {
         const { _lang: lang, text } = this;
+        if (this._isCodeBlock && RICH_CODE_FORMAT_REG.test(text)) {
+            this.inlineRenderer.patch(this, _cursor, highlights);
+            this._updateLineNumbers(text);
+            this._updatePreviewIfHave(text);
+            return;
+        }
+
         // transform alias to original language
         const fullLengthLang = transformAliasToOrigin([lang])[0];
         const domNode = this.domNode!;
@@ -231,6 +246,12 @@ class CodeBlockContent extends Content {
     }
 
     override inputHandler(event: Event): void {
+        if (this._isCodeBlock) {
+            super.inputHandler(event);
+            this._updatePreviewIfHave(this.text);
+            return;
+        }
+
         if (this.isComposed)
             return;
 
@@ -257,6 +278,17 @@ class CodeBlockContent extends Content {
             this.setCursor(start!.offset, end!.offset, true);
         }
     }
+
+    override clickHandler(event: Event): void {
+        if (this._isCodeBlock)
+            super.clickHandler(event);
+        else
+            Content.prototype.clickHandler.call(this, event);
+    }
+
+    // A code line that starts with `# `, `- `, or `> ` remains code. The
+    // explicit text-style menu is the only path that changes its block type.
+    override checkInlineUpdate(): void {}
 
     override enterHandler(event: KeyboardEvent): void {
         event.preventDefault();
@@ -452,6 +484,11 @@ class CodeBlockContent extends Content {
     }
 
     override keyupHandler(): void {
+        if (this._isCodeBlock) {
+            super.keyupHandler();
+            return;
+        }
+
         if (this.isComposed)
             return;
 

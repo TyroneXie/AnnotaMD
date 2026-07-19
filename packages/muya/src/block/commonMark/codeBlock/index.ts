@@ -29,6 +29,11 @@ class CodeBlock extends Parent {
 
         codeBlock.append(langInput);
         codeBlock.append(code);
+        // CodeBlockContent is first created before its parent chain exists.
+        // Render once more after attachment so code-only rich markers can be
+        // recognized on the initial WYSIWYG pass, including language-less
+        // fenced blocks that never trigger the async language loader.
+        code.lastContentInDescendant()?.update();
         codeBlock._createCollapseIndicator();
         codeBlock._createCaption();
 

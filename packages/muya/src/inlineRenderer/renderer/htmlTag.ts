@@ -152,7 +152,16 @@ export default function htmlTag(
         }
 
         case 'br': {
-            return [h(`span.${CLASS_NAMES.MU_HTML_TAG}`, [...openContent, h(tag)])];
+            return [
+                h(`span.${CLASS_NAMES.MU_HTML_TAG}`, [
+                    h(
+                        `span.${CLASS_NAMES.MU_HIDE}.${CLASS_NAMES.MU_OUTPUT_REMOVE}`,
+                        { attrs: { spellcheck: 'false' } },
+                        openContent,
+                    ),
+                    h(tag),
+                ]),
+            ];
         }
 
         default:

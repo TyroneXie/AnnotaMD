@@ -524,7 +524,10 @@ export class Muya {
      * the leaf was skipped.
      */
     private _formatLeafInRange(type: string, leaf: Content, start: number, end: number): { start: number; end: number } | null {
-        if (!(leaf instanceof Format))
+        // Code-block rich formatting is deliberately a same-block action.
+        // A drag spanning prose around a code block must not silently rewrite
+        // the intervening code with Markdown markers.
+        if (!(leaf instanceof Format) || leaf.blockName === 'codeblock.content')
             return null;
 
         // Never format a heading's leading `# ` marker, only its content.
@@ -681,6 +684,9 @@ export class Muya {
 
     private _immediateBlockAtCursor(): Parent | null {
         const content = this.editor.activeContentBlock ?? this.editor.selection.anchorBlock;
+
+        if (content?.blockName === 'codeblock.content')
+            return content.closestBlock('code-block') as Parent | null;
 
         return content?.parent ?? null;
     }
@@ -1417,7 +1423,7 @@ export class Muya {
     /**
      * The first FORMATTABLE content leaf whose text equals `text`, in document
      * order. Restricting to Format leaves skips marker-only content (a thematic
-     * break's `---`, code/math/html), so toggling one never lands the caret on
+     * break's `---`, math/html), so toggling one never lands the caret on
      * an unrelated block that happens to share that text.
      */
     private _findContentByText(text: string): Content | null {
@@ -1551,6 +1557,10 @@ export class Muya {
 
     /** Leading text of a block, with the atx hash run stripped for headings. */
     private _blockLeadingText(block: Parent): string {
+        const state = block.getState();
+        if (isCodeBlockState(state))
+            return state.text;
+
         const text = block.firstContentInDescendant()?.text ?? '';
 
         return block.blockName === 'atx-heading'

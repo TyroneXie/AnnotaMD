@@ -68,6 +68,7 @@ export function repositionLineNumberSpans(
     let nodeStart = 0;
     let lineIdx = 0;
     const lineH = Number.parseFloat(getComputedStyle(wrapper).lineHeight) || 24;
+    const codeHeight = Math.max(codeEl.scrollHeight, codeEl.getBoundingClientRect().height);
     let lastTop = 0;
     // Origin = the measured top of the first logical line. A collapsed range's
     // rect top sits at the text/caret box (below the line-box leading), so
@@ -94,10 +95,15 @@ export function repositionLineNumberSpans(
             let top = measured - baseTop;
             // Off-screen layout can occasionally return a viewport-relative
             // caret rect for one line. A logical line can never start above
-            // the previous one, so fall back to one normal row instead of
-            // letting a large negative `top` escape its code block.
-            if (!Number.isFinite(top) || top < lastTop)
+            // the previous one or below the code element, so fall back to one
+            // normal row instead of letting either jump escape its code block.
+            if (
+                !Number.isFinite(top)
+                || top < lastTop
+                || (codeHeight > 0 && top >= codeHeight)
+            ) {
                 top = lineIdx > 0 ? lastTop + lineH : 0;
+            }
             if (lineIdx < spans.length)
                 spans[lineIdx].style.top = `${top}px`;
             lastTop = top;

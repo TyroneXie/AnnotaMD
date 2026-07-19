@@ -51,6 +51,7 @@ const TEXT_TARGETS = [
     'atx-heading 4',
     'atx-heading 5',
     'atx-heading 6',
+    'code-block',
     'block-quote',
     'highlight-block',
     'order-list',
@@ -71,8 +72,8 @@ describe('canTurnIntoMenu — no nesting math/code/html/diagram inside themselve
         expect(canTurnIntoMenu(fakeBlock('html-block'))).toEqual([]);
     });
 
-    it('returns [] for a code-block', () => {
-        expect(canTurnIntoMenu(fakeBlock('code-block'))).toEqual([]);
+    it('offers safe text-block conversions for a code-block', () => {
+        expect(conversionLabels('code-block')).toEqual(TEXT_TARGETS);
     });
 
     it('returns [] for a diagram block', () => {
@@ -122,6 +123,7 @@ describe('canTurnIntoMenu — unified text block conversion matrix', () => {
         'bullet-list',
         'task-list',
         'highlight-block',
+        'code-block',
     ])('%s exposes the same paragraph, heading, quote and list targets', (blockName) => {
         expect(conversionLabels(blockName)).toEqual(TEXT_TARGETS);
     });
@@ -145,7 +147,8 @@ describe('canTurnIntoMenu — unified text block conversion matrix', () => {
 // no anchor" gating.
 //
 // New muya gates the same way at the UI layer: `canTurnIntoMenu` returns
-// `[]` for table/html-block/code-block/math-block/diagram, so the front
+// `[]` for table/html-block/math-block/diagram, while a code block now exposes
+// only safe text-block conversions, so the front
 // menu never offers "turn into table" from those contexts. The quick-insert
 // `/table` shortcut likewise only fires on `paragraph.content`. The cases
 // already locked above (math-block, html-block, code-block, diagram, table)

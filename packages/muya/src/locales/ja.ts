@@ -29,6 +29,7 @@ export const ja = {
         'Heading 4': 'タイトル 4',
         'Heading 5': 'タイトル 5',
         'Heading 6': 'タイトル 6',
+        'Set Number': '番号を設定',
         'Table Block': '表',
         'Display Math': '数式',
         'HTML Block': 'HTMLブロック',

@@ -22,6 +22,7 @@ const testPacks = {
       'src/ui/inlineFormatToolbar/__tests__/strikethroughStyle.spec.ts',
       'src/ui/__tests__/sharedActionIcons.spec.ts',
       'src/inlineRenderer/__tests__/wysiwygBlockMarkers.spec.ts',
+      'src/utils/__tests__/headingNumber.spec.ts',
       'src/__tests__/formatClickEvents.spec.ts',
       'src/editor/__tests__/clickableAutolink.spec.ts',
       'src/editor/__tests__/linkCursorStyle.spec.ts',

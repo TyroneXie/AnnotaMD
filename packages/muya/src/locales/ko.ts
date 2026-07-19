@@ -29,6 +29,7 @@ export const ko = {
         'Heading 4': '제목 4',
         'Heading 5': '제목 5',
         'Heading 6': '제목 6',
+        'Set Number': '번호 설정',
         'Table Block': '표',
         'Display Math': '수식',
         'HTML Block': 'HTML 블록',

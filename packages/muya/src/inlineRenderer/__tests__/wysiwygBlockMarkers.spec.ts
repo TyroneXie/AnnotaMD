@@ -40,6 +40,16 @@ function bootParagraph(markdown: string) {
     return { content, block };
 }
 
+function bootTable(markdown: string) {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const muya = new Muya(host, { markdown });
+    muya.init();
+    hosts.push(muya.domNode);
+    const cells = muya.domNode.querySelectorAll<HTMLElement>('.mu-table-cell-content');
+    return cells[cells.length - 1];
+}
+
 describe('Feishu-style block editing markers', () => {
     it('keeps the leading heading hashes hidden when the caret is inside them', () => {
         const { content, block } = bootHeading('### Heading\n');
@@ -62,6 +72,19 @@ describe('Feishu-style block editing markers', () => {
             .at(-1)!;
         expect(trailingMarker.classList.contains('mu-hide')).toBe(true);
         expect(trailingMarker.classList.contains('mu-gray')).toBe(false);
+    });
+
+    it('renders a numbered heading with a styled marker and fixed gap', () => {
+        const { content } = bootHeading('## 1.2. Numbered heading\n');
+
+        const number = content.querySelector('.mu-heading-number');
+        expect(number?.textContent).toBe('1.2.');
+        expect(number?.hasAttribute('contenteditable')).toBe(false);
+        expect(number?.getAttribute('role')).toBe('button');
+        expect(number?.getAttribute('tabindex')).toBe('0');
+        expect(number?.getAttribute('aria-label')).toBe('Set Number');
+        expect(content.querySelector('.mu-heading-number-gap')?.textContent).toBe(' ');
+        expect(content.textContent).toBe('## 1.2. Numbered heading');
     });
 
     it.each([
@@ -94,4 +117,25 @@ describe('Feishu-style block editing markers', () => {
             expect(marker.classList.contains('mu-hide'), marker.textContent ?? '').toBe(true);
     });
 
+    it('renders Feishu-style strikethrough with spaces inside the markers', () => {
+        const { content, block } = bootParagraph('~~ deleted ~~');
+
+        block.setCursor(5, 5, true);
+
+        expect(content.querySelector('del')?.textContent).toBe(' deleted ');
+        expect([...content.querySelectorAll<HTMLElement>('.mu-remove')]
+            .map(node => node.textContent)).toEqual(['~~', '~~']);
+    });
+
+    it.each(['<br>', '<br/>', '<br />'])(
+        'hides the %s source tag while keeping its table-cell line break',
+        (tag) => {
+            const content = bootTable(`| Column |\n| --- |\n| before${tag}after |\n`);
+            const lineBreak = content.querySelector<HTMLElement>('.mu-html-tag');
+            const marker = lineBreak?.querySelector<HTMLElement>('.mu-hide');
+
+            expect(marker?.textContent).toBe(tag);
+            expect(lineBreak?.querySelector('br')).not.toBeNull();
+        },
+    );
 });

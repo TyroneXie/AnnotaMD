@@ -29,6 +29,7 @@ export const pt = {
         'Heading 4': 'Título 4',
         'Heading 5': 'Título 5',
         'Heading 6': 'Título 6',
+        'Set Number': 'Definir numeração',
         'Table Block': 'Tabela',
         'Display Math': 'Fórmula matemática',
         'HTML Block': 'Bloco HTML',

@@ -29,6 +29,7 @@ export const es = {
         'Heading 4': 'Encabezado 4',
         'Heading 5': 'Encabezado 5',
         'Heading 6': 'Encabezado 6',
+        'Set Number': 'Configurar numeración',
         'Table Block': 'Tabla',
         'Display Math': 'Fórmula matemática',
         'HTML Block': 'Bloque HTML',

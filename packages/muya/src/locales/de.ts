@@ -29,6 +29,7 @@ export const de = {
         'Heading 4': 'Überschrift 4',
         'Heading 5': 'Überschrift 5',
         'Heading 6': 'Überschrift 6',
+        'Set Number': 'Nummerierung festlegen',
         'Table Block': 'Tabelle',
         'Display Math': 'Mathematische Formel',
         'HTML Block': 'HTML-Block',

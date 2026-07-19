@@ -175,4 +175,36 @@ describe('repositionLineNumberSpans', () => {
             '90px',
         ]);
     });
+
+    it('keeps line numbers inside their code block when an off-screen range jumps downward', () => {
+        const wrapper = document.createElement('span');
+        wrapper.style.lineHeight = '30px';
+        syncLineNumbersSpans(wrapper, 4);
+        const codeEl = document.createElement('code');
+        codeEl.appendChild(document.createTextNode('a\nb\nc\nd'));
+        (codeEl as unknown as { getBoundingClientRect: () => { height: number } })
+            .getBoundingClientRect = () => ({ height: 120 });
+
+        const tops = [110, 140, 5000, 200];
+        let call = 0;
+        const rangeProto = Range.prototype as unknown as {
+            getBoundingClientRect: () => { top: number };
+        };
+        const origRangeRect = rangeProto.getBoundingClientRect;
+        rangeProto.getBoundingClientRect = () => ({ top: tops[call++] });
+
+        try {
+            repositionLineNumberSpans(wrapper, codeEl);
+        }
+        finally {
+            rangeProto.getBoundingClientRect = origRangeRect;
+        }
+
+        const positionedTops = Array.from(
+            wrapper.children,
+            span => Number.parseFloat((span as HTMLElement).style.top),
+        );
+        expect(positionedTops).toEqual([0, 30, 54, 90]);
+        expect(Math.max(...positionedTops)).toBeLessThan(120);
+    });
 });

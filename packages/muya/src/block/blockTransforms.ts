@@ -11,7 +11,7 @@ import type {
 import type Parent from './base/parent';
 import emptyStates from '../config/emptyStates';
 import { getCursorReference } from '../selection';
-import { isAnyListState, isAtxHeadingState, isParagraphState, isSetextHeadingState } from '../state/types';
+import { isAnyListState, isAtxHeadingState, isCodeBlockState, isParagraphState, isSetextHeadingState } from '../state/types';
 import { deepClone } from '../utils';
 import logger from '../utils/logger';
 import { ScrollPage } from './scrollPage';
@@ -31,6 +31,7 @@ export const TEXT_BLOCK_LABELS = [
     'bullet-list',
     'task-list',
     'highlight-block',
+    'code-block',
 ] as const;
 
 const TEXT_BLOCK_LABEL_SET = new Set<string>(TEXT_BLOCK_LABELS);
@@ -145,7 +146,7 @@ function buildHighlightState(children: TState[]): IHighlightBlockState {
 
 function buildLeafBlock(label: TLeafReplacementLabel, muya: Muya, text: string) {
     const cloned = deepClone(emptyStates[label]);
-    if (cloned.name === 'paragraph') {
+    if ('text' in cloned) {
         cloned.text = text;
     }
     else if (cloned.name === 'block-quote') {
@@ -340,7 +341,7 @@ export function insertBlockBelowByLabel({ block, muya, label }: {
 }
 
 function stateText(state: TState): string | null {
-    if (isParagraphState(state) || isSetextHeadingState(state))
+    if (isParagraphState(state) || isSetextHeadingState(state) || isCodeBlockState(state))
         return state.text;
     if (isAtxHeadingState(state))
         return state.text.replace(/^ {0,3}#{1,6}(?:\s+|$)/, '');
@@ -450,6 +451,9 @@ export function replaceTextContainerByLabel({ block, muya, label }: {
 // must stay in sync with `MENU_CONFIG`'s labels and `PARAGRAPH_LABEL_MAP`.
 export function canTurnInto(block: Parent, label: string): boolean {
     const { blockName } = block;
+
+    if (blockName === 'code-block')
+        return TEXT_BLOCK_LABEL_SET.has(label);
 
     if (isTextBlockTarget(block)) {
         if (label === 'highlight-block') {

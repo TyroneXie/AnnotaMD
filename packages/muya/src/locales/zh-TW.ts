@@ -29,6 +29,7 @@ export const zhTW = {
         'Heading 4': '標題 4',
         'Heading 5': '標題 5',
         'Heading 6': '標題 6',
+        'Set Number': '設定編號',
         'Table Block': '表格',
         'Display Math': '數學公式',
         'HTML Block': 'HTML 區塊',

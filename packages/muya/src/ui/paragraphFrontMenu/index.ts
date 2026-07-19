@@ -958,6 +958,14 @@ export class ParagraphFrontMenu extends BaseFloat {
                 return this._convertedBlock?.firstContentInDescendant() ?? null;
             }
 
+            case 'code-block': {
+                if (label === 'code-block')
+                    return null;
+                const text = 'text' in oldState ? oldState.text : '';
+                this._convertedBlock = replaceBlockByLabel({ block, label, muya, text });
+                return this._convertedBlock?.firstContentInDescendant() ?? null;
+            }
+
             case 'block-quote':
                 if (label === 'paragraph')
                     muya.resetToParagraph(block);
@@ -976,7 +984,12 @@ export class ParagraphFrontMenu extends BaseFloat {
             case 'bullet-list':
                 // fall through
             case 'task-list':
-                if (label === 'block-quote' || label === 'highlight-block' || label.startsWith('atx-heading ')) {
+                if (
+                    label === 'block-quote'
+                    || label === 'highlight-block'
+                    || label === 'code-block'
+                    || label.startsWith('atx-heading ')
+                ) {
                     this._convertedBlock = replaceTextContainerByLabel({ block, muya, label });
                     return this._convertedBlock?.firstContentInDescendant() ?? null;
                 }

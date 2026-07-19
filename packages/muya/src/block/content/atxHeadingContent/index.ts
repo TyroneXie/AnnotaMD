@@ -2,8 +2,33 @@ import type { Muya } from '../../../muya';
 import type { IRenderCursor } from '../../../selection/types';
 import type AtxHeading from '../../commonMark/atxHeading';
 import { isKeyboardEvent } from '../../../utils';
+import {
+    normalizeHeadingNumber,
+    parseAtxHeadingNumber,
+    suggestedHeadingNumber,
+    type PreviousHeadingNumber,
+} from '../../../utils/headingNumber';
 import Format from '../../base/format';
 import { ScrollPage } from '../../scrollPage';
+
+function previousHeadingNumbers(heading: AtxHeading): PreviousHeadingNumber[] {
+    const headings: PreviousHeadingNumber[] = [];
+    let block = heading.prev;
+
+    while (block) {
+        if (block.blockName === 'atx-heading') {
+            const previousHeading = block as AtxHeading;
+            const text = previousHeading.firstContentInDescendant()?.text ?? '';
+            headings.push({
+                level: previousHeading.meta.level,
+                marker: parseAtxHeadingNumber(text)?.marker ?? null,
+            });
+        }
+        block = block.prev;
+    }
+
+    return headings;
+}
 
 class AtxHeadingContent extends Format {
     public override parent: AtxHeading | null = null;
@@ -27,7 +52,56 @@ class AtxHeadingContent extends Format {
     }
 
     override update(cursor?: IRenderCursor, highlights = []) {
-        return this.inlineRenderer.patch(this, cursor, highlights);
+        const result = this.inlineRenderer.patch(this, cursor, highlights);
+        const number = this.domNode?.querySelector<HTMLElement>('.mu-heading-number');
+        if (number) {
+            number.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                number.focus({ preventScroll: true });
+            });
+            number.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+        }
+        return result;
+    }
+
+    override inputHandler(event: Event) {
+        super.inputHandler(event);
+
+        const inputData = 'data' in event && typeof event.data === 'string'
+            ? event.data
+            : null;
+        if (inputData !== ' ')
+            return;
+
+        const cursor = this.getCursor();
+        const headingNumber = parseAtxHeadingNumber(this.text);
+        if (
+            !cursor
+            || !headingNumber
+            || cursor.start.offset !== headingNumber.gapEnd
+            || cursor.end.offset !== headingNumber.gapEnd
+        ) {
+            return;
+        }
+
+        const suggested = suggestedHeadingNumber(
+            this.parent!.meta.level,
+            previousHeadingNumbers(this.parent!),
+        ) ?? normalizeHeadingNumber(headingNumber.marker);
+        if (suggested === headingNumber.marker) {
+            this.setCursor(headingNumber.gapEnd, headingNumber.gapEnd, true);
+            return;
+        }
+
+        const { markerStart, markerEnd } = headingNumber;
+        this.text
+            = this.text.slice(0, markerStart) + suggested + this.text.slice(markerEnd);
+        const offset = headingNumber.gapEnd + suggested.length - headingNumber.marker.length;
+        this.setCursor(offset, offset, true);
     }
 
     override enterHandler(event: Event) {

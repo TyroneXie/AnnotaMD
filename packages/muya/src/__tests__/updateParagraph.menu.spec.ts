@@ -48,16 +48,27 @@ describe('updateParagraph same-block menu model', () => {
         });
     });
 
-    it('inserts a new code block BELOW a non-empty paragraph (non-convertible, original kept)', async () => {
+    it('converts a non-empty paragraph to a code block in place', async () => {
         const muya = bootMuya('hello\n');
         placeCursorOnFirstBlock(muya);
-        muya.updateParagraph('pre'); // 'pre' -> code-block; not in canTurnIntoMenu(paragraph)
+        muya.updateParagraph('pre');
         await vi.waitFor(() => {
             const s = muya.getState();
-            expect(s.length).toBe(2);
-            expect(s[0].name).toBe('paragraph');
+            expect(s.length).toBe(1);
+            expect(s[0].name).toBe('code-block');
             expect((s[0] as { text: string }).text).toBe('hello');
-            expect(s[1].name).toBe('code-block');
+        });
+    });
+
+    it('converts a code block to a heading in place and preserves its text', async () => {
+        const muya = bootMuya('```\ncode here\n```\n');
+        placeCursorOnLastContent(muya);
+        muya.updateParagraph('heading 2');
+        await vi.waitFor(() => {
+            const state = muya.getState()[0] as { name: string; text?: string; meta?: { level?: number } };
+            expect(state.name).toBe('atx-heading');
+            expect(state.meta?.level).toBe(2);
+            expect(state.text).toBe('## code here');
         });
     });
 
@@ -80,6 +91,23 @@ describe('updateParagraph same-block menu model', () => {
             const s = muya.getState();
             expect(s[0].name).toBe('bullet-list');
             expect((s[0] as { children: { children: { name: string }[] }[] }).children[0].children[0].name).toBe('atx-heading');
+        });
+    });
+
+    it('converts a list item to a code block without dropping its text', async () => {
+        const muya = bootMuya('- item one\n');
+        placeCursorOnFirstBlock(muya);
+        muya.updateParagraph('pre');
+        await vi.waitFor(() => {
+            const state = muya.getState()[0] as {
+                name: string;
+                children: Array<{ children: Array<{ name: string; text?: string }> }>;
+            };
+            expect(state.name).toBe('bullet-list');
+            expect(state.children[0].children[0]).toMatchObject({
+                name: 'code-block',
+                text: 'item one',
+            });
         });
     });
 
