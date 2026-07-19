@@ -6,13 +6,22 @@ on:
     # (e.g. `vbad.tag`) instead of them silently not triggering anything.
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing vX.Y.Z tag to rebuild without moving the tag
+        required: true
+        type: string
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.event.inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
 jobs:
   validate:
@@ -21,7 +30,7 @@ jobs:
     steps:
       - name: Validate semver tag
         run: |
-          tag="${GITHUB_REF_NAME}"
+          tag="${RELEASE_TAG}"
           # SemVer 2.0.0 with leading "v"
           if ! [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Tag '$tag' is not a valid semver (expected vX.Y.Z[-prerelease][+build])"
@@ -39,7 +48,7 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             platform: linux
           - name: windows-x64
             os: windows-latest
@@ -61,6 +70,8 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4.3.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Enable Git long paths on Windows
         if: matrix.platform == 'windows'
@@ -187,7 +198,7 @@ jobs:
 
       - name: Compose release notes body
         env:
-          IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+          IS_PRERELEASE: ${{ contains(env.RELEASE_TAG, '-') }}
         run: |
           {
             if [[ "$IS_PRERELEASE" == "true" ]]; then
@@ -216,9 +227,10 @@ jobs:
         uses: softprops/action-gh-release@v2.6.2
         with:
           draft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
           generate_release_notes: true
-          name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
           body_path: release_body.md
           fail_on_unmatched_files: true
           files: dist/*
@@ -226,6 +238,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote draft to published release
-        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --repo "${GITHUB_REPOSITORY}"
+        run: gh release edit "${RELEASE_TAG}" --draft=false --repo "${GITHUB_REPOSITORY}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

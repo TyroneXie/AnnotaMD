@@ -32,7 +32,7 @@
 
 - Electron 43 的 Linux V8 二进制使用 Clang 构建。v2.10.0 流水线虽然为 `native-keymap` 启用了 C++20，但 `electron-rebuild` 仍默认调用 GCC，导致 V8 头文件中的导出属性无法解析。
 - Electron 43 对应的 Chromium 150 已把预编译 Clang 包从 `.tgz` 改为 `.tar.xz`，当前 `@electron/rebuild` 的 `--use-electron-clang` 仍请求旧格式地址并返回 404，因此不能依赖该下载路径。
-- v2.10.1 的 Linux Release、Build 和 E2E 流水线在 job 级别统一安装并导出系统 `clang/clang++`，覆盖 postinstall 与正式打包中的全部原生模块重建；macOS 与 Windows 构建链保持不变。
+- v2.10.1 的 Linux Release、Build 和 E2E 流水线在 Ubuntu 24.04 的 job 级别统一安装并导出系统 `clang/clang++`，覆盖 postinstall 与正式打包中的全部原生模块重建；较旧的 Ubuntu 22.04 默认 Clang 14 不支持 Electron 43 V8 头文件所需的 `std::source_location`。macOS 与 Windows 构建链保持不变。
 
 ## 发布流程防回归
 

@@ -36,6 +36,7 @@
 - **Major：`(X+1).0.0`**。存在不向后兼容的数据格式、配置、命令、插件/API 或迁移要求。只有相关破坏性变更已经被用户明确授权时才直接发布 major；否则发布前先确认。
 - 多类改动混合时采用其中最高级别；提交数量和改动行数不影响版本级别。除非用户明确要求 beta/rc，否则发布稳定版本，不添加预发布后缀。
 - 不复用、不删除、不移动已经推送到远程的 tag。远程 tag 后若只遇到临时 CI 故障，可重跑流水线；若必须修改代码，则修复后发布下一个 patch。
+- 已推送 tag 后若确认只需修正 workflow/runner，且应用源码、依赖、版本和产物内容均不变，可从 `main` 执行 `gh workflow run release.yml --ref main -f release_tag=vX.Y.Z` 重建同一 tag；该入口必须 checkout 原 tag。若需要修改 tag 内任何应用或构建源码，仍必须发布下一个 patch。
 
 ### 标准发布流程
 
@@ -59,7 +60,7 @@
 4. **提交并执行远程跨平台预检**
    - 只暂存本次发布范围，提交信息统一为 `release: prepare AnnotaMD vX.Y.Z`。
    - 先只推送 `main`，不要创建 tag；执行 `gh workflow run build.yml --ref main`，并记录本次运行 ID。
-   - 等待该 `PR Build` 运行结束，确认其 `headSha` 与待发布 `HEAD` 完全一致，Linux、Windows x64/arm64、macOS x64/arm64 五个平台全部成功且均上传产物。失败时直接在 `main` 修复并重新预检，不占用新版本号。
+   - 等待该 `PR Build` 运行结束，确认其 `headSha` 与待发布 `HEAD` 完全一致，且 runner 标签、Node、原生编译器和打包命令与 Release workflow 对应矩阵一致；Linux、Windows x64/arm64、macOS x64/arm64 五个平台全部成功并上传产物。失败时直接在 `main` 修复并重新预检，不占用新版本号。
 
 5. **创建并推送不可变 tag**
    - 只有第 4 步精确提交的五平台预检全部通过后，才创建 annotated tag：`git tag -a vX.Y.Z -m "AnnotaMD vX.Y.Z"`。
@@ -125,9 +126,9 @@
 ### Electron 大版本与 Linux 原生模块工具链
 
 - 现象：Electron 大版本升级后，macOS 和 Windows 能完成原生模块重建，但 Linux 在 `native-keymap` 包含 V8 头文件时出现 `V8_EXPORT`/`expected identifier` 编译错误。
-- 根因：Electron 43 的 Linux V8 二进制使用 Clang 构建；仅设置 C++20 仍会让 `electron-rebuild` 默认调用 GCC。Electron 43 对应的 Chromium 150 又把预编译 Clang 包从 `.tgz` 改为 `.tar.xz`，当前 `@electron/rebuild` 4.0.4 至 4.2.0 的 `--use-electron-clang` 仍请求旧格式并返回 404。
-- 推荐做法：Linux CI 显式安装系统 Clang，并在 job 级别把 `CC=clang`、`CXX=clang++` 写入 `$GITHUB_ENV`，确保 postinstall 和 `build:linux` 内再次执行的 electron-rebuild 都继承 Clang；在上游支持 `.tar.xz` 前不要使用 `--use-electron-clang`。macOS、Windows 保持现有工具链。
-- 验证方式：确认 Release、Build 和 E2E 三条 Linux workflow 均在所有 Node 构建步骤前导出 CC/CXX，并以两次 `native-keymap` 重建及 AppImage、deb、rpm、tar.gz、snap 全量打包通过为准。
+- 根因：Electron 43 的 Linux V8 二进制使用 Clang 构建；仅设置 C++20 仍会让 `electron-rebuild` 默认调用 GCC。Electron 43 对应的 Chromium 150 又把预编译 Clang 包从 `.tgz` 改为 `.tar.xz`，当前 `@electron/rebuild` 4.0.4 至 4.2.0 的 `--use-electron-clang` 仍请求旧格式并返回 404；Ubuntu 22.04 的默认 Clang 14 还缺少 V8 头文件需要的 `std::source_location` 支持。
+- 推荐做法：Linux Build 与 Release 统一锁定 `ubuntu-24.04`，显式安装系统 Clang，并在 job 级别把 `CC=clang`、`CXX=clang++` 写入 `$GITHUB_ENV`，确保 postinstall 和 `build:linux` 内再次执行的 electron-rebuild 都继承同一工具链；在上游支持 `.tar.xz` 前不要使用 `--use-electron-clang`。macOS、Windows 保持现有工具链。
+- 验证方式：确认 Release、Build 和 E2E 三条 Linux workflow 均在所有 Node 构建步骤前导出 CC/CXX，tag 前 Build 与 Release 使用同一 Linux runner，并以两次 `native-keymap` 重建及 AppImage、deb、rpm、tar.gz、snap 全量打包通过为准。
 
 ### pnpm 冻结锁文件与配置一致性
 
@@ -146,6 +147,6 @@
 ### 不可变 tag 前的跨平台门禁
 
 - 现象：macOS 本机验证通过，但 tag 触发 Release 后才暴露 Linux 或 Windows 问题；由于远程 tag 不得移动，修复只能再发布 patch 版本。
-- 根因：本机验证覆盖不了其他平台，而旧流程把五平台构建放在 tag 创建之后；原有 `build.yml` 又只由 PR 触发，直接从 `main` 发布时没有远程预检。
-- 推荐做法：`build.yml` 保留 `workflow_dispatch` 入口；发布候选提交先推送 `main`，对其精确 SHA 手动运行五平台 Build，全部成功后再创建和推送 tag。
-- 验证方式：发布记录中必须同时保留 tag 前 Build run ID，并确认其 `headSha` 等于 tag commit；缺少这一证据不得创建 tag。
+- 根因：本机验证覆盖不了其他平台，而旧流程把五平台构建放在 tag 创建之后；原有 `build.yml` 又只由 PR 触发，直接从 `main` 发布时没有远程预检。即使增加预检，runner 或构建步骤与 Release 不一致仍会留下盲区。
+- 推荐做法：`build.yml` 保留 `workflow_dispatch` 入口；发布候选提交先推送 `main`，对其精确 SHA 手动运行与 Release 同 runner、同工具链、同打包命令的五平台 Build，全部成功后再创建和推送 tag。
+- 验证方式：发布记录中必须保留 tag 前 Build run ID，确认其 `headSha` 等于 tag commit，并逐项核对两个 workflow 的 matrix runner 与关键构建步骤；缺少任一证据不得创建 tag。
