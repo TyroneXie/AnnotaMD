@@ -48,7 +48,10 @@
 2. **更新版本与日志**
    - 同步更新根目录 `package.json` 与 `packages/desktop/package.json` 的版本号。
    - 在 `CHANGELOG.md` 顶部新增 `X.Y.Z - YYYY-MM-DD`，按 `Added`、`Changed`、`Fixed` 记录本次实际变更；没有内容的分类不写。
-   - 新增 `docs/releases/release-notes-vX.Y.Z.md`，使用中文说明用户可见变化、Electron 实机验证结论和 macOS 安装提示。
+   - 新增 `docs/releases/release-notes-vX.Y.Z.md`，使用中文说明用户可感知的新增、删除、改进和修复，以及必要的升级或安装提示。
+   - `CHANGELOG.md` 与 Release 正文只写“产品改了什么、用户会获得什么”，按实际内容组织新增、删除、改进、修复，没有内容的分类不写。不得写 CI、tag、workflow、runner、编译器、打包命令、测试数量、排障过程、失败复盘或 agent 如何完成工作；这些工程经验写入 `AGENTS.md` 或开发文档。内部问题若确实影响用户，只描述最终影响和结果，例如“恢复 Linux 安装包下载”，不展开内部根因。
+   - 性能数据可以保留，但必须转换成用户场景并说明测试条件，仅用于相对参考；不要暴露本机私有路径、内部验证文件名或无用户意义的实现细节。
+   - “完整变更”应从上一个实际公开的 GitHub Release 比较到当前版本，不以仅存在 tag、但没有公开 Release 的失败版本作为起点。
    - 执行 `git diff --check`，并确认所有 locale JSON 可解析、版本号与发布说明一致。
 
 3. **发布前验证**
