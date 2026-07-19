@@ -34,9 +34,13 @@ test.describe('Electron 43 performance smoke', () => {
   test('loads the lazy editor route', async() => {
     const errors = await getRendererErrors(app)
     const electronVersion = await app.evaluate(() => process.versions.electron)
+    const windowVisible = await app.evaluate(({ BrowserWindow }) => {
+      return BrowserWindow.getAllWindows()[0]?.isVisible() ?? false
+    })
 
     await expect(page.locator('.editor-component')).toBeAttached({ timeout: 15000 })
     expect(electronVersion).toBe('43.1.1')
+    expect(windowVisible).toBe(true)
     expect(errors).toEqual([])
   })
 

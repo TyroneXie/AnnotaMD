@@ -1,6 +1,6 @@
 # AnnotaMD 性能优化方案：Electron 43 与应用层热点
 
-> 状态：P0 与两项低风险 P1 优化已完成并验证，尚未合并发布
+> 状态：计划内 P0/P1 优化已全部完成并验证，尚未合并发布
 > 形成日期：2026-07-19
 > 适用基线：AnnotaMD 2.9.0 工作树、Electron 42.1.0
 > 目标：下一版本集中改善冷启动、首次绘制、大文档输入、批注文档输入和大型目录加载性能。
@@ -218,21 +218,19 @@ Muya `json-change` 每帧触发后，桌面层会获取完整 Markdown、完整 
 
 ## 10. P1：实测后决定
 
-本轮基于 production 构建和重复启动基准继续完成两项低风险优化：
+本轮基于 production 构建、重复启动基准和真实 Electron 场景完成全部 P1：
 
 - production `electron-log` 文件输出改为异步写，Electron 冒烟会轮询确认主进程日志实际落盘。
 - 评论 SQLite 服务和 MCP HTTP 桥从 main 默认启动入口移出，只在首次评论 IPC 或启用 MCP 时
   动态加载；退出监听也只在服务真正实例化后注册。
-
-以下项目仍有优化价值，但风险或场景依赖更高，保留为后续独立迭代：
-
-- 编辑窗口先隐藏，在首次有效绘制后显示；此项只改善白屏和感知时序。
-- macOS 默认使用原生文件事件，仅在云盘或异常卷上回退 polling。
-- 优化长文档多表格滚动时 sticky header 的布局测量。
-- 批注栏 ResizeObserver 和逐条高度测量的批量化。
-
-macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iCloud/网盘、外部磁盘和原子替换
-写入，否则可能用较低 CPU 换来漏事件。
+- 编辑窗口默认隐藏，懒加载 editor route 接收 bootstrap 并确认初始化后再显示，避免空窗口。
+- macOS 默认使用 Chokidar 5 原生文件事件；普通覆盖写、atomic inode replacement，以及目录
+  创建、重命名、删除均已在真实 Electron 中验证。现有 `watcherUsePolling` 继续作为网络盘和
+  云盘的显式回退，不删除兼容路径。
+- sticky table header 在内容变化时缓存表格纵向几何，滚动帧用二分查找当前表格，只测量滚动
+  容器和活动表格，不再遍历所有表格、逐单元格读取宽度。
+- 批注栏用一个 animation frame 合并 watch、锚点和 ResizeObserver 更新，并缓存已观察卡片的
+  border-box 高度；回复/编辑导致卡片变高时仍会重新布局。
 
 ## 11. 实施批次
 
@@ -286,7 +284,7 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
 
 本节记录 `codex/performance-electron-43` 分支的实际结果。它不是发布结论；合入 `main` 和
 正式打包仍需完成发布级全量回归和用户确认。第一阶段已提交为 `e0732a7`，第二阶段提交为
-`921ec75`；本节也包含尚待提交的第三阶段低风险 P1 与测试基线修复。
+`921ec75`，第三阶段提交为 `0351a50`；本节也包含尚待提交的第四阶段剩余 P1。
 
 ### 已完成
 
@@ -321,6 +319,14 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
 - 主进程不再为默认关闭的 MCP 调用同步导入评论数据库、HTTP 和加密代码；评论与 MCP 被构建
   为 14.65 KB 和 8.44 KB 的独立分块，main 默认入口从 1,097,077 字节降到 1,076,136 字节。
 - production 日志由同步文件写入改为异步队列，并加入真实 Electron 日志落盘回归检查。
+- 编辑 BrowserWindow 改为 route 初始化后显示；最终 10 次启动样本 p50 约 933 ms、p95 约
+  966 ms，没有因隐藏/显示握手增加启动等待。
+- macOS watcher 不再强制轮询；原生事件覆盖文件普通写入、内容相同写入、atomic replacement，
+  以及目录创建、重命名和删除。轮询偏好仍可强制启用。
+- sticky table header 的纵向位置和表头宽度改为失效时测量、滚动时复用。24 张表格真实文档中，
+  12 个滚动帧共记录 33 次相关布局读取，读取量不再随前方表格数量线性增长。
+- 批注卡片高度由单个 ResizeObserver 缓存，布局请求按帧合并；两条同锚点批注中打开回复编辑器
+  后，后一张卡片会按新的缓存高度下移，已通过 Electron 交互测试。
 - Node 25 无有效 `--localstorage-file` 时暴露不完整 `localStorage` 的测试环境问题已通过统一
   MemoryStorage setup 修复；旧按钮测试也已对齐当前组件选择器和实际 primary 主题变量，未通过
   跳过或降低覆盖率来消除失败。
@@ -328,16 +334,16 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
 ### 当前验证
 
 - `npm run verify:feature`：通过，覆盖 menu、table、comments、editor 和批注 OT，共 325 个测试。
-- desktop 完整单测：92 个文件、886 项全部通过。
+- desktop 完整单测：92 个文件、890 项全部通过。
 - Muya 完整单测：240 个文件、1,695 项全部通过。
 - AnnotaMD desktop TypeScript 检查：通过。
 - Electron production build：通过；main 默认入口 1,076,136 字节，preload 约 24 KB。
 - Electron 43.1.1 production 实机：编辑器懒加载、设置页懒加载、真实长文档
   `design.md`、输入后 Markdown 快照、批注锚点、MCP 状态按需加载、异步日志落盘、语言切换和
-  侧栏新建文件均已完成冒烟。
-- 同一生产构建的 10 次启动基准：最初基线 p50 约 1,001 ms、p95 约 1,336 ms；本轮两次最终
-  测量的 p50 为 948–977 ms、p95 为 1,189–1,195 ms。受机器状态影响，保守结论是 p50 改善
-  约 2.5%–5.3%、p95 改善约 10.6%–11.0%；安装包冷/热启动仍需发布前重新测量。
+  侧栏新建文件、原生 watcher、长表格滚动和批注卡片高度变化均已完成冒烟。
+- 同一 production 构建的最终 10 次启动基准：最初基线 p50 约 1,001 ms、p95 约 1,336 ms；
+  当前 p50 约 933 ms、p95 约 966 ms，分别改善约 6.8% 和 27.7%。测试助手包含固定 500 ms
+  等待，因此该数据用于同机相对比较；安装包冷/热启动仍需发布前重新测量。
 
 ### 发布前剩余工作
 
@@ -346,6 +352,5 @@ macOS watcher polling 不能直接移除。必须分别验证本地 APFS、iClou
    体积与微基准不能替代安装包性能结论。
 3. 验证 macOS x64/arm64、Windows x64/arm64 和 Linux 产物，特别检查 Electron 43 的窗口、
    下载目录、图像色彩和原生依赖兼容性。
-4. 第 10 节剩余的 watcher、表格 sticky header 和批注栏测量优化必须先取得对应场景 trace；
-   watcher 尤其需要 APFS、iCloud/网盘、外部磁盘和原子替换写入验证，不能只凭本地目录通过
-   就切换默认策略。
+4. 网络盘、iCloud/其他云盘仍保留 polling 回退；跨平台安装包验收时应分别确认默认原生事件
+   和强制 polling 两条路径，但计划内不再有待实现的性能代码项。

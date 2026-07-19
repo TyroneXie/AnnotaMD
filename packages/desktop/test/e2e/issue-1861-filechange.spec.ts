@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import fs from 'fs'
+import path from 'node:path'
 import { launchWithMarkdown, waitForMenuReady } from './helpers'
 
 // #1861 — rewriting the open file on disk with byte-identical content (e.g. a
@@ -15,8 +16,8 @@ import { launchWithMarkdown, waitForMenuReady } from './helpers'
 const isDirty = (page: Page) =>
   page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved'))
 
-// macOS uses polling + awaitWriteFinish (stabilityThreshold 1000ms), so a disk
-// write surfaces ~1–2s later.
+// The open-file watcher keeps awaitWriteFinish (stabilityThreshold 1000ms), so
+// a disk write surfaces ~1–2s later with either the native or polling backend.
 const WATCH_SETTLE = 2500
 
 test.describe('Issue #1861 — content-identical file change', () => {
@@ -36,6 +37,16 @@ test.describe('Issue #1861 — content-identical file change', () => {
     await expect.poll(async() => {
       return await page.locator('.mu-container').textContent()
     }, { timeout: 8000 }).toContain('changed')
+    expect(await isDirty(page)).toBe(false)
+
+    // Atomic replacement is how editors and git commonly install a new inode.
+    // The native macOS watcher must keep following the path after the rename.
+    const replacementPath = path.join(path.dirname(filePath), '.note.md.atomic-replacement')
+    fs.writeFileSync(replacementPath, 'hello\nworld\natomic\n', 'utf-8')
+    fs.renameSync(replacementPath, filePath)
+    await expect.poll(async() => {
+      return await page.locator('.mu-container').textContent()
+    }, { timeout: 8000 }).toContain('atomic')
     expect(await isDirty(page)).toBe(false)
 
     await app.close()

@@ -216,7 +216,10 @@ class Watcher {
   }
 
   watch(win: BrowserWindow, watchPath: string, type: WatchType = 'dir'): () => void {
-    const usePolling = isOsx ? true : this._preferences.getItem<boolean>('watcherUsePolling')
+    // Chokidar's native backend handles local APFS/FSEvents and atomic file
+    // replacement without continuously polling every watched path. Keep the
+    // existing preference as an explicit fallback for network/cloud volumes.
+    const usePolling = this._preferences.getItem<boolean>('watcherUsePolling')
 
     const id = getUniqueId()
 

@@ -45,11 +45,25 @@ function optionsForLastWatch(): Record<string, unknown> {
 describe('watcher awaitWriteFinish (#3955)', () => {
   let watcher: Watcher
   const win = { id: 1, webContents: { send: vi.fn() } }
+  const getItem = vi.fn(() => false)
 
   beforeEach(() => {
     watchMock.mockClear()
-    const preferences = { getItem: vi.fn(() => false) }
+    getItem.mockReset()
+    getItem.mockReturnValue(false)
+    const preferences = { getItem }
     watcher = new Watcher(preferences as never)
+  })
+
+  it('uses native filesystem events by default on every platform', () => {
+    watcher.watch(win as never, '/project', 'dir')
+    expect(optionsForLastWatch().usePolling).toBe(false)
+  })
+
+  it('retains polling as an explicit fallback for network or cloud volumes', () => {
+    getItem.mockReturnValue(true)
+    watcher.watch(win as never, '/network-project', 'dir')
+    expect(optionsForLastWatch().usePolling).toBe(true)
   })
 
   it('does not defer directory-tree events with awaitWriteFinish', () => {

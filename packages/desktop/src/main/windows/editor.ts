@@ -158,6 +158,10 @@ class EditorWindow extends BaseWindow {
         this._doOpenFilesToOpen()
         this._markdownToOpen!.length = 0
       }
+      // The lazy editor route is now mounted and has received its initial
+      // state. Showing here avoids exposing an empty BrowserWindow while still
+      // preserving the existing focus/restore behavior.
+      this.bringToFront()
     }
     ipcMain.on('mt::window-initialized', handleWindowInitialized)
 
@@ -179,9 +183,6 @@ class EditorWindow extends BaseWindow {
     win.webContents.once('did-finish-load', () => {
       this.lifecycle = WindowLifecycle.READY
       this.emit('window-ready')
-
-      // Restore and focus window
-      this.bringToFront()
 
       const lineEnding = preferences.getPreferredEol()
       appMenu.updateLineEndingMenu(this.id!, lineEnding)

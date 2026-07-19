@@ -20,7 +20,9 @@ export const editorWinOptions: Readonly<BrowserWindowConstructorOptions> = Objec
     preload: path.join(__dirname, '../preload/index.js')
   },
   useContentSize: true,
-  show: true,
+  // The editor route is lazy-loaded. Keep the native window hidden until the
+  // renderer acknowledges that route and its bootstrap listener are mounted.
+  show: false,
   frame: false,
   titleBarStyle: 'hiddenInset',
   zoomFactor: 1.0

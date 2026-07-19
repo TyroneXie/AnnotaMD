@@ -40,16 +40,45 @@ const selectParagraphText = async(page: Page, paragraphIndex: number, start = 0,
   await page.waitForTimeout(150)
 }
 
-const addComment = async(page: Page, paragraphIndex: number, body: string) => {
+const addComment = async(
+  page: Page,
+  paragraphIndex: number,
+  body: string,
+  expectedCount = 1,
+  expectedQuote = '重复文字：需要修正。'
+) => {
   await selectParagraphText(page, paragraphIndex)
   await page.locator('.mu-format-picker li.annotamd_comment').click()
   const composer = page.locator('.annotamd-composer-card')
   await expect(composer).toBeVisible()
-  await expect(composer.locator('blockquote')).toContainText('重复文字：需要修正。')
+  await expect(composer.locator('blockquote')).toContainText(expectedQuote)
   await composer.locator('textarea').fill(body)
   await composer.locator('.annotamd-composer-actions button').click()
-  await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(1)
+  await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(expectedCount)
 }
+
+test('batches cached comment-card height changes into one anchored relayout', async() => {
+  const { app, page } = await launchWithMarkdown('同一锚点文字。\n')
+  try {
+    await addComment(page, 0, '第一条', 1, '同一锚点文字。')
+    await addComment(page, 0, '第二条', 2, '同一锚点文字。')
+    const cards = page.locator('.annotamd-comment-card[data-comment-id]')
+    const readSecondTop = () => cards.nth(1).evaluate(
+      (card) => Number.parseFloat((card as HTMLElement).style.top)
+    )
+    await expect.poll(readSecondTop).toBeGreaterThan(0)
+    const secondTopBefore = await readSecondTop()
+
+    await cards.nth(0).locator('.annotamd-comment-action-row button').nth(1).click()
+    await expect(cards.nth(0).locator('.annotamd-reply-editor')).toBeVisible()
+
+    await expect.poll(async() => {
+      return cards.nth(1).evaluate((card) => Number.parseFloat((card as HTMLElement).style.top))
+    }).toBeGreaterThan(secondTopBefore)
+  } finally {
+    await app.close()
+  }
+})
 
 test.describe('AnnotaMD comment anchors in Electron', () => {
   let app: ElectronApplication

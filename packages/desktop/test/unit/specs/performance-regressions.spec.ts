@@ -11,6 +11,7 @@ describe('performance regression guards', () => {
     const bootstrap = read('packages/desktop/src/renderer/src/bootstrap.ts')
     const editorStore = read('packages/desktop/src/renderer/src/store/editor.ts')
     const editorWindow = read('packages/desktop/src/main/windows/editor.ts')
+    const mainConfig = read('packages/desktop/src/main/config.ts')
 
     expect(router).toContain("const App = () => import('@/pages/app.vue')")
     expect(router).toContain("const Preference = () => import('@/pages/preference.vue')")
@@ -21,6 +22,12 @@ describe('performance regression guards', () => {
     expect(editorStore).toContain('listenForEditorBootstrap((config) =>')
     expect(editorWindow).toContain("ipcMain.on('mt::window-initialized'")
     expect(editorWindow).toContain('this._doOpenFilesToOpen()')
+    expect(mainConfig).toMatch(
+      /export const editorWinOptions:[\s\S]*?Object\.freeze\(\{[\s\S]*?show:\s*false/
+    )
+    expect(editorWindow).toMatch(
+      /const handleWindowInitialized[\s\S]*?this\.bringToFront\(\)/
+    )
   })
 
   it('registers only the Element Plus components used by renderer templates', () => {
@@ -136,5 +143,19 @@ describe('performance regression guards', () => {
     )
     expect(editor).toContain("bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)")
     expect(editor).toContain('const readCommentText = createAnnotaMDCommentTextReader(root)')
+  })
+
+  it('batches comment bubble layout and caches observed card heights', () => {
+    const commentPane = read(
+      'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
+    )
+
+    expect(commentPane).toContain('commentLayoutFrame = requestAnimationFrame(() =>')
+    expect(commentPane).toContain('const commentCardHeights = new Map<string, number>()')
+    expect(commentPane).toContain('commentResizeObserver?.observe(card)')
+    expect(commentPane).toContain('height: commentCardHeights.get(comment.id) ?? 120')
+    expect(commentPane).not.toMatch(
+      /selectionComments\.value\.map[\s\S]*?height:\s*card\?\.offsetHeight/
+    )
   })
 })

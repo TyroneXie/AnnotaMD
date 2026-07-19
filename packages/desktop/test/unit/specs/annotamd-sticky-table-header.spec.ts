@@ -15,6 +15,11 @@ const rect = (left: number, top: number, width: number, height: number): DOMRect
 })
 
 const mountTable = (tableRect: DOMRect) => {
+  const measurements = { count: 0 }
+  const measured = (value: DOMRect): (() => DOMRect) => () => {
+    measurements.count++
+    return value
+  }
   const root = document.createElement('div')
   const figure = document.createElement('figure')
   const table = document.createElement('table')
@@ -27,18 +32,18 @@ const mountTable = (tableRect: DOMRect) => {
   root.appendChild(figure)
   document.body.appendChild(root)
 
-  root.getBoundingClientRect = () => rect(80, 50, 440, 500)
-  figure.getBoundingClientRect = () => rect(100, -20, 400, 600)
-  table.getBoundingClientRect = () => tableRect
-  row.getBoundingClientRect = () => rect(tableRect.left, 20, tableRect.width, 40)
+  root.getBoundingClientRect = measured(rect(80, 50, 440, 500))
+  figure.getBoundingClientRect = measured(rect(100, -20, 400, 600))
+  table.getBoundingClientRect = measured(tableRect)
+  row.getBoundingClientRect = measured(rect(tableRect.left, 20, tableRect.width, 40))
   Array.from(row.cells).forEach((cell, index) => {
-    cell.getBoundingClientRect = () => rect(tableRect.left + index * 100, 20, 100, 40)
+    cell.getBoundingClientRect = measured(rect(tableRect.left + index * 100, 20, 100, 40))
     cell.style.fontFamily = 'Test Sans'
     cell.style.fontSize = '18px'
   })
   Object.defineProperty(table, 'scrollWidth', { value: tableRect.width })
 
-  return { root }
+  return { root, measurements }
 }
 
 afterEach(() => {
@@ -69,6 +74,19 @@ describe('AnnotaMDStickyTableHeader', () => {
     expect(overlay.style.width).toBe('400px')
     expect(overlay.querySelector<HTMLElement>('table')!.style.transform).toBe('translateX(-40px)')
 
+    stickyHeader.destroy()
+  })
+
+  it('reuses cached vertical and cell geometry during unchanged scroll refreshes', () => {
+    const { root, measurements } = mountTable(rect(105, -20, 380, 600))
+    const stickyHeader = new AnnotaMDStickyTableHeader(root)
+    measurements.count = 0
+
+    stickyHeader.refresh()
+
+    // Root, active figure and active table only. The header row and all cells
+    // are measured during layout rebuilds, not on every scroll frame.
+    expect(measurements.count).toBe(3)
     stickyHeader.destroy()
   })
 })

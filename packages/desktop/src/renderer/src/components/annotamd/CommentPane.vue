@@ -226,7 +226,11 @@ const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
-let commentListResizeObserver: ResizeObserver | null = null
+let commentResizeObserver: ResizeObserver | null = null
+let commentLayoutFrame: number | null = null
+let commentLayoutDisposed = false
+const commentCardHeights = new Map<string, number>()
+const observedCommentCards = new Map<string, HTMLElement>()
 let stopMcpStatusListener: (() => void) | null = null
 const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clients: [] })
 
@@ -254,28 +258,58 @@ const commentCardStyle = (commentId: string): Record<string, string> => {
   return Number.isFinite(top) ? { top: `${top}px` } : {}
 }
 
-const updateCommentBubbleLayout = async (): Promise<void> => {
-  await nextTick()
+const syncObservedCommentCards = (list: HTMLElement): void => {
+  const currentIds = new Set<string>()
+  for (const card of list.querySelectorAll<HTMLElement>('[data-comment-id]')) {
+    const id = card.dataset.commentId
+    if (!id) continue
+    currentIds.add(id)
+    const previous = observedCommentCards.get(id)
+    if (previous === card) continue
+    if (previous) commentResizeObserver?.unobserve(previous)
+    observedCommentCards.set(id, card)
+    commentCardHeights.set(id, card.offsetHeight)
+    commentResizeObserver?.observe(card)
+  }
+  for (const [id, card] of observedCommentCards) {
+    if (currentIds.has(id)) continue
+    commentResizeObserver?.unobserve(card)
+    observedCommentCards.delete(id)
+    commentCardHeights.delete(id)
+  }
+}
+
+const recalculateCommentBubbleLayout = (): void => {
   const list = commentList.value
   if (!list || composerOpen.value) return
 
+  syncObservedCommentCards(list)
   const listRect = list.getBoundingClientRect()
   const anchorById = new Map(commentAnchors.value.map((anchor) => [anchor.id, anchor]))
   const bubbles = selectionComments.value.map((comment) => {
-    const card = list.querySelector<HTMLElement>(`[data-comment-id="${comment.id}"]`)
     const anchor = anchorById.get(comment.id)
     return {
       id: comment.id,
       anchorTop: anchor ? anchor.top - listRect.top + list.scrollTop : null,
-      height: card?.offsetHeight ?? 120
+      height: commentCardHeights.get(comment.id) ?? 120
     }
   })
   commentLayout.value = layoutCommentBubbles(bubbles, 0, list.clientHeight)
 }
 
+const updateCommentBubbleLayout = (): void => {
+  void nextTick().then(() => {
+    if (commentLayoutDisposed || commentLayoutFrame != null) return
+    commentLayoutFrame = requestAnimationFrame(() => {
+      commentLayoutFrame = null
+      recalculateCommentBubbleLayout()
+    })
+  })
+}
+
 const handleCommentAnchors = (payload: unknown): void => {
   commentAnchors.value = Array.isArray(payload) ? payload as CommentAnchorRect[] : []
-  void updateCommentBubbleLayout()
+  updateCommentBubbleLayout()
 }
 
 const clearActiveComment = (commentId: string): void => {
@@ -336,7 +370,8 @@ const focusCommentCard = async (commentId: string): Promise<void> => {
   composerOpen.value = false
   draftBody.value = ''
   commentStore.setActiveComment(commentId)
-  await updateCommentBubbleLayout()
+  await nextTick()
+  recalculateCommentBubbleLayout()
   await nextTick()
   const card = [...(commentList.value?.querySelectorAll<HTMLElement>('[data-comment-id]') ?? [])]
     .find((element) => element.dataset.commentId === commentId)
@@ -357,7 +392,7 @@ watch(commentFocusRequest, (request) => {
 
 watch(
   [selectionComments, editingId, replyingId, composerOpen],
-  () => void updateCommentBubbleLayout(),
+  updateCommentBubbleLayout,
   { deep: true }
 )
 
@@ -379,17 +414,32 @@ onMounted(() => {
   )
   bus.on('annotamd-comment-anchors', handleCommentAnchors)
   if (commentList.value) {
-    commentListResizeObserver = new ResizeObserver(() => void updateCommentBubbleLayout())
-    commentListResizeObserver.observe(commentList.value)
+    commentResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const card = entry.target as HTMLElement
+        const id = card.dataset.commentId
+        if (!id) continue
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? card.offsetHeight
+        commentCardHeights.set(id, height)
+      }
+      updateCommentBubbleLayout()
+    })
+    commentResizeObserver.observe(commentList.value)
+    updateCommentBubbleLayout()
   }
 })
 
 onBeforeUnmount(() => {
+  commentLayoutDisposed = true
   stopMcpStatusListener?.()
   stopMcpStatusListener = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
-  commentListResizeObserver?.disconnect()
-  commentListResizeObserver = null
+  if (commentLayoutFrame != null) cancelAnimationFrame(commentLayoutFrame)
+  commentLayoutFrame = null
+  commentResizeObserver?.disconnect()
+  commentResizeObserver = null
+  observedCommentCards.clear()
+  commentCardHeights.clear()
   commentStore.setActiveComment(null)
 })
 </script>
