@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.10.0 - 2026-07-19
+
+### Changed
+
+- Upgraded the desktop runtime from Electron 42.1.0 to Electron 43.1.1, bringing the latest Chromium, Node.js, V8, preload bytecode caching, and renderer startup improvements.
+- Split editor and Settings routes, loaded Element Plus components on demand, and reduced the initial renderer JavaScript bundle by about 78% and initial CSS by about 52%.
+- Reused editor state snapshots and deferred non-critical document statistics, outline refreshes, history serialization, comment layout, and persistence work outside the per-keystroke hot path.
+- Made large workspaces load metadata without reading every Markdown file, batch file-tree updates, use native macOS file events by default, and retain polling as an explicit network/cloud-volume fallback.
+- Enabled Agent access to local AnnotaMD comments by default for new installations while preserving the Settings switch and existing user preferences.
+
+### Fixed
+
+- Removed an approximately quadratic reference-definition scan that made table-heavy documents slow to open; the 137 KB validation document improved from 4,063 ms to 430 ms in a running production build.
+- Avoided rebuilding the same new document twice and reduced sticky-table-header, comment-highlight, comment-card, logging, and file-tree layout work during editing and scrolling.
+- Prevented renderer bootstrap events from being lost while lazy routes load and delayed showing the editor window until its route is ready, avoiding an empty startup frame.
+
 ## 2.9.0 - 2026-07-19
 
 ### Added
