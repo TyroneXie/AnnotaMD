@@ -58,6 +58,18 @@ xattr -cr /Applications/AnnotaMD.app
 
 也可以在“系统设置 → 隐私与安全性”中选择“仍要打开”。
 
+## 下载校验
+
+所有安装包均记录在 Release 的 `SHA256SUMS.txt` 中，可在下载目录执行：
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
+
+## 完整变更
+
+[查看 v2.10.0 到 v2.10.1 的完整提交差异](https://github.com/TyroneXie/AnnotaMD/compare/v2.10.0...v2.10.1)
+
 ## 致谢
 
 AnnotaMD 基于 MarkText 与 Muya 的开源编辑器能力开发，感谢所有上游贡献者。
