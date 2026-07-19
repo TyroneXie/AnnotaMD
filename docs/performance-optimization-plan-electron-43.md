@@ -284,7 +284,8 @@ Muya `json-change` 每帧触发后，桌面层会获取完整 Markdown、完整 
 
 本节记录 `codex/performance-electron-43` 分支的实际结果。它不是发布结论；合入 `main` 和
 正式打包仍需完成发布级全量回归和用户确认。第一阶段已提交为 `e0732a7`，第二阶段提交为
-`921ec75`，第三阶段提交为 `0351a50`；本节也包含尚待提交的第四阶段剩余 P1。
+`921ec75`，第三阶段提交为 `0351a50`，第四阶段提交为 `2b5ccbd`；本节也包含随后发现的真实
+长文档打开性能修复。
 
 ### 已完成
 
@@ -316,8 +317,9 @@ Muya `json-change` 每帧触发后，桌面层会获取完整 Markdown、完整 
 - 目录 watcher 将 16 ms 内的树事件合并为一次 IPC；renderer 对纯新增批次统一插入并只排序
   一次，混合的重命名、删除和修改事件仍按原顺序处理。微基准中 1,000 文件从约 11.22 ms
   降至 2.82 ms，10,000 文件从约 309.17 ms 降至 19.59 ms。
-- 主进程不再为默认关闭的 MCP 调用同步导入评论数据库、HTTP 和加密代码；评论与 MCP 被构建
-  为 14.65 KB 和 8.44 KB 的独立分块，main 默认入口从 1,097,077 字节降到 1,076,136 字节。
+- 评论与 MCP 被构建为 14.65 KB 和 8.44 KB 的独立分块，main 入口不再静态解析评论数据库、
+  HTTP 和加密代码。MCP 评论访问现已默认开启，并在 Electron ready 后动态加载；用户明确关闭
+  时仍会保留选择且不会加载该分块。
 - production 日志由同步文件写入改为异步队列，并加入真实 Electron 日志落盘回归检查。
 - 编辑 BrowserWindow 改为 route 初始化后显示；最终 10 次启动样本 p50 约 933 ms、p95 约
   966 ms，没有因隐藏/显示握手增加启动等待。
@@ -330,16 +332,25 @@ Muya `json-change` 每帧触发后，桌面层会获取完整 Markdown、完整 
 - Node 25 无有效 `--localstorage-file` 时暴露不完整 `localStorage` 的测试环境问题已通过统一
   MemoryStorage setup 修复；旧按钮测试也已对齐当前组件选择器和实际 primary 主题变量，未通过
   跳过或降低覆盖率来消除失败。
+- 新标签此前会先发出 `file-changed`、再发出 `file-loaded`，导致同一 Markdown 连续构建两次；
+  新文件现只走 `file-loaded`，已有标签切换仍走 `file-changed`。同时，InlineRenderer 曾在创建
+  每个富文本叶子时深拷贝并遍历整份状态以收集引用定义，表格密集文档因此形成近似 O(n²)；现以
+  JSON state revision 为缓存边界，同一 revision 只扫描一次，`setContent`/OT dispatch 后自动失效。
+- 真实文件 `design-2026-06-30-review.md`（137,008 字节、51 张表、496 行表格、1,513 个单元格、
+  1,894 个编辑叶子）在已启动的 production Electron 中打开由 4,063 ms 降到 430 ms，改善约
+  89.4%。CPU profile 中原先约 1.38 秒的 `TableCellContent → _collectReferenceDefinitions →
+  getState → deepClone` 热点已消失；最终 DOM 数量和 Markdown 往返内容均一致。
 
 ### 当前验证
 
 - `npm run verify:feature`：通过，覆盖 menu、table、comments、editor 和批注 OT，共 325 个测试。
-- desktop 完整单测：92 个文件、890 项全部通过。
-- Muya 完整单测：240 个文件、1,695 项全部通过。
+- desktop 完整单测：93 个文件、892 项全部通过。
+- Muya 完整单测：241 个文件、1,698 项全部通过。
 - AnnotaMD desktop TypeScript 检查：通过。
 - Electron production build：通过；main 默认入口 1,076,136 字节，preload 约 24 KB。
 - Electron 43.1.1 production 实机：编辑器懒加载、设置页懒加载、真实长文档
-  `design.md`、输入后 Markdown 快照、批注锚点、MCP 状态按需加载、异步日志落盘、语言切换和
+  `design.md`、表格密集的 `design-2026-06-30-review.md`、输入后 Markdown 快照、批注锚点、
+  默认启用的 MCP 状态、异步日志落盘、语言切换和
   侧栏新建文件、原生 watcher、长表格滚动和批注卡片高度变化均已完成冒烟。
 - 同一 production 构建的最终 10 次启动基准：最初基线 p50 约 1,001 ms、p95 约 1,336 ms；
   当前 p50 约 933 ms、p95 约 966 ms，分别改善约 6.8% 和 27.7%。测试助手包含固定 500 ms

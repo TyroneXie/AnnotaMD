@@ -40,7 +40,7 @@ describe('performance regression guards', () => {
     expect(main).toContain("import 'element-plus/es/components/button/style/css'")
   })
 
-  it('keeps comments and the MCP bridge off the default main-process startup path', () => {
+  it('keeps comments lazy and imports the MCP bridge only when syncing access', () => {
     const main = read('packages/desktop/src/main/index.ts')
     const commentIpc = read('packages/desktop/src/main/ipc/comments.ts')
 
@@ -93,6 +93,17 @@ describe('performance regression guards', () => {
     expect(editor).not.toMatch(
       /editor\.value\.on\('json-change',[\s\S]*?blocks:\s*editor\.value\.getState\(\)/
     )
+  })
+
+  it('renders newly opened tabs only through the file-loaded path', () => {
+    const editorStore = read('packages/desktop/src/renderer/src/store/editor.ts')
+
+    expect(editorStore).toContain(
+      'UPDATE_CURRENT_FILE(currentFile: IFileState, emitFileChanged = true)'
+    )
+    expect(editorStore).toMatch(/if \(emitFileChanged\) \{\s*bus\.emit\('file-changed'/)
+    expect(editorStore).toContain('this.UPDATE_CURRENT_FILE(fileState, false)')
+    expect(editorStore).toContain('this.UPDATE_CURRENT_FILE(docState, false)')
   })
 
   it('moves display-only derived state and history cloning off the keystroke path', () => {

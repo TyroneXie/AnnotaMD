@@ -44,6 +44,8 @@ class JSONState {
 
     private _operationCache: JSONOpList[] = [];
 
+    private _revision = 0;
+
     // Handle of the scheduled deferred-op flush. Doubles as the "a flush is
     // already scheduled" guard (non-null ⇒ batching in progress), and lets
     // `setContent` cancel a pending batch that belongs to the outgoing
@@ -56,13 +58,14 @@ class JSONState {
         this.setContent(stateOrMarkdown);
     }
 
-    private _apply(op: JSONOp) {
+    private _apply(op: JSONOp): boolean {
         // ot-json1's noop is the literal `null`. `json1.type.apply` accepts it
         // and returns the doc unchanged — short-circuit instead so the rest of
         // the call site can treat `op` as definitely applied.
         if (op === null)
-            return;
+            return false;
         this._state = asState(json1.type.apply(asDoc(this._state), op));
+        return true;
     }
 
     setContent(content: TState[] | string) {
@@ -80,6 +83,7 @@ class JSONState {
             this._setState(content);
         else
             this._setMarkdown(content);
+        this._revision += 1;
     }
 
     private _setState(state: TState[]) {
@@ -207,7 +211,8 @@ class JSONState {
 
     dispatch(op: JSONOp, source = 'user' /* user, api */) {
         const prevDoc = this.getState();
-        this._apply(op);
+        if (this._apply(op))
+            this._revision += 1;
         // TODO: remove doc in future
         const doc = this.getState();
         debug.log(JSON.stringify(op));
@@ -221,6 +226,10 @@ class JSONState {
 
     getState(): TState[] {
         return deepClone(this._state);
+    }
+
+    get revision(): number {
+        return this._revision;
     }
 
     getMarkdown() {

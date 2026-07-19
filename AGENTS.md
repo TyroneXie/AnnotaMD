@@ -104,6 +104,13 @@
 - 推荐做法：固定渲染支持的客户端行；主进程启动时异步预热并缓存探测结果，页面读取缓存，只有用户主动刷新时强制重查。
 - 验证方式：回归测试覆盖异步探测完成前的固定行与缓存路径，并在 Electron 冷启动后连续打开设置页确认列表无跳动。
 
+### 表格密集长文档首次打开
+
+- 现象：普通文档启动基准正常，但打开包含大量表格单元格的真实长文档需要数秒。
+- 根因：新标签同时触发 `file-changed` 和 `file-loaded` 导致全文渲染两次；InlineRenderer 又在创建每个内容叶子时深拷贝并遍历完整 state 收集引用定义，形成近似 O(n²) 工作。
+- 推荐做法：新文件只走一次 `file-loaded`，已有标签切换走 `file-changed`；引用定义按 JSON state revision 缓存，`setContent` 或 OT dispatch 后失效，同一 revision 不重复扫描。
+- 验证方式：用 CPU profile 确认不再出现 `TableCellContent → _collectReferenceDefinitions → getState → deepClone` 热点；用 `referenceDefinitionCache.spec.ts` 覆盖缓存与失效，并在 Electron 中核对真实文档的表格/单元格数量和 Markdown 往返内容。
+
 ### 分支、提交与发布产物一致性
 
 - 现象：开发过程中某个性能或功能改动在实验分支验证有效，但 `main`/Release 仍表现为旧逻辑。

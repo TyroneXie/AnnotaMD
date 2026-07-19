@@ -57,7 +57,7 @@ test.describe('Electron 43 performance smoke', () => {
     await expect(settingPage.locator('.pref-general')).toBeAttached({ timeout: 15000 })
   })
 
-  test('loads the disabled MCP bridge status on demand', async() => {
+  test('starts the default-enabled MCP bridge', async() => {
     const status = await page.evaluate(() => {
       return (window as unknown as {
         electron: {
@@ -72,7 +72,7 @@ test.describe('Electron 43 performance smoke', () => {
       }).electron.ipcRenderer.invoke('mt::comments::mcp-status')
     })
 
-    expect(status).toEqual({ enabled: false, running: false, clients: [] })
+    expect(status).toEqual({ enabled: true, running: true, clients: [] })
   })
 
   test('flushes asynchronous main-process logs', async() => {

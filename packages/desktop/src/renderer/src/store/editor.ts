@@ -838,7 +838,7 @@ export const useEditorStore = defineStore('editor', {
       debouncedSendBufferedState()
     },
 
-    UPDATE_CURRENT_FILE(currentFile: IFileState): void {
+    UPDATE_CURRENT_FILE(currentFile: IFileState, emitFileChanged = true): void {
       const oldCurrentFile = this.currentFile
       let didUpdateCurrentFile = false
       if (oldCurrentFile == null || oldCurrentFile.id !== currentFile.id) {
@@ -858,16 +858,18 @@ export const useEditorStore = defineStore('editor', {
           this.updateTabIdToIndex()
         }
 
-        bus.emit('file-changed', {
-          id,
-          markdown,
-          cursor,
-          muyaIndexCursor,
-          renderCursor: true,
-          history,
-          scrollTop,
-          blocks
-        })
+        if (emitFileChanged) {
+          bus.emit('file-changed', {
+            id,
+            markdown,
+            cursor,
+            muyaIndexCursor,
+            renderCursor: true,
+            history,
+            scrollTop,
+            blocks
+          })
+        }
       }
 
       this.UPDATE_LINE_ENDING_MENU()
@@ -1281,7 +1283,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (selected) {
         const { id, markdown } = fileState
-        this.UPDATE_CURRENT_FILE(fileState)
+        this.UPDATE_CURRENT_FILE(fileState, false)
         bus.emit('file-loaded', { id, markdown })
       } else {
         this.tabs.push(fileState)
@@ -1346,7 +1348,7 @@ export const useEditorStore = defineStore('editor', {
       const { id, cursor } = docState
 
       if (selected) {
-        this.UPDATE_CURRENT_FILE(docState)
+        this.UPDATE_CURRENT_FILE(docState, false)
         bus.emit('file-loaded', { id, markdown, cursor })
       } else {
         this.tabs.push(docState)
