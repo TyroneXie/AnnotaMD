@@ -195,6 +195,7 @@ describe('AnnotaMD preference styling', () => {
 
     expect(markdown).not.toContain("onSelectChange('codeFontSize'")
     expect(markdown).not.toContain('preferHeadingStyle')
+    expect(markdown).not.toContain('footnoteNotes')
     expect(spellchecker).not.toContain('autoDetectLanguage')
     expect(spellchecker).not.toContain('const noop')
     expect(editor).not.toMatch(/^\s*codeFontSize,\s*$/m)

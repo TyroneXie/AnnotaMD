@@ -58,7 +58,6 @@
         />
         <bool
           :description="t('preferences.markdown.extensions.footnote')"
-          :notes="t('preferences.markdown.extensions.footnoteNotes')"
           :bool="footnote"
           :on-change="(value) => onSelectChange('footnote', value)"
           more="https://pandoc.org/MANUAL.html#footnotes"
