@@ -1,7 +1,7 @@
 <template>
   <section
     class="pref-switch-item"
-    :class="{ 'ag-underdevelop': disable }"
+    :class="{ 'ag-underdevelop': disable, 'has-notes': Boolean(notes) }"
   >
     <div class="label-column">
       <div class="description">
@@ -112,6 +112,14 @@ const handleSwitchChange = (value: boolean | string | number) => {
 
 .pref-switch-item .el-switch {
   height: 20px;
+}
+
+.pref-switch-item.has-notes {
+  align-items: flex-start;
+}
+
+.pref-switch-item.has-notes .el-switch {
+  margin-top: -2px;
 }
 
 .pref-switch-item .el-switch__core {

@@ -28,6 +28,9 @@ describe('AnnotaMD preference styling', () => {
     )
     expect(css).toMatch(/\.el-switch__action\s*\{[^}]*background:\s*#fff;/s)
     expect(css).toMatch(/\.el-switch__core\s*\{[^}]*min-width:\s*34px;/s)
+    expect(css).toContain("'has-notes': Boolean(notes)")
+    expect(css).toMatch(/\.pref-switch-item\.has-notes\s*\{[^}]*align-items:\s*flex-start;/s)
+    expect(css).toMatch(/\.pref-switch-item\.has-notes \.el-switch\s*\{[^}]*margin-top:\s*-2px;/s)
   })
 
   it('uses compact page spacing and typography', () => {

@@ -117,11 +117,16 @@ test.describe('application update indicator', () => {
     await expect(settingsPage!.locator('.app-update-panel button')).toContainText('Download update')
 
     const switchBox = await persistedAutomaticDownload.locator('.el-switch').boundingBox()
+    const switchLabelBox = await persistedAutomaticDownload.locator('.description').boundingBox()
     const updateActionBox = await settingsPage!
       .locator('.app-update-panel button')
       .boundingBox()
     expect(switchBox).not.toBeNull()
+    expect(switchLabelBox).not.toBeNull()
     expect(updateActionBox).not.toBeNull()
+    expect(Math.abs(
+      switchBox!.y + switchBox!.height / 2 - (switchLabelBox!.y + switchLabelBox!.height / 2)
+    )).toBeLessThanOrEqual(1)
     expect(Math.abs(switchBox!.x + switchBox!.width - (updateActionBox!.x + updateActionBox!.width)))
       .toBeLessThanOrEqual(1)
 
