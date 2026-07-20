@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.12.0 - 2026-07-20
+
+### Added
+
+- Added in-app update checks with a compact sidebar download indicator that appears only when a newer version is available.
+- Added update controls in Settings for automatic downloads, manual checks, download progress, and user-controlled restart installation.
+
+### Changed
+
+- Kept update controls visually aligned with the surrounding Settings layout and removed the redundant footnote note.
+- Automatically unregister and detach mounted AnnotaMD installer images after launching an installed macOS copy, reducing duplicate AnnotaMD entries in “Open With”.
+
+### Fixed
+
+- Prevented the update indicator from occupying sidebar space when the current version is already up to date.
+- Stabilized Settings typography while asynchronous preferences load and aligned annotated switches with their primary label line.
+
 ## 2.11.0 - 2026-07-20
 
 ### Added
