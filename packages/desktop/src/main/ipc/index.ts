@@ -10,6 +10,7 @@ import { registerCmdHandlers } from './cmd'
 import { registerI18nHandlers } from './i18n'
 import { registerCommentHandlers } from './comments'
 import { registerMcpClientHandlers } from './mcpClients'
+import { registerAppUpdater } from '../updater'
 
 export const registerSandboxIpcHandlers = (): void => {
   registerBootInfo()
@@ -24,4 +25,5 @@ export const registerSandboxIpcHandlers = (): void => {
   registerI18nHandlers()
   registerCommentHandlers()
   registerMcpClientHandlers()
+  registerAppUpdater()
 }

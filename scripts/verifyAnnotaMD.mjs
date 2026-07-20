@@ -73,9 +73,11 @@ const testPacks = {
     files: [
       'test/unit/specs/annotamd-code-block-controls.spec.ts',
       'test/unit/specs/appearance-preferences.spec.ts',
+      'test/unit/specs/app-updater.spec.ts',
       'test/unit/specs/annotamd-preference-style.spec.ts',
       'test/unit/specs/auto-save-default.spec.ts',
       'test/unit/specs/file-change-content-check.spec.ts',
+      'test/unit/specs/macos-installer-volumes.spec.ts',
       'test/unit/specs/multi-root-sidebar.spec.ts'
     ]
   }

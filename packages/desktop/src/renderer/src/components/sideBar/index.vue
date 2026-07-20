@@ -16,15 +16,18 @@
           <component :is="c.icon" />
         </li>
       </ul>
-      <ul class="bottom">
-        <li
-          v-for="(c, index) of sideBarBottomIcons"
-          :key="index"
-          @click="handleLeftBottomClick(c.id)"
-        >
-          <component :is="c.icon" />
-        </li>
-      </ul>
+      <div class="bottom-actions">
+        <app-update-control sidebar />
+        <ul class="bottom">
+          <li
+            v-for="(c, index) of sideBarBottomIcons"
+            :key="index"
+            @click="handleLeftBottomClick(c.id)"
+          >
+            <component :is="c.icon" />
+          </li>
+        </ul>
+      </div>
     </div>
     <div
       v-show="rightColumn"
@@ -59,6 +62,7 @@ import SideBarSearch from './search.vue'
 import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 import type { TabDescriptor } from './types'
+import AppUpdateControl from '../appUpdate/AppUpdateControl.vue'
 
 const layoutStore = useLayoutStore()
 const projectStore = useProjectStore()
@@ -172,6 +176,12 @@ const handleLeftBottomClick = (name: string): void => {
 
 .left-column > ul {
   opacity: 1;
+}
+
+.bottom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .left-column ul {

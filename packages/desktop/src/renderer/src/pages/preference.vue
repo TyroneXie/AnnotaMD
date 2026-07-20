@@ -61,6 +61,8 @@ onMounted(() => {
 .pref-container {
   --prefSideBarWidth: 200px;
   --prefControlWidth: 260px;
+  --prefFontFamily: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --el-font-family: var(--prefFontFamily);
 
   width: 100vw;
   height: 100vh;
@@ -71,6 +73,8 @@ onMounted(() => {
   left: 0;
   display: flex;
   background: var(--editorBgColor);
+  font-family: var(--prefFontFamily);
+  -webkit-font-smoothing: antialiased;
 
   & h1,
   & h2,

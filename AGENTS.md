@@ -115,6 +115,7 @@
 - 对齐飞书标题编号时，不要把编号当成普通文本自增：未编号标题不会中断序列，首个子项保留输入末位，已有同级按前项递增，输入末位 `1` 表示重开当前层级。完整实测矩阵和菜单状态见 `docs/feishu-heading-numbering.md`，修改后用真实飞书文档与 `headingNumber` 回归测试共同验证。
 - 长代码块首次在屏幕外布局时，Range API 可能返回跳出代码块的异常行坐标，导致代码块行号覆盖后续正文；行号定位必须同时拒绝向上倒退和超出代码元素高度的坐标，并用长代码块首次加载场景验证所有行号都位于所属代码块内。
 - 共享 SVG 图标放入局部裁剪容器时，容器尺寸必须与 SVG 实际尺寸一致；仅修改外层 action icon 的百分比宽高不能覆盖 SVG 的固定尺寸。验证时比较 SVG 与裁剪容器的实际边界，不能只确认图标元素存在。
+- 现象：设置窗口首次打开使用异常的回退字体，切换到懒加载页面后整窗字体又发生变化。根因：设置根容器没有固定字体，只继承全局 `html/body`，后加载的路由样式会改变继承结果。推荐做法：在 `.pref-container` 上固定系统中英文字体栈，并同步覆盖 Element Plus 的 `--el-font-family`；不要依赖编辑器路由加载的 Muya 字体样式。验证时比较设置页首次渲染与切换 Agent 等懒加载页面后的 `getComputedStyle(...).fontFamily`，并在 Electron 中等待后目测确认无跳变。
 - `CodeBlockContent` 同时承载代码块、数学块、HTML、图表和 front matter；为代码块增加富文本能力时必须按真实 `code-block` 容器隔离，不能让其他容器出现格式工具栏。代码块内单块选区可以复用 `Format`，但跨块格式化仍应跳过代码块，避免拖选正文时改写中间代码。验证需覆盖普通 Prism 高亮、代码块内格式/评论、跨块跳过代码以及源码模式往返。
 
 ### 飞书真实交互验证
@@ -145,6 +146,20 @@
 - 推荐做法：固定渲染支持的客户端行；主进程启动时异步预热并缓存探测结果，页面读取缓存，只有用户主动刷新时强制重查。
 - 验证方式：回归测试覆盖异步探测完成前的固定行与缓存路径，并在 Electron 冷启动后连续打开设置页确认列表无跳动。
 
+### macOS DMG 与“打开方式”重复项
+
+- 现象：用户安装过多个版本后，Markdown 文件的“打开方式”会列出多个 AnnotaMD；仅下载未打开的 DMG 不会触发。
+- 根因：每个仍挂载的 AnnotaMD DMG 都包含一份声明 Markdown 文件关联的 `AnnotaMD.app`，LaunchServices 会把这些安装盘内的不同版本同时登记为候选应用。
+- 推荐做法：正式安装版从非 `/Volumes` 路径启动时，只匹配 electron-builder 生成的 `AnnotaMD <semver>[-arch]` 安装盘；先定向注销其中的 `AnnotaMD.app`，再使用非强制 `hdiutil detach` 弹出。开发版和直接从 DMG 内运行时不得处理，失败只记录日志，不重置全局 LaunchServices 数据库。
+- 验证方式：挂载新生成的 DMG，从新打包的非 `/Volumes` 应用启动，确认对应挂载点自动消失；随后在 Finder 中右键 `.md`，检查“打开方式”只有一个 AnnotaMD。回归测试登记在 editor 验证包中。
+
+### 应用内更新与多架构清单
+
+- 现象：应用能发现 Release，但不同架构的用户可能下载到错误安装包；或者更新下载后退出应用便自动安装，不符合用户预期。
+- 根因：macOS x64/arm64 与 Windows x64/arm64 构建都会生成同名更新清单，Release 汇总产物时后写入的清单会覆盖其他架构；`electron-updater` 默认还会在退出时自动安装已下载版本。
+- 推荐做法：Release 发布前根据最终安装产物统一重建 `latest-mac.yml`、`latest.yml` 和 `latest-linux.yml`，同一平台清单必须包含全部架构；应用启动时只自动检查，是否自动下载由 `autoDownloadUpdates` 控制且默认开启，始终设置 `autoInstallOnAppQuit=false`，只有用户点击“重启更新”才安装。
+- 验证方式：单测覆盖默认设置、自动下载开关与多架构清单；Electron 中确认未发现更新时侧栏不显示按钮，发现后按钮只出现在设置按钮上方，下载完成前后均不会自行退出；发布前检查三个远程清单包含对应平台全部安装产物。
+
 ### 表格密集长文档首次打开
 
 - 现象：普通文档启动基准正常，但打开包含大量表格单元格的真实长文档需要数秒。
@@ -158,6 +173,10 @@
 - 根因：只验证了实验 worktree，没有把对应提交合入当前发布分支，或构建时使用了另一份源码/旧产物。
 - 推荐做法：开始修改前确认仓库路径、分支和 `HEAD`；完成后用 `git diff`/`git log --contains <commit>` 确认代码归属；发布前确认目标提交可从发布 `HEAD` 到达，并对新生成的安装包而不是开发版或旧 DMG 进行冒烟验证。
 - 验证方式：至少记录并核对 `pwd`、`git branch --show-current`、`git rev-parse HEAD`、`git merge-base --is-ancestor <目标提交> HEAD`、`git status --short`；安装产物后复测本次修复的核心场景。
+- 现象：macOS 从 Finder 打开 Markdown 时，AnnotaMD 窗口刚出现便退出，或文件被另一份界面接管。
+- 根因：打包验收启动的 `dist/mac-*/AnnotaMD.app` 与 `/Applications/AnnotaMD.app` 共用 bundle ID、用户数据目录和单实例锁；测试产物未退出时，正式安装版会把打开请求交给它并立即结束自身进程。
+- 推荐做法：打包产物冒烟完成后必须退出该产物的主进程和 Helper，再启动正式安装版；不要同时保留 `dist`、DMG 与 `/Applications` 三处 AnnotaMD 运行实例。
+- 验证方式：用 `ps` 和 `lsappinfo` 确认唯一前台 AnnotaMD 的 bundle path 是预期路径，再从 Finder 或 `open -a /Applications/AnnotaMD.app <file.md>` 打开真实文档，并等待确认主进程持续存活。
 
 ### Electron 大版本与 Linux 原生模块工具链
 

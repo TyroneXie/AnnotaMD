@@ -34,6 +34,9 @@ describe('AnnotaMD preference styling', () => {
     const css = readRepoFile('packages/desktop/src/renderer/src/pages/preference.vue')
 
     expect(css).toContain('--prefSideBarWidth: 200px;')
+    expect(css).toContain('--prefFontFamily: -apple-system')
+    expect(css).toContain('--el-font-family: var(--prefFontFamily);')
+    expect(css).toContain('font-family: var(--prefFontFamily);')
     expect(css).toMatch(/& h4\s*\{[^}]*font-size:\s*17px;/s)
     expect(css).toMatch(/& \.pref-setting\s*\{[^}]*padding:\s*32px;/s)
   })

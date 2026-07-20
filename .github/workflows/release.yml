@@ -176,6 +176,11 @@ jobs:
       contents: write
       actions: read
     steps:
+      - name: Check out release source
+        uses: actions/checkout@v4.3.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
       # upload-artifact@v4 treats `dist/` as the common-ancestor root and
       # stores files flat inside each artifact (no `dist/` prefix). Downloading
       # with `path: dist` + `merge-multiple` recreates `./dist/<file>` across
@@ -185,6 +190,9 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      - name: Rebuild multi-architecture update manifests
+        run: node scripts/generateUpdateManifests.mjs dist "${RELEASE_TAG}"
 
       - name: Generate SHA256SUMS.txt
         working-directory: dist

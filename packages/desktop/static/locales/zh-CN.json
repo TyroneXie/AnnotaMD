@@ -933,6 +933,27 @@
       "switchLanguage": "切换拼写检查语言"
     }
   },
+  "updates": {
+    "title": "软件更新",
+    "autoDownload": "自动下载更新",
+    "manualInstallNote": "下载完成后始终由你手动重启安装。",
+    "currentVersion": "当前版本：{version}",
+    "ready": "检查 GitHub Release 中是否有新版本。",
+    "checking": "正在检查更新…",
+    "checkingShort": "检查中",
+    "available": "发现 AnnotaMD {version} 新版本。",
+    "downloading": "正在下载更新… {progress}%",
+    "downloaded": "AnnotaMD {version} 已下载，重启后安装。",
+    "upToDate": "当前已是最新版本。",
+    "error": "更新未能完成，请重试。",
+    "unsupported": "当前安装包无法自动更新，请下载最新安装包。",
+    "check": "检查更新",
+    "download": "下载更新",
+    "restart": "重启更新",
+    "retry": "重试",
+    "retryDownload": "重新下载",
+    "viewDownloads": "前往下载"
+  },
   "annotamd": {
     "mode": {
       "label": "编辑模式",

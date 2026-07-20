@@ -1,6 +1,7 @@
 {
   "autoSave": true,
   "autoSaveDelay": 1000,
+  "autoDownloadUpdates": true,
   "titleBarStyle": "custom",
   "openFilesInNewWindow": false,
   "openFolderInNewWindow": false,

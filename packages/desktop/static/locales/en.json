@@ -933,6 +933,27 @@
       "switchLanguage": "Switch Language"
     }
   },
+  "updates": {
+    "title": "Software update",
+    "autoDownload": "Automatically download updates",
+    "manualInstallNote": "Installation always starts manually after the download finishes.",
+    "currentVersion": "Current version: {version}",
+    "ready": "Check GitHub Releases for a newer version.",
+    "checking": "Checking for updates…",
+    "checkingShort": "Checking",
+    "available": "AnnotaMD {version} is available.",
+    "downloading": "Downloading update… {progress}%",
+    "downloaded": "AnnotaMD {version} is ready. Restart to install it.",
+    "upToDate": "You're using the latest version.",
+    "error": "The update could not be completed. Try again.",
+    "unsupported": "This package cannot update itself. Download the latest installer instead.",
+    "check": "Check for updates",
+    "download": "Download update",
+    "restart": "Restart to update",
+    "retry": "Try again",
+    "retryDownload": "Retry download",
+    "viewDownloads": "View downloads"
+  },
   "annotamd": {
     "mode": {
       "label": "Editing mode",

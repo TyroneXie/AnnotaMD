@@ -47,6 +47,7 @@ import type {
   AnnotaMDMcpClientState,
   AnnotaMDMcpManualConfigResult
 } from './mcpClients'
+import type { AppUpdateState } from './update'
 
 export interface LinkPreviewMetadata {
   title: string
@@ -58,6 +59,10 @@ export interface LinkPreviewMetadata {
 // =================================================================
 
 export interface IpcInvokeChannels {
+  'mt::update:get-state': { args: []; ret: AppUpdateState }
+  'mt::update:check': { args: []; ret: AppUpdateState }
+  'mt::update:download': { args: []; ret: AppUpdateState }
+  'mt::update:install': { args: []; ret: AppUpdateState }
   'mt::mcp-clients::inspect': {
     args: [forceRefresh?: boolean]
     ret: AnnotaMDMcpClientState[]
@@ -148,7 +153,6 @@ export interface IpcSendChannels {
   'broadcast-user-data-changed': [partial: unknown]
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
-  'mt::NEED_UPDATE': [payload?: unknown]
   'mt::add-recently-used-document': [filePath: string]
   'mt::app-try-quit': []
   'mt::ask-for-image-auto-path': [payload: unknown]
@@ -157,7 +161,6 @@ export interface IpcSendChannels {
   'mt::remove-directory-from-workspace': [pathname: string]
   'mt::ask-for-user-data': []
   'mt::ask-for-user-preference': []
-  'mt::check-for-update': []
   'mt::clipboard::write-text': [text: string]
   'mt::clipboard::write-image': [dataUrl: string]
   'mt::close-window': []
@@ -269,10 +272,7 @@ export interface IpcMainEventChannels {
   'mt::comments::apply-edit': [request: AnnotaMDAgentEditRequest]
   'mt::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
   'language-changed': [language: string]
-  'mt::UPDATE_AVAILABLE': [info?: unknown]
-  'mt::UPDATE_DOWNLOADED': [info?: unknown]
-  'mt::UPDATE_ERROR': [error: unknown]
-  'mt::UPDATE_NOT_AVAILABLE': [info?: unknown]
+  'mt::update:state': [state: AppUpdateState]
   'mt::about-dialog': []
   'mt::ask-for-close': []
   'mt::bootstrap-editor': [config: BootstrapEditorConfig]

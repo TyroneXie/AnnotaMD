@@ -112,6 +112,21 @@
         </section>
       </template>
     </compound>
+
+    <compound>
+      <template #head>
+        <h6 class="title">{{ t('updates.title') }}</h6>
+      </template>
+      <template #children>
+        <bool
+          :description="t('updates.autoDownload')"
+          :notes="t('updates.manualInstallNote')"
+          :bool="autoDownloadUpdates"
+          :on-change="(value) => onSelectChange('autoDownloadUpdates', value)"
+        />
+        <app-update-control />
+      </template>
+    </compound>
   </div>
 </template>
 
@@ -125,14 +140,21 @@ import Compound from '../common/compound/index.vue'
 import CurSelect from '../common/select/index.vue'
 import Bool from '../common/bool/index.vue'
 import { isOsx } from '@/util'
+import AppUpdateControl from '@/components/appUpdate/AppUpdateControl.vue'
 
 import { getTitleBarStyleOptions } from './config'
 
 const { t } = useI18n()
 const preferenceStore = usePreferencesStore()
 
-const { autoSave, titleBarStyle, defaultDirectoryToOpen, wordWrapInToc, openedFilesInSidebar } =
-  storeToRefs(preferenceStore)
+const {
+  autoSave,
+  autoDownloadUpdates,
+  titleBarStyle,
+  defaultDirectoryToOpen,
+  wordWrapInToc,
+  openedFilesInSidebar
+} = storeToRefs(preferenceStore)
 
 const openItemsInNewWindow = computed<boolean>({
   get: () => preferenceStore.openFilesInNewWindow && preferenceStore.openFolderInNewWindow,

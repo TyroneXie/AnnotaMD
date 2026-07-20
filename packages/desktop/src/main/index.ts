@@ -15,6 +15,8 @@ import App from './app'
 import { t } from './i18n'
 import { registerSandboxIpcHandlers } from './ipc'
 import { scheduleMcpClientInspection } from './ipc/mcpClients'
+import { cleanupMountedAnnotaMdInstallers } from './utils/macosInstallerVolumes'
+import { scheduleStartupUpdateCheck, setAutomaticUpdateDownloads } from './updater'
 
 // Set version strings into global and process.versions
 process.env.MARKTEXT_VERSION = MARKTEXT_VERSION
@@ -121,6 +123,7 @@ try {
 }
 const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()
+setAutomaticUpdateDownloads(accessor.preferences.getItem<boolean>('autoDownloadUpdates'))
 
 let agentBridgeModule: Promise<typeof import('./comments/AgentBridgeServer')> | null = null
 const syncAgentBridge = (nextEnabled: boolean): void => {
@@ -136,11 +139,20 @@ const syncAgentBridge = (nextEnabled: boolean): void => {
 }
 
 void app.whenReady().then(() => {
+  void cleanupMountedAnnotaMdInstallers({
+    platform: process.platform,
+    isPackaged: app.isPackaged,
+    executablePath: process.execPath
+  })
   syncAgentBridge(accessor.preferences.getItem<boolean>('commentMcpEnabled'))
+  scheduleStartupUpdateCheck()
 })
 onInternalChannel('broadcast-preferences-changed', (change: Record<string, unknown>) => {
   if (typeof change.commentMcpEnabled === 'boolean') {
     syncAgentBridge(change.commentMcpEnabled)
+  }
+  if (typeof change.autoDownloadUpdates === 'boolean') {
+    setAutomaticUpdateDownloads(change.autoDownloadUpdates)
   }
 })
 app.once('before-quit', () => {

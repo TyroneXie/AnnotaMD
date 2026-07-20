@@ -23,6 +23,7 @@ export interface PreferencesState {
   // ----- General -----
   autoSave: boolean
   autoSaveDelay: number
+  autoDownloadUpdates: boolean
   titleBarStyle: TitleBarStyle | string
   openFilesInNewWindow: boolean
   openFolderInNewWindow: boolean
@@ -145,6 +146,7 @@ export const usePreferencesStore = defineStore('preferences', {
   state: (): PreferencesState => ({
     autoSave: true,
     autoSaveDelay: 1000,
+    autoDownloadUpdates: true,
     titleBarStyle: 'custom',
     openFilesInNewWindow: false,
     openFolderInNewWindow: false,

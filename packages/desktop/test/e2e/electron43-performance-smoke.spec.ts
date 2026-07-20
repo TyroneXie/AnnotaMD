@@ -55,6 +55,20 @@ test.describe('Electron 43 performance smoke', () => {
 
     await expect(settingPage.locator('.pref-container')).toBeAttached({ timeout: 15000 })
     await expect(settingPage.locator('.pref-general')).toBeAttached({ timeout: 15000 })
+
+    const preferenceFont = await settingPage.locator('.pref-container').evaluate(element => {
+      return getComputedStyle(element).fontFamily
+    })
+    expect(preferenceFont).toContain('SF Pro Text')
+
+    await settingPage.locator('.pref-sidebar .item').filter({ hasText: 'Agent' }).click()
+    await expect(settingPage.locator('.pref-agent')).toBeAttached({ timeout: 15000 })
+    await settingPage.waitForTimeout(1000)
+
+    const fontAfterLazyRoute = await settingPage.locator('.pref-container').evaluate(element => {
+      return getComputedStyle(element).fontFamily
+    })
+    expect(fontAfterLazyRoute).toBe(preferenceFont)
   })
 
   test('starts the default-enabled MCP bridge', async() => {

@@ -688,7 +688,7 @@ if (isUpdatable()) {
     id: 'file.check-update',
     description: getCommandDescriptionById('file.check-update'),
     execute: async() => {
-      window.electron.ipcRenderer.send('mt::check-for-update')
+      await window.electron.ipcRenderer.invoke('mt::update:check')
     }
   })
 }
