@@ -19,16 +19,18 @@ test.describe('application update indicator', () => {
     if (app) await app.close()
   })
 
-  test('shows available, progress and restart states above Settings', async() => {
+  test('stays empty without an update and shows only one download icon above Settings', async() => {
     const currentVersion = '2.11.0'
     const updateButton = page.locator('.app-update-sidebar')
     await expect(updateButton).toHaveCount(0)
+    await expect(page.locator('.left-column .app-update-panel')).toHaveCount(0)
     await sendIpcToRenderer(app, 'mt::update:state', {
       status: 'error',
       currentVersion,
       message: 'offline'
     })
     await expect(updateButton).toHaveCount(0)
+    await expect(page.locator('.left-column .app-update-panel')).toHaveCount(0)
 
     await sendIpcToRenderer(app, 'mt::update:state', {
       status: 'available',
@@ -39,6 +41,8 @@ test.describe('application update indicator', () => {
     const settingsButton = page.locator('.left-column .bottom li').last()
     await expect(updateButton).toBeVisible()
     await expect(updateButton).toHaveAttribute('aria-label', 'AnnotaMD 2.12.0 is available.')
+    await expect(updateButton.locator('svg')).toHaveCount(1)
+    await expect(updateButton).toHaveText('')
     await expect(settingsButton).toBeVisible()
 
     const updateBox = await updateButton.boundingBox()
@@ -56,7 +60,8 @@ test.describe('application update indicator', () => {
       version: '2.12.0',
       progress: 47
     })
-    await expect(updateButton.locator('.app-update-sidebar-progress')).toHaveText('47')
+    await expect(updateButton.locator('svg')).toHaveCount(1)
+    await expect(updateButton).toHaveText('')
 
     await sendIpcToRenderer(app, 'mt::update:state', {
       status: 'downloaded',
@@ -68,6 +73,7 @@ test.describe('application update indicator', () => {
       'aria-label',
       'AnnotaMD 2.12.0 is ready. Restart to install it.'
     )
+    await expect(updateButton).toHaveText('')
   })
 
   test('shows the same update state in General settings', async() => {
@@ -109,6 +115,15 @@ test.describe('application update indicator', () => {
       'AnnotaMD 2.12.0 is available.'
     )
     await expect(settingsPage!.locator('.app-update-panel button')).toContainText('Download update')
+
+    const switchBox = await persistedAutomaticDownload.locator('.el-switch').boundingBox()
+    const updateActionBox = await settingsPage!
+      .locator('.app-update-panel button')
+      .boundingBox()
+    expect(switchBox).not.toBeNull()
+    expect(updateActionBox).not.toBeNull()
+    expect(Math.abs(switchBox!.x + switchBox!.width - (updateActionBox!.x + updateActionBox!.width)))
+      .toBeLessThanOrEqual(1)
 
     if (process.env.ANNOTAMD_UPDATE_SETTINGS_SCREENSHOT) {
       await settingsPage!.locator('.app-update-panel').scrollIntoViewIfNeeded()

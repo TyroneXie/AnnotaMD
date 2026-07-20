@@ -1,32 +1,18 @@
 <template>
-  <button
-    v-if="sidebar && showCompact"
-    type="button"
-    class="app-update-sidebar"
-    :class="`is-${state.status}`"
-    :disabled="busy"
-    :title="statusText"
-    :aria-label="statusText"
-    @click.stop="runAction"
-  >
-    <span class="app-update-icon" :class="{ spinning: busy }" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path v-if="state.status === 'downloaded'" d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" />
-        <path v-else-if="state.status === 'error'" d="M12 4 3.5 20h17L12 4Zm0 5v5m0 3v.5" />
-        <template v-else-if="state.status === 'available'">
-          <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
-          <path d="M5 20h14" />
-        </template>
-        <template v-else>
-          <path d="M12 3a9 9 0 1 0 8.5 6" />
-          <path d="M17 3h4v4" />
-        </template>
-      </svg>
-    </span>
-    <span v-if="state.status === 'downloading'" class="app-update-sidebar-progress">
-      {{ roundedProgress }}
-    </span>
-  </button>
+  <template v-if="sidebar">
+    <button
+      v-if="showCompact"
+      type="button"
+      class="app-update-sidebar"
+      :class="`is-${state.status}`"
+      :disabled="busy"
+      :title="statusText"
+      :aria-label="statusText"
+      @click.stop="runAction"
+    >
+      <Download class="app-update-icon" aria-hidden="true" />
+    </button>
+  </template>
 
   <div v-else class="app-update-panel">
     <div class="app-update-copy">
@@ -55,6 +41,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Download } from '@element-plus/icons-vue'
 import type { AppUpdateState } from '@shared/types/update'
 
 withDefaults(defineProps<{ sidebar?: boolean }>(), { sidebar: false })
@@ -178,48 +165,20 @@ onBeforeUnmount(() => {
   color: #d14343;
 }
 
-.app-update-sidebar-progress {
-  position: absolute;
-  right: -3px;
-  bottom: -2px;
-  min-width: 16px;
-  height: 12px;
-  padding: 0 2px;
-  border: 1px solid #fbfcfd;
-  border-radius: 99px;
-  background: #3370ff;
-  color: #fff;
-  font-size: 7px;
-  line-height: 11px;
-  box-sizing: border-box;
-}
-
 .app-update-icon {
-  display: inline-flex;
-  width: 14px;
-  height: 14px;
-}
-
-.app-update-icon svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.app-update-icon.spinning {
-  animation: app-update-spin 1s linear infinite;
+  width: 17px;
+  height: 17px;
 }
 
 .app-update-panel {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--prefControlWidth);
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
   min-height: 52px;
+  margin: 4px 0;
+  color: var(--editorColor);
+  font-size: 14px;
 }
 
 .app-update-copy {
@@ -229,7 +188,7 @@ onBeforeUnmount(() => {
 
 .app-update-version {
   color: var(--editorColor);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
 }
 
@@ -260,7 +219,11 @@ onBeforeUnmount(() => {
   transition: width 0.16s ease;
 }
 
-@keyframes app-update-spin {
-  to { transform: rotate(360deg); }
+.app-update-panel :deep(.el-button) {
+  justify-self: end;
+  min-width: 104px;
+  height: 28px;
+  margin: 0;
+  font-size: 13px;
 }
 </style>

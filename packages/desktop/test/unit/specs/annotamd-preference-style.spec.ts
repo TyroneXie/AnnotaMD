@@ -52,6 +52,20 @@ describe('AnnotaMD preference styling', () => {
     }
   })
 
+  it('keeps the update sidebar empty until an update action is available', () => {
+    const updateControl = readRepoFile(
+      'packages/desktop/src/renderer/src/components/appUpdate/AppUpdateControl.vue'
+    )
+
+    expect(updateControl).toMatch(
+      /<template v-if="sidebar">\s*<button\s+v-if="showCompact"/s
+    )
+    expect(updateControl).not.toContain('app-update-sidebar-progress')
+    expect(updateControl).toMatch(
+      /\.app-update-panel\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--prefControlWidth\);/s
+    )
+  })
+
   it('uses compact numeric steppers for editor size controls', () => {
     const range = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/common/range/index.vue'
