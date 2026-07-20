@@ -65,6 +65,7 @@ declare module '@muyajs/core' {
   export const CodeBlockLanguageSelector: any
   export const EmojiSelector: any
   export const FootnoteTool: any
+  export const HeadingNumberMenu: any
   export const ImageEditTool: any
   export const ImagePathPicker: any
   export const ImageResizeBar: any

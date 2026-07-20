@@ -3,8 +3,12 @@ import type { IRenderCursor } from '../../../selection/types';
 import type AtxHeading from '../../commonMark/atxHeading';
 import { isKeyboardEvent } from '../../../utils';
 import {
+    headingNumberValue,
     normalizeHeadingNumber,
     parseAtxHeadingNumber,
+    replaceHeadingNumberValue,
+    restartedHeadingNumber,
+    standardizedHeadingNumber,
     suggestedHeadingNumber,
     type PreviousHeadingNumber,
 } from '../../../utils/headingNumber';
@@ -28,6 +32,15 @@ function previousHeadingNumbers(heading: AtxHeading): PreviousHeadingNumber[] {
     }
 
     return headings;
+}
+
+export interface HeadingNumberMenuState {
+    canContinue: boolean;
+    canRestart: boolean;
+    continuation: string | null;
+    current: string;
+    restart: string;
+    value: number;
 }
 
 class AtxHeadingContent extends Format {
@@ -63,9 +76,63 @@ class AtxHeadingContent extends Format {
             number.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                this.muya.eventCenter.emit('muya-heading-number-menu', {
+                    block: this,
+                    reference: number,
+                });
+            });
+            number.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ')
+                    return;
+                event.preventDefault();
+                event.stopPropagation();
+                this.muya.eventCenter.emit('muya-heading-number-menu', {
+                    block: this,
+                    reference: number,
+                });
             });
         }
         return result;
+    }
+
+    getHeadingNumberMenuState(): HeadingNumberMenuState | null {
+        const headingNumber = parseAtxHeadingNumber(this.text);
+        if (!headingNumber || !this.parent)
+            return null;
+
+        const current = normalizeHeadingNumber(headingNumber.marker);
+        const previous = previousHeadingNumbers(this.parent);
+        const continuation = suggestedHeadingNumber(this.parent.meta.level, previous);
+        const restart = restartedHeadingNumber(this.parent.meta.level, previous);
+        return {
+            canContinue: continuation !== null && continuation !== current,
+            canRestart: restart !== current,
+            continuation,
+            current,
+            restart,
+            value: headingNumberValue(current),
+        };
+    }
+
+    setHeadingNumber(marker: string) {
+        const headingNumber = parseAtxHeadingNumber(this.text);
+        if (!headingNumber)
+            return;
+
+        const normalized = normalizeHeadingNumber(marker);
+        const { markerStart, markerEnd } = headingNumber;
+        this.text = this.text.slice(0, markerStart) + normalized + this.text.slice(markerEnd);
+        // Menu commands are discrete actions. Commit their queued text edit
+        // before the popup closes so an immediate mode/tab switch cannot drop it.
+        this.muya.flush();
+        const offset = headingNumber.gapEnd + normalized.length - headingNumber.marker.length;
+        this.setCursor(offset, offset, true);
+    }
+
+    setHeadingNumberValue(value: number) {
+        const headingNumber = parseAtxHeadingNumber(this.text);
+        if (headingNumber)
+            this.setHeadingNumber(replaceHeadingNumberValue(headingNumber.marker, value));
     }
 
     override inputHandler(event: Event) {
@@ -88,10 +155,11 @@ class AtxHeadingContent extends Format {
             return;
         }
 
-        const suggested = suggestedHeadingNumber(
+        const suggested = standardizedHeadingNumber(
+            headingNumber.marker,
             this.parent!.meta.level,
             previousHeadingNumbers(this.parent!),
-        ) ?? normalizeHeadingNumber(headingNumber.marker);
+        );
         if (suggested === headingNumber.marker) {
             this.setCursor(headingNumber.gapEnd, headingNumber.gapEnd, true);
             return;

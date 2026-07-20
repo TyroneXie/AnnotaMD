@@ -77,6 +77,7 @@ import {
   CodeBlockLanguageSelector,
   EmojiSelector,
   FootnoteTool,
+  HeadingNumberMenu,
   ImageEditTool,
   ImagePathPicker,
   ImageResizeBar,
@@ -2006,6 +2007,7 @@ onMounted(() => {
       jumpClick
     })
     Muya.use(FootnoteTool)
+    Muya.use(HeadingNumberMenu)
     Muya.use(TableDragBar)
     Muya.use(TableRowColumMenu)
   }

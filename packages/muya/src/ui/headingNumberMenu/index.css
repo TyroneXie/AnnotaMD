@@ -1,0 +1,162 @@
+.mu-heading-number-menu-wrapper {
+    width: 236px;
+    overflow: visible;
+
+    background: transparent;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.mu-heading-number-menu {
+    width: 236px;
+
+    background: #fff;
+    border: 1px solid #dee0e3;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
+}
+
+.mu-heading-number-menu-panel {
+    box-sizing: border-box;
+    padding: 6px;
+
+    color: #1f2329;
+    font-weight: 400;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
+}
+
+.mu-heading-number-menu-item {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    height: 42px;
+    padding: 0 10px;
+
+    color: #1f2329;
+    text-align: left;
+
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.mu-heading-number-menu-item:disabled {
+    color: #bbbfc4;
+
+    cursor: not-allowed;
+}
+
+.mu-heading-number-menu-item:hover:not(:disabled) {
+    background: #f2f3f5;
+}
+
+.mu-heading-number-command-icon {
+    position: relative;
+
+    display: inline-flex;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 28px;
+    margin-right: 6px;
+
+    color: #646a73;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.mu-heading-number-menu-item:disabled .mu-heading-number-command-icon {
+    color: #bbbfc4;
+}
+
+.mu-heading-number-command-icon.continue::before {
+    content: '¹↪₂';
+}
+
+.mu-heading-number-command-icon.restart::before {
+    content: '¹↧';
+}
+
+.mu-heading-number-command-icon.set-value::before {
+    font-size: 13px;
+
+    content: '¹₂₃✎';
+}
+
+.mu-heading-number-command-label {
+    overflow: hidden;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.mu-heading-number-menu-divider {
+    height: 1px;
+    margin: 5px -6px;
+
+    background: #eff0f1;
+}
+
+.mu-heading-number-value-label {
+    display: block;
+    margin: 2px 4px 8px;
+
+    color: #1f2329;
+    font-weight: 500;
+}
+
+.mu-heading-number-value-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 34px;
+    padding: 0 9px;
+
+    color: #1f2329;
+    font-size: 14px;
+
+    background: #fff;
+    border: 1px solid #c9cdd4;
+    border-radius: 6px;
+    outline: none;
+}
+
+.mu-heading-number-value-input:focus {
+    border-color: #3370ff;
+    box-shadow: 0 0 0 2px rgb(51 112 255 / 12%);
+}
+
+.mu-heading-number-value-input.error {
+    border-color: #f54a45;
+}
+
+.mu-heading-number-value-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.mu-heading-number-value-actions button {
+    height: 30px;
+    padding: 0 12px;
+
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.mu-heading-number-value-actions .cancel {
+    color: #1f2329;
+
+    background: #f2f3f5;
+}
+
+.mu-heading-number-value-actions .confirm {
+    color: #fff;
+
+    background: #3370ff;
+}

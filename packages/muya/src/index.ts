@@ -19,6 +19,7 @@ export { CodeBlockLanguageSelector } from './ui/codeBlockLanguageSelector';
 // Export ui tools.
 export { EmojiSelector } from './ui/emojiSelector';
 export { FootnoteTool } from './ui/footnoteTool';
+export { HeadingNumberMenu } from './ui/headingNumberMenu';
 export { ImageEditTool } from './ui/imageEditTool';
 export { ImagePathPicker } from './ui/imagePicker';
 export type { IImagePathSuggestion } from './ui/imagePicker';

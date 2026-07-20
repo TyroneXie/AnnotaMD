@@ -20,6 +20,7 @@ const testPacks = {
       'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
       'src/ui/inlineFormatToolbar/__tests__/strikethroughStyle.spec.ts',
+      'src/ui/headingNumberMenu/__tests__/headingNumberMenu.spec.ts',
       'src/ui/__tests__/sharedActionIcons.spec.ts',
       'src/inlineRenderer/__tests__/wysiwygBlockMarkers.spec.ts',
       'src/utils/__tests__/headingNumber.spec.ts',

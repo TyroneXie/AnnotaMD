@@ -52,7 +52,7 @@ test.describe('Smart heading numbering', () => {
     expect(await getMarkdownContent(page, app)).toContain('## 1.2. Numbered child')
   })
 
-  test('starts from the numbered parent after a higher-level heading', async() => {
+  test('keeps the typed child value under a new numbered parent', async() => {
     await setSourceMarkdown(page, app, [
       '# 1. Parent',
       '',
@@ -65,8 +65,8 @@ test.describe('Smart heading numbering', () => {
     const content = await prepareLastHeading(page)
     await page.keyboard.type('7. New child', { delay: 10 })
 
-    await expect(content.locator('.mu-heading-number')).toHaveText('2.1.')
-    expect(await getMarkdownContent(page, app)).toContain('## 2.1. New child')
+    await expect(content.locator('.mu-heading-number')).toHaveText('2.7.')
+    expect(await getMarkdownContent(page, app)).toContain('## 2.7. New child')
   })
 
   test('accepts a Chinese full stop and exposes the normalized number as a control', async() => {
@@ -76,9 +76,10 @@ test.describe('Smart heading numbering', () => {
       '## placeholder'
     ].join('\n'))
     const content = await prepareLastHeading(page)
-    await page.keyboard.insertText('9.9。')
+    await page.keyboard.insertText('1.1。')
     await page.keyboard.press('Space')
     await page.keyboard.insertText('Chinese punctuation')
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())))
 
     const number = content.locator('.mu-heading-number')
     await expect(number).toHaveText('1.1.')
@@ -89,6 +90,34 @@ test.describe('Smart heading numbering', () => {
 
     await number.click()
     expect(await number.evaluate(node => document.activeElement === node)).toBe(true)
+    const menu = page.locator('.mu-heading-number-menu')
+    await expect(menu).toBeVisible()
+    await expect(menu.locator('button.continue')).toBeDisabled()
+    await expect(menu.locator('button.restart')).toBeDisabled()
+    await expect(menu.locator('button.set-value')).toBeEnabled()
     expect(await getMarkdownContent(page, app)).toContain('## 1.1. Chinese punctuation')
+  })
+
+  test('continues, restarts and explicitly sets a heading number', async() => {
+    await setSourceMarkdown(page, app, '# 1. First\n\n# 4. Broken\n')
+    let number = page.locator('.mu-heading-number').last()
+    await number.click()
+    const menu = page.locator('.mu-heading-number-menu')
+    await menu.locator('button.continue').click()
+    await expect.poll(() => getMarkdownContent(page, app)).toContain('# 2. Broken')
+
+    number = page.locator('.mu-heading-number').last()
+    await number.click()
+    await menu.locator('button.restart').click()
+    await expect.poll(() => getMarkdownContent(page, app)).toContain('# 1. Broken')
+
+    await setSourceMarkdown(page, app, '# 3. Parent\n\n## 3.2. Child\n')
+    number = page.locator('.mu-heading-number').last()
+    await number.click()
+    await menu.locator('button.set-value').click()
+    const input = menu.locator('.mu-heading-number-value-input')
+    await input.fill('7')
+    await menu.locator('.confirm').click()
+    await expect.poll(() => getMarkdownContent(page, app)).toContain('## 3.7. Child')
   })
 })
