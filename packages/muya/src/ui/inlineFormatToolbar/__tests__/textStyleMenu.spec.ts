@@ -191,6 +191,7 @@ describe('inline format toolbar text-style menu', () => {
         toolbar.container!.querySelector<HTMLElement>('li.item.link')!.click();
 
         expect(muya.getMarkdown()).toBe('hello world\n');
+        muya.eventCenter.emit('muya-format-picker', { reference: null, block: null });
         const input = toolbar.container!.querySelector<HTMLInputElement>('.mu-link-create-input')!;
         const confirm = toolbar.container!.querySelector<HTMLButtonElement>('.mu-link-create-confirm')!;
         expect(input.placeholder).toBe('Paste or enter link');

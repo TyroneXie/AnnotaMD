@@ -48,10 +48,10 @@ afterEach(() => {
         delete (window as Partial<Window>).MUYA_VERSION;
 });
 
-function bootMuya(markdown: string): Muya {
+function bootMuya(markdown: string, options: Record<string, unknown> = {}): Muya {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const muya = new MuyaClass(host, { markdown } as ConstructorParameters<typeof MuyaClass>[1]);
+    const muya = new MuyaClass(host, { markdown, ...options } as ConstructorParameters<typeof MuyaClass>[1]);
     muya.init();
     bootedHosts.push(muya.domNode);
     return muya;
@@ -79,21 +79,28 @@ function stubSelection(muya: Muya, block: Content, start: number, end: number) {
     });
 }
 
-function pasteEvent(text: string) {
+function pasteEvent(text: string, html = '') {
     return {
         preventDefault() {},
         stopPropagation() {},
         clipboardData: {
-            getData: (t: string) => (t === 'text/plain' ? text : ''),
+            getData: (t: string) => (t === 'text/plain' ? text : t === 'text/html' ? html : ''),
             files: [],
             items: [],
         },
     } as unknown as ClipboardEvent;
 }
 
-async function paste(muya: Muya, block: Content, start: number, end: number, text: string): Promise<string> {
+async function paste(
+    muya: Muya,
+    block: Content,
+    start: number,
+    end: number,
+    text: string,
+    html = '',
+): Promise<string> {
     stubSelection(muya, block, start, end);
-    await muya.editor.clipboard.pasteHandler(pasteEvent(text), text, '');
+    await muya.editor.clipboard.pasteHandler(pasteEvent(text, html), text, html);
     await new Promise(r => setTimeout(r, 40));
     return muya.getMarkdown();
 }
@@ -175,5 +182,107 @@ describe('paste — markdown link into a link destination uses only the URL (#38
         // caret between the parentheses of `[my text]()` (offset 10)
         const md = await paste(muya, block, 10, 10, '[Some Page Title](https://example.com/page)');
         expect(md).toBe('[my text](https://example.com/page)\n');
+    });
+});
+
+describe('paste — a standalone bare URL resolves to title view with a link fallback', () => {
+    it('keeps the URL label when no title is available', async () => {
+        const onlineSpy = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+        const muya = bootMuya('\n');
+        const block = contentBlocks(muya)[0];
+        const url = 'https://example.com/page';
+
+        expect(await paste(muya, block, 0, 0, url)).toBe(`[${url}](${url})\n`);
+        onlineSpy.mockRestore();
+    });
+
+    it('shows a loading link immediately and replaces it when metadata resolves', async () => {
+        const url = 'https://example.com/page';
+        let finish!: (value: { title: string; icon: string }) => void;
+        const resolveLinkMetadata = vi.fn(() => new Promise<{ title: string; icon: string }>((resolve) => {
+            finish = resolve;
+        }));
+        const muya = bootMuya('\n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+
+        expect(await paste(muya, block, 0, 0, url)).toBe(`[${url}](${url})\n`);
+        expect(resolveLinkMetadata).toHaveBeenCalledWith(url);
+        expect(muya.domNode.querySelector('.mu-link-title-loading')).not.toBeNull();
+
+        finish({ title: 'Example Page', icon: 'https://example.com/favicon.ico' });
+        await vi.waitFor(() => {
+            expect(muya.getMarkdown()).toBe(`[Example Page](${url})\n`);
+        });
+        expect(muya.domNode.querySelector('.mu-link-title-loading')).toBeNull();
+    });
+
+    it('automatically resolves a shortened rich-link label pasted on its own line', async () => {
+        const url = 'https://www.msn.cn/zh-cn/news/example/article-id';
+        const shortLabel = 'msn.cn/zh-cn/news/example/article-id';
+        const resolveLinkMetadata = vi.fn(async () => ({ title: 'Example Article Title' }));
+        const muya = bootMuya('\n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+
+        expect(await paste(
+            muya,
+            block,
+            0,
+            0,
+            shortLabel,
+            `<a href="${url}">${shortLabel}</a>`,
+        )).toBe(`[Example Article Title](${url})\n`);
+        expect(resolveLinkMetadata).toHaveBeenCalledWith(url);
+    });
+
+    it('recognizes and resolves a root URL with a trailing slash', async () => {
+        const url = 'https://www.piaohua.com/';
+        const resolveLinkMetadata = vi.fn(async () => ({ title: 'Piaohua' }));
+        const muya = bootMuya('\n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+
+        expect(await paste(muya, block, 0, 0, url)).toBe(`[Piaohua](${url})\n`);
+        expect(resolveLinkMetadata).toHaveBeenCalledWith(url);
+    });
+
+    it('does not replace selected text with a fetched page title', async () => {
+        const url = 'https://example.com/page';
+        const resolveLinkMetadata = vi.fn(async () => ({ title: 'Example Page' }));
+        const muya = bootMuya('selected\n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+
+        expect(await paste(muya, block, 0, 8, url)).toBe(`[${url}](${url})\n`);
+        expect(resolveLinkMetadata).not.toHaveBeenCalled();
+    });
+
+    it('does not auto-title a URL pasted beside existing text', async () => {
+        const url = 'https://example.com/page';
+        const resolveLinkMetadata = vi.fn(async () => ({ title: 'Example Page' }));
+        const muya = bootMuya('prefix \n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+
+        expect(await paste(muya, block, 7, 7, url)).toBe(`prefix [${url}](${url})\n`);
+        expect(resolveLinkMetadata).not.toHaveBeenCalled();
+    });
+
+    it('stops loading after eight seconds and keeps the link when metadata times out', async () => {
+        const url = 'https://example.com/slow';
+        const resolveLinkMetadata = vi.fn(() => new Promise<never>(() => {}));
+        const muya = bootMuya('\n', { resolveLinkMetadata });
+        const block = contentBlocks(muya)[0];
+        vi.useFakeTimers();
+        try {
+            stubSelection(muya, block, 0, 0);
+            await muya.editor.clipboard.pasteHandler(pasteEvent(url), url, '');
+            await vi.advanceTimersByTimeAsync(50);
+            expect(muya.getMarkdown()).toBe(`[${url}](${url})\n`);
+            expect(muya.domNode.querySelector('.mu-link-title-loading')).not.toBeNull();
+
+            await vi.advanceTimersByTimeAsync(7950);
+            expect(muya.getMarkdown()).toBe(`[${url}](${url})\n`);
+            expect(muya.domNode.querySelector('.mu-link-title-loading')).toBeNull();
+        }
+        finally {
+            vi.useRealTimers();
+        }
     });
 });

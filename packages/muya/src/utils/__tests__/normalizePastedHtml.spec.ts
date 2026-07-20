@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import HtmlToMarkdown from '../../state/htmlToMarkdown';
 import { normalizePastedHTML } from '../paste';
 
@@ -14,6 +14,7 @@ function setOnline(value: boolean) {
 
 afterEach(() => {
     setOnline(true);
+    vi.unstubAllGlobals();
 });
 
 describe('normalizePastedHTML — bare URL link normalization', () => {
@@ -49,5 +50,18 @@ describe('normalizePastedHTML — bare URL link normalization', () => {
 
         expect(out).toContain(`href="${url}"`);
         expect(markdown).toContain(`[${url}](${url})`);
+    });
+
+    it('does not replace a preserved bare URL with a fetched title', async () => {
+        const url = 'http://example.com/page';
+        const fetchMock = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
+
+        const out = await normalizePastedHTML(`<a href="${url}">${url}</a>`, {
+            preserveBareUrlLinks: true,
+        });
+
+        expect(out).toContain(`>${url}</a>`);
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

@@ -36,6 +36,66 @@ span.mu-inline-rule.mu-link {
     cursor: pointer;
 }
 
+.mu-link-title-icon-shell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.3em;
+
+    color: currentcolor;
+    vertical-align: -0.12em;
+}
+
+.mu-link-title-icon {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    border-radius: 2px;
+}
+
+.mu-link-title-icon-shell > .mu-action-icon {
+    display: inline-flex;
+    width: 100%;
+    height: 100%;
+}
+
+.mu-link-title-icon-shell > .mu-action-icon > svg {
+    width: 100%;
+    height: 100%;
+}
+
+.mu-link-title-loading {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    margin-right: 0.35em;
+
+    vertical-align: -0.02em;
+    border: 1.5px solid currentcolor;
+    border-left-color: transparent;
+    border-radius: 50%;
+    opacity: 0.68;
+
+    animation: loading 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mu-link-title-loading {
+        border-style: dotted;
+        animation: none;
+    }
+}
+
 .mu-html-preview a[href] {
     cursor: pointer;
 }

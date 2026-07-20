@@ -73,6 +73,28 @@ describe('linkMouseEvents — dispatches muya-link-tools on hover', () => {
         expect(emits[0].linkInfo?.href).toBe('https://x.com');
     });
 
+    it('emits when the hovered link child is an SVG icon', () => {
+        const { muya, eventCenter, domNode } = makeMuya();
+        const emits = captureEmits(eventCenter);
+        attachLinkMouseHandlers(muya);
+
+        const marker = document.createElement('span');
+        marker.classList.add('mu-hide');
+        const link = document.createElement('span');
+        link.classList.add('mu-inline-rule', 'mu-link');
+        link.dataset.raw = '[hi](https://x.com)';
+        link.dataset.start = '0';
+        link.dataset.end = '19';
+        (link as HTMLElement & { href: string }).href = 'https://x.com';
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        link.appendChild(icon);
+        domNode.append(marker, link);
+
+        icon.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        expect(emits).toHaveLength(1);
+        expect(emits[0].reference).toBe(link);
+    });
+
     it('emits on mouseover of a reference link `<a class="mu-reference-link">`', () => {
         const { muya, eventCenter, domNode } = makeMuya();
         const emits = captureEmits(eventCenter);
@@ -148,7 +170,7 @@ describe('linkMouseEvents — dispatches muya-link-tools on hover', () => {
         expect(emits).toHaveLength(0);
     });
 
-    it('does NOT emit when the markdown link is in EDIT mode (no hidden marker sibling)', () => {
+    it('emits when the markdown link is in EDIT mode (no hidden marker sibling)', () => {
         const { muya, eventCenter, domNode } = makeMuya();
         const emits = captureEmits(eventCenter);
         attachLinkMouseHandlers(muya);
@@ -163,7 +185,8 @@ describe('linkMouseEvents — dispatches muya-link-tools on hover', () => {
         domNode.appendChild(link);
 
         mouseover(link);
-        expect(emits).toHaveLength(0);
+        expect(emits).toHaveLength(1);
+        expect(emits[0].reference).toBe(link);
     });
 
     it('detaches all handlers when eventCenter.detachAllDomEvents runs (no leakage)', () => {
@@ -214,6 +237,32 @@ describe('linkMouseEvents — dispatches muya-link-tools on hover', () => {
         // Pointer moves from `innerA` to `innerB` — both still inside `link`.
         const ev = new MouseEvent('mouseout', { bubbles: true, relatedTarget: innerB });
         innerA.dispatchEvent(ev);
+
+        expect(emits).toHaveLength(0);
+    });
+
+    it('does NOT re-emit reference when the pointer moves between descendants of the same wrapper', () => {
+        const { muya, eventCenter, domNode } = makeMuya();
+        const emits = captureEmits(eventCenter);
+        attachLinkMouseHandlers(muya);
+
+        const marker = document.createElement('span');
+        marker.classList.add('mu-hide');
+        const link = document.createElement('span');
+        link.classList.add('mu-inline-rule', 'mu-link');
+        link.dataset.raw = '[hi](https://x.com)';
+        (link as HTMLElement & { href: string }).href = 'https://x.com';
+        const icon = document.createElement('span');
+        const text = document.createElement('span');
+        link.append(icon, text);
+        domNode.append(marker, link);
+
+        icon.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        emits.length = 0;
+        text.dispatchEvent(new MouseEvent('mouseover', {
+            bubbles: true,
+            relatedTarget: icon,
+        }));
 
         expect(emits).toHaveLength(0);
     });

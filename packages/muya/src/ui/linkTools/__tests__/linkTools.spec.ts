@@ -31,6 +31,8 @@ interface ILinkToolsView {
     selectItem: (event: Event, item: { type: string; icon: string; tooltip?: string }) => void;
     render: () => void;
     container: HTMLElement | null;
+    floatBox: HTMLElement | null;
+    status: boolean;
     destroy: () => void;
 }
 
@@ -87,6 +89,92 @@ afterEach(() => {
         muya.eventCenter.detachAllDomEvents();
         domNode.remove();
     }
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+});
+
+describe('linkTools hover lifecycle', () => {
+    it('cancels a pending hide when the pointer enters a link again', async () => {
+        vi.useFakeTimers();
+        const { muya, tools } = bootLinkTools();
+        const first = document.createElement('span');
+        const second = document.createElement('span');
+
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: first,
+            linkInfo: { href: 'https://first.example', text: 'first' },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(tools.status).toBe(true);
+
+        muya.eventCenter.emit('muya-link-tools', { reference: null });
+        await vi.advanceTimersByTimeAsync(300);
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: second,
+            linkInfo: { href: 'https://second.example', text: 'second' },
+        });
+        await vi.advanceTimersByTimeAsync(600);
+
+        expect(tools.status).toBe(true);
+        expect(tools.container!.querySelector('.link-address-text')?.textContent)
+            .toBe('https://second.example');
+    });
+
+    it('keeps the toolbar open while crossing from the link into the toolbar', async () => {
+        vi.useFakeTimers();
+        const { muya, tools } = bootLinkTools();
+        const link = document.createElement('span');
+
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: link,
+            linkInfo: { href: 'https://example.com', text: 'example' },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        muya.eventCenter.emit('muya-link-tools', { reference: null });
+        await vi.advanceTimersByTimeAsync(300);
+        tools.container!.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+        await vi.advanceTimersByTimeAsync(600);
+
+        expect(tools.status).toBe(true);
+    });
+
+    it('does not hide immediately when crossing from the toolbar back to the link', async () => {
+        vi.useFakeTimers();
+        const { muya, tools } = bootLinkTools();
+        const link = document.createElement('span');
+
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: link,
+            linkInfo: { href: 'https://example.com', text: 'example' },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        tools.container!.dispatchEvent(new MouseEvent('mouseleave'));
+        await vi.advanceTimersByTimeAsync(300);
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: link,
+            linkInfo: { href: 'https://example.com', text: 'example' },
+        });
+        await vi.advanceTimersByTimeAsync(600);
+
+        expect(tools.status).toBe(true);
+    });
+
+    it('ignores a delayed hide while the browser still reports the link as hovered', async () => {
+        vi.useFakeTimers();
+        const { muya, tools } = bootLinkTools();
+        const link = document.createElement('span');
+        vi.spyOn(link, 'matches').mockImplementation(selector => selector === ':hover');
+
+        muya.eventCenter.emit('muya-link-tools', {
+            reference: link,
+            linkInfo: { href: 'https://example.com', text: 'example' },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        muya.eventCenter.emit('muya-link-tools', { reference: null });
+        await vi.advanceTimersByTimeAsync(600);
+
+        expect(tools.status).toBe(true);
+    });
 });
 
 describe('linkTools.selectItem — edit and unlink', () => {
@@ -152,7 +240,12 @@ describe('linkTools.selectItem — edit and unlink', () => {
     it('edit: writes both changed text and URL into a markdown link', () => {
         const { tools } = bootLinkTools();
         const setCursor = vi.fn();
-        const block = { text: '[Example]()', setCursor };
+        const block = {
+            text: '[Example]()',
+            setCursor,
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        };
         tools._linkBlock = block as unknown as Format;
         tools._linkInfo = {
             href: '',
@@ -195,12 +288,16 @@ describe('linkTools.render — Feishu-style toolbar structure', () => {
             .toBe('sambesi://localhost/node/11164');
         expect(tools.container!.querySelectorAll('li.item.edit').length).toBe(1);
         expect(tools.container!.querySelectorAll('li.item.unlink').length).toBe(1);
-        expect(tools.container!.querySelectorAll('li.item.view-selector').length).toBe(1);
+        expect(tools.container!.querySelectorAll('li.item.view-selector').length).toBe(0);
         expect(tools.container!.querySelectorAll('li.item.more').length).toBe(1);
     });
 
-    it('renders address, edit, unlink, view selector and more actions', () => {
+    it('does not offer view switching for a link created from selected text', () => {
         const { tools } = bootLinkTools();
+        tools._linkBlock = {
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        } as unknown as Format;
         tools._linkInfo = {
             href: 'https://example.com',
             text: 'hi',
@@ -215,7 +312,7 @@ describe('linkTools.render — Feishu-style toolbar structure', () => {
         expect(tools.container!.querySelectorAll('li.item.edit').length).toBe(1);
         expect(tools.container!.querySelectorAll('li.item.unlink').length).toBe(1);
         expect(tools.container!.querySelector('.mu-action-icon-edit')).not.toBeNull();
-        expect(tools.container!.querySelector('.view-mode-label')?.textContent).toBe('Title View');
+        expect(tools.container!.querySelector('.view-selector')).toBeNull();
         expect(tools.container!.querySelector('.more-grid .mu-action-icon-more')).not.toBeNull();
     });
 
@@ -223,14 +320,19 @@ describe('linkTools.render — Feishu-style toolbar structure', () => {
         const { muya, tools } = bootLinkTools();
         const writeText = vi.fn();
         (muya.options as { clipboardWriteText?: (text: string) => void }).clipboardWriteText = writeText;
+        tools._linkBlock = {
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        } as unknown as Format;
         tools._linkInfo = {
             href: 'https://example.com',
-            text: 'Example',
-            raw: '[Example](https://example.com)',
-            range: { start: 0, end: 30 },
+            text: 'https://example.com',
+            raw: '[https://example.com](https://example.com)',
+            range: { start: 0, end: 42 },
         };
         tools.render();
 
+        expect(tools.container!.querySelector('.view-mode-label')?.textContent).toBe('Link View');
         tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
         expect([...tools.container!.querySelectorAll('.link-view-menu .link-menu-label')]
             .map(item => item.textContent))
@@ -246,6 +348,223 @@ describe('linkTools.render — Feishu-style toolbar structure', () => {
         expect(tools.container!.querySelector('.link-more-menu .mu-action-icon-copy-link')).not.toBeNull();
         expect(tools.container!.querySelector('.link-more-menu .mu-action-icon-web-link')).not.toBeNull();
         tools.container!.querySelector<HTMLElement>('.link-more-menu .copy-link')!.click();
-        expect(writeText).toHaveBeenCalledWith('[Example](https://example.com)');
+        expect(writeText).toHaveBeenCalledWith('[https://example.com](https://example.com)');
+    });
+
+    it('switches between Title View and Link View without losing the title text', () => {
+        const { tools } = bootLinkTools();
+        const setCursor = vi.fn();
+        let linkView = false;
+        const setLinkView = vi.fn((_range, _href: string, enabled: boolean) => {
+            linkView = enabled;
+        });
+        const block = {
+            text: '[Example](https://example.com)',
+            setCursor,
+            setLinkView,
+            isSmartLink: () => true,
+            isLinkView: () => linkView,
+        };
+        tools._linkBlock = block as unknown as Format;
+        tools._linkInfo = {
+            href: 'https://example.com',
+            text: 'Example',
+            raw: '[Example](https://example.com)',
+            range: { start: 0, end: 30 },
+        };
+        tools.render();
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .link')!.click();
+
+        expect(setLinkView).toHaveBeenCalledWith({ start: 0, end: 30 }, 'https://example.com', true);
+        expect(block.text).toBe('[Example](https://example.com)');
+
+        tools._linkInfo = {
+            href: 'https://example.com',
+            text: 'Example',
+            raw: '[Example](https://example.com)',
+            range: { start: 0, end: 30 },
+        };
+        tools.render();
+        expect(tools.container!.querySelector('.view-mode-label')?.textContent).toBe('Link View');
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        expect(tools.container!.querySelector('.link-view-menu .link.selected')).not.toBeNull();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        expect(setLinkView).toHaveBeenLastCalledWith({ start: 0, end: 30 }, 'https://example.com', false);
+        expect(block.text).toBe('[Example](https://example.com)');
+        expect(setCursor).not.toHaveBeenCalled();
+    });
+
+    it('fetches a title for a pasted bare URL and reuses it after a view round trip', async () => {
+        const { tools } = bootLinkTools();
+        Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+        const fetchMock = vi.fn(async () => ({
+            status: 200,
+            headers: { get: () => 'text/html; charset=utf-8' },
+            text: async () => '<html><head><title>Example Title</title></head></html>',
+        }));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const href = 'https://example.com';
+        const originalRaw = `[${href}](${href})`;
+        let linkView = false;
+        let smart = false;
+        const block = {
+            text: originalRaw,
+            setCursor: vi.fn(),
+            setLinkView: vi.fn((_range, _href: string, enabled: boolean) => {
+                smart = true;
+                linkView = enabled;
+            }),
+            isSmartLink: () => smart,
+            isLinkView: () => linkView,
+        };
+        tools._linkBlock = block as unknown as Format;
+        tools._linkInfo = {
+            href,
+            text: href,
+            raw: originalRaw,
+            range: { start: 0, end: originalRaw.length },
+        };
+        tools.render();
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        const titleRaw = `[Example Title](${href})`;
+        await vi.waitFor(() => expect(block.text).toBe(titleRaw));
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        tools._linkInfo = {
+            href,
+            text: 'Example Title',
+            raw: titleRaw,
+            range: { start: 0, end: titleRaw.length },
+        };
+        tools.render();
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .link')!.click();
+        tools.render();
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        expect(block.text).toBe(titleRaw);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses the host title resolver when converting a real bare URL', async () => {
+        const { muya, tools } = bootLinkTools();
+        const href = 'http://10.0.0.1/app/workflow';
+        const resolveLinkMetadata = vi.fn(async () => ({
+            title: 'Dify',
+            icon: 'http://10.0.0.1/favicon.ico',
+        }));
+        muya.options.resolveLinkMetadata = resolveLinkMetadata;
+        const block = {
+            text: href,
+            setCursor: vi.fn(),
+            setLinkView: vi.fn(),
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        };
+        tools._linkBlock = block as unknown as Format;
+        tools._linkInfo = {
+            href,
+            text: href,
+            raw: href,
+            range: { start: 0, end: href.length },
+        };
+        tools.render();
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        await vi.waitFor(() => expect(block.text).toBe(`[Dify](${href})`));
+        expect(resolveLinkMetadata).toHaveBeenCalledWith(href);
+        expect(block.setLinkView).toHaveBeenCalledWith(
+            { start: 0, end: `[Dify](${href})`.length },
+            href,
+            false,
+            'http://10.0.0.1/favicon.ico',
+        );
+    });
+
+    it('resolves a real title when the stored label is only a shortened URL', async () => {
+        const { muya, tools } = bootLinkTools();
+        const href = 'https://www.msn.cn/zh-cn/news/example/ar-AA123';
+        const shortLabel = 'msn.cn/zh-cn/news/example/ar-AA123';
+        const originalRaw = `[${shortLabel}](${href})`;
+        muya.options.resolveLinkMetadata = vi.fn(async () => ({
+            title: 'Example Article Title',
+            icon: 'https://www.msn.cn/favicon.ico',
+        }));
+        const block = {
+            text: originalRaw,
+            setCursor: vi.fn(),
+            setLinkView: vi.fn(),
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        };
+        tools._linkBlock = block as unknown as Format;
+        tools._linkInfo = {
+            href,
+            text: shortLabel,
+            raw: originalRaw,
+            range: { start: 0, end: originalRaw.length },
+        };
+        tools.render();
+        expect(tools.container!.querySelector('.view-mode-label')?.textContent).toBe('Link View');
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        await vi.waitFor(() => expect(block.text).toBe(`[Example Article Title](${href})`));
+        expect(muya.options.resolveLinkMetadata).toHaveBeenCalledWith(href);
+    });
+
+    it('re-resolves the live block after asynchronous title lookup', async () => {
+        const { muya, tools } = bootLinkTools();
+        const href = 'https://example.com/article';
+        muya.options.resolveLinkMetadata = vi.fn(async () => ({
+            title: 'Current title',
+            icon: 'https://example.com/favicon.ico',
+        }));
+        const staleBlock = {
+            path: [0, 'text'],
+            text: href,
+            setCursor: vi.fn(),
+            setLinkView: vi.fn(),
+            isSmartLink: () => false,
+            isLinkView: () => false,
+        };
+        const liveBlock = {
+            text: href,
+            isContent: () => true,
+            setCursor: vi.fn(),
+            setLinkView: vi.fn(),
+        };
+        Object.assign(muya, {
+            editor: {
+                scrollPage: {
+                    queryBlock: vi.fn(() => liveBlock),
+                },
+            },
+        });
+        tools._linkBlock = staleBlock as unknown as Format;
+        tools._linkInfo = {
+            href,
+            text: href,
+            raw: href,
+            range: { start: 0, end: href.length },
+        };
+        tools.render();
+
+        tools.container!.querySelector<HTMLElement>('.view-selector-button')!.click();
+        tools.container!.querySelector<HTMLElement>('.link-view-menu .title')!.click();
+
+        await vi.waitFor(() => expect(liveBlock.text).toBe(`[Current title](${href})`));
+        expect(staleBlock.text).toBe(href);
     });
 });

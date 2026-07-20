@@ -29,6 +29,8 @@ const annotaMDKeys = [
   'annotamd.comments.replyPlaceholder',
   'annotamd.comments.send',
   'annotamd.comments.emptyTitle',
+  'editor.blockConversion.title',
+  'editor.blockConversion.structuralSelection',
   'sideBar.tree.newMarkdownFilePlaceholder'
 ]
 

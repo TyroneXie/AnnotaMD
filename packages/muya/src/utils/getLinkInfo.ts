@@ -57,7 +57,7 @@ export function getLinkInfo(el: HTMLElement): IExtractedLinkInfo | null {
     return {
         href: readHref(el),
         raw,
-        text: el.textContent ?? '',
+        text: el.dataset.text ?? el.textContent ?? '',
         range: parseRange(el.dataset.start, el.dataset.end),
     };
 }

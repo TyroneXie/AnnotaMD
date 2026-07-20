@@ -1,24 +1,24 @@
 .mu-heading-number-menu-wrapper {
-    width: 236px;
+    width: 190px;
     overflow: visible;
 
     background: transparent;
-    border-radius: 10px;
+    border-radius: 9px;
     box-shadow: none;
 }
 
 .mu-heading-number-menu {
-    width: 236px;
+    width: 190px;
 
     background: #fff;
-    border: 1px solid #dee0e3;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
+    border: 1px solid #e1e3e6;
+    border-radius: 9px;
+    box-shadow: 0 4px 12px rgb(31 35 41 / 10%);
 }
 
 .mu-heading-number-menu-panel {
     box-sizing: border-box;
-    padding: 6px;
+    padding: 3px;
 
     color: #1f2329;
     font-weight: 400;
@@ -31,60 +31,49 @@
     align-items: center;
     box-sizing: border-box;
     width: 100%;
-    height: 42px;
-    padding: 0 10px;
+    height: 34px;
+    padding: 0 8px;
 
     color: #1f2329;
     text-align: left;
 
     background: transparent;
     border: 0;
-    border-radius: 7px;
+    border-radius: 6px;
     cursor: pointer;
 }
 
 .mu-heading-number-menu-item:disabled {
     color: #bbbfc4;
 
-    cursor: not-allowed;
+    cursor: default;
 }
 
-.mu-heading-number-menu-item:hover:not(:disabled) {
+.mu-heading-number-menu-item:hover {
     background: #f2f3f5;
 }
 
 .mu-heading-number-command-icon {
-    position: relative;
-
     display: inline-flex;
-    flex: 0 0 34px;
+    flex: 0 0 26px;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 28px;
-    margin-right: 6px;
+    width: 26px;
+    height: 24px;
+    margin-right: 8px;
 
     color: #646a73;
-    font-size: 11px;
-    line-height: 1;
+}
+
+.mu-heading-number-command-icon .mu-action-icon,
+.mu-heading-number-command-icon svg {
+    display: block;
+    width: 20px;
+    height: 20px;
 }
 
 .mu-heading-number-menu-item:disabled .mu-heading-number-command-icon {
     color: #bbbfc4;
-}
-
-.mu-heading-number-command-icon.continue::before {
-    content: '¹↪₂';
-}
-
-.mu-heading-number-command-icon.restart::before {
-    content: '¹↧';
-}
-
-.mu-heading-number-command-icon.set-value::before {
-    font-size: 13px;
-
-    content: '¹₂₃✎';
 }
 
 .mu-heading-number-command-label {
@@ -92,13 +81,6 @@
 
     white-space: nowrap;
     text-overflow: ellipsis;
-}
-
-.mu-heading-number-menu-divider {
-    height: 1px;
-    margin: 5px -6px;
-
-    background: #eff0f1;
 }
 
 .mu-heading-number-value-label {

@@ -428,7 +428,7 @@ class ParagraphContent extends Format {
         event.stopPropagation();
 
         const { text, parent, muya } = this;
-        const { start, end } = this.getCursor()!;
+        const { start, end } = this.getEnterOffsets();
         const listItem = parent!.parent!;
         const list = listItem!.parent! as BulletList | OrderList | TaskList;
 
@@ -520,10 +520,10 @@ class ParagraphContent extends Format {
         }
         else {
             if (parent!.isOnlyChild()) {
-                this.text = text.substring(0, start.offset);
+                this.text = text.substring(0, start);
                 const paragraphChild: IParagraphState = {
                     name: 'paragraph',
-                    text: text.substring(end.offset),
+                    text: text.substring(end),
                 };
                 const newNodeState: IListItemState | ITaskListItemState
                     = listItem.blockName === 'task-list-item'

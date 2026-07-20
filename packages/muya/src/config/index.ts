@@ -401,9 +401,9 @@ export const isWin
     = typeof window !== 'undefined'
         && window.navigator
         && /win32|wow32|win64|wow64/i.test(window.navigator.userAgent);
-// http[s] (domain or IPv4 or localhost or IPv6) [port] /not-white-space
+// http[s] (domain or IPv4 or localhost or IPv6) [port] optional path/query/hash
 export const URL_REG
-    = /^http(s)?:\/\/([\w\-.~]+\.[a-z]{2,}|[0-9.]+|localhost|\[[a-f0-9.:]+\])(:\d{1,5})?\/\S+/i;
+    = /^https?:\/\/([\w\-.~]+\.[a-z]{2,}|[0-9.]+|localhost|\[[a-f0-9.:]+\])(:\d{1,5})?(?:[/?#]\S*)?$/i;
 // A fully-formed base64/percent-encoded image data URL, e.g.
 // `data:image/png;base64,iVBORw0KGg...`. A bare `data:image/` prefix is not
 // treated as a safe-to-embed source.

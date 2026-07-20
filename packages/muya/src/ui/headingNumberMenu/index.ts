@@ -4,6 +4,7 @@ import type { Muya } from '../../muya';
 import type { IBaseOptions } from '../types';
 import { isHTMLInputElement } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
+import { renderActionIcon, type ActionIconName } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 
 import './index.css';
@@ -27,6 +28,7 @@ export class HeadingNumberMenu extends BaseFloat {
     static pluginName = 'headingNumberMenu';
 
     private _block: AtxHeadingContent | null = null;
+    private _reference: HTMLElement | null = null;
     private _editingValue = false;
     private _oldVNode: VNode | null = null;
     private _toolContainer: HTMLDivElement = document.createElement('div');
@@ -60,7 +62,10 @@ export class HeadingNumberMenu extends BaseFloat {
             return;
         }
 
+        this._reference?.classList.remove('menu-open');
         this._block = block;
+        this._reference = reference;
+        reference.classList.add('menu-open');
         this._editingValue = false;
         this._valueError = false;
         this._valueText = String(state.value);
@@ -95,7 +100,6 @@ export class HeadingNumberMenu extends BaseFloat {
                 !state.canRestart,
                 () => this._apply(state.restart),
             ),
-            h('div.mu-heading-number-menu-divider'),
             this._command(
                 'set-value',
                 this.muya.i18n.t('Set Number Value'),
@@ -126,7 +130,11 @@ export class HeadingNumberMenu extends BaseFloat {
                 },
             },
             [
-                h(`span.mu-heading-number-command-icon.${icon}`, { attrs: { 'aria-hidden': 'true' } }),
+                h(
+                    `span.mu-heading-number-command-icon.${icon}`,
+                    { attrs: { 'aria-hidden': 'true' } },
+                    renderActionIcon(`heading-number-${icon === 'set-value' ? 'set' : icon}` as ActionIconName),
+                ),
                 h('span.mu-heading-number-command-label', label),
             ],
         );
@@ -208,6 +216,8 @@ export class HeadingNumberMenu extends BaseFloat {
 
     override hide() {
         super.hide();
+        this._reference?.classList.remove('menu-open');
+        this._reference = null;
         this._block = null;
         this._editingValue = false;
     }

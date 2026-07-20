@@ -78,7 +78,10 @@ const ICON_CANDIDATES = {
   duplicate: ['copy', 'duplicate', 'copies'],
   cut: ['cut', 'scissors'],
   promote: ['arrow-up'],
-  demote: ['arrow-down']
+  demote: ['arrow-down'],
+  'heading-number-continue': ['list-start', 'corner-down-right', 'arrow-forward', 'arrow-right'],
+  'heading-number-restart': ['list-restart', 'restore', 'arrow-counter-clockwise', 'arrow-counterclockwise', 'restart', 'history', 'repeat'],
+  'heading-number-set': ['playlist-edit', 'list-numbers', 'list-ordered', 'format-list-numbered', 'left-to-right-list-number', 'list-ol']
 }
 
 const HEADING_NAMES = {

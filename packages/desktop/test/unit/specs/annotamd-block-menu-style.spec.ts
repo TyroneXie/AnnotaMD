@@ -11,11 +11,12 @@ describe('AnnotaMD block menu typography', () => {
       'utf8'
     )
 
-    expect(css).toMatch(/\.mu-front-menu\s*\{[^}]*width:\s*208px;/s)
+    expect(css).toMatch(/\.mu-front-menu\s*\{[^}]*width:\s*222px;/s)
     expect(css).toMatch(/\.mu-front-menu > ul\s*\{[^}]*padding:\s*6px;/s)
     expect(css).toMatch(/\.mu-front-menu > ul li\.item\s*\{[^}]*height:\s*32px;[^}]*padding:\s*0 8px;/s)
-    expect(css).toMatch(/li\.turn-into-menu\s*\{[^}]*grid-template-columns:\s*repeat\(7, 24px\);[^}]*gap:\s*2px;/s)
-    expect(css).toMatch(/\.turn-into-item\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s)
+    expect(css).toMatch(/li\.turn-into-menu\s*\{[^}]*grid-template-columns:\s*repeat\(7, 28px\);[^}]*gap:\s*2px;/s)
+    expect(css).toMatch(/\.turn-into-item\s*\{[^}]*height:\s*28px;[^}]*width:\s*28px;/s)
+    expect(css).toMatch(/\.turn-into-item:focus-visible\s*\{[^}]*outline:\s*2px solid #3370ff;/s)
   })
 
   it('keeps the floating block menu labels compact and readable', () => {
@@ -74,6 +75,7 @@ describe('AnnotaMD block menu typography', () => {
     )
 
     expect(css).toMatch(/\.mu-icon-wrapper\s*\{[^}]*height:\s*24px;/s)
+    expect(css).toMatch(/\.mu-icon-wrapper:focus-visible\s*\{[^}]*outline:\s*2px solid #3370ff;/s)
     expect(css).toMatch(/\.mu-block-label\s*\{[^}]*height:\s*22px;/s)
     expect(css).toMatch(/\.mu-block-grip\s*\{[^}]*height:\s*22px;/s)
     expect(css).not.toContain('backdrop-filter: blur')

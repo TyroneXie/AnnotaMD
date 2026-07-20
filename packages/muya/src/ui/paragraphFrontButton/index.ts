@@ -354,15 +354,18 @@ export class ParagraphFrontButton {
             }
         }, 300);
 
-        const clickHandler = () => {
+        const openMenu = (focusMenu = false) => {
             eventCenter.emit('muya-front-menu', {
                 reference: {
                     getBoundingClientRect: () => container.getBoundingClientRect(),
                 },
                 block: this._block,
                 kind: this._kindOverride,
+                focusMenu,
             });
         };
+
+        const clickHandler = () => openMenu();
 
         eventCenter.attachDOMEvent(container, 'mousedown', this._dragBarMouseDown);
         eventCenter.attachDOMEvent(container, 'mouseup', this._dragBarMouseUp);
@@ -586,9 +589,33 @@ export class ParagraphFrontButton {
         const visualBlock = displayBlock(block!);
         const kind = this._kindOverride ?? frontButtonBlockKind(visualBlock);
         const label = frontButtonBlockLabel(visualBlock);
-        const iconWrapperSelector = `div.mu-icon-wrapper.${kind}`;
+        const iconWrapperSelector = `button.mu-icon-wrapper.${kind}`;
         const vnode = h(
             iconWrapperSelector,
+            {
+                attrs: {
+                    type: 'button',
+                    role: 'button',
+                    tabindex: '0',
+                    'aria-label': this.muya.i18n.t('More'),
+                },
+                on: {
+                    keydown: (event: KeyboardEvent) => {
+                        if (event.key !== 'Enter' && event.key !== ' ')
+                            return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.muya.eventCenter.emit('muya-front-menu', {
+                            reference: {
+                                getBoundingClientRect: () => container.getBoundingClientRect(),
+                            },
+                            block: this._block,
+                            kind: this._kindOverride,
+                            focusMenu: true,
+                        });
+                    },
+                },
+            },
             [
                 renderBlockLabel(kind, label, visualBlock),
                 renderGrip(),

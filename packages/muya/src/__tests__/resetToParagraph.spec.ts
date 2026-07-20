@@ -7,9 +7,8 @@ import { Muya } from '../muya';
 import { ParagraphFrontMenu } from '../ui/paragraphFrontMenu';
 
 // Resetting a list/blockquote to paragraphs must preserve every item/line.
-// `resetToParagraph` is the shared engine path used both by the command
-// palette/menu `reset-to-paragraph` command and by the paragraph front menu
-// when the user clicks the already-active list type (toggle the list off).
+// `resetToParagraph` is the shared engine path used by the command
+// palette/menu `reset-to-paragraph` command and explicit paragraph conversion.
 
 const bootedHosts: HTMLElement[] = [];
 let hadVersion = false;
@@ -80,8 +79,8 @@ describe('muya.resetToParagraph(block)', () => {
     });
 });
 
-describe('paragraph front menu — clicking the active list type unwraps the list', () => {
-    it('bullet list -> bullet-list item unwraps into paragraphs', async () => {
+describe('paragraph front menu — clicking the active list type is a no-op', () => {
+    it('keeps a bullet list unchanged', async () => {
         const muya = bootMuya('- one\n- two\n- three\n');
         const list = firstOutmostBlock(muya);
         expect(list.blockName).toBe('bullet-list');
@@ -90,11 +89,9 @@ describe('paragraph front menu — clicking the active list type unwraps the lis
         (menu as unknown as { _block: Parent })._block = list;
         menu.selectItem(new Event('click'), { label: 'bullet-list' });
 
-        await vi.waitFor(() => {
-            const state = muya.getState();
-            expect(state.length).toBe(3);
-            expect(state.every(b => b.name === 'paragraph')).toBe(true);
-        });
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(muya.getState()).toEqual([list.getState()]);
+        expect(muya.getMarkdown()).toBe('- one\n- two\n- three\n');
     });
 });
 
@@ -149,21 +146,21 @@ describe('paragraph front menu — a single menu open performs at most one actio
         });
     });
 
-    it('toggling the active list type twice does not crash', () => {
+    it('clicking the active list type twice does not crash or change the list', () => {
         const muya = bootMuya('- one\n- two\n');
         const list = firstOutmostBlock(muya);
 
         const menu = new ParagraphFrontMenu(muya, {});
         (menu as unknown as { _block: Parent })._block = list;
 
-        // First toggle unwraps the list back to paragraphs (removes the list).
+        // The active conversion target is selected but non-operative.
         menu.selectItem(new Event('click'), { label: 'bullet-list' });
 
-        // The stale `_block` now points at the removed list; toggling again
-        // must be a no-op, not a crash.
+        // Repeating the action must remain a no-op, not a crash.
         expect(() =>
             menu.selectItem(new Event('click'), { label: 'bullet-list' }),
         ).not.toThrow();
+        expect(muya.getMarkdown()).toBe('- one\n- two\n');
     });
 
     // The deterministic real-world repro: an external command (the app menu bar)

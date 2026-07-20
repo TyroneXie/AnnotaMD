@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.11.0 - 2026-07-20
+
+### Added
+
+- Added Feishu-style heading numbering for H1–H6, including hierarchical auto-numbering, clickable numbers, and continue, restart, or custom-number controls.
+- Added richer block conversion between text, headings, code blocks, quotes, lists, task lists, and highlight blocks, with inline formatting available from text selections inside code blocks.
+- Added smart Title View for standalone pasted web addresses, with automatic title and site-icon retrieval, a visible loading state, and reliable Link View fallback.
+
+### Changed
+
+- Made block menus more compact and consistent, added complete keyboard navigation, and kept all six heading levels directly available.
+- Treated thematic breaks as selectable blocks, reduced task-checkbox size, hid inactive block-link affordances, and rendered table-cell `<br>` markers as line breaks.
+- Kept links created from selected text as ordinary inline links, while reserving Link/Title View switching for standalone pasted addresses.
+
+### Fixed
+
+- Fixed code-block line numbers leaking over following content when opening long documents.
+- Fixed heading-number sequences skipping values or inheriting from the wrong heading level.
+- Fixed link hover tools disappearing during pointer movement, links breaking when Enter is pressed at the visible end, and fetched titles being lost when switching views.
+- Fixed root URLs ending in `/`, browser-formatted pasted links, broken favicon placeholders, and title links reopening without their title-view state.
+- Prevented incompatible multi-block selections from being partially converted and preserved code-block language when converting to a highlight block.
+
 ## 2.10.1 - 2026-07-19
 
 ### Changed

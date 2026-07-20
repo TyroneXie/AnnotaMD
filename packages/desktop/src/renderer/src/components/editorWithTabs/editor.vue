@@ -2051,6 +2051,7 @@ onMounted(() => {
     clipboardText: () => window.electron.clipboard.readText(),
     clipboardWriteText: (text: string) => window.electron.clipboard.writeText(text),
     clipboardWriteImage: (dataUrl: string) => window.electron.clipboard.writeImage(dataUrl),
+    resolveLinkMetadata: (url: string) => window.electron.shell.getLinkMetadata(url),
     // Image-persist callbacks read by the engine's clipboard + drag-drop handlers
     // from `muya.options.*` (distinct from the ImageEditTool plugin option above).
     // Without these, local-file drag-drop, screenshot/binary clipboard paste, and
@@ -2285,6 +2286,19 @@ onMounted(() => {
   editor.value.on('code-wrap-toggle', ({ enabled }: { enabled: boolean }) => {
     preferencesStore.SET_SINGLE_PREFERENCE({ type: 'wrapCodeBlocks', value: enabled })
   })
+
+  editor.value.on(
+    'block-conversion-blocked',
+    ({ reason }: { reason: string }) => {
+      if (reason !== 'structural-selection') return
+      void notice.notify({
+        title: t('editor.blockConversion.title'),
+        message: t('editor.blockConversion.structuralSelection'),
+        type: 'warning',
+        time: 4000
+      })
+    }
+  )
 
   editor.value.on(
     'format-click',

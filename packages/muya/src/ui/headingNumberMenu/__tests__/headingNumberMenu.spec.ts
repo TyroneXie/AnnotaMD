@@ -51,6 +51,19 @@ describe('heading number menu', () => {
         expect(menu.container!.querySelector<HTMLButtonElement>('.set-value')!.disabled).toBe(false);
     });
 
+    it('uses compact shared SVG icons without a separator row', () => {
+        const { content, menu } = boot('# 1. First\n');
+        open(content);
+
+        expect(menu.container!.querySelectorAll('.mu-heading-number-command-icon svg')).toHaveLength(3);
+        expect(menu.container!.querySelector('.mu-heading-number-menu-divider')).toBeNull();
+        expect(menu.container!.textContent).not.toMatch(/[¹₂₃↪↧✎]/u);
+        expect(content.domNode!.querySelector('.mu-heading-number')!.classList).toContain('menu-open');
+
+        menu.hide();
+        expect(content.domNode!.querySelector('.mu-heading-number')!.classList).not.toContain('menu-open');
+    });
+
     it('does not continue the first child but allows it to restart from 1', () => {
         const { content, menu } = boot('# 3. Parent\n\n## 3.4. Child\n');
         open(content);

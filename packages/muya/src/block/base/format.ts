@@ -41,6 +41,15 @@ interface IOffsetWithDelta extends IOffset {
 
 const debug = logger('block.format:');
 
+interface SmartLinkViewState {
+    href: string;
+    linkView: boolean;
+    icon?: string;
+    loading?: boolean;
+}
+
+const smartLinkViews = new WeakMap<object, Map<string, SmartLinkViewState>>();
+
 const INLINE_STYLE_PROPERTIES = {
     text_color: 'color',
     background_color: 'background-color',
@@ -250,6 +259,74 @@ class Format extends Content {
 
     protected override get autoPairType() {
         return 'format';
+    }
+
+    isSmartLink(range: { start: number; end: number } | null | undefined, href: string): boolean {
+        const state = this._getSmartLinkView(range, href);
+
+        return Boolean(state);
+    }
+
+    isLinkView(range: { start: number; end: number } | null | undefined, href: string): boolean {
+        const state = this._getSmartLinkView(range, href);
+
+        return Boolean(state?.linkView);
+    }
+
+    getLinkIcon(range: { start: number; end: number } | null | undefined, href: string): string {
+        const state = this._getSmartLinkView(range, href);
+
+        return state && !state.linkView ? state.icon ?? '' : '';
+    }
+
+    isLinkLoading(range: { start: number; end: number } | null | undefined, href: string): boolean {
+        return Boolean(this._getSmartLinkView(range, href)?.loading);
+    }
+
+    setLinkView(
+        range: { start: number; end: number },
+        href: string,
+        enabled: boolean,
+        icon?: string,
+    ): void {
+        let views = smartLinkViews.get(this.muya);
+        if (!views) {
+            views = new Map();
+            smartLinkViews.set(this.muya, views);
+        }
+        views.set(this._smartLinkViewKey(range, href), { href, linkView: enabled, icon });
+        this.update();
+    }
+
+    setLinkLoading(
+        range: { start: number; end: number },
+        href: string,
+        loading: boolean,
+    ): void {
+        let views = smartLinkViews.get(this.muya);
+        if (!views) {
+            views = new Map();
+            smartLinkViews.set(this.muya, views);
+        }
+        const key = this._smartLinkViewKey(range, href);
+        if (loading)
+            views.set(key, { href, linkView: true, loading: true });
+        else
+            views.delete(key);
+        this.update();
+    }
+
+    private _getSmartLinkView(
+        range: { start: number; end: number } | null | undefined,
+        href: string,
+    ): SmartLinkViewState | null {
+        if (!range || !this.parent)
+            return null;
+        return smartLinkViews.get(this.muya)?.get(this._smartLinkViewKey(range, href)) ?? null;
+    }
+
+    private _smartLinkViewKey(range: { start: number }, href: string): string {
+        return JSON.stringify([this.path, range.start, href]);
     }
 
     private _checkCursorInTokenType(
@@ -1576,19 +1653,19 @@ class Format extends Content {
         event.stopPropagation();
 
         const { text: oldText } = this;
-        const { start, end } = this.getCursor()!;
+        const { start, end } = this.getEnterOffsets();
         this.text
-            = `${oldText.substring(0, start.offset)}\n${oldText.substring(end.offset)}`;
-        this.setCursor(start.offset + 1, end.offset + 1, true);
+            = `${oldText.substring(0, start)}\n${oldText.substring(end)}`;
+        this.setCursor(start + 1, end + 1, true);
     }
 
     override enterHandler(event: KeyboardEvent): void {
         event.preventDefault();
         this.muya.editor.history.markInputBoundary('insertParagraph', '\n');
         const { text: oldText, muya, parent } = this;
-        const { start, end } = this.getCursor()!;
-        this.text = oldText.substring(0, start.offset);
-        const textOfNewNode = oldText.substring(end.offset);
+        const { start: startOffset, end: endOffset } = this.getEnterOffsets();
+        this.text = oldText.substring(0, startOffset);
+        const textOfNewNode = oldText.substring(endOffset);
         const newParagraphState = {
             name: 'paragraph',
             text: textOfNewNode,
@@ -1604,6 +1681,65 @@ class Format extends Content {
         this.update();
         const cursorBlock = newNode.firstContentInDescendant();
         cursorBlock.setCursor(0, 0, true);
+    }
+
+    protected getEnterOffsets(): { start: number; end: number } {
+        const { start, end } = this.getCursor()!;
+        if (start.offset === end.offset) {
+            const renderedLinkEnd = this._renderedLinkEndAtCursor(start.offset);
+            if (renderedLinkEnd !== null)
+                return { start: renderedLinkEnd, end: renderedLinkEnd };
+        }
+
+        return { start: start.offset, end: end.offset };
+    }
+
+    private _renderedLinkEndAtCursor(sourceOffset: number): number | null {
+        const selection = this.domNode?.ownerDocument.getSelection();
+        const { anchorNode, anchorOffset } = selection ?? {};
+        if (anchorNode) {
+            const anchorElement = anchorNode instanceof HTMLElement
+                ? anchorNode
+                : anchorNode.parentElement;
+            const link = anchorElement?.closest<HTMLElement>(
+                `span.${CLASS_NAMES.MU_LINK}[data-end]`,
+            );
+            if (link && this.domNode?.contains(link)) {
+                const caretRange = this.domNode.ownerDocument.createRange();
+                caretRange.setStart(link, 0);
+                caretRange.setEnd(anchorNode, anchorOffset ?? 0);
+                const visibleOffset = getTextContent(caretRange.cloneContents()).length;
+                if (visibleOffset === getTextContent(link).length) {
+                    const end = Number(link.dataset.end);
+                    if (Number.isFinite(end))
+                        return end;
+                }
+            }
+        }
+
+        const tokens = tokenizer(this.text, {
+            hasBeginRules: false,
+            options: this.muya.options,
+        });
+        const findLinkEnd = (items: Token[]): number | null => {
+            for (const token of items) {
+                if (token.type === 'link') {
+                    const visibleEnd = token.range.start
+                        + 1
+                        + token.anchor.length
+                        + token.backlash.first.length;
+                    if (sourceOffset === visibleEnd)
+                        return token.range.end;
+                }
+                if ('children' in token && Array.isArray(token.children)) {
+                    const nested = findLinkEnd(token.children);
+                    if (nested !== null)
+                        return nested;
+                }
+            }
+            return null;
+        };
+        return findLinkEnd(tokens);
     }
 
     getFormatsInRange(cursor: IContentCursor | null = this.getCursor()) {

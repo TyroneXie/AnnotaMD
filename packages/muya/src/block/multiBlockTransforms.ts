@@ -63,6 +63,22 @@ export function collectSelectedTextTargets(muya: Muya): Parent[] {
     return targets.length > 1 ? targets : [];
 }
 
+export function hasUnsupportedCrossBlockSelection(muya: Muya): boolean {
+    const { anchorBlock, focusBlock } = muya.editor.selection;
+    if (!anchorBlock || !focusBlock || anchorBlock === focusBlock)
+        return false;
+
+    const contents = contentRange(muya);
+    const anchorIndex = contents.indexOf(anchorBlock);
+    const focusIndex = contents.indexOf(focusBlock);
+    if (anchorIndex < 0 || focusIndex < 0)
+        return false;
+
+    const start = Math.min(anchorIndex, focusIndex);
+    const end = Math.max(anchorIndex, focusIndex);
+    return contents.slice(start, end + 1).some(content => !targetForContent(content));
+}
+
 function mergeCompatibleStateLists(states: TState[]): TState[] {
     const result: TState[] = [];
     for (const state of states) {

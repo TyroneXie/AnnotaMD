@@ -158,6 +158,11 @@
     opacity: 1;
 }
 
+.mu-container .mu-heading-number.menu-open::before,
+.mu-container .mu-heading-number.menu-open::after {
+    opacity: 0;
+}
+
 /* A collapsed heading keeps a small Feishu-style disclosure control beside
    its title. The control is view-only: expanding it restores the hidden
    section without writing any marker into Markdown. */

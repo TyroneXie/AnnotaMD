@@ -127,6 +127,62 @@ describe('enter mid-paragraph — split into two paragraphs', () => {
 
         expect(event.preventDefault).toHaveBeenCalled();
     });
+
+    it('keeps a rendered Markdown link intact when Enter follows its visible title', async () => {
+        const href = 'https://example.com/releases';
+        const raw = `before [发发发](${href})`;
+        const muya = bootMuya(`- ${raw}\n`);
+        const content = contentByText(muya, raw);
+        muya.editor.activeContentBlock = content;
+
+        const link = content.domNode!.querySelector<HTMLElement>('span.mu-link')!;
+        const walker = document.createTreeWalker(link, NodeFilter.SHOW_TEXT);
+        let textNode: Text | null = null;
+        while (walker.nextNode())
+            textNode = walker.currentNode as Text;
+        const range = document.createRange();
+        range.setStart(textNode!, textNode!.length);
+        range.collapse(true);
+        document.getSelection()!.removeAllRanges();
+        document.getSelection()!.addRange(range);
+
+        const event = {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            shiftKey: false,
+            key: 'Enter',
+        } as unknown as KeyboardEvent;
+        content.enterHandler(event);
+
+        await flush();
+        expect(muya.getMarkdown()).toContain(`- ${raw}\n- `);
+        expect(muya.getMarkdown()).not.toContain(`[发发发\n`);
+    });
+
+    it('uses the Markdown token boundary after a re-render moves the DOM caret', () => {
+        const href = 'https://example.com/releases';
+        const raw = `before [发发发](${href})`;
+        const muya = bootMuya(`${raw}\n`);
+        const content = contentByText(muya, raw);
+        const visibleLinkEnd = raw.indexOf('](');
+        vi.spyOn(content, 'getCursor').mockReturnValue({
+            start: { offset: visibleLinkEnd },
+            end: { offset: visibleLinkEnd },
+            isCollapsed: true,
+        });
+        const selection = document.getSelection()!;
+        const range = document.createRange();
+        range.setStart(content.domNode!, 0);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        const offsets = (content as unknown as {
+            getEnterOffsets: () => { start: number; end: number };
+        }).getEnterOffsets();
+
+        expect(offsets).toEqual({ start: raw.length, end: raw.length });
+    });
 });
 
 describe('enter at offset 0 — all text moves to the new block', () => {

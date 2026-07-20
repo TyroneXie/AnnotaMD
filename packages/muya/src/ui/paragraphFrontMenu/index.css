@@ -1,6 +1,6 @@
 .mu-front-menu {
     box-sizing: border-box;
-    width: 208px;
+    width: 222px;
 
     max-height: calc(100vh - 16px);
     overflow: hidden auto;
@@ -288,18 +288,26 @@
 
 .mu-front-menu li.turn-into-menu {
     display: grid;
-    grid-template-columns: repeat(7, 24px);
+    grid-template-columns: repeat(7, 28px);
     gap: 2px;
     justify-content: start;
-    padding: 2px 4px 6px;
+    padding: 2px 0 6px;
 }
 
 .mu-front-menu li.turn-into-menu .turn-into-item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    height: 28px;
+    width: 28px;
+
+    padding: 0;
+
+    color: inherit;
+    font: inherit;
+
+    background: transparent;
+    border: 0;
 
     border-radius: 5px;
 
@@ -307,8 +315,19 @@
 }
 
 .mu-front-menu li.turn-into-menu .turn-into-item:hover,
+.mu-front-menu li.turn-into-menu .turn-into-item:focus-visible,
 .mu-front-menu li.turn-into-menu .turn-into-item.active {
     background: #eef3ff;
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item:focus-visible {
+    outline: 2px solid #3370ff;
+    outline-offset: -2px;
+}
+
+.mu-front-menu li.turn-into-menu .turn-into-item.blocked {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .mu-front-menu li.turn-into-menu .turn-into-item.active i.icon {

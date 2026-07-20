@@ -69,6 +69,7 @@ const ipcWrapper = {
 
 const shellAPI = {
   openExternal: (url: string) => invoke('mt::shell::open-external', url),
+  getLinkMetadata: (url: string) => invoke('mt::shell::get-link-metadata', url),
   showItemInFolder: (fullPath: string) => send('mt::shell::show-item', fullPath),
   openPath: (fullPath: string) => invoke('mt::shell::open-path', fullPath)
 }

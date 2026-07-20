@@ -99,7 +99,7 @@ describe('#2165 — autolinks are followable by clicking', () => {
         expect(emits[0].data.href).toContain('https://example.com');
     });
 
-    it('hovering an autolink does NOT open the edit/unlink popover (follow-only)', () => {
+    it('hovering an HTTP autolink opens the link popover for view conversion', () => {
         const muya = bootMuya('<https://example.com>\n');
         const popoverEmits: unknown[] = [];
         muya.eventCenter.subscribe('muya-link-tools', (p: { reference: unknown }) => {
@@ -110,6 +110,6 @@ describe('#2165 — autolinks are followable by clicking', () => {
 
         anchor.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 
-        expect(popoverEmits).toHaveLength(0);
+        expect(popoverEmits).toHaveLength(1);
     });
 });

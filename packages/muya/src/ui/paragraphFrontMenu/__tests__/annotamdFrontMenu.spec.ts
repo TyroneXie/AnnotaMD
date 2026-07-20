@@ -284,6 +284,58 @@ describe('AnnotaMD paragraph front menu actions', () => {
         await vi.waitFor(() => expect(muya.getMarkdown()).toBe('> reversible quote\n'));
     });
 
+    it('renders conversion targets as accessible buttons with current-state semantics', () => {
+        const muya = bootMuya('## Accessible heading\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0]);
+        menu.render();
+
+        const current = menu.container!.querySelector<HTMLButtonElement>('.turn-into-item.atx-heading-2');
+        const paragraph = menu.container!.querySelector<HTMLButtonElement>('.turn-into-item.paragraph');
+        const action = menu.container!.querySelector<HTMLElement>('li.item[role="button"]');
+        expect(current?.tagName).toBe('BUTTON');
+        expect(current?.getAttribute('aria-pressed')).toBe('true');
+        expect(current?.getAttribute('aria-disabled')).toBe('true');
+        expect(paragraph?.tagName).toBe('BUTTON');
+        expect(paragraph?.getAttribute('aria-label')).toBeTruthy();
+        expect(action?.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('focuses the current conversion target when opened from the keyboard', async () => {
+        const muya = bootMuya('## Keyboard heading\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const block = blocks(muya)[0];
+
+        muya.eventCenter.emit('muya-front-menu', {
+            reference: {
+                getBoundingClientRect: () => block.domNode!.getBoundingClientRect(),
+            },
+            block,
+            kind: null,
+            focusMenu: true,
+        });
+
+        await vi.waitFor(() => {
+            expect(document.activeElement).toBe(
+                menu.container!.querySelector('.turn-into-item.atx-heading-2'),
+            );
+        });
+    });
+
+    it('keeps the active type unchanged when its selected icon is clicked again', async () => {
+        const muya = bootMuya('- one\n- two\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+        const list = blocks(muya)[0];
+
+        openOn(menu, list);
+        menu.selectItem(new Event('click'), { label: 'bullet-list' });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(muya.getState()).toEqual([list.getState()]);
+        expect(muya.getMarkdown()).toBe('- one\n- two\n');
+    });
+
     it('keeps the type menu open and refreshes it immediately after paragraph/list conversion', async () => {
         const muya = bootMuya('convert me\n');
         const menu = new ParagraphFrontMenu(muya, {});
@@ -318,6 +370,25 @@ describe('AnnotaMD paragraph front menu actions', () => {
             expect(muya.getState().map(state => state.name)).toEqual(['atx-heading', 'atx-heading']);
         });
         expect(muya.getMarkdown()).toBe('## first\n\n## second\n');
+    });
+
+    it('wraps a code block in a highlight without losing its language or code semantics', async () => {
+        const muya = bootMuya('```ts\nconst value = 1\n```\n');
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0]);
+        menu.selectItem(new Event('click'), { label: 'highlight-block' });
+
+        await vi.waitFor(() => expect(muya.getState()[0].name).toBe('highlight-block'));
+        const highlight = muya.getState()[0];
+        expect(highlight.name === 'highlight-block' ? highlight.children[0] : null).toMatchObject({
+            name: 'code-block',
+            meta: { lang: 'ts' },
+            text: 'const value = 1',
+        });
+        expect(muya.getMarkdown()).toBe(
+            '> [!HIGHLIGHT]\n> ```ts\n> const value = 1\n> ```\n',
+        );
     });
 
     it('converts a multi-paragraph quote to a Todo list and preserves each paragraph', async () => {
@@ -575,10 +646,12 @@ describe('AnnotaMD paragraph front menu actions', () => {
         expect(muya.editor.selection.focusBlock?.text).toContain('third');
     });
 
-    it('does not batch-convert a selection that crosses a structural code block', async () => {
+    it('blocks the whole conversion and emits feedback when a selection crosses a structural code block', async () => {
         const muya = bootMuya('first\n\n```ts\nconst x = 1\n```\n\nthird\n');
         const menu = new ParagraphFrontMenu(muya, {});
         const [first, code, third] = blocks(muya);
+        const blocked = vi.fn();
+        muya.on('block-conversion-blocked', blocked);
         const firstContent = first.firstContentInDescendant()!;
         const thirdContent = third.lastContentInDescendant()!;
         muya.editor.selection.setSelection(
@@ -587,11 +660,15 @@ describe('AnnotaMD paragraph front menu actions', () => {
         );
 
         openOn(menu, first);
+        menu.render();
+        expect(menu.container!.querySelector('.turn-into-item.atx-heading-2')?.getAttribute('aria-disabled')).toBe('true');
         menu.selectItem(new Event('click'), { label: 'atx-heading 2' });
 
-        await vi.waitFor(() => expect(blocks(muya)[0].blockName).toBe('atx-heading'));
+        await vi.waitFor(() => expect(blocked).toHaveBeenCalledWith({ reason: 'structural-selection' }));
+        expect(blocks(muya)[0]).toBe(first);
         expect(blocks(muya)[1]).toBe(code);
         expect(blocks(muya)[2]).toBe(third);
+        expect(muya.getMarkdown()).toBe('first\n\n```ts\nconst x = 1\n```\n\nthird\n');
     });
 
     it('cuts one block by copying its Markdown and removing only that block', async () => {

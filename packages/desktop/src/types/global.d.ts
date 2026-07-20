@@ -44,6 +44,7 @@ declare global {
 
   interface ElectronShellAPI {
     openExternal(url: string): Promise<void>
+    getLinkMetadata(url: string): Promise<{ title: string; icon: string }>
     showItemInFolder(fullPath: string): void
     openPath(fullPath: string): Promise<string>
   }

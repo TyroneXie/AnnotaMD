@@ -30,6 +30,7 @@ const testPacks = {
       'src/ui/linkTools/__tests__/linkTools.spec.ts',
       'src/ui/emojiSelector/__tests__/emojiSelector.spec.ts',
       'src/block/base/__tests__/formatEmojiInsertion.spec.ts',
+      'src/block/content/paragraphContent/__tests__/enterHandler.spec.ts',
       'src/block/commonMark/html/__tests__/htmlPreviewEmptyGuard.spec.ts',
       'src/editor/__tests__/initialPreviewFocus.spec.ts',
       'src/state/__tests__/markdownToState.spec.ts',

@@ -40,6 +40,12 @@ describe('extended autolink — trailing punctuation (#2096)', () => {
         expect(token).toBeDefined();
         expect(token!.url).toBe('https://example.com/a/b');
     });
+
+    it('recognizes an origin URL whose path is only a trailing slash', () => {
+        const token = autoLinkExt('https://www.piaohua.com/');
+        expect(token).toBeDefined();
+        expect(token!.url).toBe('https://www.piaohua.com/');
+    });
 });
 
 // GFM §6.9 also trims the link extent for three further cases. The match is

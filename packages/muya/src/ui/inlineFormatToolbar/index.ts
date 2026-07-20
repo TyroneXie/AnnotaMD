@@ -152,6 +152,12 @@ export class InlineFormatToolbar extends BaseFloat {
                 });
             }
             else {
+                // Focusing the link input collapses the editor selection and
+                // emits a transient picker-close event. Keep the captured
+                // selection alive until the user confirms, cancels or clicks
+                // outside the float (BaseFloat handles that final hide).
+                if (this._linkCreateOpen)
+                    return;
                 this._openPalette = null;
                 this._textStyleOpen = false;
                 this._linkCreateOpen = false;
@@ -557,6 +563,8 @@ export class InlineFormatToolbar extends BaseFloat {
         block.text = `${block.text.slice(0, start)}${link}${block.text.slice(end)}`;
         const cursor = start + link.length;
         block.setCursor(cursor, cursor, true);
+        this.muya.flush();
+        this.muya.eventCenter.emit('content-change', { block });
         this._linkCreateOpen = false;
         this._linkSelection = null;
         this.hide();

@@ -48,6 +48,11 @@ import type {
   AnnotaMDMcpManualConfigResult
 } from './mcpClients'
 
+export interface LinkPreviewMetadata {
+  title: string
+  icon: string
+}
+
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
 // =================================================================
@@ -113,6 +118,7 @@ export interface IpcInvokeChannels {
   'mt::paths::is-image': { args: [path: string]; ret: boolean }
   'mt::rg::start': { args: [req: unknown]; ret: { searchId: string } }
   'mt::shell::open-external': { args: [url: string]; ret: void }
+  'mt::shell::get-link-metadata': { args: [url: string]; ret: LinkPreviewMetadata }
   'mt::shell::open-path': { args: [fullPath: string]; ret: string }
   'mt::spellchecker-get-available-dictionaries': { args: []; ret: string[] }
   'mt::spellchecker-get-custom-dictionary-words': { args: []; ret: string[] }

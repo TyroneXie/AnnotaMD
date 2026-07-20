@@ -16,11 +16,10 @@ import { getLinkInfo } from '../utils/getLinkInfo';
 //                                        nothing to jump to or unlink)
 //   - HTML `<a href=...>`          → a.mu-inline-rule.mu-raw-html
 //
-// For the markdown and reference-link variants we additionally require the
-// preceding sibling to be `.mu-hide` — i.e. the source-character markers
-// are hidden, which means the wrapper is rendered in *preview* mode
-// (cursor isn't editing inside the link), which keeps the
-// popover from flashing while the user types the URL.
+// Link tools are available in both preview and edit rendering states. The
+// wrapper itself remains a valid link target while the source markers are
+// visible, and suppressing that state made the toolbar appear intermittent
+// depending on the caret position.
 //
 // Click handling: PR-11b removed the `pointer-events: none` rule that
 // `inlineSyntax.css` used to set on link wrappers, because that rule
@@ -51,32 +50,24 @@ export const LINK_SELECTOR = [
 const ANCHOR_CLICK_SELECTOR = `a.${CLASS_NAMES.MU_INLINE_RULE}`;
 
 function findLinkWrapper(target: EventTarget | null): HTMLElement | null {
-    if (!(target instanceof HTMLElement))
+    if (!(target instanceof Element))
         return null;
 
     return target.closest<HTMLElement>(LINK_SELECTOR);
 }
 
 function isPopoverTarget(wrapper: HTMLElement): boolean {
-    // Auto-detected links are follow-only (Cmd/Ctrl-click). The edit/unlink
-    // popover doesn't apply — there is no `[text](url)` source to rewrite, and
-    // the URL re-autolinks on the next render anyway.
+    // HTTP(S) auto-links use the same popover so a pasted bare URL can be
+    // converted to a title-backed Markdown link. Email auto-links remain
+    // follow-only because a page title does not apply to `mailto:` targets.
     if (
         wrapper.classList.contains(CLASS_NAMES.MU_AUTO_LINK)
         || wrapper.classList.contains(CLASS_NAMES.MU_AUTO_LINK_EXTENSION)
     ) {
-        return false;
+        return /^https?:\/\//i.test(wrapper.getAttribute('href') ?? '');
     }
 
-    // HTML `<a>` is always a popover target — no source markers to hide.
-    if (wrapper.classList.contains(CLASS_NAMES.MU_RAW_HTML))
-        return true;
-
-    // Markdown link / reference link: only show in preview mode (the
-    // preceding `[` marker is hidden via `.mu-hide`).
-    const prev = wrapper.previousElementSibling;
-
-    return !!prev && prev.classList.contains(CLASS_NAMES.MU_HIDE);
+    return true;
 }
 
 export function attachLinkMouseHandlers(muya: Muya): void {
@@ -93,6 +84,15 @@ export function attachLinkMouseHandlers(muya: Muya): void {
         const wrapper = findLinkWrapper(event.target);
         if (!wrapper || !isPopoverTarget(wrapper))
             return;
+
+        // `mouseover` bubbles when the pointer crosses descendants inside a
+        // title link (favicon -> text, emphasis -> text). The pointer never
+        // left the link, so do not restart the floating toolbar lifecycle.
+        if (event instanceof MouseEvent) {
+            const { relatedTarget } = event;
+            if (relatedTarget instanceof Node && wrapper.contains(relatedTarget))
+                return;
+        }
 
         const linkInfo = getLinkInfo(wrapper);
         if (!linkInfo)
@@ -130,7 +130,7 @@ export function attachLinkMouseHandlers(muya: Muya): void {
     };
 
     const clickHandler = (event: Event) => {
-        if (!(event.target instanceof HTMLElement))
+        if (!(event.target instanceof Element))
             return;
 
         // Suppress in-editor navigation for every real anchor variant. Place

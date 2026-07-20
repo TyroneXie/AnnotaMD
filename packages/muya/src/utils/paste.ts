@@ -126,6 +126,9 @@ export async function normalizePastedHTML(
         // `URL_REG.test(href)` so a non-URL link whose text happens to equal its
         // href (e.g. `<a href="foo">foo</a>`) survives instead of collapsing.
         if (typeof href === 'string' && URL_REG.test(href) && href === text) {
+            if (options.preserveBareUrlLinks)
+                continue;
+
             // Resolve empty string when `TIMEOUT` passed.
             const timer = new Promise((resolve) => {
                 setTimeout(() => {
@@ -137,7 +140,7 @@ export async function normalizePastedHTML(
             if (title) {
                 link.textContent = title as string;
             }
-            else if (!options.preserveBareUrlLinks) {
+            else {
                 // Escape + sanitize the fallback text (muyajs uses
                 // `sanitize(text, PREVIEW_DOMPURIFY_CONFIG, true)`) so a stray
                 // angle bracket can't re-enter as live markup.

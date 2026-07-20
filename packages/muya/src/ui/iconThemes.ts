@@ -410,8 +410,14 @@ const SVG_ICONS: Record<string, string[]> = {
     'more': ['M6 12h.01', 'M12 12h.01', 'M18 12h.01'],
 };
 
+const HEADING_NUMBER_ICONS = {
+    'heading-number-continue': OFFICIAL_ICON_THEMES.lucide.icons['heading-number-continue'],
+    'heading-number-restart': OFFICIAL_ICON_THEMES.lucide.icons['heading-number-restart'],
+    'heading-number-set': OFFICIAL_ICON_THEMES.lucide.icons['heading-number-set'],
+};
+
 for (const icons of [TABLER_ICONS, LUCIDE_ICONS, HEROICONS_ICONS, FEATHER_ICONS, SVG_ICONS])
-    Object.assign(icons, COMPLETE_MENU_ICONS);
+    Object.assign(icons, COMPLETE_MENU_ICONS, HEADING_NUMBER_ICONS);
 
 /* ========== Theme configs ========== */
 const ICON_THEMES: Record<IconThemeName, IconThemeConfig> = {
@@ -421,7 +427,7 @@ const ICON_THEMES: Record<IconThemeName, IconThemeConfig> = {
         strokeWidth: 1.5,
         strokeLinecap: 'square',
         strokeLinejoin: 'miter',
-        icons: { ...TABLER_ICONS, ...OFFICIAL_ICON_THEMES.tabler.icons },
+        icons: { ...TABLER_ICONS, ...OFFICIAL_ICON_THEMES.tabler.icons, ...HEADING_NUMBER_ICONS },
     },
     lucide: {
         label: 'Lucide',

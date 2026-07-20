@@ -1039,6 +1039,10 @@
     "unexpectedError": "Unexpected spellchecker error"
   },
   "editor": {
+    "blockConversion": {
+      "title": "Cannot convert selection",
+      "structuralSelection": "This selection includes a code block or another structural block. Select compatible text blocks and try again."
+    },
     "export": {
       "error": "Export error",
       "errorExporting": "Error exporting {type} file",

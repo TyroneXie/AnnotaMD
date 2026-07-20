@@ -1039,6 +1039,10 @@
     "unexpectedError": "意外的拼写检查器错误"
   },
   "editor": {
+    "blockConversion": {
+      "title": "无法转换所选内容",
+      "structuralSelection": "选区包含代码块或其他结构块，请只选择可转换的文字块后重试。"
+    },
     "insertTable": {
       "title": "插入表格",
       "rows": "行",

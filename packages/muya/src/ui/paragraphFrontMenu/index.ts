@@ -2,10 +2,10 @@ import type { VNode } from 'snabbdom';
 import type Content from '../../block/base/content';
 import type Format from '../../block/base/format';
 import type Parent from '../../block/base/parent';
-import type AtxHeading from '../../block/commonMark/atxHeading';
 import type { Muya } from '../../index';
 import type {
     IBulletListState,
+    IHighlightBlockState,
     IOrderListState,
     ITaskListState,
     TState,
@@ -14,7 +14,11 @@ import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import type { ActionIconName } from '../actionIcons';
 import { replaceBlockByLabel, replaceTextContainerByLabel } from '../../block/blockTransforms';
 import { convertListItem, isListItemBlock, mergeAdjacentCompatibleLists } from '../../block/listItemTransforms';
-import { collectSelectedTextTargets, convertSelectedTextTargets } from '../../block/multiBlockTransforms';
+import {
+    collectSelectedTextTargets,
+    convertSelectedTextTargets,
+    hasUnsupportedCrossBlockSelection,
+} from '../../block/multiBlockTransforms';
 import { ScrollPage } from '../../block/scrollPage';
 import { BLOCK_DOM_PROPERTY, CLASS_NAMES } from '../../config';
 import emptyStates from '../../config/emptyStates';
@@ -156,7 +160,7 @@ export class ParagraphFrontMenu extends BaseFloat {
         const { eventCenter } = this.muya;
         super.listen();
 
-        eventCenter.subscribe('muya-front-menu', ({ reference, block, kind }) => {
+        eventCenter.subscribe('muya-front-menu', ({ reference, block, kind, focusMenu }) => {
             if (reference) {
                 this._block = block;
                 this._kind = kind === 'image' ? 'image' : null;
@@ -174,11 +178,22 @@ export class ParagraphFrontMenu extends BaseFloat {
                         });
                     }
                     this.show(reference);
+                    if (focusMenu) {
+                        requestAnimationFrame(() => {
+                            const active = this.container?.querySelector<HTMLButtonElement>(
+                                'button.turn-into-item.active',
+                            );
+                            const first = this.container?.querySelector<HTMLButtonElement>(
+                                'button.turn-into-item',
+                            );
+                            (active ?? first)?.focus();
+                        });
+                    }
                 }, 0);
             }
         });
 
-        const enterLeaveHandler = () => {
+        const closeMenu = () => {
             this._hideTypeTooltip();
             this.hide();
             this._block = null;
@@ -186,10 +201,59 @@ export class ParagraphFrontMenu extends BaseFloat {
             this._pendingSectionDelete = null;
         };
 
+        const enterLeaveHandler = () => {
+            requestAnimationFrame(() => {
+                if (container?.contains(document.activeElement))
+                    return;
+                closeMenu();
+            });
+        };
+
         eventCenter.attachDOMEvent(container!, 'mouseleave', enterLeaveHandler);
+        eventCenter.attachDOMEvent(container!, 'focusout', enterLeaveHandler);
+        eventCenter.attachDOMEvent(container!, 'keydown', (event: Event) => {
+            if (event instanceof KeyboardEvent && event.key === 'Escape')
+                closeMenu();
+        });
     }
 
-    private _renderSubMenu(subMenu: IQuickInsertMenuItem['children']) {
+    private _isActiveType(block: Parent, label: string): boolean {
+        const activeBlock = isListItemBlock(block) ? block.parent : block;
+        if (!activeBlock)
+            return false;
+        const state = activeBlock.getState();
+        if (isAtxHeadingState(state))
+            return label === `atx-heading ${state.meta.level}`;
+        return label === activeBlock.blockName;
+    }
+
+    private _focusAdjacentType(event: KeyboardEvent): void {
+        const columns = 7;
+        const deltas: Partial<Record<string, number>> = {
+            ArrowLeft: -1,
+            ArrowRight: 1,
+            ArrowUp: -columns,
+            ArrowDown: columns,
+        };
+        const delta = deltas[event.key];
+        if (!delta || !(event.currentTarget instanceof HTMLButtonElement))
+            return;
+
+        const buttons = Array.from(
+            this.container?.querySelectorAll<HTMLButtonElement>('button.turn-into-item') ?? [],
+        );
+        const index = buttons.indexOf(event.currentTarget);
+        if (index < 0)
+            return;
+
+        event.preventDefault();
+        buttons[(index + delta + buttons.length) % buttons.length]?.focus();
+    }
+
+    private _renderSubMenu(
+        subMenu: IQuickInsertMenuItem['children'],
+        conversionBlocked: boolean,
+    ) {
         const { _block: block } = this;
         const { i18n } = this.muya;
         const children = subMenu.map((menuItem) => {
@@ -211,27 +275,34 @@ export class ParagraphFrontMenu extends BaseFloat {
                 renderIcon(menuItem),
             );
 
-            let itemSelector = `div.turn-into-item.${label}`;
-            const activeBlockName = isListItemBlock(block!) ? block?.parent?.blockName : block?.blockName;
-            if (activeBlockName === 'atx-heading') {
-                if (
-                    label.startsWith(activeBlockName)
-                    && label.endsWith(String((block as AtxHeading).meta.level))
-                ) {
-                    itemSelector += '.active';
-                }
-            }
-            else if (label === activeBlockName) {
+            const normalizedLabel = label.replace(/\s+/g, '-');
+            const baseLabel = label.split(' ')[0];
+            const labelClasses = baseLabel === normalizedLabel
+                ? normalizedLabel
+                : `${baseLabel}.${normalizedLabel}`;
+            const isActive = this._isActiveType(block!, label);
+            let itemSelector = `button.turn-into-item.${labelClasses}`;
+            if (isActive)
                 itemSelector += '.active';
-            }
+            if (conversionBlocked)
+                itemSelector += '.blocked';
 
             return h(
                 itemSelector,
                 {
+                    attrs: {
+                        type: 'button',
+                        'aria-label': tooltip,
+                        'aria-pressed': String(isActive),
+                        'aria-disabled': String(isActive || conversionBlocked),
+                    },
                     on: {
                         click: (event) => {
+                            if (isActive)
+                                return;
                             this.selectItem(event, { label });
                         },
+                        keydown: event => this._focusAdjacentType(event),
                     },
                 },
                 [iconWrapper],
@@ -309,8 +380,19 @@ export class ParagraphFrontMenu extends BaseFloat {
             children.push(h(
                 itemSelector,
                 {
+                    attrs: {
+                        role: 'button',
+                        tabindex: '0',
+                        'aria-label': i18n.t(item.text),
+                    },
                     on: {
                         click: event => this.selectItem(event, { label: item.label }),
+                        keydown: (event: KeyboardEvent) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                this.selectItem(event, { label: item.label });
+                            }
+                        },
                     },
                 },
                 [
@@ -355,6 +437,9 @@ export class ParagraphFrontMenu extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
+                        role: 'button',
+                        tabindex: isDisabled ? '-1' : '0',
+                        'aria-label': i18n.t(actionText),
                         'aria-disabled': String(isDisabled),
                     },
                     on: {
@@ -362,6 +447,12 @@ export class ParagraphFrontMenu extends BaseFloat {
                             if (isDisabled)
                                 return;
                             this.selectItem(event, { label });
+                        },
+                        keydown: (event: KeyboardEvent) => {
+                            if (!isDisabled && (event.key === 'Enter' || event.key === ' ')) {
+                                event.preventDefault();
+                                this.selectItem(event, { label });
+                            }
                         },
                     },
                 },
@@ -374,9 +465,10 @@ export class ParagraphFrontMenu extends BaseFloat {
 
         const subMenu = this._kind === 'image' ? [] : canTurnIntoMenu(block!);
         if (subMenu.length) {
+            const conversionBlocked = hasUnsupportedCrossBlockSelection(this.muya);
             const line = h('li.divider');
             children.unshift(line);
-            children.unshift(this._renderSubMenu(subMenu));
+            children.unshift(this._renderSubMenu(subMenu, conversionBlocked));
         }
 
         const vnode = h('ul', children);
@@ -406,6 +498,14 @@ export class ParagraphFrontMenu extends BaseFloat {
         const block = this._block;
         if (!block?.parent)
             return;
+        if (!isMetaAction && this._isActiveType(block, label))
+            return;
+        if (!isMetaAction && hasUnsupportedCrossBlockSelection(this.muya)) {
+            this.muya.eventCenter.emit('block-conversion-blocked', {
+                reason: 'structural-selection',
+            });
+            return;
+        }
 
         if (label === 'delete-section' && this._pendingSectionDelete !== block) {
             this._pendingSectionDelete = block;
@@ -961,6 +1061,19 @@ export class ParagraphFrontMenu extends BaseFloat {
             case 'code-block': {
                 if (label === 'code-block')
                     return null;
+                if (label === 'highlight-block') {
+                    const highlightState: IHighlightBlockState = {
+                        name: 'highlight-block',
+                        meta: { collapsed: false },
+                        children: [deepClone(oldState)],
+                    };
+                    this._convertedBlock = ScrollPage.loadBlock('highlight-block').create(
+                        muya,
+                        highlightState,
+                    );
+                    block.replaceWith(this._convertedBlock);
+                    return this._convertedBlock.firstContentInDescendant();
+                }
                 const text = 'text' in oldState ? oldState.text : '';
                 this._convertedBlock = replaceBlockByLabel({ block, label, muya, text });
                 return this._convertedBlock?.firstContentInDescendant() ?? null;

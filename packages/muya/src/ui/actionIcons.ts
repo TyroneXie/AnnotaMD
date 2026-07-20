@@ -17,6 +17,7 @@ export const ACTION_ICON_NAMES = [
     'ordered-list', 'bullet-list', 'task-list', 'chart', 'mermaid',
     'plantuml', 'flowchart', 'sequence', 'footnote',
     'copy-plain-text', 'copy-markdown', 'duplicate', 'cut', 'promote', 'demote',
+    'heading-number-continue', 'heading-number-restart', 'heading-number-set',
 ] as const;
 
 export type ActionIconName = typeof ACTION_ICON_NAMES[number];

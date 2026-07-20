@@ -6,6 +6,7 @@ import type { TState } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import CodeBlockContent from '../block/content/codeBlockContent';
+import type Format from '../block/base/format';
 import LangInputContent from '../block/content/langInputContent';
 import { ScrollPage } from '../block/scrollPage';
 import { URL_REG } from '../config';
@@ -13,7 +14,7 @@ import { tokenizer } from '../inlineRenderer/lexer';
 import HtmlToMarkdown from '../state/htmlToMarkdown';
 import { MarkdownToState } from '../state/markdownToState';
 import { isAnyListState, isParagraphState } from '../state/types';
-import { getClipboardImageFile, getCopyTextType, isStandaloneTableHtml, normalizePastedHTML } from '../utils/paste';
+import { getClipboardImageFile, getCopyTextType, getPageTitle, isStandaloneTableHtml, normalizePastedHTML } from '../utils/paste';
 import { mergePasteIntoHeading } from './mergePasteIntoHeading';
 import { tryPasteImage, tryReplaceSelectedImage } from './pasteImage';
 import { PasteType } from './types';
@@ -105,32 +106,100 @@ function isSinglePlainUrl(text: string): boolean {
     return URL_REG.test(text) && !/\s/.test(text);
 }
 
-function canPlainUrlFallbackAutoLink(
-    text: string,
-    content: string,
-    start: { offset: number },
-    end: { offset: number },
-): boolean {
-    const candidate
-        = content.substring(0, start.offset)
-            + text
-            + content.substring(end.offset);
+const AUTO_TITLE_TIMEOUT_MS = 8000;
 
-    return tokenizer(candidate, { hasBeginRules: false }).some(token =>
-        token.type === 'auto_link_extension'
-        && token.linkType === 'url'
-        && token.range.start === start.offset
-        && token.range.end === start.offset + text.length,
+function getStandalonePastedUrl(text: string, html: string): string {
+    const plainText = text.trim();
+    if (isSinglePlainUrl(plainText))
+        return plainText;
+    if (!html)
+        return '';
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    const links = wrapper.querySelectorAll<HTMLAnchorElement>('a[href]');
+    if (links.length !== 1)
+        return '';
+
+    const link = links[0];
+    const href = link.getAttribute('href')?.trim() ?? '';
+    const onlyLinkText = wrapper.textContent?.trim() === link.textContent?.trim();
+    return onlyLinkText && isSinglePlainUrl(href) ? href : '';
+}
+
+function getStandaloneLink(block: Format, href: string) {
+    return tokenizer(block.text, {
+        hasBeginRules: false,
+        options: block.muya.options,
+    }).find(token =>
+        token.type === 'link'
+        && token.href === href
+        && block.text.trim() === token.raw.trim(),
     );
 }
 
-function shouldPreserveBareUrlLinkForPaste(
-    text: string,
-    content: string,
-    start: { offset: number },
-    end: { offset: number },
-): boolean {
-    return isSinglePlainUrl(text) && !canPlainUrlFallbackAutoLink(text, content, start, end);
+function escapeLinkLabel(value: string): string {
+    return value.replace(/\s+/g, ' ').trim().replace(/([\\\[\]])/g, '\\$1');
+}
+
+async function resolveLinkMetadata(muya: Muya, href: string): Promise<{ title: string; icon: string }> {
+    const hostMetadata = await muya.options.resolveLinkMetadata?.(href);
+    if (hostMetadata?.title)
+        return { title: hostMetadata.title, icon: hostMetadata.icon ?? '' };
+
+    return { title: await getPageTitle(href), icon: '' };
+}
+
+async function autoTitleStandaloneLink(muya: Muya, blockPath: number[], href: string): Promise<void> {
+    const initialBlock = muya.editor.scrollPage?.queryBlock([...blockPath]);
+    if (!initialBlock?.isContent())
+        return;
+    const block = initialBlock as Format;
+    const link = getStandaloneLink(block, href);
+    if (!link || link.type !== 'link')
+        return;
+
+    block.setLinkLoading(link.range, href, true);
+    const timeout = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), AUTO_TITLE_TIMEOUT_MS);
+    });
+    let metadata: { title: string; icon: string } | null = null;
+    try {
+        metadata = await Promise.race([resolveLinkMetadata(muya, href), timeout]);
+    }
+    catch {
+        metadata = null;
+    }
+
+    const resolved = muya.editor.scrollPage?.queryBlock([...blockPath]);
+    if (!resolved?.isContent())
+        return;
+    const target = resolved as Format;
+    const liveLink = getStandaloneLink(target, href);
+    if (!liveLink || liveLink.type !== 'link')
+        return;
+
+    if (!metadata?.title) {
+        target.setLinkLoading(liveLink.range, href, false);
+        return;
+    }
+
+    const title = escapeLinkLabel(metadata.title);
+    if (!title) {
+        target.setLinkLoading(liveLink.range, href, false);
+        return;
+    }
+
+    const nextRaw = `[${title}](${href})`;
+    target.text = `${target.text.slice(0, liveLink.range.start)}${nextRaw}${target.text.slice(liveLink.range.end)}`;
+    target.setLinkView(
+        { start: liveLink.range.start, end: liveLink.range.start + nextRaw.length },
+        href,
+        false,
+        metadata.icon,
+    );
+    muya.flush?.();
+    muya.eventCenter.emit('content-change', { block: target });
 }
 
 function seatCursorAtSeam(last: Nullable<Parent>, offset: number): void {
@@ -607,11 +676,10 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
 
     const { imageFile, pasteType } = data;
     let { html } = data;
-    // Preserve source provenance before synthetic URL/table HTML promotion.
-    const hasClipboardHtml = html !== '';
     // Normalize Windows CRLF / lone CR to LF so every downstream `split('\n')`
     // and offset calculation sees one newline convention (muyajs strips \r).
     const text = data.text.replace(/\r\n?/g, '\n');
+    const standaloneUrl = getStandalonePastedUrl(text, html);
 
     if (!isSelectionInSameBlock) {
         clipboard.cutHandler();
@@ -636,18 +704,9 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
     if (!html && isStandaloneTableHtml(text))
         html = text;
 
-    const cursorBeforeNormalize = anchorBlock.getCursor();
-
     // Remove crap from HTML such as meta data and styles.
     html = await normalizePastedHTML(html, {
-        preserveBareUrlLinks: hasClipboardHtml
-            && cursorBeforeNormalize != null
-            && shouldPreserveBareUrlLinkForPaste(
-                text,
-                anchorBlock.text,
-                cursorBeforeNormalize.start,
-                cursorBeforeNormalize.end,
-            ),
+        preserveBareUrlLinks: isSinglePlainUrl(text),
     });
     const copyType = getCopyTextType(html, text, pasteType);
 
@@ -662,7 +721,13 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
         end,
         content,
     };
-
+    const autoTitleBlockPath
+        = standaloneUrl
+            && start.offset === end.offset
+            && content.trim() === ''
+            && Array.isArray(anchorBlock.path)
+            ? [...anchorBlock.path]
+            : null;
     if (/html|text/.test(copyType)) {
         const markdown
             = copyType === 'html' && anchorBlock.blockName !== 'codeblock.content'
@@ -681,8 +746,11 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
 
         if (isLiteralAnchor || isPlainInlineSpaces)
             applyLiteralPaste(clipboard, ctx, isPlainInlineSpaces ? text : markdown);
-        else
+        else {
             applyParsedPaste(clipboard, ctx, markdown);
+            if (autoTitleBlockPath)
+                void autoTitleStandaloneLink(muya, autoTitleBlockPath, standaloneUrl);
+        }
     }
     else if (pasteType === PasteType.PASTE_AS_PLAIN_TEXT) {
         // Paste as Plain Text inserts block-level HTML as literal text, not a

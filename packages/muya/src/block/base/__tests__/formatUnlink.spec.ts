@@ -92,3 +92,13 @@ describe('format.unlink — replaces link source with visible anchor', () => {
         expect(emit).not.toHaveBeenCalled();
     });
 });
+
+describe('format smart links — detached block safety', () => {
+    it('does not read the path after the block has been removed from its parent', () => {
+        const detached = Object.create(Format.prototype) as Format;
+        Object.defineProperty(detached, 'parent', { value: null, configurable: true });
+
+        expect(detached.isLinkView({ start: 0, end: 10 }, 'https://example.com')).toBe(false);
+        expect(detached.getLinkIcon({ start: 0, end: 10 }, 'https://example.com')).toBe('');
+    });
+});

@@ -1,5 +1,10 @@
 import type { TState } from './state/types';
 
+export interface ILinkPreviewMetadata {
+    title: string;
+    icon?: string;
+}
+
 export interface IMuyaOptions {
     fontSize: number;
     lineHeight: number;
@@ -66,6 +71,8 @@ export interface IMuyaOptions {
     clipboardText?: () => Promise<string>;
     /** Write plain text to the host OS clipboard. */
     clipboardWriteText?: (text: string) => void | Promise<void>;
+    /** Resolve HTTP(S) link-preview metadata through the embedding host. */
+    resolveLinkMetadata?: (url: string) => Promise<ILinkPreviewMetadata>;
     /** Write a rendered image data URL to the host OS clipboard. */
     clipboardWriteImage?: (dataUrl: string) => void | Promise<void>;
     /**

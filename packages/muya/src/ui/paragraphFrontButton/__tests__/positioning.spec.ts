@@ -79,6 +79,34 @@ describe('paragraph front button positioning', () => {
         expect(document.querySelectorAll('.mu-front-button-wrapper')).toHaveLength(1);
     });
 
+    it('exposes the block-menu trigger to keyboard users', () => {
+        window.MUYA_VERSION = 'test';
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const muya = new Muya(host, { markdown: 'keyboard block\n' });
+        muya.init();
+        const block = muya.editor.scrollPage!.firstChild as Parent;
+        const opened = vi.fn();
+        muya.on('muya-front-menu', opened);
+        const button = new ParagraphFrontButton(muya);
+        buttons.push(button);
+
+        Object.assign(button as unknown as { _block: Parent }, { _block: block });
+        button.render();
+        const trigger = document.querySelector<HTMLElement>(
+            '.mu-front-button-wrapper:last-of-type .mu-icon-wrapper',
+        )!;
+
+        expect(trigger.getAttribute('role')).toBe('button');
+        expect(trigger.getAttribute('tabindex')).toBe('0');
+        expect(trigger.getAttribute('aria-label')).toBeTruthy();
+        trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(opened).toHaveBeenCalledWith(expect.objectContaining({
+            block,
+            focusMenu: true,
+        }));
+    });
+
     it('targets the hovered list item instead of the whole list container', () => {
         window.MUYA_VERSION = 'test';
         const host = document.createElement('div');
