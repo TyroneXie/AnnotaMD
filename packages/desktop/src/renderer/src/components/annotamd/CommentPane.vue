@@ -33,14 +33,22 @@
 
     <section
       ref="commentList"
-      class="annotamd-comment-list"
-      :class="{ anchored: anchoredLayoutEnabled }"
+      class="annotamd-comment-list annotamd-auto-hide-scrollbar"
+      :class="{
+        anchored: anchoredLayoutEnabled,
+        'annotamd-scrollbar-visible': scrollbarVisible
+      }"
       :style="{ '--annotamd-comment-stage-height': `${commentStageHeight}px` }"
       :aria-label="t('annotamd.comments.listLabel')"
+      @scroll.passive="handleCommentListScroll"
+      @wheel.passive="revealScrollbar"
+      @pointerdown="handleScrollbarPointerDown"
     >
       <article
         v-if="composerOpen"
+        :data-comment-id="ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID"
         class="annotamd-comment-card annotamd-composer-card active"
+        :style="commentCardStyle(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID)"
       >
         <div class="annotamd-comment-row">
           <span class="annotamd-comment-scope">{{ t('annotamd.comments.selectionScope') }}</span>
@@ -83,16 +91,43 @@
         class="annotamd-comment-card"
         :class="{
           resolved: comment.resolved,
-          emphasized: activeCommentId === comment.id
+          emphasized: activeCommentId === comment.id || selectedCommentId === comment.id,
+          selected: selectedCommentId === comment.id,
+          compact: !isCommentExpanded(comment)
         }"
         :style="commentCardStyle(comment.id)"
         @mouseenter="commentStore.setActiveComment(comment.id)"
         @mouseleave="clearActiveComment(comment.id)"
-        @click="commentStore.setActiveComment(comment.id)"
+        @click="selectComment(comment.id)"
       >
         <div class="annotamd-comment-row">
           <span class="annotamd-comment-scope">{{ t('annotamd.comments.selectionScope') }}</span>
           <div class="annotamd-comment-card-actions">
+            <div
+              v-if="selectedCommentId === comment.id"
+              class="annotamd-comment-navigation"
+            >
+              <button
+                class="annotamd-comment-next"
+                type="button"
+                :title="t('annotamd.comments.nextComment')"
+                :aria-label="t('annotamd.comments.nextComment')"
+                :disabled="!canNavigateComment(comment.id, 1)"
+                @click.stop="navigateComment(comment.id, 1)"
+              >
+                <ArrowDown aria-hidden="true" />
+              </button>
+              <button
+                class="annotamd-comment-previous"
+                type="button"
+                :title="t('annotamd.comments.previousComment')"
+                :aria-label="t('annotamd.comments.previousComment')"
+                :disabled="!canNavigateComment(comment.id, -1)"
+                @click.stop="navigateComment(comment.id, -1)"
+              >
+                <ArrowUp aria-hidden="true" />
+              </button>
+            </div>
             <button
               v-if="!comment.resolved || (comment.anchor && comment.focus)"
               type="button"
@@ -105,32 +140,109 @@
 
         <blockquote>{{ comment.quote }}</blockquote>
 
-        <textarea
-          v-if="editingId === comment.id"
-          v-model="editBody"
-          class="annotamd-inline-editor"
-          rows="3"
-        />
-        <p v-else>{{ comment.body }}</p>
+        <div
+          v-show="isCommentExpanded(comment) || !comment.replies.length"
+          class="annotamd-thread-message annotamd-root-message"
+        >
+          <span class="annotamd-message-author">{{ t('annotamd.comments.userAuthor') }}</span>
+          <textarea
+            v-if="editingId === comment.id"
+            v-model="editBody"
+            class="annotamd-inline-editor"
+            rows="3"
+          />
+          <p v-else>{{ comment.body }}</p>
+          <div class="annotamd-message-actions">
+            <template v-if="editingId === comment.id">
+              <button
+                type="button"
+                :disabled="!editBody.trim()"
+                @click="saveEdit(comment.id)"
+              >
+                {{ t('annotamd.comments.save') }}
+              </button>
+              <button type="button" @click="cancelEdit">
+                {{ t('annotamd.comments.cancel') }}
+              </button>
+            </template>
+            <template v-else>
+              <button type="button" @click="startCommentEdit(comment.id, comment.body)">
+                {{ t('annotamd.comments.edit') }}
+              </button>
+              <button type="button" @click="commentStore.deleteComment(filePath, comment.id)">
+                {{ t('annotamd.comments.delete') }}
+              </button>
+            </template>
+          </div>
+        </div>
 
         <div
           v-if="comment.replies.length"
           class="annotamd-replies"
         >
-          <p
+          <article
             v-for="reply in comment.replies"
             :key="reply.id"
+            v-show="isCommentExpanded(comment) || reply.id === latestReplyId(comment)"
+            :data-reply-id="reply.id"
+            class="annotamd-thread-message annotamd-reply-message"
+            :class="`author-${reply.author}`"
           >
-            <span
-              v-if="reply.author === 'agent'"
-              class="annotamd-reply-author"
-            >{{ t('annotamd.comments.agentAuthor') }}</span>
-            {{ reply.body }}
-          </p>
+            <span class="annotamd-message-author">
+              {{ t(reply.author === 'agent'
+                ? 'annotamd.comments.agentAuthor'
+                : 'annotamd.comments.userAuthor') }}
+            </span>
+            <textarea
+              v-if="editingReplyId === reply.id"
+              v-model="editReplyBody"
+              class="annotamd-inline-editor"
+              rows="3"
+            />
+            <p v-else>{{ reply.body }}</p>
+            <div
+              v-if="reply.author === 'user'"
+              class="annotamd-message-actions"
+            >
+              <template v-if="editingReplyId === reply.id">
+                <button
+                  type="button"
+                  :disabled="!editReplyBody.trim()"
+                  @click="saveReplyEdit(comment.id, reply.id)"
+                >
+                  {{ t('annotamd.comments.save') }}
+                </button>
+                <button type="button" @click="cancelReplyEdit">
+                  {{ t('annotamd.comments.cancel') }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  type="button"
+                  @click="startReplyEdit(reply.id, reply.body)"
+                >
+                  {{ t('annotamd.comments.edit') }}
+                </button>
+                <button type="button" @click="deleteReply(comment.id, reply.id)">
+                  {{ t('annotamd.comments.delete') }}
+                </button>
+              </template>
+            </div>
+          </article>
         </div>
 
+        <button
+          v-if="commentNeedsCollapse(comment) && !isCommentExpanded(comment)"
+          class="annotamd-thread-toggle"
+          type="button"
+          :aria-expanded="false"
+          @click.stop="toggleCommentExpanded(comment)"
+        >
+          {{ t('annotamd.comments.expandThread', { count: commentMessageCount(comment) }) }}
+        </button>
+
         <div
-          v-if="replyingId === comment.id"
+          v-if="isCommentExpanded(comment) && replyingId === comment.id"
           class="annotamd-reply-editor"
         >
           <textarea
@@ -147,33 +259,25 @@
           </button>
         </div>
 
-        <div class="annotamd-comment-action-row">
+        <div
+          v-if="isCommentExpanded(comment)"
+          class="annotamd-comment-action-row"
+        >
           <button
-            v-if="editingId === comment.id"
-            type="button"
-            :disabled="!editBody.trim()"
-            @click="saveEdit(comment.id)"
-          >
-            {{ t('annotamd.comments.save') }}
-          </button>
-          <button
-            v-else
-            type="button"
-            @click="startEdit(comment.id, comment.body)"
-          >
-            {{ t('annotamd.comments.edit') }}
-          </button>
-          <button
+            class="annotamd-reply-action"
             type="button"
             @click="startReply(comment.id)"
           >
             {{ t('annotamd.comments.reply') }}
           </button>
           <button
+            v-if="commentNeedsCollapse(comment)"
+            class="annotamd-thread-toggle"
             type="button"
-            @click="commentStore.deleteComment(filePath, comment.id)"
+            :aria-expanded="true"
+            @click.stop="toggleCommentExpanded(comment)"
           >
-            {{ t('annotamd.comments.delete') }}
+            {{ t('annotamd.comments.collapseThread') }}
           </button>
         </div>
       </article>
@@ -194,15 +298,26 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
-import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import {
+  useAnnotaMDCommentsStore,
+  type AnnotaMDComment
+} from '@/store/annotamdComments'
 import bus from '@/bus'
 import {
+  isCommentAnchorVisible,
   layoutCommentBubbles,
   type CommentBubbleLayout
 } from '@/util/commentBubbleLayout'
-import type { CommentAnchorRect } from '@/util/annotamdCommentHighlights'
+import {
+  ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
+  type CommentAnchorRect
+} from '@/util/annotamdCommentHighlights'
 import { useI18n } from 'vue-i18n'
 import type { AnnotaMDMcpStatus } from '@shared/types/comments'
+import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
+import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
+
+const COMMENT_ANCHOR_VIEWPORT_RATIO = 0.28
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
@@ -220,23 +335,43 @@ const composerOpen = ref(false)
 const draftBody = ref('')
 const editingId = ref<string | null>(null)
 const editBody = ref('')
+const editingReplyId = ref<string | null>(null)
+const editReplyBody = ref('')
 const replyingId = ref<string | null>(null)
 const replyBody = ref('')
+const selectedCommentId = ref<string | null>(null)
+const collapsedCommentId = ref<string | null>(null)
 const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
+const hiddenCommentCardIds = ref<Set<string>>(new Set())
+const sharedScrollHeight = ref(0)
 let commentResizeObserver: ResizeObserver | null = null
 let commentLayoutFrame: number | null = null
 let commentLayoutDisposed = false
+let sharedEditorScroller: HTMLElement | null = null
+let syncingFromEditor = false
 const commentCardHeights = new Map<string, number>()
 const observedCommentCards = new Map<string, HTMLElement>()
 let stopMcpStatusListener: (() => void) | null = null
 const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clients: [] })
+const {
+  scrollbarVisible,
+  revealScrollbar,
+  handleScrollbarPointerDown
+} = useAutoHideScrollbar()
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
 const selectionComments = computed(() => comments.value.filter((comment) => comment.scope === 'selection'))
+const orderedAnchoredCommentIds = computed(() => {
+  const selectionIds = new Set(selectionComments.value.map((comment) => comment.id))
+  return commentAnchors.value
+    .filter((anchor) => selectionIds.has(anchor.id))
+    .sort((first, second) => first.top - second.top)
+    .map((anchor) => anchor.id)
+})
 const mcpStatusClass = computed(() => ({
   disabled: !mcpStatus.value.enabled,
   error: mcpStatus.value.enabled && !mcpStatus.value.running,
@@ -248,15 +383,42 @@ const mcpStatusTitle = computed(() => {
   return t('annotamd.comments.mcpEnabled')
 })
 const anchoredLayoutEnabled = computed(() =>
-  !composerOpen.value && Object.keys(commentLayout.value.positions).length > 0
+  Object.keys(commentLayout.value.positions).length > 0 || hiddenCommentCardIds.value.size > 0
 )
-const commentStageHeight = computed(() => commentLayout.value.height)
+const commentStageHeight = computed(() => (
+  Math.max(sharedScrollHeight.value, commentLayout.value.height)
+))
 
 const commentCardStyle = (commentId: string): Record<string, string> => {
+  if (hiddenCommentCardIds.value.has(commentId)) {
+    return { visibility: 'hidden', pointerEvents: 'none' }
+  }
   if (!anchoredLayoutEnabled.value) return {}
   const top = commentLayout.value.positions[commentId]
   return Number.isFinite(top) ? { top: `${top}px` } : {}
 }
+
+const commentMessageCount = (comment: AnnotaMDComment): number => 1 + comment.replies.length
+
+const latestReplyId = (comment: AnnotaMDComment): string | null => (
+  comment.replies.at(-1)?.id ?? null
+)
+
+const commentHasActiveInteraction = (comment: AnnotaMDComment): boolean => (
+  editingId.value === comment.id ||
+  replyingId.value === comment.id ||
+  comment.replies.some((reply) => editingReplyId.value === reply.id)
+)
+
+const isCommentExpanded = (comment: AnnotaMDComment): boolean => (
+  commentHasActiveInteraction(comment) ||
+  (selectedCommentId.value === comment.id && collapsedCommentId.value !== comment.id)
+)
+
+const commentNeedsCollapse = (comment: AnnotaMDComment): boolean => (
+  commentMessageCount(comment) > 1 ||
+  comment.body.length + comment.replies.reduce((total, reply) => total + reply.body.length, 0) > 180
+)
 
 const syncObservedCommentCards = (list: HTMLElement): void => {
   const currentIds = new Set<string>()
@@ -281,20 +443,36 @@ const syncObservedCommentCards = (list: HTMLElement): void => {
 
 const recalculateCommentBubbleLayout = (): void => {
   const list = commentList.value
-  if (!list || composerOpen.value) return
+  if (!list) return
 
   syncObservedCommentCards(list)
   const listRect = list.getBoundingClientRect()
   const anchorById = new Map(commentAnchors.value.map((anchor) => [anchor.id, anchor]))
-  const bubbles = selectionComments.value.map((comment) => {
+  const hiddenIds = new Set<string>()
+  const bubbles = selectionComments.value.flatMap((comment) => {
     const anchor = anchorById.get(comment.id)
-    return {
+    return [{
       id: comment.id,
-      anchorTop: anchor ? anchor.top - listRect.top + list.scrollTop : null,
+      anchorTop: anchor ? list.scrollTop + anchor.top - listRect.top : null,
       height: commentCardHeights.get(comment.id) ?? 120
-    }
+    }]
   })
-  commentLayout.value = layoutCommentBubbles(bubbles, 0, list.clientHeight)
+  if (composerOpen.value) {
+    const anchor = anchorById.get(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID)
+    bubbles.push({
+      id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
+      anchorTop: anchor ? list.scrollTop + anchor.top - listRect.top : null,
+      height: commentCardHeights.get(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID) ?? 220
+    })
+  }
+  hiddenCommentCardIds.value = hiddenIds
+  commentLayout.value = layoutCommentBubbles(
+    bubbles,
+    list.scrollTop,
+    Math.max(sharedScrollHeight.value, list.clientHeight),
+    12,
+    selectedCommentId.value
+  )
 }
 
 const updateCommentBubbleLayout = (): void => {
@@ -313,7 +491,113 @@ const handleCommentAnchors = (payload: unknown): void => {
 }
 
 const clearActiveComment = (commentId: string): void => {
-  if (activeCommentId.value === commentId) commentStore.setActiveComment(null)
+  if (activeCommentId.value === commentId) {
+    commentStore.setActiveComment(selectedCommentId.value)
+  }
+}
+
+const scrollCommentAnchorIntoView = (
+  commentId: string,
+  forcePosition = false
+): void => {
+  if (!sharedEditorScroller) return
+  const anchor = commentAnchors.value.find((item) => item.id === commentId)
+  if (!anchor) return
+  const viewport = sharedEditorScroller.getBoundingClientRect()
+  if (!forcePosition && isCommentAnchorVisible(
+    anchor.top,
+    anchor.bottom,
+    viewport.top,
+    viewport.bottom
+  )) return
+
+  const targetTop = viewport.top + viewport.height * COMMENT_ANCHOR_VIEWPORT_RATIO
+  sharedEditorScroller.scrollTo({
+    top: Math.max(0, sharedEditorScroller.scrollTop + anchor.top - targetTop),
+    behavior: 'smooth'
+  })
+}
+
+const selectComment = async(
+  commentId: string,
+  forceAnchorPosition = false
+): Promise<void> => {
+  selectedCommentId.value = commentId
+  collapsedCommentId.value = null
+  commentStore.setActiveComment(commentId)
+  await nextTick()
+  recalculateCommentBubbleLayout()
+  await nextTick()
+  scrollCommentAnchorIntoView(commentId, forceAnchorPosition)
+}
+
+const toggleCommentExpanded = (comment: AnnotaMDComment): void => {
+  if (commentHasActiveInteraction(comment)) return
+  if (isCommentExpanded(comment)) {
+    collapsedCommentId.value = comment.id
+  } else {
+    selectedCommentId.value = comment.id
+    collapsedCommentId.value = null
+    commentStore.setActiveComment(comment.id)
+  }
+}
+
+const canNavigateComment = (commentId: string, offset: -1 | 1): boolean => {
+  const index = orderedAnchoredCommentIds.value.indexOf(commentId)
+  const targetIndex = index + offset
+  return index >= 0 && targetIndex >= 0 && targetIndex < orderedAnchoredCommentIds.value.length
+}
+
+const navigateComment = (commentId: string, offset: -1 | 1): void => {
+  const index = orderedAnchoredCommentIds.value.indexOf(commentId)
+  const targetId = orderedAnchoredCommentIds.value[index + offset]
+  if (targetId) void selectComment(targetId, true)
+}
+
+const syncSharedScrollFromEditor = (): void => {
+  const list = commentList.value
+  if (!list || !sharedEditorScroller) return
+  sharedScrollHeight.value = sharedEditorScroller.scrollHeight
+  const editorMaxScrollTop = Math.max(
+    0,
+    sharedEditorScroller.scrollHeight - sharedEditorScroller.clientHeight
+  )
+  if (sharedEditorScroller.scrollTop >= editorMaxScrollTop - 1 &&
+    list.scrollTop > editorMaxScrollTop) return
+  if (Math.abs(list.scrollTop - sharedEditorScroller.scrollTop) < 1) return
+  syncingFromEditor = true
+  list.scrollTop = sharedEditorScroller.scrollTop
+}
+
+const bindSharedEditorScroller = (): void => {
+  const next = document.querySelector<HTMLElement>('.editor-component')
+  if (next === sharedEditorScroller) {
+    syncSharedScrollFromEditor()
+    return
+  }
+  sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
+  sharedEditorScroller = next
+  sharedEditorScroller?.addEventListener('scroll', syncSharedScrollFromEditor, { passive: true })
+  syncSharedScrollFromEditor()
+}
+
+const handleCommentListScroll = (): void => {
+  const list = commentList.value
+  if (!list || !sharedEditorScroller) return
+  revealScrollbar()
+  if (syncingFromEditor && Math.abs(list.scrollTop - sharedEditorScroller.scrollTop) < 1) {
+    syncingFromEditor = false
+  } else {
+    const editorMaxScrollTop = Math.max(
+      0,
+      sharedEditorScroller.scrollHeight - sharedEditorScroller.clientHeight
+    )
+    const editorScrollTop = Math.min(list.scrollTop, editorMaxScrollTop)
+    if (Math.abs(sharedEditorScroller.scrollTop - editorScrollTop) >= 1) {
+      sharedEditorScroller.scrollTop = editorScrollTop
+    }
+  }
+  updateCommentBubbleLayout()
 }
 
 const openAgentSettings = (): void => {
@@ -323,7 +607,8 @@ const openAgentSettings = (): void => {
 const openComposer = (): void => {
   composerOpen.value = true
   nextTick(() => {
-    composerTextarea.value?.focus()
+    composerTextarea.value?.focus({ preventScroll: true })
+    scrollCommentAnchorIntoView(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID)
   })
 }
 
@@ -337,21 +622,58 @@ const submitComment = (): void => {
   if (!filePath.value || !draftBody.value.trim()) return
 
   if (activeSelection.value) {
+    const previousIds = new Set(selectionComments.value.map((comment) => comment.id))
     commentStore.addSelectionComment(filePath.value, draftBody.value)
+    const addedComment = selectionComments.value.find((comment) => !previousIds.has(comment.id))
+    if (addedComment) {
+      selectedCommentId.value = addedComment.id
+      collapsedCommentId.value = null
+      commentStore.setActiveComment(addedComment.id)
+    }
   }
   closeComposer()
-}
-
-const startEdit = (id: string, body: string): void => {
-  editingId.value = id
-  editBody.value = body
 }
 
 const saveEdit = (id: string): void => {
   if (!filePath.value) return
   commentStore.updateComment(filePath.value, id, editBody.value)
+  cancelEdit()
+}
+
+const cancelEdit = (): void => {
   editingId.value = null
   editBody.value = ''
+}
+
+const startCommentEdit = (commentId: string, body: string): void => {
+  cancelEdit()
+  cancelReplyEdit()
+  editingId.value = commentId
+  editBody.value = body
+}
+
+const startReplyEdit = (replyId: string, body: string): void => {
+  cancelEdit()
+  cancelReplyEdit()
+  editingReplyId.value = replyId
+  editReplyBody.value = body
+}
+
+const saveReplyEdit = (commentId: string, replyId: string): void => {
+  if (!filePath.value) return
+  commentStore.updateReply(filePath.value, commentId, replyId, editReplyBody.value)
+  cancelReplyEdit()
+}
+
+const cancelReplyEdit = (): void => {
+  editingReplyId.value = null
+  editReplyBody.value = ''
+}
+
+const deleteReply = (commentId: string, replyId: string): void => {
+  if (!filePath.value) return
+  if (editingReplyId.value === replyId) cancelReplyEdit()
+  commentStore.deleteReply(filePath.value, commentId, replyId)
 }
 
 const startReply = (id: string): void => {
@@ -369,13 +691,7 @@ const saveReply = (id: string): void => {
 const focusCommentCard = async (commentId: string): Promise<void> => {
   composerOpen.value = false
   draftBody.value = ''
-  commentStore.setActiveComment(commentId)
-  await nextTick()
-  recalculateCommentBubbleLayout()
-  await nextTick()
-  const card = [...(commentList.value?.querySelectorAll<HTMLElement>('[data-comment-id]') ?? [])]
-    .find((element) => element.dataset.commentId === commentId)
-  card?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  await selectComment(commentId)
   commentStore.clearCommentFocusRequest()
 }
 
@@ -391,18 +707,41 @@ watch(commentFocusRequest, (request) => {
 }, { immediate: true })
 
 watch(
-  [selectionComments, editingId, replyingId, composerOpen],
+  [
+    selectionComments,
+    editingId,
+    editingReplyId,
+    replyingId,
+    composerOpen,
+    selectedCommentId,
+    collapsedCommentId
+  ],
   updateCommentBubbleLayout,
   { deep: true }
 )
 
+watch(selectionComments, (nextComments) => {
+  if (selectedCommentId.value && !nextComments.some(
+    (comment) => comment.id === selectedCommentId.value
+  )) {
+    selectedCommentId.value = null
+    collapsedCommentId.value = null
+    commentStore.setActiveComment(null)
+  }
+})
+
 watch(filePath, () => {
   commentStore.setActiveComment(null)
+  selectedCommentId.value = null
+  collapsedCommentId.value = null
   commentAnchors.value = []
   commentLayout.value = { positions: {}, height: 0 }
+  hiddenCommentCardIds.value = new Set()
+  void nextTick(bindSharedEditorScroller)
 })
 
 onMounted(() => {
+  bindSharedEditorScroller()
   void window.electron.ipcRenderer.invoke('mt::comments::mcp-status').then((status) => {
     mcpStatus.value = status
   })
@@ -433,6 +772,8 @@ onBeforeUnmount(() => {
   commentLayoutDisposed = true
   stopMcpStatusListener?.()
   stopMcpStatusListener = null
+  sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
+  sharedEditorScroller = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
   if (commentLayoutFrame != null) cancelAnimationFrame(commentLayoutFrame)
   commentLayoutFrame = null
@@ -475,16 +816,23 @@ onBeforeUnmount(() => {
 
 .annotamd-comment-header {
   display: flex;
+  position: relative;
+  z-index: 1;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--annotamd-border-soft);
+  height: var(--annotamd-editor-tab-height, 28px);
+  min-height: var(--annotamd-editor-tab-height, 28px);
+  box-sizing: border-box;
+  padding: 0 12px;
+  box-shadow: 0 0 9px 2px rgb(0 0 0 / 10%);
 }
 
 .annotamd-comment-title {
   color: var(--annotamd-ink);
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
 }
 
 .annotamd-comment-header-actions {
@@ -563,11 +911,13 @@ onBeforeUnmount(() => {
 .annotamd-comment-list {
   position: relative;
   flex: 1;
-  overflow: auto;
-  padding: 14px 14px 80px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 0 8px;
 }
 
-.annotamd-comment-list.anchored::after {
+.annotamd-comment-list::after {
   display: block;
   height: var(--annotamd-comment-stage-height);
   content: '';
@@ -575,10 +925,10 @@ onBeforeUnmount(() => {
 
 .annotamd-comment-list.anchored .annotamd-comment-card[data-comment-id] {
   position: absolute;
-  right: 14px;
-  left: 14px;
+  right: 8px;
+  left: 8px;
   margin-bottom: 0;
-  transition: top 120ms ease, border-color 120ms ease, background-color 120ms ease;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .annotamd-comment-card {
@@ -598,6 +948,10 @@ onBeforeUnmount(() => {
   background: #f7f9ff;
 }
 
+.annotamd-comment-card.selected {
+  border-color: var(--annotamd-blue);
+}
+
 .annotamd-comment-card.resolved {
   opacity: 0.72;
 }
@@ -606,23 +960,38 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 10px 10px 0;
 }
 
 .annotamd-comment-scope {
+  min-width: 0;
   color: var(--annotamd-blue);
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .annotamd-comment-card-actions,
-.annotamd-comment-action-row {
+.annotamd-comment-action-row,
+.annotamd-message-actions {
   display: flex;
   gap: 4px;
 }
 
+.annotamd-comment-card-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.annotamd-comment-navigation {
+  display: flex;
+  gap: 0;
+}
+
 .annotamd-comment-card-actions button,
-.annotamd-comment-action-row button {
+.annotamd-comment-action-row button,
+.annotamd-message-actions button {
   height: 24px;
   padding: 0 6px;
   border: 0;
@@ -630,12 +999,33 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--annotamd-blue);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .annotamd-comment-card-actions button:hover,
-.annotamd-comment-action-row button:hover {
+.annotamd-comment-action-row button:hover,
+.annotamd-message-actions button:hover {
   background: var(--annotamd-surface-blue);
   color: var(--annotamd-blue);
+}
+
+.annotamd-comment-card-actions button:disabled {
+  background: transparent;
+  color: #b5bac3;
+  cursor: default;
+}
+
+.annotamd-comment-navigation button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+}
+
+.annotamd-comment-navigation svg {
+  width: 15px;
+  height: 15px;
 }
 
 .annotamd-composer-card textarea,
@@ -690,6 +1080,7 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-comment-card blockquote {
+  overflow: hidden;
   margin: 8px 10px 0;
   padding: 7px 9px;
   border-left: 3px solid var(--annotamd-blue);
@@ -697,6 +1088,8 @@ onBeforeUnmount(() => {
   color: var(--annotamd-text);
   font-size: 13px;
   line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .annotamd-comment-card p {
@@ -707,26 +1100,66 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.annotamd-replies {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 10px 10px;
-  padding: 8px 9px;
-  border-left: 2px solid var(--annotamd-border);
-  border-radius: 0 6px 6px 0;
+.annotamd-thread-message {
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid var(--annotamd-border);
+  border-radius: 7px;
   background: #fafbfc;
 }
 
-.annotamd-replies p {
-  padding: 0;
-  color: var(--annotamd-text);
-  font-size: 13px;
+.annotamd-root-message {
+  margin: 0 10px 10px;
+  background: var(--annotamd-surface);
 }
 
-.annotamd-reply-author {
+.annotamd-thread-message p {
+  padding: 6px 0 7px;
+  white-space: pre-wrap;
+}
+
+.annotamd-thread-message .annotamd-inline-editor {
+  width: 100%;
+  margin: 7px 0;
+}
+
+.annotamd-comment-card.compact .annotamd-thread-message p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.annotamd-comment-card.compact .annotamd-message-actions {
+  display: none;
+}
+
+.annotamd-thread-toggle {
+  height: 28px;
+  margin: 0 10px 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--annotamd-blue);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.annotamd-thread-toggle:hover {
+  text-decoration: underline;
+}
+
+.annotamd-comment-action-row .annotamd-thread-toggle {
+  margin: 0;
+}
+
+.annotamd-message-actions {
+  justify-content: flex-end;
+  min-height: 24px;
+}
+
+.annotamd-message-author {
   display: inline-flex;
-  margin-right: 6px;
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--annotamd-surface-blue);
@@ -734,6 +1167,22 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.annotamd-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 10px 10px;
+}
+
+.annotamd-reply-message.author-agent {
+  background: #f7f9ff;
+}
+
+.annotamd-reply-message p {
+  color: var(--annotamd-text);
+  font-size: 13px;
 }
 
 .annotamd-reply-editor {

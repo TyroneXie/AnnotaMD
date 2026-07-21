@@ -81,8 +81,7 @@ const getLaunchSpec = (clientName?: AnnotaMDMcpClientId): McpLaunchSpec => {
     ? join(process.resourcesPath, 'annotamd-mcp', 'index.mjs')
     : resolve(app.getAppPath(), '..', '..', 'tools', 'annotamd-mcp', 'dist', 'index.js')
   const env: Record<string, string> = {
-    ELECTRON_RUN_AS_NODE: '1',
-    ANNOTAMD_BRIDGE_FILE: join(app.getPath('userData'), 'agent-bridge.json')
+    ELECTRON_RUN_AS_NODE: '1'
   }
   if (clientName) env.ANNOTAMD_CLIENT_NAME = clientName
   return {
@@ -99,21 +98,32 @@ export const hasNamedMcpServer = (output: string): boolean => {
   return normalized.includes(SERVER_NAME)
 }
 
-const isConfiguredWithCli = async(
+export const hasCurrentMcpServer = (output: string): boolean => {
+  return hasNamedMcpServer(output)
+    && output.includes('annotamd-mcp')
+    && !output.includes('ANNOTAMD_BRIDGE_FILE')
+}
+
+const readMcpServerOutput = async(
   id: Extract<AnnotaMDMcpClientId, 'codex' | 'claude-code'>,
   executable: string
-): Promise<boolean> => {
+): Promise<string> => {
   const args = id === 'codex'
     ? ['mcp', 'get', SERVER_NAME, '--json']
     : ['mcp', 'get', SERVER_NAME]
   try {
     const { stdout, stderr } = await run(executable, args)
-    return hasNamedMcpServer(`${stdout}\n${stderr}`)
+    return `${stdout}\n${stderr}`
   } catch (error) {
     const detail = error as { stdout?: string; stderr?: string }
-    return hasNamedMcpServer(`${detail.stdout ?? ''}\n${detail.stderr ?? ''}`)
+    return `${detail.stdout ?? ''}\n${detail.stderr ?? ''}`
   }
 }
+
+const isConfiguredWithCli = async(
+  id: Extract<AnnotaMDMcpClientId, 'codex' | 'claude-code'>,
+  executable: string
+): Promise<boolean> => hasCurrentMcpServer(await readMcpServerOutput(id, executable))
 
 export const createStandardMcpManualConfig = (launch: McpLaunchSpec): string => {
   return JSON.stringify({
@@ -207,7 +217,33 @@ const configureWithCli = async(
 ): Promise<void> => {
   const launch = getLaunchSpec(id)
   const args = createCliConfigureArgs(id, launch)
+  try {
+    await run(executable, ['mcp', 'remove', SERVER_NAME])
+  } catch {
+    // A missing server is the normal first-time setup path.
+  }
   await run(executable, args)
+}
+
+export const migrateConfiguredMcpClients = async(): Promise<AnnotaMDMcpClientState[]> => {
+  if (!app.isPackaged) return inspectMcpClients()
+
+  for (const id of ['codex', 'claude-code'] as const) {
+    const executable = await findExecutable(id)
+    if (!executable) continue
+    const currentConfig = await readMcpServerOutput(id, executable)
+    if (hasNamedMcpServer(currentConfig) && !hasCurrentMcpServer(currentConfig)) {
+      try {
+        await configureWithCli(id, executable)
+      } catch {
+        // Keep startup non-blocking. The settings page will expose the stale
+        // configuration as available for a manual retry.
+      }
+    }
+  }
+
+  cachedInspection = null
+  return inspectMcpClients(true)
 }
 
 export const configureMcpClient = async(

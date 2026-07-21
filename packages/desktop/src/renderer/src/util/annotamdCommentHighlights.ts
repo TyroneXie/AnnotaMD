@@ -31,6 +31,15 @@ const BLOCK_DOM_PROPERTY = '__MUYA_BLOCK__'
 
 export const ANNOTAMD_COMMENT_HIGHLIGHT = 'annotamd-selection-comment'
 export const ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT = 'annotamd-active-selection-comment'
+export const ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID = 'annotamd-comment-composer'
+
+const COMMENT_INLINE_CODE_BRIDGE_CLASSES = [
+  'annotamd-comment-code-bridge-start',
+  'annotamd-comment-code-bridge-end',
+  'annotamd-active-comment-code-bridge-start',
+  'annotamd-active-comment-code-bridge-end'
+] as const
+const inlineCodeBridgesByRoot = new WeakMap<HTMLElement, Set<HTMLElement>>()
 
 export interface CommentAnchorRect {
   id: string
@@ -140,7 +149,8 @@ export const createAnnotaMDCommentTextReader = (
 
 export const buildAnnotaMDCommentRangeLayout = (
   root: HTMLElement,
-  comments: CommentHighlightSource[]
+  comments: CommentHighlightSource[],
+  anchorOnlySources: CommentHighlightSource[] = []
 ): CommentRangeLayout => {
   const blocks = contentBlocksByPath(root)
   const entries: CommentRangeEntry[] = []
@@ -160,11 +170,66 @@ export const buildAnnotaMDCommentRangeLayout = (
     }
   })
 
+  anchorOnlySources.forEach((source) => {
+    const range = rangeForComment(blocks, source)
+    if (!range || !source.id) return
+    const rect = typeof range.getBoundingClientRect === 'function'
+      ? range.getBoundingClientRect()
+      : { top: 0, bottom: 0 }
+    anchorRects.push({ id: source.id, top: rect.top, bottom: rect.bottom })
+  })
+
   return {
     entries,
     ranges: entries.map(({ range }) => range),
     anchorRects
   }
+}
+
+const syncInlineCodeBridgeClasses = (
+  root: HTMLElement,
+  layout: CommentRangeLayout,
+  activeCommentId: string | null
+): void => {
+  inlineCodeBridgesByRoot.get(root)?.forEach((code) => {
+    code.classList.remove(...COMMENT_INLINE_CODE_BRIDGE_CLASSES)
+  })
+  const markedInlineCodes = new Set<HTMLElement>()
+
+  layout.entries.forEach(({ comment, range }) => {
+    const commonAncestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer as HTMLElement
+      : range.commonAncestorContainer.parentElement
+    if (!commonAncestor) return
+    const inlineCodes = commonAncestor.matches('code.mu-inline-rule')
+      ? [commonAncestor]
+      : [...commonAncestor.querySelectorAll<HTMLElement>('code.mu-inline-rule')]
+    inlineCodes.forEach((code) => {
+      try {
+        if (!range.intersectsNode(code)) return
+        markedInlineCodes.add(code)
+        const active = comment.id === activeCommentId
+        if (range.comparePoint(code, 0) === 0) {
+          code.classList.add(
+            active
+              ? 'annotamd-active-comment-code-bridge-start'
+              : 'annotamd-comment-code-bridge-start'
+          )
+        }
+        if (range.comparePoint(code, code.childNodes.length) === 0) {
+          code.classList.add(
+            active
+              ? 'annotamd-active-comment-code-bridge-end'
+              : 'annotamd-comment-code-bridge-end'
+          )
+        }
+      } catch {
+        // Ignore stale nodes replaced by Muya between layout and paint.
+      }
+    })
+  })
+
+  inlineCodeBridgesByRoot.set(root, markedInlineCodes)
 }
 
 export const buildAnnotaMDCommentRanges = (
@@ -227,6 +292,7 @@ export const syncAnnotaMDCommentHighlights = (
   api.registry.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
   api.registry.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
   const resolvedLayout = layout ?? buildAnnotaMDCommentRangeLayout(root, comments)
+  syncInlineCodeBridgeClasses(root, resolvedLayout, activeCommentId)
   const { ranges } = resolvedLayout
   if (ranges.length) {
     api.registry.set(ANNOTAMD_COMMENT_HIGHLIGHT, new api.HighlightClass(...ranges))

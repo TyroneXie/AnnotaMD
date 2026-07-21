@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from 'electron'
-import { join } from 'node:path'
+import { mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { getAnnotaMDCommentDatabasePath } from '../app/userDataBranding'
 import { CommentService } from './CommentService'
 
 let service: CommentService | null = null
@@ -12,8 +14,15 @@ const handleBeforeQuit = (): void => {
 
 export const getCommentService = (): CommentService => {
   if (!service) {
+    const databasePath = getAnnotaMDCommentDatabasePath({
+      appDataPath: app.getPath('appData'),
+      userDataPath: app.getPath('userData'),
+      isDevelopment: process.env.NODE_ENV === 'development',
+      isAutomatedTest: process.env.PERF_TESTING === 'true'
+    })
+    mkdirSync(dirname(databasePath), { recursive: true })
     service = new CommentService({
-      databasePath: join(app.getPath('userData'), 'annotations.sqlite')
+      databasePath
     })
     if (!closeListenerRegistered) {
       closeListenerRegistered = true

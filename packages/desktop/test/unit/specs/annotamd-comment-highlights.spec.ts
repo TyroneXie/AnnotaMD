@@ -1,13 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
   buildAnnotaMDCommentRangeLayout,
   buildAnnotaMDCommentRanges,
-  createAnnotaMDCommentTextReader
+  createAnnotaMDCommentTextReader,
+  syncAnnotaMDCommentHighlights
 } from '@/util/annotamdCommentHighlights'
 
 const repoRoot = resolve(__dirname, '../../../../..')
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 const contentBlock = (path: Array<string | number>, text: string): HTMLElement => {
   const element = document.createElement('span')
@@ -33,6 +39,28 @@ describe('AnnotaMD selection comment highlights', () => {
 
     expect(ranges).toHaveLength(1)
     expect(ranges[0].toString()).toBe('commented')
+  })
+
+  it('builds one range and exact quote across multiple content blocks', () => {
+    const root = document.createElement('div')
+    root.append(
+      contentBlock([0, 0], 'first block'),
+      contentBlock([1, 0], 'middle block'),
+      contentBlock([2, 0], 'last block')
+    )
+    const comment = {
+      scope: 'selection' as const,
+      resolved: false,
+      anchor: { key: '0/0', offset: 6 },
+      focus: { key: '2/0', offset: 4 }
+    }
+
+    const ranges = buildAnnotaMDCommentRanges(root, [comment])
+    const readText = createAnnotaMDCommentTextReader(root)
+
+    expect(ranges).toHaveLength(1)
+    expect(ranges[0].toString()).toBe('blockmiddle blocklast')
+    expect(readText(comment)).toBe('blockmiddle blocklast')
   })
 
   it('skips resolved comments and comments whose blocks no longer exist', () => {
@@ -82,6 +110,54 @@ describe('AnnotaMD selection comment highlights', () => {
     expect(readText(comments[0])).toBe('commented')
     expect(readText(comments[0])).toBe('commented')
     expect(querySelectorAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('positions the composer from its selection without adding a second highlight', () => {
+    const root = document.createElement('div')
+    root.append(contentBlock([0, 0], 'first and second'))
+
+    const layout = buildAnnotaMDCommentRangeLayout(root, [], [{
+      id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
+      scope: 'selection',
+      resolved: false,
+      anchor: { key: '0/0', offset: 10 },
+      focus: { key: '0/0', offset: 16 }
+    }])
+
+    expect(layout.ranges).toHaveLength(0)
+    expect(layout.anchorRects.map(({ id }) => id)).toEqual([
+      ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID
+    ])
+  })
+
+  it('bridges comment underlines across inline-code padding', () => {
+    const root = document.createElement('div')
+    const content = contentBlock([0, 0], '')
+    content.append('before ')
+    const code = document.createElement('code')
+    code.className = 'mu-inline-rule'
+    code.textContent = 'inline'
+    content.append(code, ' after')
+    root.append(content)
+    const HighlightClass = class {
+      constructor(..._ranges: Range[]) {}
+    }
+    const registry = { delete: vi.fn(), set: vi.fn() }
+    vi.stubGlobal('Highlight', HighlightClass)
+    vi.stubGlobal('CSS', { highlights: registry })
+    const comment = {
+      id: 'comment-1',
+      scope: 'selection' as const,
+      resolved: false,
+      anchor: { key: '0/0', offset: 0 },
+      focus: { key: '0/0', offset: 19 }
+    }
+    const layout = buildAnnotaMDCommentRangeLayout(root, [comment])
+
+    syncAnnotaMDCommentHighlights(root, [comment], null, layout)
+
+    expect(code.classList.contains('annotamd-comment-code-bridge-start')).toBe(true)
+    expect(code.classList.contains('annotamd-comment-code-bridge-end')).toBe(true)
   })
 
   it('keeps the browser highlight registry synced without writing markup', () => {

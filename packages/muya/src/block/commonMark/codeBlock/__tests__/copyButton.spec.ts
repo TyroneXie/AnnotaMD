@@ -215,6 +215,26 @@ describe('code-block language input', () => {
         expect(muya.getMarkdown()).toContain('const value = 1');
     });
 
+    it('does not open the language picker while editing or clearing the caption', () => {
+        const muya = bootMuya('```ts\nconst value = 1\n```\n');
+        const picker = new CodeBlockLanguageSelector(muya);
+        const caption = muya.domNode.querySelector<HTMLInputElement>('.mu-code-caption')!;
+
+        try {
+            caption.value = '领域模型';
+            caption.dispatchEvent(new InputEvent('input', { bubbles: true }));
+            expect(picker.status).toBe(false);
+
+            caption.value = '';
+            caption.dispatchEvent(new InputEvent('input', { bubbles: true }));
+            expect(picker.status).toBe(false);
+            expect(muya.getMarkdown()).toContain('```ts\n');
+        }
+        finally {
+            picker.destroy();
+        }
+    });
+
     it('restores the caption and preserves it when changing language', () => {
         const muya = bootMuya('```ts title="领域模型"\nconst value = 1\n```\n');
         const codeBlock = muya.editor.scrollPage!.firstChild! as CodeBlock;

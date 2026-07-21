@@ -38,4 +38,15 @@ describe('AnnotaMD user-visible branding', () => {
     expect(setNameIndex).toBeGreaterThan(-1)
     expect(setNameIndex).toBeLessThan(setupEnvironmentIndex)
   })
+
+  it('uses the AnnotaMD profile and database names for new installations', () => {
+    const cli = read('packages/desktop/src/main/cli/index.ts')
+    const comments = read('packages/desktop/src/main/comments/index.ts')
+    const userDataBranding = read('packages/desktop/src/main/app/userDataBranding.ts')
+
+    expect(cli).toContain("path.join(getPath('appData'), 'AnnotaMD')")
+    expect(comments).toContain('getAnnotaMDCommentDatabasePath')
+    expect(userDataBranding).toContain("path.join(directory, 'annotamd.sqlite')")
+    expect(comments).not.toContain("'annotations.sqlite'")
+  })
 })

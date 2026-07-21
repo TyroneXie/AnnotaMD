@@ -507,6 +507,24 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       void this.persistFile(filePath)
     },
 
+    updateReply(filePath: string, commentId: string, replyId: string, body: string): void {
+      const comment = this.commentsByFile[filePath]?.find((item) => item.id === commentId)
+      const reply = comment?.replies.find((item) => item.id === replyId)
+      if (!comment || !reply || reply.author !== 'user' || !body.trim()) return
+      reply.body = body.trim()
+      comment.updatedAt = Date.now()
+      void this.persistFile(filePath)
+    },
+
+    deleteReply(filePath: string, commentId: string, replyId: string): void {
+      const comment = this.commentsByFile[filePath]?.find((item) => item.id === commentId)
+      const reply = comment?.replies.find((item) => item.id === replyId)
+      if (!comment || !reply || reply.author !== 'user') return
+      comment.replies = comment.replies.filter((item) => item.id !== replyId)
+      comment.updatedAt = Date.now()
+      void this.persistFile(filePath)
+    },
+
     completeAgentEdit(filePath: string, id: string, body: string): Promise<void> {
       const comment = this.commentsByFile[filePath]?.find((item) => item.id === id)
       if (!comment || !body.trim()) return Promise.resolve()

@@ -4,7 +4,10 @@
     :class="[{ typewriter: typewriter, focus: focus, source: sourceCode }]"
     :dir="textDirection"
   >
-    <div ref="editorRef" class="editor-component" />
+    <div
+      ref="editorRef"
+      class="editor-component"
+    />
     <Teleport
       v-if="documentCommentFooterReady && hasDocumentContent"
       :to="documentCommentFooterTarget"
@@ -119,6 +122,7 @@ import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
 import { resolveTocHeadingElement } from '@/util/tocNavigation'
 import {
+  ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
   buildAnnotaMDCommentRangeLayout,
   clearAnnotaMDCommentHighlights,
   createAnnotaMDCommentTextReader,
@@ -136,6 +140,7 @@ import { useAnnotaMDCommentsStore, type AnnotaMDSelection } from '@/store/annota
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
+import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
 
 // Importing the engine entrypoint auto-injects its editor CSS (the muya.ts
 // module imports its stylesheets at load time). Desktop themes still target the
@@ -218,6 +223,16 @@ const preferencesStore = usePreferencesStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const annotaMDCommentsStore = useAnnotaMDCommentsStore()
+const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
+const {
+  scrollbarVisible: editorScrollbarVisible,
+  revealScrollbar,
+  handleScrollbarPointerDown
+} = useAutoHideScrollbar()
+
+const handleEditorScrollbarPointerDown = (event: PointerEvent): void => {
+  if (!commentPaneVisible.value) handleScrollbarPointerDown(event)
+}
 
 // Use storeToRefs to extract reactive properties from the stores
 const {
@@ -309,6 +324,8 @@ let switchLanguageCommand: SpellcheckerLanguageCommand | null = null
 let imageViewer: SimpleImageViewer | null = null
 // The engine has no `scroll` event; we listen on the scroll container directly.
 let scrollHandler: ((e: Event) => void) | null = null
+let editorScrollbarPointerDownHandler: ((event: PointerEvent) => void) | null = null
+let stopEditorScrollbarModeWatch: (() => void) | null = null
 let commentClickHandler: ((event: MouseEvent) => void) | null = null
 let commentHoverHandler: ((event: MouseEvent) => void) | null = null
 let commentLeaveHandler: (() => void) | null = null
@@ -1338,7 +1355,21 @@ const observeDocumentCommentFooterTarget = (): void => {
 const refreshAnnotaMDCommentHighlights = (): void => {
   const root = getScrollContainer()
   if (!root) return
-  commentRangeLayout = buildAnnotaMDCommentRangeLayout(root, currentFileComments.value)
+  const activeSelection = annotaMDCommentsStore.activeSelection
+  const composerAnchorSources = activeSelection
+    ? [{
+        id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
+        scope: 'selection' as const,
+        resolved: false,
+        anchor: activeSelection.anchor,
+        focus: activeSelection.focus
+      }]
+    : []
+  commentRangeLayout = buildAnnotaMDCommentRangeLayout(
+    root,
+    currentFileComments.value,
+    composerAnchorSources
+  )
   syncAnnotaMDCommentHighlights(
     root,
     currentFileComments.value,
@@ -2101,6 +2132,19 @@ onMounted(() => {
   }
 
   const container = getScrollContainer()!
+  container.classList.add('annotamd-editor-scroll-container')
+  stopEditorScrollbarModeWatch = watch(
+    [commentPaneVisible, editorScrollbarVisible],
+    ([paneVisible, scrollbarVisible]) => {
+      container.classList.toggle('annotamd-shared-scroll-source', paneVisible)
+      container.classList.toggle('annotamd-auto-hide-scrollbar', !paneVisible)
+      container.classList.toggle(
+        'annotamd-scrollbar-visible',
+        !paneVisible && scrollbarVisible
+      )
+    },
+    { immediate: true }
+  )
   stickyTableHeader = new AnnotaMDStickyTableHeader(container)
 
   // Listen for language changes and update the engine locale.
@@ -2263,12 +2307,15 @@ onMounted(() => {
   // The engine does not emit `scroll`; listen on the scroll container directly
   // so the desktop can persist each tab's scroll position.
   scrollHandler = () => {
+    if (!commentPaneVisible.value) revealScrollbar()
     if (currentFile.value) {
       editorStore.updateScrollPosition(currentFile.value.id, container.scrollTop)
     }
     queueAnnotaMDCommentHighlights()
   }
   container.addEventListener('scroll', scrollHandler, { passive: true })
+  editorScrollbarPointerDownHandler = handleEditorScrollbarPointerDown
+  container.addEventListener('pointerdown', editorScrollbarPointerDownHandler)
   commentClickHandler = handleCommentHighlightClick
   container.addEventListener('click', commentClickHandler)
   commentHoverHandler = handleCommentHighlightHover
@@ -2453,6 +2500,13 @@ onBeforeUnmount(() => {
     container?.removeEventListener('scroll', scrollHandler)
   }
   scrollHandler = null
+  stopEditorScrollbarModeWatch?.()
+  stopEditorScrollbarModeWatch = null
+  if (editorScrollbarPointerDownHandler && editor.value) {
+    const container = getScrollContainer()
+    container?.removeEventListener('pointerdown', editorScrollbarPointerDownHandler)
+  }
+  editorScrollbarPointerDownHandler = null
   if (commentClickHandler && editor.value) {
     const container = getScrollContainer()
     container?.removeEventListener('click', commentClickHandler)
@@ -2770,6 +2824,41 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   text-decoration-skip-spaces: none;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
+}
+
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start,
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end {
+  position: relative;
+}
+
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start::before,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before,
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end::after,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
+  position: absolute;
+  bottom: 0.08em;
+  width: 0.35em;
+  height: 2px;
+  background: rgb(51 112 255 / 85%);
+  content: '';
+  pointer-events: none;
+}
+
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start::before,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before {
+  left: 0;
+}
+
+.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end::after,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
+  right: 0;
+}
+
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before,
+.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
+  background: rgb(51 112 255 / 100%);
 }
 
 .editor-component .mu-container img,

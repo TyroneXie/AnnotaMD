@@ -253,6 +253,7 @@ export class CommentService {
     this.db.exec(`
       PRAGMA foreign_keys = ON;
       PRAGMA journal_mode = WAL;
+      PRAGMA busy_timeout = 5000;
       CREATE TABLE IF NOT EXISTS documents (
         id TEXT PRIMARY KEY,
         path TEXT NOT NULL,

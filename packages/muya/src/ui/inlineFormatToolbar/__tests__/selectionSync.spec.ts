@@ -43,12 +43,19 @@ function bootMuya(markdown: string): Muya {
 function emitSelectionChange(
     muya: Muya,
     formats: Array<{ type: string }>,
-    extra: { isCollapsed?: boolean; isSelectionInSameBlock?: boolean } = {},
+    extra: {
+        isCollapsed?: boolean;
+        isSelectionInSameBlock?: boolean;
+        anchorBlock?: unknown;
+        cursorCoords?: DOMRect;
+    } = {},
 ): void {
     muya.eventCenter.emit('selection-change', {
         formats,
         isCollapsed: extra.isCollapsed ?? false,
         isSelectionInSameBlock: extra.isSelectionInSameBlock ?? true,
+        anchorBlock: extra.anchorBlock,
+        cursorCoords: extra.cursorCoords,
     });
 }
 
@@ -88,15 +95,59 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
         expect(toolbar.container!.querySelector('li.item.strong')).toBeNull();
     });
 
-    it('ignores collapsed / cross-block selections (single-block tool)', () => {
+    it('ignores collapsed selections', () => {
         const muya = bootMuya('hello world\n');
         const toolbar = new InlineFormatToolbar(muya);
         toolbar.status = true;
 
         emitSelectionChange(muya, [{ type: 'strong' }], { isCollapsed: true });
         expect(toolbar.container!.querySelector('li.item.strong')).toBeNull();
+    });
 
-        emitSelectionChange(muya, [{ type: 'strong' }], { isSelectionInSameBlock: false });
+    it('shows a comment-only toolbar for a cross-block selection', async () => {
+        const muya = bootMuya('first paragraph\n\nsecond paragraph\n');
+        const toolbar = new InlineFormatToolbar(muya);
+        const first = muya.editor.scrollPage!.firstContentInDescendant()!;
+        const second = first.nextContentInContext()!;
+        const rect = {
+            x: 120,
+            y: 160,
+            top: 160,
+            left: 120,
+            right: 121,
+            bottom: 178,
+            width: 1,
+            height: 18,
+            toJSON: () => ({}),
+        } as DOMRect;
+
+        muya.editor.selection.setSelection(
+            { offset: 0, block: first, path: first.path },
+            { offset: 6, block: second, path: second.path },
+        );
+        emitSelectionChange(muya, [], {
+            isSelectionInSameBlock: false,
+            anchorBlock: first,
+            cursorCoords: rect,
+        });
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+
+        expect(toolbar.status).toBe(true);
+        const commentItem = toolbar.container!.querySelector<HTMLElement>('li.item.annotamd_comment');
+        expect(commentItem).toBeTruthy();
         expect(toolbar.container!.querySelector('li.item.strong')).toBeNull();
+        expect(toolbar.container!.querySelector('li.item.text_style')).toBeNull();
+
+        let commentSelection: Record<string, unknown> | null = null;
+        muya.on('annotamd-comment-selection', (payload: unknown) => {
+            commentSelection = payload as Record<string, unknown>;
+        });
+        commentItem!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(commentSelection).toMatchObject({
+            isCrossBlock: true,
+            anchor: { key: first.path.join('/'), offset: 0 },
+            focus: { key: second.path.join('/'), offset: 6 },
+        });
     });
 });

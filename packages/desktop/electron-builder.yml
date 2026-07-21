@@ -113,6 +113,20 @@ nsis:
   include: windows/installer.nsh
 mac:
   artifactName: 'annotamd-mac-${arch}-${version}.${ext}'
+  # Native macOS panels use the app bundle's .lproj resources rather than
+  # AnnotaMD's renderer translations. Keep every locale supported by the app.
+  electronLanguages:
+    - de
+    - en
+    - es
+    - fr
+    - ja
+    - ko
+    - pt_BR
+    - pt_PT
+    - tr
+    - zh_CN
+    - zh_TW
   # No paid Developer ID is available yet. Explicit ad-hoc signing makes the
   # whole app bundle internally consistent, so Gatekeeper shows the standard
   # unidentified-developer flow instead of reporting the app as damaged.

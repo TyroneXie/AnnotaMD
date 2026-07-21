@@ -123,9 +123,17 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             requestAnimationFrame(() => this._searchInput.focus());
         });
 
-        eventCenter.on('content-change', ({ block }) => {
+        eventCenter.on('content-change', ({ block, source }) => {
             if (block.blockName !== 'paragraph.content' && block.blockName !== 'language-input')
                 return;
+
+            // The visible code caption persists through the hidden language-input
+            // block. It is not a language search, and that hidden node cannot be
+            // used as a Floating UI reference without jumping to the viewport origin.
+            if (source === 'code-caption') {
+                this.hide();
+                return;
+            }
 
             const { text, domNode } = block;
             let lang = '';

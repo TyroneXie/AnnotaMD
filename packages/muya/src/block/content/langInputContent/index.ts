@@ -41,9 +41,10 @@ class LangInputContent extends Content {
 
     /**
      * Update this block lang and parent's lang, and show/hide language selector.
-     * @param lang
+     * @param info Full fenced-code info string.
+     * @param source Optional origin used to avoid treating caption edits as language searches.
      */
-    private _updateInfoString(info: string) {
+    private _updateInfoString(info: string, source?: 'code-caption') {
         const cursor = this.getCursor();
         this.text = info;
         this.parent!.lang = info;
@@ -55,7 +56,7 @@ class LangInputContent extends Content {
         else {
             this.update();
         }
-        this.muya.eventCenter.emit('content-change', { block: this });
+        this.muya.eventCenter.emit('content-change', { block: this, source });
     }
 
     private _updateLanguage(lang: string) {
@@ -70,7 +71,7 @@ class LangInputContent extends Content {
     }
 
     updateInfoString(info: string): void {
-        this._updateInfoString(info);
+        this._updateInfoString(info, 'code-caption');
     }
 
     override inputHandler() {

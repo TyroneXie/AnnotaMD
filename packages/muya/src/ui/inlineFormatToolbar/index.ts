@@ -1,3 +1,4 @@
+import type { ReferenceElement } from '@floating-ui/dom';
 import type { VNode } from 'snabbdom';
 import type { Muya } from '../../index';
 import type { Token } from '../../inlineRenderer/types';
@@ -104,7 +105,10 @@ export class InlineFormatToolbar extends BaseFloat {
     private _linkCreateOpen = false;
     private _draftLinkHref = '';
     private _linkSelection: { block: Format; start: number; end: number } | null = null;
-    private _reference: HTMLElement | null = null;
+    private _reference: ReferenceElement | null = null;
+
+    /** Cross-block selections expose commenting without enabling block-wide formatting. */
+    private _crossBlockSelection = false;
 
     /** Toolbar configuration options */
     public override options: IBaseOptions;
@@ -141,6 +145,7 @@ export class InlineFormatToolbar extends BaseFloat {
             if (reference) {
                 this._reference = reference;
                 this._block = block;
+                this._crossBlockSelection = false;
                 this._formats = block.getFormatsInRange().formats;
                 this._linkCreateOpen = false;
                 this._draftLinkHref = '';
@@ -167,12 +172,54 @@ export class InlineFormatToolbar extends BaseFloat {
 
         // While open, re-sync the highlight from the selection's current
         // formats — this is how formats applied outside the toolbar (menu /
-        // command / shortcut) light up their buttons. Single-block tool, so
-        // ignore collapsed / cross-block selections.
-        eventCenter.subscribe('selection-change', ({ formats, isCollapsed, isSelectionInSameBlock }) => {
-            if (!this.status || this._linkCreateOpen || isCollapsed || !isSelectionInSameBlock)
+        // command / shortcut) light up their buttons. A cross-block selection
+        // gets a compact comment-only toolbar: the comment range is safe to
+        // persist, while inline formatting remains a single-block action here.
+        eventCenter.subscribe('selection-change', ({
+            formats,
+            isCollapsed,
+            isSelectionInSameBlock,
+            anchorBlock,
+            cursorCoords,
+        }) => {
+            if (this._linkCreateOpen)
                 return;
 
+            if (isCollapsed) {
+                this._crossBlockSelection = false;
+                this.hide();
+                return;
+            }
+
+            if (!isSelectionInSameBlock) {
+                if (!(anchorBlock instanceof Format) || !cursorCoords)
+                    return;
+
+                const reference: ReferenceElement = {
+                    getBoundingClientRect: () => cursorCoords,
+                    contextElement: anchorBlock.domNode ?? undefined,
+                };
+                this._reference = reference;
+                this._block = anchorBlock;
+                this._formats = [];
+                this._crossBlockSelection = true;
+                this._openPalette = null;
+                this._textStyleOpen = false;
+                this.options.placement = 'top';
+                requestAnimationFrame(() => {
+                    const current = editor.selection.getSelection();
+                    if (!current || current.isSelectionInSameBlock)
+                        return;
+                    this.show(reference);
+                    this._render();
+                });
+                return;
+            }
+
+            if (!this.status)
+                return;
+
+            this._crossBlockSelection = false;
             this._formats = formats;
             this._render();
         });
@@ -299,7 +346,10 @@ export class InlineFormatToolbar extends BaseFloat {
             return;
         }
 
-        const children = icons.map(icon => this._createIconItem(icon, formats, i18n));
+        const visibleIcons = this._crossBlockSelection
+            ? icons.filter(icon => icon.type === 'annotamd_comment')
+            : icons;
+        const children = visibleIcons.map(icon => this._createIconItem(icon, formats, i18n));
         const vnode = h('ul', children);
 
         patch(oldVNode || formatContainer, vnode);

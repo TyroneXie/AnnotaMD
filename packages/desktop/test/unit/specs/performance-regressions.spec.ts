@@ -149,9 +149,8 @@ describe('performance regression guards', () => {
       'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
     )
 
-    expect(editor).toContain(
-      'commentRangeLayout = buildAnnotaMDCommentRangeLayout(root, currentFileComments.value)'
-    )
+    expect(editor).toContain('commentRangeLayout = buildAnnotaMDCommentRangeLayout(')
+    expect(editor).toContain('composerAnchorSources')
     expect(editor).toContain("bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)")
     expect(editor).toContain('const readCommentText = createAnnotaMDCommentTextReader(root)')
   })

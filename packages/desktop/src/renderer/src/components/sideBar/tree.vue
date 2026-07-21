@@ -206,14 +206,10 @@
       class="open-project"
     >
       <div class="centered-group">
-        <el-button
-          text
-          bg
-          type="primary"
-          @click="openFolder"
-        >
-          {{ t('sideBar.tree.openFolder') }}
-        </el-button>
+        <OpenFileSplitButton
+          @open-file="openFile"
+          @open-folder="openFolder"
+        />
       </div>
     </div>
   </div>
@@ -228,6 +224,7 @@ import { usePreferencesStore } from '@/store/preferences'
 import Folder from './treeFolder.vue'
 import File from './treeFile.vue'
 import OpenedFile from './treeOpenedTab.vue'
+import OpenFileSplitButton from '@/components/OpenFileSplitButton.vue'
 import bus from '../../bus'
 import { showRootContextMenu } from '../../contextMenu/sideBar'
 import { useI18n } from 'vue-i18n'
@@ -280,6 +277,10 @@ const createCacheDirname = computed<string | undefined>(() => {
 // Methods
 const openFolder = (): void => {
   projectStore.ASK_FOR_OPEN_PROJECT()
+}
+
+const openFile = (): void => {
+  window.electron.ipcRenderer.send('mt::cmd-open-file')
 }
 
 const closeAll = (): void => {
@@ -726,26 +727,6 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-.open-project .el-button {
-  margin-top: 20px;
-}
-.tree-view.without-projects .open-project .el-button {
-  margin-top: 0;
-}
-.open-project .el-button.is-text.is-has-bg,
-.empty-project .el-button.is-text.is-has-bg {
-  color: var(--buttonPrimaryFontColor);
-  background-color: var(--buttonPrimaryBgColor);
-  border: var(--buttonPrimaryBorder);
-}
-.open-project .el-button.is-text.is-has-bg:hover,
-.open-project .el-button.is-text.is-has-bg:focus,
-.empty-project .el-button.is-text.is-has-bg:hover,
-.empty-project .el-button.is-text.is-has-bg:focus {
-  color: var(--buttonPrimaryFontColor);
-  background-color: var(--buttonPrimaryBgColor);
-  border-color: transparent;
-}
 .new-input {
   outline: none;
   height: 28px;

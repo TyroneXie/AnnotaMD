@@ -407,6 +407,14 @@ onMounted(() => {
         visibility: visible;
         opacity: 1;
       }
+      &.is-regex::after {
+        right: 0;
+        left: auto;
+        transform: translate(0, -2px);
+      }
+      &.is-regex:hover::after {
+        transform: translate(0);
+      }
     }
   }
 

@@ -6889,11 +6889,6 @@ var require_dist = __commonJS({
   }
 });
 
-// src/index.ts
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
 // node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
@@ -22109,26 +22104,65 @@ var StdioServerTransport = class {
   }
 };
 
-// src/index.ts
-var bridgeFile = () => {
-  if (process.env.ANNOTAMD_BRIDGE_FILE) return process.env.ANNOTAMD_BRIDGE_FILE;
-  if (process.platform === "darwin") {
-    return join(homedir(), "Library", "Application Support", "AnnotaMD", "agent-bridge.json");
-  }
-  if (process.platform === "win32") {
-    return join(process.env.APPDATA ?? homedir(), "AnnotaMD", "agent-bridge.json");
-  }
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "AnnotaMD", "agent-bridge.json");
+// src/bridgeDiscovery.ts
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+var unique = (values) => [...new Set(values.filter(Boolean))];
+var getBridgeFileCandidates = (options = {}) => {
+  const platform = options.platform ?? process.platform;
+  const homeDirectory = options.homeDirectory ?? homedir();
+  const environment = options.environment ?? process.env;
+  const baseDirectory = platform === "darwin" ? join(homeDirectory, "Library", "Application Support") : platform === "win32" ? environment.APPDATA ?? homeDirectory : environment.XDG_CONFIG_HOME ?? join(homeDirectory, ".config");
+  return unique([
+    join(baseDirectory, "AnnotaMD", "agent-bridge.json"),
+    join(baseDirectory, "marktext", "agent-bridge.json"),
+    environment.ANNOTAMD_BRIDGE_FILE ?? "",
+    join(baseDirectory, "annotamd-dev", "agent-bridge.json"),
+    join(baseDirectory, "marktext-dev", "agent-bridge.json")
+  ]);
 };
-var callBridge = async (method, params = {}) => {
-  let config2;
+var parseBridgeConfig = (value) => {
   try {
-    config2 = JSON.parse(await readFile(bridgeFile(), "utf8"));
+    const config2 = JSON.parse(value);
+    return Number.isInteger(config2.port) && Number(config2.port) > 0 && typeof config2.token === "string" && config2.token.length > 0 ? { port: Number(config2.port), token: config2.token } : null;
   } catch {
-    throw new Error("AnnotaMD \u8BC4\u8BBA\u8BBF\u95EE\u672A\u5F00\u542F\u3002\u8BF7\u6253\u5F00 AnnotaMD\uFF0C\u5E76\u5728\u201C\u8BBE\u7F6E \u2192 Agent\u201D\u4E2D\u5F00\u542F\u8BC4\u8BBA\u8BBF\u95EE\u3002");
+    return null;
   }
+};
+var discoverRunningBridge = async (candidates, probe) => {
+  for (const candidate of unique(candidates)) {
+    try {
+      const config2 = parseBridgeConfig(await readFile(candidate, "utf8"));
+      if (config2 && await probe(config2)) return config2;
+    } catch {
+    }
+  }
+  return null;
+};
+
+// src/commentWorkflow.ts
+var COMMENT_DATA_MARKER = "\u8BC4\u8BBA\u6570\u636E\uFF08\u53EA\u8BFB\u7ED3\u679C\uFF09\uFF1A";
+var COMMENT_REVIEW_GUIDANCE = [
+  "\u5904\u7406\u89C4\u5219\uFF08\u5FC5\u987B\u5728\u4EFB\u4F55\u5199\u64CD\u4F5C\u524D\u9010\u6761\u6267\u884C\uFF09\uFF1A",
+  "1. \u5148\u8BC6\u522B\u6BCF\u6761\u8BC4\u8BBA\u7684\u610F\u56FE\uFF1B\u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002",
+  "2. \u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\uFF1A\u4F7F\u7528 annotamd_reply_comment \u5728\u539F\u8BC4\u8BBA\u7EBF\u7A0B\u76F4\u63A5\u56DE\u7B54\uFF0C\u4E0D\u4FEE\u6539\u6B63\u6587\uFF0C\u9ED8\u8BA4\u4FDD\u7559\u4E3A\u672A\u89E3\u51B3\u3002",
+  "3. \u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u6216\u6539\u5199\u8981\u6C42\uFF1A\u624D\u4F7F\u7528 annotamd_apply_comment_edit \u6309 commentId \u7684\u771F\u5B9E\u951A\u70B9\u4FEE\u6539\u6B63\u6587\u3002",
+  "4. \u610F\u56FE\u4E0D\u6E05\u3001\u4FE1\u606F\u4E0D\u8DB3\u6216\u540C\u65F6\u5305\u542B\u95EE\u9898\u4E0E\u6F5C\u5728\u6539\u52A8\uFF1A\u5148\u4F7F\u7528 annotamd_reply_comment \u8FFD\u95EE\u786E\u8BA4\uFF0C\u4E0D\u5F97\u731C\u6D4B\u540E\u6539\u6B63\u6587\u3002"
+].join("\n");
+var formatCommentReviewResult = (value) => {
+  return `${COMMENT_REVIEW_GUIDANCE}
+
+${COMMENT_DATA_MARKER}
+${JSON.stringify(value, null, 2)}`;
+};
+
+// src/index.ts
+var clientName = process.env.ANNOTAMD_CLIENT_NAME?.trim() || "Agent";
+var requestBridge = async (config2, method, params = {}, signal) => {
   const response = await fetch(`http://127.0.0.1:${config2.port}`, {
     method: "POST",
+    signal,
     headers: {
       authorization: `Bearer ${config2.token}`,
       "content-type": "application/json"
@@ -22137,10 +22171,33 @@ var callBridge = async (method, params = {}) => {
   });
   const payload = await response.json();
   if (!response.ok || payload.error) throw new Error(payload.error ?? `AnnotaMD bridge error ${response.status}`);
+  return payload;
+};
+var callBridge = async (method, params = {}) => {
+  const config2 = await discoverRunningBridge(getBridgeFileCandidates(), async (candidate) => {
+    try {
+      await requestBridge(
+        candidate,
+        "register_client",
+        { name: clientName },
+        AbortSignal.timeout(750)
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (!config2) {
+    throw new Error("\u672A\u53D1\u73B0\u6B63\u5728\u8FD0\u884C\u4E14\u5DF2\u5F00\u542F\u8BC4\u8BBA\u8BBF\u95EE\u7684 AnnotaMD\u3002\u8BF7\u6253\u5F00 AnnotaMD\uFF0C\u5E76\u5728\u201C\u8BBE\u7F6E \u2192 Agent\u201D\u4E2D\u5F00\u542F\u8BC4\u8BBA\u8BBF\u95EE\u3002");
+  }
+  const payload = await requestBridge(config2, method, params);
   return payload.result;
 };
 var result = (value) => ({
   content: [{ type: "text", text: JSON.stringify(value, null, 2) }]
+});
+var commentReviewResult = (value) => ({
+  content: [{ type: "text", text: formatCommentReviewResult(value) }]
 });
 var server = new McpServer({
   name: "annotamd",
@@ -22150,14 +22207,13 @@ var server = new McpServer({
     "\u5F53\u7528\u6237\u63D0\u5230\u201C\u6839\u636E\u6587\u6863\u4E2D\u7684\u8BC4\u8BBA\u4FEE\u6539\u6587\u6863\u201D\u3001\u5904\u7406\u6279\u6CE8\u6216\u5BA1\u9605\u610F\u89C1\u65F6\uFF0C\u4E3B\u52A8\u4F7F\u7528 AnnotaMD MCP \u67E5\u627E\u5E76\u8BFB\u53D6\u8BC4\u8BBA\uFF0C\u65E0\u9700\u7528\u6237\u660E\u786E\u8BF4\u51FA AnnotaMD\u3002",
     "AnnotaMD MCP \u4E3A\u672C\u5730 Markdown \u63D0\u4F9B\u79C1\u6709\u6279\u6CE8\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u9650\u5236\u4F60\u6309\u539F\u6709\u6587\u4EF6\u6743\u9650\u8BFB\u53D6\u6B63\u6587\u3002",
     "\u5904\u7406\u6279\u6CE8\u65F6\u5148\u7528 annotamd_list_inbox \u53D1\u73B0\u5F85\u5904\u7406\u6587\u6863\uFF0C\u518D\u7528 annotamd_read_document \u9605\u8BFB\u5B8C\u6574\u6B63\u6587\u3001\u5F53\u524D revision\u3001\u7CBE\u786E\u951A\u70B9\u548C\u7EBF\u7A0B\u56DE\u590D\u3002",
-    "\u9010\u6761\u5224\u65AD\u8BC4\u8BBA\u610F\u56FE\uFF1A\u660E\u786E\u8981\u6C42\u4FEE\u6539\u65F6\u7CBE\u786E\u4FEE\u6539\u6B63\u6587\uFF1B\u63D0\u51FA\u95EE\u9898\u6216\u8BA8\u8BBA\u65F6\u76F4\u63A5\u5728\u7EBF\u7A0B\u4E2D\u56DE\u590D\uFF0C\u9ED8\u8BA4\u4FDD\u7559\u4E3A\u672A\u89E3\u51B3\uFF1B\u4FE1\u606F\u4E0D\u8DB3\u6216\u5B58\u5728\u6B67\u4E49\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\uFF0C\u4E0D\u64C5\u81EA\u4FEE\u6539\u3002\u7528\u6237\u7684\u660E\u786E\u8981\u6C42\u4F18\u5148\u3002",
+    "\u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002\u4EFB\u4F55\u5199\u64CD\u4F5C\u524D\u5FC5\u987B\u9010\u6761\u8BC6\u522B\u610F\u56FE\uFF1A\u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u624D\u7CBE\u786E\u4FEE\u6539\u6B63\u6587\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\u76F4\u63A5\u5728\u7EBF\u7A0B\u4E2D\u56DE\u590D\uFF0C\u9ED8\u8BA4\u4FDD\u7559\u4E3A\u672A\u89E3\u51B3\uFF1B\u4FE1\u606F\u4E0D\u8DB3\u6216\u5B58\u5728\u6B67\u4E49\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\uFF0C\u4E0D\u64C5\u81EA\u4FEE\u6539\u3002\u7528\u6237\u7684\u660E\u786E\u8981\u6C42\u4F18\u5148\u3002",
     "\u91CD\u590D\u6587\u5B57\u5FC5\u987B\u4F9D\u9760 commentId \u533A\u5206\uFF1B\u4FEE\u6539\u6B63\u6587\u65F6\u4F7F\u7528 annotamd_apply_comment_edit\uFF0C\u4E0D\u8981\u641C\u7D22\u540C\u540D\u6587\u672C\u731C\u6D4B\u4F4D\u7F6E\u3002",
     "annotamd_apply_comment_edit \u6210\u529F\u540E\u4F1A\u81EA\u52A8\u4FDD\u7559 Agent \u5904\u7406\u56DE\u590D\u5E76\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\uFF0C\u65E0\u9700\u518D\u6B21\u8C03\u7528\u89E3\u51B3\u5DE5\u5177\u3002",
     "\u6240\u6709\u5199\u64CD\u4F5C\u4F7F\u7528\u521A\u8BFB\u53D6\u7684 expectedRevision\uFF1B\u8FC7\u671F\u65F6\u91CD\u65B0\u8BFB\u53D6\u3002\u9700\u8981\u6C9F\u901A\u65F6\u5728\u7EBF\u7A0B\u4E2D\u56DE\u590D\u3002",
     "\u6279\u6CE8\u670D\u52A1\u5173\u95ED\u65F6\uFF0C\u4F60\u4ECD\u53EF\u4F7F\u7528\u81EA\u5DF1\u7684\u6587\u4EF6\u80FD\u529B\u8BFB\u53D6 Markdown\uFF0C\u4F46\u65E0\u6CD5\u8BBF\u95EE AnnotaMD SQLite \u4E2D\u7684\u79C1\u6709\u6279\u6CE8\u3002"
   ].join("\n")
 });
-var clientName = process.env.ANNOTAMD_CLIENT_NAME?.trim() || "Agent";
 var touchBridge = async () => {
   await callBridge("register_client", { name: clientName });
 };
@@ -22215,14 +22271,14 @@ server.registerResource(
 );
 server.registerTool("annotamd_read_document", {
   title: "\u8BFB\u53D6\u5E26\u8BC4\u8BBA\u7684\u672C\u5730 Markdown",
-  description: "\u8BFB\u53D6\u5B8C\u6574 Markdown \u6B63\u6587\u3001revision\u3001\u9009\u533A\u6279\u6CE8\u3001\u5168\u6587\u6279\u6CE8\u53CA\u7EBF\u7A0B\u56DE\u590D\u3002\u6279\u6CE8\u662F\u8865\u5145\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u662F\u6B63\u6587\u8BFB\u53D6\u6743\u9650\u3002\u540E\u7EED\u5199\u64CD\u4F5C\u5FC5\u987B\u4F7F\u7528\u8FD4\u56DE\u7684 revision\u3002",
+  description: "\u8BFB\u53D6\u5B8C\u6574 Markdown \u6B63\u6587\u3001revision\u3001\u9009\u533A\u6279\u6CE8\u3001\u5168\u6587\u6279\u6CE8\u53CA\u7EBF\u7A0B\u56DE\u590D\u3002\u8FD4\u56DE\u7ED3\u679C\u4F1A\u8981\u6C42\u5148\u9010\u6761\u8BC6\u522B\u8BC4\u8BBA\u610F\u56FE\uFF1B\u8BFB\u53D6\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u6B63\u6587\u3002\u540E\u7EED\u5199\u64CD\u4F5C\u5FC5\u987B\u4F7F\u7528\u8FD4\u56DE\u7684 revision\u3002",
   inputSchema: { documentId: string2().min(1) }
-}, async ({ documentId }) => result(await callBridge("read_document", { documentId })));
+}, async ({ documentId }) => commentReviewResult(await callBridge("read_document", { documentId })));
 server.registerTool("annotamd_list_comments", {
   title: "\u5217\u51FA\u6587\u6863\u8BC4\u8BBA",
-  description: "\u6309 documentId \u5217\u51FA\u8BC4\u8BBA\u53CA\u5176\u7CBE\u786E\u951A\u70B9\u548C\u7EBF\u7A0B\u56DE\u590D\u3002",
+  description: "\u6309 documentId \u5217\u51FA\u8BC4\u8BBA\u53CA\u5176\u7CBE\u786E\u951A\u70B9\u548C\u7EBF\u7A0B\u56DE\u590D\u3002\u5FC5\u987B\u5148\u9010\u6761\u8BC6\u522B\u610F\u56FE\uFF1A\u95EE\u9898\u7C7B\u56DE\u590D\u8BC4\u8BBA\uFF0C\u660E\u786E\u4FEE\u6539\u5EFA\u8BAE\u624D\u4FEE\u6539\u6B63\u6587\uFF0C\u4E0D\u6E05\u695A\u65F6\u5148\u8FFD\u95EE\uFF1B\u4E0D\u5F97\u9ED8\u8BA4\u6279\u91CF\u4FEE\u6539\u6240\u6709\u8BC4\u8BBA\u5173\u8054\u6B63\u6587\u3002",
   inputSchema: { documentId: string2().min(1) }
-}, async ({ documentId }) => result(await callBridge("list_comments", { documentId })));
+}, async ({ documentId }) => commentReviewResult(await callBridge("list_comments", { documentId })));
 server.registerTool("annotamd_list_inbox", {
   title: "\u5217\u51FA\u5F85\u5904\u7406\u6279\u6CE8\u6587\u6863",
   description: "\u5217\u51FA\u5305\u542B\u672A\u89E3\u51B3 AnnotaMD \u6279\u6CE8\u7684\u672C\u5730\u6587\u6863\u3002\u5148\u7528\u6B64\u5DE5\u5177\u53D1\u73B0\u5F85\u5904\u7406\u6587\u6863\uFF0C\u518D\u8BFB\u53D6\u6B63\u6587\u4E0E\u5B8C\u6574\u6279\u6CE8\u3002",
@@ -22230,12 +22286,12 @@ server.registerTool("annotamd_list_inbox", {
 }, async () => result(await callBridge("inbox")));
 server.registerTool("annotamd_get_comment", {
   title: "\u8BFB\u53D6\u5355\u6761\u8BC4\u8BBA",
-  description: "\u8BFB\u53D6\u8BC4\u8BBA\u3001\u6240\u5C5E\u6587\u6863\u548C\u5F53\u524D revision\u3002",
+  description: "\u8BFB\u53D6\u8BC4\u8BBA\u3001\u6240\u5C5E\u6587\u6863\u548C\u5F53\u524D revision\uFF0C\u5E76\u5148\u5224\u65AD\u5B83\u662F\u95EE\u9898\u3001\u660E\u786E\u4FEE\u6539\u5EFA\u8BAE\u8FD8\u662F\u9700\u8981\u8FFD\u95EE\u7684\u6B67\u4E49\u5185\u5BB9\u3002",
   inputSchema: { commentId: string2().min(1) }
-}, async ({ commentId }) => result(await callBridge("get_comment", { commentId })));
+}, async ({ commentId }) => commentReviewResult(await callBridge("get_comment", { commentId })));
 server.registerTool("annotamd_reply_comment", {
   title: "\u56DE\u590D\u8BC4\u8BBA",
-  description: "\u4EE5 Agent \u8EAB\u4EFD\u5728\u7EBF\u7A0B\u4E2D\u56DE\u590D\u3002revision \u8FC7\u671F\u65F6\u62D2\u7EDD\u5199\u5165\u3002",
+  description: "\u56DE\u7B54\u95EE\u9898\u3001\u53C2\u4E0E\u8BA8\u8BBA\u3001\u56DE\u5E94\u5F81\u8BE2\u610F\u89C1\u6216\u8FFD\u95EE\u6B67\u4E49\u65F6\uFF0C\u4EE5 Agent \u8EAB\u4EFD\u5728\u539F\u7EBF\u7A0B\u4E2D\u56DE\u590D\uFF0C\u4E0D\u4FEE\u6539\u6B63\u6587\u3002revision \u8FC7\u671F\u65F6\u62D2\u7EDD\u5199\u5165\u3002",
   inputSchema: {
     commentId: string2().min(1),
     body: string2().min(1),
@@ -22248,7 +22304,7 @@ server.registerTool("annotamd_reply_comment", {
 })));
 server.registerTool("annotamd_apply_comment_edit", {
   title: "\u6309\u8BC4\u8BBA\u7CBE\u786E\u4FEE\u6539\u6B63\u6587",
-  description: "\u7531 AnnotaMD \u6839\u636E commentId \u7684\u771F\u5B9E\u951A\u70B9\u6267\u884C\u7F16\u8F91\uFF0C\u4E0D\u641C\u7D22\u540C\u540D\u6587\u672C\u3002\u6210\u529F\u540E\u81EA\u52A8\u4FDD\u7559\u5904\u7406\u56DE\u590D\u5E76\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\u3002\u6587\u6863\u9700\u8981\u5728 AnnotaMD \u4E2D\u6253\u5F00\u3002",
+  description: "\u4EC5\u5728\u521A\u8BFB\u53D6\u7684\u8BC4\u8BBA\u88AB\u660E\u786E\u8BC6\u522B\u4E3A\u4FEE\u6539\u5EFA\u8BAE\u6216\u6539\u5199\u8981\u6C42\u65F6\u8C03\u7528\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u6B67\u4E49\u5185\u5BB9\u4E0D\u5F97\u8C03\u7528\u3002\u7531 AnnotaMD \u6839\u636E commentId \u7684\u771F\u5B9E\u951A\u70B9\u6267\u884C\u7F16\u8F91\uFF0C\u4E0D\u641C\u7D22\u540C\u540D\u6587\u672C\u3002\u6210\u529F\u540E\u81EA\u52A8\u4FDD\u7559\u5904\u7406\u56DE\u590D\u5E76\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\u3002\u6587\u6863\u9700\u8981\u5728 AnnotaMD \u4E2D\u6253\u5F00\u3002",
   inputSchema: {
     commentId: string2().min(1),
     replacement: string2(),
@@ -22287,7 +22343,7 @@ server.registerPrompt("annotamd_comment_workflow", {
         "1. \u5148\u8C03\u7528 annotamd_list_inbox \u67E5\u627E\u6709\u672A\u89E3\u51B3\u6279\u6CE8\u7684\u6587\u6863\u3002",
         "2. \u8C03\u7528 annotamd_read_document\uFF0C\u5B8C\u6574\u9605\u8BFB markdown \u6B63\u6587\u3001\u9009\u533A\u6279\u6CE8\u3001\u5168\u6587\u6279\u6CE8\u548C\u7EBF\u7A0B\u56DE\u590D\uFF1B\u6279\u6CE8\u53EA\u662F\u8865\u5145\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u4EE3\u8868\u53EA\u80FD\u8BFB\u53D6\u6279\u6CE8\u3002",
         "3. \u7528 commentId \u533A\u5206\u91CD\u590D\u6587\u5B57\u4E0A\u7684\u4E0D\u540C\u6279\u6CE8\uFF0C\u4E0D\u8981\u81EA\u884C\u641C\u7D22\u540C\u540D\u6587\u672C\u6765\u731C\u6D4B\u4F4D\u7F6E\u3002",
-        "4. \u9010\u6761\u5224\u65AD\u8BC4\u8BBA\u610F\u56FE\uFF1A\u660E\u786E\u8981\u6C42\u4FEE\u6539\u65F6\u4F7F\u7528 annotamd_apply_comment_edit\uFF0C\u5E76\u63D0\u4F9B\u7B80\u77ED\u7684\u5904\u7406\u8BF4\u660E\uFF1B\u95EE\u9898\u6216\u8BA8\u8BBA\u4F7F\u7528 annotamd_reply_comment \u56DE\u7B54\uFF0C\u9ED8\u8BA4\u4E0D\u89E3\u51B3\uFF1B\u4E0D\u660E\u786E\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\uFF0C\u4E0D\u64C5\u81EA\u4FEE\u6539\u3002",
+        "4. \u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002\u5728\u4EFB\u4F55\u5199\u64CD\u4F5C\u524D\u9010\u6761\u5224\u65AD\u610F\u56FE\uFF1A\u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u624D\u4F7F\u7528 annotamd_apply_comment_edit\uFF0C\u5E76\u63D0\u4F9B\u7B80\u77ED\u7684\u5904\u7406\u8BF4\u660E\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\u4F7F\u7528 annotamd_reply_comment \u56DE\u7B54\uFF0C\u9ED8\u8BA4\u4E0D\u89E3\u51B3\uFF1B\u4E0D\u660E\u786E\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\uFF0C\u4E0D\u64C5\u81EA\u4FEE\u6539\u3002",
         "5. \u5199\u64CD\u4F5C\u4F7F\u7528\u521A\u8BFB\u53D6\u5230\u7684 expectedRevision\uFF1Brevision \u8FC7\u671F\u65F6\u91CD\u65B0\u8BFB\u53D6\uFF0C\u4E0D\u8981\u8986\u76D6\u65B0\u5185\u5BB9\u3002",
         "6. annotamd_apply_comment_edit \u4F1A\u81EA\u52A8\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\u5E76\u4FDD\u7559\u5904\u7406\u8BB0\u5F55\uFF0C\u4E0D\u8981\u518D\u6B21\u89E3\u51B3\uFF1B\u4EC5\u56DE\u590D\u7684\u95EE\u9898\u8BC4\u8BBA\u5E94\u4FDD\u7559\uFF0C\u65B9\u4FBF\u7528\u6237\u786E\u8BA4\u6216\u8FFD\u95EE\u3002",
         "\u5982\u679C AnnotaMD MCP \u6279\u6CE8\u670D\u52A1\u5173\u95ED\uFF0C\u4ECD\u53EF\u6309\u4F60\u539F\u6709\u7684\u6587\u4EF6\u6743\u9650\u8BFB\u53D6 Markdown\uFF0C\u4F46\u4E0D\u80FD\u8BFB\u53D6 AnnotaMD \u79C1\u6709\u6279\u6CE8\u3002"

@@ -61,8 +61,11 @@ const testPacks = {
       'test/unit/specs/annotamd-comment-navigation.spec.ts',
       'test/unit/specs/annotamd-comment-anchor-lifecycle.spec.ts',
       'test/unit/specs/annotamd-comment-storage.spec.ts',
+      'test/unit/specs/user-data-branding.spec.ts',
       'test/unit/specs/comment-bubble-layout.spec.ts',
+      'test/unit/specs/comment-message-actions.spec.ts',
       'test/unit/specs/comment-pane-resize.spec.ts',
+      'test/unit/specs/auto-hide-scrollbar.spec.ts',
       'test/unit/specs/annotamd-mcp-clients.spec.ts',
       'test/unit/specs/mcp-client-initial-render.spec.ts'
     ]
@@ -76,9 +79,12 @@ const testPacks = {
       'test/unit/specs/app-updater.spec.ts',
       'test/unit/specs/annotamd-preference-style.spec.ts',
       'test/unit/specs/auto-save-default.spec.ts',
+      'test/unit/specs/empty-state-open-file.spec.ts',
       'test/unit/specs/file-change-content-check.spec.ts',
       'test/unit/specs/macos-installer-volumes.spec.ts',
-      'test/unit/specs/multi-root-sidebar.spec.ts'
+      'test/unit/specs/native-dialog-localization.spec.ts',
+      'test/unit/specs/multi-root-sidebar.spec.ts',
+      'test/unit/specs/side-bar-search-ui.spec.ts'
     ]
   }
 }
@@ -115,12 +121,20 @@ for (const name of selectedPacks) {
 
 if (selectedPacks.includes('comments')) {
   checks.push({
+    label: 'MCP comment intent workflow tests',
+    command: 'npm',
+    args: ['test'],
+    cwd: path.join(root, 'tools/annotamd-mcp'),
+    env: { ...process.env, CI: '1' }
+  })
+  checks.push({
     label: 'comment anchor OT tests',
     command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
     args: [
       'run',
       'src/annotations/__tests__/transformAnchor.spec.ts',
-      'src/__tests__/replaceTextRangeExact.spec.ts'
+      'src/__tests__/replaceTextRangeExact.spec.ts',
+      'src/ui/inlineFormatToolbar/__tests__/selectionSync.spec.ts'
     ],
     cwd: path.join(root, 'packages/muya'),
     env: { ...process.env, CI: '1' }

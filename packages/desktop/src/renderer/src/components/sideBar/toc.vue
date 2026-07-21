@@ -1,7 +1,17 @@
 <template>
   <div
     class="side-bar-toc"
-    :class="[{ 'side-bar-toc-overflow': !wordWrapInToc, 'side-bar-toc-wordwrap': wordWrapInToc }]"
+    :class="[
+      {
+        'side-bar-toc-overflow': !wordWrapInToc,
+        'side-bar-toc-wordwrap': wordWrapInToc,
+        'annotamd-scrollbar-visible': scrollbarVisible
+      },
+      'annotamd-auto-hide-scrollbar'
+    ]"
+    @scroll.passive="revealScrollbar"
+    @wheel.passive="revealScrollbar"
+    @pointerdown="handleScrollbarPointerDown"
   >
     <div class="title">
       {{ t('sideBar.toc.title') }}
@@ -31,6 +41,7 @@ import bus from '../../bus'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
+import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
 
 const { t } = useI18n()
 
@@ -44,6 +55,11 @@ const defaultProps = {
 
 const { toc } = storeToRefs(editorStore)
 const { wordWrapInToc } = storeToRefs(preferencesStore)
+const {
+  scrollbarVisible,
+  revealScrollbar,
+  handleScrollbarPointerDown
+} = useAutoHideScrollbar()
 
 // Stable per-node key so el-tree preserves the user's expand/collapse state
 // across content edits (#3028) and tab switches (#3791). See deriveKeyedToc.

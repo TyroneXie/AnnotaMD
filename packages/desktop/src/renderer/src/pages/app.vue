@@ -1,7 +1,7 @@
 <template>
   <div
     class="editor-container"
-    :class="{ 'comment-pane-open': commentPaneVisible }"
+    :class="{ 'comment-pane-open': commentPaneActive }"
     :style="commentPaneStyle"
   >
     <side-bar v-if="init" />
@@ -39,7 +39,7 @@
       <import-modal />
     </div>
     <div
-      v-if="hasCurrentFile && init && commentPaneVisible"
+      v-if="commentPaneActive"
       class="annotamd-comment-pane-resizer"
       role="separator"
       aria-label="Resize comment pane"
@@ -52,7 +52,7 @@
       @keydown.left.prevent="resizeCommentPaneBy(16)"
       @keydown.right.prevent="resizeCommentPaneBy(-16)"
     />
-    <AnnotaMDCommentPane v-if="hasCurrentFile && init && commentPaneVisible" />
+    <AnnotaMDCommentPane v-if="commentPaneActive" />
   </div>
 </template>
 
@@ -109,8 +109,16 @@ const { projectTrees } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
 
+const hasCurrentFile = computed<boolean>(() => {
+  return currentFile.value?.markdown !== undefined
+})
+const commentPaneActive = computed<boolean>(() => {
+  return init.value && hasCurrentFile.value && commentPaneVisible.value
+})
+
 const commentPaneStyle = computed<Record<string, string>>(() => ({
-  '--annotamd-comment-pane-width': commentPaneVisible.value ? `${commentPaneWidth.value}px` : '0px'
+  '--annotamd-comment-pane-width': commentPaneActive.value ? `${commentPaneWidth.value}px` : '0px',
+  '--annotamd-editor-tab-height': '28px'
 }))
 
 let stopCommentPaneResize: (() => void) | null = null
@@ -179,8 +187,10 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
   () => currentFile.value?.muyaIndexCursor as Record<string, unknown> | undefined
 )
 
-const hasCurrentFile = computed<boolean>(() => {
-  return currentFile.value?.markdown !== undefined
+watch([init, hasCurrentFile], ([isInitialized, hasFile]) => {
+  if (isInitialized && !hasFile) {
+    layoutStore.SET_LAYOUT({ rightColumn: '' })
+  }
 })
 
 // Watchers
@@ -345,6 +355,22 @@ onBeforeUnmount(() => stopCommentPaneResize?.())
 :global(*::-webkit-scrollbar-thumb:hover) {
   background: rgba(31, 35, 41, 0.34);
   background-clip: padding-box;
+}
+
+:global(.annotamd-auto-hide-scrollbar:not(.annotamd-scrollbar-visible)::-webkit-scrollbar-thumb),
+:global(.annotamd-auto-hide-scrollbar:not(.annotamd-scrollbar-visible)::-webkit-scrollbar-thumb:hover) {
+  background: transparent;
+}
+
+:global(.annotamd-auto-hide-scrollbar:not(.annotamd-scrollbar-visible)::-webkit-scrollbar),
+:global(.annotamd-auto-hide-scrollbar:not(.annotamd-scrollbar-visible)::-webkit-scrollbar-corner) {
+  background: transparent;
+}
+
+:global(.annotamd-shared-scroll-source::-webkit-scrollbar) {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .editor-placeholder,

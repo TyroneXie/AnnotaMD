@@ -12,6 +12,7 @@ import {
   createCliConfigureArgs,
   createCustomAgentManualConfig,
   createStandardMcpManualConfig,
+  hasCurrentMcpServer,
   hasNamedMcpServer,
   type McpLaunchSpec
 } from '../../../src/main/mcpClients'
@@ -21,8 +22,7 @@ const launch: McpLaunchSpec = {
   args: ['/Applications/AnnotaMD.app/Contents/Resources/annotamd-mcp/index.mjs'],
   env: {
     ELECTRON_RUN_AS_NODE: '1',
-    ANNOTAMD_CLIENT_NAME: 'codex',
-    ANNOTAMD_BRIDGE_FILE: '/tmp/agent-bridge.json'
+    ANNOTAMD_CLIENT_NAME: 'codex'
   }
 }
 
@@ -32,7 +32,6 @@ describe('AnnotaMD MCP client setup', () => {
       'mcp', 'add', 'annotamd',
       '--env', 'ELECTRON_RUN_AS_NODE=1',
       '--env', 'ANNOTAMD_CLIENT_NAME=codex',
-      '--env', 'ANNOTAMD_BRIDGE_FILE=/tmp/agent-bridge.json',
       '--', launch.command, ...launch.args
     ])
   })
@@ -42,7 +41,6 @@ describe('AnnotaMD MCP client setup', () => {
       'mcp', 'add', 'annotamd', '--scope', 'user',
       '-e', 'ELECTRON_RUN_AS_NODE=1',
       '-e', 'ANNOTAMD_CLIENT_NAME=codex',
-      '-e', 'ANNOTAMD_BRIDGE_FILE=/tmp/agent-bridge.json',
       '--', launch.command, ...launch.args
     ])
   })
@@ -60,12 +58,29 @@ describe('AnnotaMD MCP client setup', () => {
     const result = createCustomAgentManualConfig()
     const config = JSON.parse(result.manualConfig)
     expect(config.mcpServers.annotamd.env.ELECTRON_RUN_AS_NODE).toBe('1')
-    expect(config.mcpServers.annotamd.env.ANNOTAMD_BRIDGE_FILE).toContain('agent-bridge.json')
+    expect(config.mcpServers.annotamd.env).not.toHaveProperty('ANNOTAMD_BRIDGE_FILE')
     expect(config.mcpServers.annotamd.env).not.toHaveProperty('ANNOTAMD_CLIENT_NAME')
   })
 
   it('does not treat a missing named server error as configured', () => {
     expect(hasNamedMcpServer('No MCP server named "annotamd".')).toBe(false)
     expect(hasNamedMcpServer('{"name":"annotamd","enabled":true}')).toBe(true)
+  })
+
+  it('requires the discovery-based adapter instead of a pinned bridge file', () => {
+    expect(hasCurrentMcpServer(JSON.stringify({
+      name: 'annotamd',
+      transport: {
+        args: ['/Applications/AnnotaMD.app/Contents/Resources/annotamd-mcp/index.mjs'],
+        env: { ELECTRON_RUN_AS_NODE: '1' }
+      }
+    }))).toBe(true)
+    expect(hasCurrentMcpServer(JSON.stringify({
+      name: 'annotamd',
+      transport: {
+        args: ['/workspace/tools/annotamd-mcp/dist/index.js'],
+        env: { ANNOTAMD_BRIDGE_FILE: '/tmp/annotamd-dev/agent-bridge.json' }
+      }
+    }))).toBe(false)
   })
 })

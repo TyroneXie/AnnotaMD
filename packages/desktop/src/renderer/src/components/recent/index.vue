@@ -9,13 +9,10 @@
         {{ t('recent.startDescription') }}
       </p>
       <div class="start-actions">
-        <button
-          type="button"
-          class="start-primary"
-          @click="openFile"
-        >
-          {{ t('recent.openFile') }}
-        </button>
+        <OpenFileSplitButton
+          @open-file="openFile"
+          @open-folder="openFolder"
+        />
         <button
           type="button"
           class="start-secondary"
@@ -33,12 +30,19 @@
 
 <script setup lang="ts">
 import { useEditorStore } from '@/store/editor'
+import { useProjectStore } from '@/store/project'
+import OpenFileSplitButton from '@/components/OpenFileSplitButton.vue'
 import { t } from '../../i18n'
 
 const editorStore = useEditorStore()
+const projectStore = useProjectStore()
 
 const openFile = (): void => {
   window.electron.ipcRenderer.send('mt::cmd-open-file')
+}
+
+const openFolder = (): void => {
+  projectStore.ASK_FOR_OPEN_PROJECT()
 }
 
 const newFile = (): void => {
@@ -138,10 +142,13 @@ const newFile = (): void => {
   margin-top: 22px;
 }
 
-.start-actions button {
+.start-secondary {
   min-width: 112px;
   height: 36px;
   padding: 0 18px;
+  color: var(--buttonPrimaryFontColor);
+  background: var(--buttonPrimaryBgColor);
+  border: 1px solid transparent;
   font: inherit;
   font-size: 13px;
   border-radius: 8px;
@@ -149,24 +156,10 @@ const newFile = (): void => {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.start-primary {
-  color: var(--buttonPrimaryFontColor);
-  background: var(--buttonPrimaryBgColor);
-  border: var(--buttonPrimaryBorder);
-}
-
-.start-secondary {
-  color: var(--editorColor);
-  background: transparent;
-  border: 1px solid transparent;
-}
-
-.start-primary:hover,
-.start-primary:focus-visible,
 .start-secondary:hover,
 .start-secondary:focus-visible {
   color: var(--buttonPrimaryFontColor);
-  background: var(--buttonPrimaryBgColor);
+  background: var(--buttonPrimaryBgColorHover, var(--buttonPrimaryBgColor));
   border-color: transparent;
 }
 

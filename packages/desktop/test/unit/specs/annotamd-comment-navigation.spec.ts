@@ -70,6 +70,19 @@ describe('AnnotaMD comment navigation', () => {
     expect(pane).toContain(':data-comment-id="comment.id"')
     expect(pane).toContain('commentFocusRequest')
     expect(pane).toContain('activeCommentId === comment.id')
-    expect(pane).toContain("card?.scrollIntoView({ block: 'center', behavior: 'smooth' })")
+    expect(pane).toContain('scrollCommentAnchorIntoView(commentId, forceAnchorPosition)')
+    expect(pane).toContain('const COMMENT_ANCHOR_VIEWPORT_RATIO = 0.28')
+    expect(pane).not.toContain('card?.scrollIntoView')
+  })
+
+  it('uses Feishu-style arrows for anchored previous and next comment navigation', () => {
+    const pane = read(
+      'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
+    )
+
+    expect(pane).toContain('class="annotamd-comment-next"')
+    expect(pane).toContain('class="annotamd-comment-previous"')
+    expect(pane).toContain('navigateComment(comment.id, 1)')
+    expect(pane).toContain('navigateComment(comment.id, -1)')
   })
 })

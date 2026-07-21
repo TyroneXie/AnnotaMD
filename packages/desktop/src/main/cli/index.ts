@@ -55,6 +55,8 @@ const cli = (): ParsedArgs => {
     const portablePath = path.join(app.getAppPath(), '..', '..', 'marktext-user-data')
     if (isDirectory(portablePath)) {
       args['--user-data-dir'] = portablePath
+    } else {
+      args['--user-data-dir'] = path.join(getPath('appData'), 'AnnotaMD')
     }
   } else {
     args['--user-data-dir'] = path.resolve(args['--user-data-dir'])

@@ -27,28 +27,88 @@
         </button>
       </div>
 
-      <textarea
-        v-if="editingId === comment.id"
-        v-model="editBody"
-        class="annotamd-document-editor"
-        rows="3"
-      />
-      <p v-else>{{ comment.body }}</p>
+      <div class="annotamd-document-thread-message annotamd-document-root-message">
+        <span class="annotamd-document-message-author">{{ t('annotamd.comments.userAuthor') }}</span>
+        <textarea
+          v-if="editingId === comment.id"
+          v-model="editBody"
+          class="annotamd-document-editor"
+          rows="3"
+        />
+        <p v-else>{{ comment.body }}</p>
+        <div class="annotamd-document-message-actions">
+          <template v-if="editingId === comment.id">
+            <button
+              type="button"
+              :disabled="!editBody.trim()"
+              @click="saveEdit(comment.id)"
+            >
+              {{ t('annotamd.comments.save') }}
+            </button>
+            <button type="button" @click="cancelEdit">
+              {{ t('annotamd.comments.cancel') }}
+            </button>
+          </template>
+          <template v-else>
+            <button type="button" @click="startCommentEdit(comment.id, comment.body)">
+              {{ t('annotamd.comments.edit') }}
+            </button>
+            <button type="button" @click="commentStore.deleteComment(filePath, comment.id)">
+              {{ t('annotamd.comments.delete') }}
+            </button>
+          </template>
+        </div>
+      </div>
 
       <div
         v-if="comment.replies.length"
         class="annotamd-document-replies"
       >
-        <p
+        <article
           v-for="reply in comment.replies"
           :key="reply.id"
+          :data-reply-id="reply.id"
+          class="annotamd-document-thread-message annotamd-document-reply-message"
+          :class="`author-${reply.author}`"
         >
-          <span
-            v-if="reply.author === 'agent'"
-            class="annotamd-document-reply-author"
-          >{{ t('annotamd.comments.agentAuthor') }}</span>
-          {{ reply.body }}
-        </p>
+          <span class="annotamd-document-message-author">
+            {{ t(reply.author === 'agent'
+              ? 'annotamd.comments.agentAuthor'
+              : 'annotamd.comments.userAuthor') }}
+          </span>
+          <textarea
+            v-if="editingReplyId === reply.id"
+            v-model="editReplyBody"
+            class="annotamd-document-editor"
+            rows="3"
+          />
+          <p v-else>{{ reply.body }}</p>
+          <div
+            v-if="reply.author === 'user'"
+            class="annotamd-document-message-actions"
+          >
+            <template v-if="editingReplyId === reply.id">
+              <button
+                type="button"
+                :disabled="!editReplyBody.trim()"
+                @click="saveReplyEdit(comment.id, reply.id)"
+              >
+                {{ t('annotamd.comments.save') }}
+              </button>
+              <button type="button" @click="cancelReplyEdit">
+                {{ t('annotamd.comments.cancel') }}
+              </button>
+            </template>
+            <template v-else>
+              <button type="button" @click="startReplyEdit(reply.id, reply.body)">
+                {{ t('annotamd.comments.edit') }}
+              </button>
+              <button type="button" @click="deleteReply(comment.id, reply.id)">
+                {{ t('annotamd.comments.delete') }}
+              </button>
+            </template>
+          </div>
+        </article>
       </div>
 
       <div
@@ -71,31 +131,10 @@
 
       <div class="annotamd-document-actions">
         <button
-          v-if="editingId === comment.id"
-          type="button"
-          :disabled="!editBody.trim()"
-          @click="saveEdit(comment.id)"
-        >
-          {{ t('annotamd.comments.save') }}
-        </button>
-        <button
-          v-else
-          type="button"
-          @click="startEdit(comment.id, comment.body)"
-        >
-          {{ t('annotamd.comments.edit') }}
-        </button>
-        <button
           type="button"
           @click="startReply(comment.id)"
         >
           {{ t('annotamd.comments.reply') }}
-        </button>
-        <button
-          type="button"
-          @click="commentStore.deleteComment(filePath, comment.id)"
-        >
-          {{ t('annotamd.comments.delete') }}
         </button>
       </div>
     </article>
@@ -137,6 +176,8 @@ const { currentFile } = storeToRefs(editorStore)
 const draftBody = ref('')
 const editingId = ref<string | null>(null)
 const editBody = ref('')
+const editingReplyId = ref<string | null>(null)
+const editReplyBody = ref('')
 const replyingId = ref<string | null>(null)
 const replyBody = ref('')
 
@@ -151,16 +192,46 @@ const submitComment = (): void => {
   draftBody.value = ''
 }
 
-const startEdit = (id: string, body: string): void => {
-  editingId.value = id
-  editBody.value = body
-}
-
 const saveEdit = (id: string): void => {
   if (!filePath.value) return
   commentStore.updateComment(filePath.value, id, editBody.value)
+  cancelEdit()
+}
+
+const cancelEdit = (): void => {
   editingId.value = null
   editBody.value = ''
+}
+
+const startCommentEdit = (commentId: string, body: string): void => {
+  cancelEdit()
+  cancelReplyEdit()
+  editingId.value = commentId
+  editBody.value = body
+}
+
+const startReplyEdit = (replyId: string, body: string): void => {
+  cancelEdit()
+  cancelReplyEdit()
+  editingReplyId.value = replyId
+  editReplyBody.value = body
+}
+
+const saveReplyEdit = (commentId: string, replyId: string): void => {
+  if (!filePath.value) return
+  commentStore.updateReply(filePath.value, commentId, replyId, editReplyBody.value)
+  cancelReplyEdit()
+}
+
+const cancelReplyEdit = (): void => {
+  editingReplyId.value = null
+  editReplyBody.value = ''
+}
+
+const deleteReply = (commentId: string, replyId: string): void => {
+  if (!filePath.value) return
+  if (editingReplyId.value === replyId) cancelReplyEdit()
+  commentStore.deleteReply(filePath.value, commentId, replyId)
 }
 
 const startReply = (id: string): void => {
@@ -252,25 +323,37 @@ const saveReply = (id: string): void => {
   line-height: 1.55;
 }
 
-.annotamd-document-replies {
+.annotamd-document-thread-message {
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid #dee0e3;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.annotamd-document-root-message {
+  margin-bottom: 10px;
+}
+
+.annotamd-document-thread-message p {
+  padding: 6px 0 7px;
+  white-space: pre-wrap;
+}
+
+.annotamd-document-thread-message .annotamd-document-editor {
+  width: 100%;
+  margin: 7px 0;
+}
+
+.annotamd-document-message-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0 12px 12px;
-  padding: 8px 10px;
-  border-left: 2px solid #dee0e3;
-  border-radius: 0 6px 6px 0;
-  background: #fafbfc;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: 26px;
 }
 
-.annotamd-document-replies p {
-  padding: 0;
-  font-size: 13px;
-}
-
-.annotamd-document-reply-author {
+.annotamd-document-message-author {
   display: inline-flex;
-  margin-right: 6px;
   padding: 1px 5px;
   border-radius: 4px;
   background: #eaf2ff;
@@ -278,6 +361,21 @@ const saveReply = (id: string): void => {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.annotamd-document-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.annotamd-document-reply-message p {
+  font-size: 13px;
+}
+
+.annotamd-document-reply-message.author-agent {
+  background: #f7f9ff;
 }
 
 .annotamd-document-actions {
@@ -289,6 +387,7 @@ const saveReply = (id: string): void => {
 
 .annotamd-document-comment-top button,
 .annotamd-document-actions button,
+.annotamd-document-message-actions button,
 .annotamd-document-reply-editor button,
 .annotamd-document-composer button {
   height: 26px;
@@ -301,7 +400,8 @@ const saveReply = (id: string): void => {
 }
 
 .annotamd-document-comment-top button:hover,
-.annotamd-document-actions button:hover {
+.annotamd-document-actions button:hover,
+.annotamd-document-message-actions button:hover {
   background: #e8f1ff;
 }
 

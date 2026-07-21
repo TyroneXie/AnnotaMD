@@ -13,6 +13,15 @@ describe('sidebar search controls', () => {
     expect(source).toContain('content: attr(data-tooltip)')
   })
 
+  it('keeps the rightmost regex tooltip inside the sidebar', () => {
+    expect(source).toMatch(
+      /&\.is-regex::after\s*\{[^}]*right:\s*0;[^}]*left:\s*auto;[^}]*transform:\s*translate\(0, -2px\);/s
+    )
+    expect(source).toMatch(
+      /&\.is-regex:hover::after\s*\{[^}]*transform:\s*translate\(0\);/s
+    )
+  })
+
   it('does not duplicate the open-folder action in search', () => {
     expect(source).not.toContain("t('sideBar.search.openFolder')")
     expect(source).not.toContain('const openFolder =')

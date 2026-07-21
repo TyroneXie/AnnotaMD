@@ -130,6 +130,8 @@ const requestRendererEdit = async(
 const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown> => {
   const service = getCommentService()
   switch (method) {
+    case 'ping':
+      return { application: 'AnnotaMD', pid: process.pid }
     case 'register_client': {
       const name = stringParam(params, 'name')
       clients.set(name, Date.now())

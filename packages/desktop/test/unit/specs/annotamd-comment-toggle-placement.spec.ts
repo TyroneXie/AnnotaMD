@@ -37,7 +37,7 @@ describe('AnnotaMD comment toggle placement', () => {
       /\.annotamd-comment-pane\s*\{[^}]*top:\s*var\(--titleBarHeight\);[^}]*bottom:\s*0;/s
     )
     expect(commentPane).toMatch(
-      /\.annotamd-comment-header\s*\{[^}]*padding:\s*10px 16px;/s
+      /\.annotamd-comment-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;/s
     )
   })
 

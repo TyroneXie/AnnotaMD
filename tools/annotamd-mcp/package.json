@@ -8,8 +8,9 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && npm run build:bundle",
-    "build:bundle": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=bundle/index.mjs",
-    "dev": "tsx src/index.ts"
+    "build:bundle": "node scripts/buildBundle.mjs",
+    "dev": "tsx src/index.ts",
+    "test": "node --import tsx --test src/*.spec.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
