@@ -67,6 +67,7 @@ const testPacks = {
       'test/unit/specs/comment-pane-resize.spec.ts',
       'test/unit/specs/auto-hide-scrollbar.spec.ts',
       'test/unit/specs/annotamd-mcp-clients.spec.ts',
+      'test/unit/specs/annotamd-comment-skill.spec.ts',
       'test/unit/specs/mcp-client-initial-render.spec.ts'
     ]
   },

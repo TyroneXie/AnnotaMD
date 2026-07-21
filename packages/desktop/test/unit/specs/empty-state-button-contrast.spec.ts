@@ -114,12 +114,14 @@ const pairContrast = (
   return contrast(fg, bg)
 }
 
-// Pull the foreground (color) and background-color custom-property names the
-// empty-state button rule assigns, straight from the component's scoped CSS.
-const extractButtonVars = (
+// Pull a colour custom-property name from the shared split button's scoped
+// CSS. Its text colour is inherited from the wrapper while its background is
+// assigned to the two button segments.
+const extractButtonVar = (
   componentPath: string,
-  selectorNeedle: string
-): { fgVar: string; bgVar: string } => {
+  selectorNeedle: string,
+  property: 'color' | 'background'
+): string => {
   const css = readFileSync(componentPath, 'utf8')
   const ruleRe = /([^{}]+)\{([^{}]*)\}/g
   let m: RegExpExecArray | null
@@ -128,11 +130,12 @@ const extractButtonVars = (
     const body = m[2]
     if (!selector.includes(selectorNeedle)) continue
     if (/:hover|:focus/.test(selector)) continue
-    const bg = body.match(/(?<![-\w])background(?:-color)?:\s*var\(\s*(--[\w-]+)/)
-    const fg = body.match(/(?<![-\w])color:\s*var\(\s*(--[\w-]+)/)
-    if (bg && fg) return { fgVar: fg[1], bgVar: bg[1] }
+    const match = property === 'color'
+      ? body.match(/(?<![-\w])color:\s*var\(\s*(--[\w-]+)/)
+      : body.match(/(?<![-\w])background(?:-color)?:\s*var\(\s*(--[\w-]+)/)
+    if (match) return match[1]
   }
-  throw new Error(`no ${selectorNeedle} colour rule found in ${componentPath}`)
+  throw new Error(`no ${selectorNeedle} ${property} rule found in ${componentPath}`)
 }
 
 const baseVars = parseVars(readFileSync(BASE_CSS, 'utf8'))
@@ -140,18 +143,16 @@ const themeFiles = readdirSync(THEME_DIR).filter((f) => f.endsWith('.theme.css')
 
 const COMPONENTS = [
   {
-    name: 'Open Folder (sidebar/tree.vue)',
-    path: resolve(RENDERER, 'components/sideBar/tree.vue'),
-    selector: '.open-project .el-button.is-text.is-has-bg',
+    name: 'Open File split button in the sidebar',
     surfaceVar: '--sideBarBgColor'
   },
   {
-    name: 'Open File (recent/index.vue)',
-    path: resolve(RENDERER, 'components/recent/index.vue'),
-    selector: '.start-primary',
+    name: 'Open File split button on the start screen',
     surfaceVar: '--editorBgColor'
   }
 ]
+
+const SPLIT_BUTTON = resolve(RENDERER, 'components/OpenFileSplitButton.vue')
 
 describe('empty-state button readability (#4774)', () => {
   it('found theme files and base variables to test against', () => {
@@ -162,7 +163,8 @@ describe('empty-state button readability (#4774)', () => {
 
   for (const component of COMPONENTS) {
     it(`${component.name} label is at least as readable as the standard primary button, in every theme`, () => {
-      const { fgVar, bgVar } = extractButtonVars(component.path, component.selector)
+      const fgVar = extractButtonVar(SPLIT_BUTTON, '.open-file-split', 'color')
+      const bgVar = extractButtonVar(SPLIT_BUTTON, '.open-file-split-main', 'background')
       const failures: string[] = []
 
       for (const file of themeFiles) {

@@ -6,6 +6,11 @@ import { delimiter, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { app } from 'electron'
 import commandExists from 'command-exists'
+import {
+  getCommentSkillInstallDirectory,
+  installCommentSkill,
+  isCommentSkillCurrent
+} from './commentSkill'
 import type {
   AnnotaMDMcpClientConfigureResult,
   AnnotaMDMcpClientId,
@@ -91,6 +96,36 @@ const getLaunchSpec = (clientName?: AnnotaMDMcpClientId): McpLaunchSpec => {
   }
 }
 
+const getCommentSkillSourceDirectory = (): string => app.isPackaged
+  ? join(process.resourcesPath, 'annotamd-skills', 'annotamd-comment-review')
+  : resolve(
+    app.getAppPath(),
+    '..',
+    '..',
+    'tools',
+    'annotamd-mcp',
+    'skills',
+    'annotamd-comment-review'
+  )
+
+const isCommentSkillConfigured = (id: AnnotaMDMcpClientId): Promise<boolean> => (
+  isCommentSkillCurrent(
+    getCommentSkillSourceDirectory(),
+    getCommentSkillInstallDirectory(id)
+  )
+)
+
+const configureCommentSkill = (id: AnnotaMDMcpClientId): Promise<void> => (
+  installCommentSkill(
+    getCommentSkillSourceDirectory(),
+    getCommentSkillInstallDirectory(id)
+  )
+)
+
+export const configurePortableCommentSkill = (): Promise<void> => (
+  configureCommentSkill('codex')
+)
+
 export const hasNamedMcpServer = (output: string): boolean => {
   const normalized = output.toLowerCase()
   if (normalized.includes('no mcp server named')) return false
@@ -150,16 +185,23 @@ export const inspectMcpClient = async(id: AnnotaMDMcpClientId): Promise<AnnotaMD
       id,
       installed: false,
       configured: false,
+      mcpConfigured: false,
+      skillConfigured: false,
       canAutoConfigure: true
     }
   }
 
   try {
-    const configured = await isConfiguredWithCli(id, executable)
+    const [mcpConfigured, skillConfigured] = await Promise.all([
+      isConfiguredWithCli(id, executable),
+      isCommentSkillConfigured(id)
+    ])
     return {
       id,
       installed: true,
-      configured,
+      configured: mcpConfigured && skillConfigured,
+      mcpConfigured,
+      skillConfigured,
       canAutoConfigure: true,
       executable
     }
@@ -168,6 +210,8 @@ export const inspectMcpClient = async(id: AnnotaMDMcpClientId): Promise<AnnotaMD
       id,
       installed: true,
       configured: false,
+      mcpConfigured: false,
+      skillConfigured: false,
       canAutoConfigure: true,
       executable,
       error: error instanceof Error ? error.message : String(error)
@@ -258,7 +302,8 @@ export const configureMcpClient = async(
     return { success: true, client: before }
   }
   try {
-    await configureWithCli(id, before.executable!)
+    if (!before.mcpConfigured) await configureWithCli(id, before.executable!)
+    if (!before.skillConfigured) await configureCommentSkill(id)
     const client = await inspectMcpClient(id)
     updateCachedInspection(client)
     return { success: client.configured, client }

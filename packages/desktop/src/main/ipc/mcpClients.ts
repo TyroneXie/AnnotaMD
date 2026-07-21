@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import type { AnnotaMDMcpClientId } from '@shared/types/mcpClients'
 import {
   configureMcpClient,
+  configurePortableCommentSkill,
   createCustomAgentManualConfig,
   inspectMcpClients,
   migrateConfiguredMcpClients
@@ -29,5 +30,9 @@ export const registerMcpClientHandlers = (): void => {
   ipcMain.handle(
     'mt::mcp-clients::manual-config',
     () => createCustomAgentManualConfig()
+  )
+  ipcMain.handle(
+    'mt::mcp-clients::install-portable-skill',
+    () => configurePortableCommentSkill()
   )
 }

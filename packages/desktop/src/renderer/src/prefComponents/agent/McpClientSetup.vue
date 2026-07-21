@@ -31,10 +31,23 @@
               <i class="mcp-client-state-dot" :class="clientStateClass(client.id)" />
               {{ stateText(client) }}
             </small>
+            <small
+              v-if="configureErrors[client.id]"
+              class="mcp-client-config-error"
+              role="alert"
+            >
+              {{ t('preferences.agent.clientConfigureFailureReason', {
+                reason: conciseError(configureErrors[client.id])
+              }) }}
+              {{ t('preferences.agent.clientManualFallback', {
+                client: clientNames[client.id],
+                path: clientSkillPaths[client.id]
+              }) }}
+            </small>
           </span>
         </div>
         <button
-          v-if="connectedClient(client.id)"
+          v-if="connectedClient(client.id) && client.configured"
           type="button"
           class="mcp-client-button connected"
           disabled
@@ -141,16 +154,30 @@
           <button
             type="button"
             class="mcp-client-button primary"
+            :disabled="customConfigBusy"
             @click="copyCustomConfig"
           >
-            {{ customConfigCopied
+            {{ customConfigBusy
+              ? t('preferences.agent.clientConfiguring')
+              : customConfigCopied
               ? t('preferences.agent.clientCopied')
               : t('preferences.agent.customClientCopy') }}
           </button>
         </div>
+        <p
+          v-if="customConfigError"
+          class="mcp-client-config-error mcp-custom-client-error"
+          role="alert"
+        >
+          {{ t('preferences.agent.customClientSetupFailed', {
+            reason: conciseError(customConfigError)
+          }) }}
+          {{ t('preferences.agent.customClientManualFallback') }}
+        </p>
         <div v-show="customDetailsExpanded" class="mcp-custom-client-details">
           <p>{{ t('preferences.agent.customClientDetailsDescription') }}</p>
           <ol>
+            <li>{{ t('preferences.agent.customClientStepSkill') }}</li>
             <li>{{ t('preferences.agent.customClientStepPaste') }}</li>
             <li>{{ t('preferences.agent.customClientStepRestart') }}</li>
           </ol>
@@ -186,6 +213,8 @@ const emptyClientState = (id: ClientId): AnnotaMDMcpClientState => ({
   id,
   installed: false,
   configured: false,
+  mcpConfigured: false,
+  skillConfigured: false,
   canAutoConfigure: true
 })
 
@@ -193,7 +222,10 @@ const inspectedClients = ref<AnnotaMDMcpClientState[]>(clientIds.map(emptyClient
 const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clients: [] })
 const initialInspectionPending = ref(true)
 const busyClient = ref<ClientId | null>(null)
+const configureErrors = ref<Partial<Record<ClientId, string>>>({})
 const customConfigCopied = ref(false)
+const customConfigBusy = ref(false)
+const customConfigError = ref<string | null>(null)
 const customDetailsExpanded = ref(false)
 const missingIcons = ref<Record<string, boolean>>({})
 let stopMcpStatusListener: null | (() => void) = null
@@ -206,6 +238,25 @@ const clientNames: Record<ClientId, string> = {
 const clientIcons: Record<ClientId, string> = {
   codex: chatGptIcon,
   'claude-code': claudeCodeIcon
+}
+
+const clientSkillPaths: Record<ClientId, string> = {
+  codex: '~/.agents/skills/annotamd-comment-review',
+  'claude-code': '~/.claude/skills/annotamd-comment-review'
+}
+
+const conciseError = (error: string | undefined): string => (
+  (error || t('preferences.agent.clientUnknownError'))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240)
+)
+
+const setConfigureError = (id: ClientId, error?: string): void => {
+  const next = { ...configureErrors.value }
+  if (error) next[id] = error
+  else delete next[id]
+  configureErrors.value = next
 }
 
 const normalizedClientName = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -264,13 +315,17 @@ const connectionText = (client: AnnotaMDMcpClientStatus): string => t(
 )
 
 const stateText = (client: AnnotaMDMcpClientState): string => {
+  if (initialInspectionPending.value) return detectingText()
+  if (configureErrors.value[client.id]) return t('preferences.agent.clientConfigureFailed')
+  if (client.error) return t('preferences.agent.clientDetectionFailed')
+  if (!client.installed) return t('preferences.agent.clientInstallFirst')
+  if (client.mcpConfigured && !client.skillConfigured) {
+    return t('preferences.agent.clientSkillMissing')
+  }
   const liveClient = connectedClient(client.id)
   if (liveClient) return connectionText(liveClient)
   const previousClient = knownClientHistory(client.id)
   if (previousClient) return connectionText(previousClient)
-  if (initialInspectionPending.value) return detectingText()
-  if (client.error) return t('preferences.agent.clientDetectionFailed')
-  if (!client.installed) return t('preferences.agent.clientInstallFirst')
   if (client.configured) return t('preferences.agent.clientConfiguredWaiting')
   return t('preferences.agent.clientAvailable')
 }
@@ -322,22 +377,46 @@ const refresh = async(): Promise<void> => {
 
 const configure = async(id: ClientId): Promise<void> => {
   busyClient.value = id
+  setConfigureError(id)
   try {
     const result = await window.electron.ipcRenderer.invoke('mt::mcp-clients::configure', id)
     const index = inspectedClients.value.findIndex((client) => client.id === id)
     if (index >= 0) inspectedClients.value[index] = result.client
+    if (!result.success) {
+      setConfigureError(id, result.message || t('preferences.agent.clientUnknownError'))
+      customDetailsExpanded.value = true
+    }
+  } catch (error) {
+    setConfigureError(id, error instanceof Error ? error.message : String(error))
+    customDetailsExpanded.value = true
   } finally {
     busyClient.value = null
   }
 }
 
 const copyCustomConfig = async(): Promise<void> => {
-  const result = await window.electron.ipcRenderer.invoke('mt::mcp-clients::manual-config')
-  window.electron.clipboard.writeText(result.manualConfig)
-  customConfigCopied.value = true
-  window.setTimeout(() => {
-    customConfigCopied.value = false
-  }, 1600)
+  customConfigBusy.value = true
+  customConfigError.value = null
+  try {
+    try {
+      await window.electron.ipcRenderer.invoke('mt::mcp-clients::install-portable-skill')
+    } catch (error) {
+      customConfigError.value = error instanceof Error ? error.message : String(error)
+      customDetailsExpanded.value = true
+    }
+
+    const result = await window.electron.ipcRenderer.invoke('mt::mcp-clients::manual-config')
+    window.electron.clipboard.writeText(result.manualConfig)
+    customConfigCopied.value = true
+    window.setTimeout(() => {
+      customConfigCopied.value = false
+    }, 1600)
+  } catch (error) {
+    customConfigError.value = error instanceof Error ? error.message : String(error)
+    customDetailsExpanded.value = true
+  } finally {
+    customConfigBusy.value = false
+  }
 }
 
 onMounted(() => {
@@ -478,6 +557,14 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   font-size: 11px;
 }
 
+.mcp-client-copy .mcp-client-config-error {
+  display: block;
+  max-width: 460px;
+  margin-top: 5px;
+  color: #d46b08;
+  line-height: 1.45;
+}
+
 .mcp-client-button {
   min-width: 72px;
   flex: 0 0 auto;
@@ -575,6 +662,11 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   color: var(--editorColor80);
   font-size: 11px;
   line-height: 1.55;
+}
+
+.mcp-custom-client .mcp-custom-client-error {
+  margin: 0 0 8px 38px;
+  color: #d46b08;
 }
 
 .mcp-custom-client-copy small {

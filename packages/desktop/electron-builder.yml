@@ -42,6 +42,10 @@ extraResources:
     to: annotamd-mcp
     filter:
       - 'index.mjs'
+  - from: ../../tools/annotamd-mcp/skills/annotamd-comment-review
+    to: annotamd-skills/annotamd-comment-review
+    filter:
+      - '**/*'
   - from: build/icons
     to: icons # ends up at resources/icons/
     filter:

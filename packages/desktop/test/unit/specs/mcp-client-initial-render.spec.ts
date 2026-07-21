@@ -66,4 +66,18 @@ describe('MCP client initial rendering', () => {
     expect(bridgeSource).toContain('client.connected = false')
     expect(bridgeSource).not.toContain('clients.delete(name)')
   })
+
+  it('installs the portable comment skill when copying setup for other Agents', () => {
+    expect(source).toContain("invoke('mt::mcp-clients::install-portable-skill')")
+    expect(source).toContain("t('preferences.agent.customClientStepSkill')")
+    expect(source).toContain('v-if="connectedClient(client.id) && client.configured"')
+  })
+
+  it('shows actionable manual steps when automatic MCP or skill setup fails', () => {
+    expect(source).toContain('configureErrors')
+    expect(source).toContain("t('preferences.agent.clientManualFallback'")
+    expect(source).toContain('customConfigError')
+    expect(source).toContain("t('preferences.agent.customClientManualFallback')")
+    expect(source).toContain('customDetailsExpanded.value = true')
+  })
 })

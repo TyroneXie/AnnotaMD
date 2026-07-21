@@ -75,6 +75,7 @@ export interface IpcInvokeChannels {
     args: []
     ret: AnnotaMDMcpManualConfigResult
   }
+  'mt::mcp-clients::install-portable-skill': { args: []; ret: void }
   'mt::comments::mcp-status': { args: []; ret: AnnotaMDMcpStatus }
   'mt::comments::load': {
     args: [filePath: string, markdown?: string]

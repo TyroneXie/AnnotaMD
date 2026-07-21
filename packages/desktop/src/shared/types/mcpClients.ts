@@ -6,6 +6,8 @@ export interface AnnotaMDMcpClientState {
   id: AnnotaMDMcpClientId
   installed: boolean
   configured: boolean
+  mcpConfigured: boolean
+  skillConfigured: boolean
   canAutoConfigure: boolean
   executable?: string
   error?: string

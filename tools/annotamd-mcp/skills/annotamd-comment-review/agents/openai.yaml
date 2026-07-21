@@ -1,0 +1,4 @@
+interface:
+  display_name: "AnnotaMD Comment Review"
+  short_description: "Handle local Markdown comments with AnnotaMD"
+  default_prompt: "Use $annotamd-comment-review to read and respond to the latest comments on this Markdown document."
