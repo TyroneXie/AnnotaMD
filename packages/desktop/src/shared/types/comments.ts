@@ -87,7 +87,9 @@ export interface AnnotaMDAgentEditResult {
 
 export interface AnnotaMDMcpClientStatus {
   name: string
+  version?: string
   lastSeenAt: number
+  connected: boolean
 }
 
 export interface AnnotaMDMcpStatus {

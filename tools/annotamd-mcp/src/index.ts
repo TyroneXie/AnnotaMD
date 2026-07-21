@@ -7,6 +7,7 @@ import {
   getBridgeFileCandidates,
   type BridgeConfig
 } from './bridgeDiscovery.js'
+import { resolveClientIdentity } from './clientIdentity.js'
 import { formatCommentReviewResult } from './commentWorkflow.js'
 
 interface BridgeResponse {
@@ -14,7 +15,21 @@ interface BridgeResponse {
   error?: string
 }
 
-const clientName = process.env.ANNOTAMD_CLIENT_NAME?.trim() || 'Agent'
+const configuredClientName = process.env.ANNOTAMD_CLIENT_NAME?.trim()
+let initialized = false
+
+const clientIdentity = () => resolveClientIdentity(
+  configuredClientName,
+  server.server.getClientVersion()
+)
+
+const clientRegistration = (): Record<string, string> => {
+  const identity = clientIdentity()
+  return {
+    name: identity.name,
+    ...(identity.version ? { version: identity.version } : {})
+  }
+}
 
 const requestBridge = async(
   config: BridgeConfig,
@@ -42,7 +57,7 @@ const callBridge = async(method: string, params: Record<string, unknown> = {}): 
       await requestBridge(
         candidate,
         'register_client',
-        { name: clientName },
+        clientRegistration(),
         AbortSignal.timeout(750)
       )
       return true
@@ -82,7 +97,12 @@ const server = new McpServer({
 })
 
 const touchBridge = async(): Promise<void> => {
-  await callBridge('register_client', { name: clientName })
+  await callBridge('register_client', clientRegistration())
+}
+
+server.server.oninitialized = () => {
+  initialized = true
+  void touchBridge().catch(() => {})
 }
 
 server.registerResource(
@@ -232,8 +252,7 @@ server.registerPrompt('annotamd_comment_workflow', {
 
 const transport = new StdioServerTransport()
 await server.connect(transport)
-void touchBridge().catch(() => {})
 const heartbeat = setInterval(() => {
-  void touchBridge().catch(() => {})
+  if (initialized) void touchBridge().catch(() => {})
 }, 10_000)
 heartbeat.unref()

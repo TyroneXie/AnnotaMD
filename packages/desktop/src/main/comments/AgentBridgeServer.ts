@@ -20,6 +20,12 @@ interface PendingEdit {
   timer: NodeJS.Timeout
 }
 
+interface ConnectedClient {
+  lastSeenAt: number
+  version?: string
+  connected: boolean
+}
+
 let server: Server | null = null
 let connectionPath = ''
 let enabled = false
@@ -27,7 +33,7 @@ let handlersRegistered = false
 let clientCleanupTimer: NodeJS.Timeout | null = null
 let bridgeTransition: Promise<void> = Promise.resolve()
 const pendingEdits = new Map<string, PendingEdit>()
-const clients = new Map<string, number>()
+const clients = new Map<string, ConnectedClient>()
 const CLIENT_TTL_MS = 30_000
 
 const broadcastMcpStatus = (): void => {
@@ -37,12 +43,12 @@ const broadcastMcpStatus = (): void => {
   }
 }
 
-const pruneClients = (): boolean => {
+const markStaleClientsDisconnected = (): boolean => {
   const cutoff = Date.now() - CLIENT_TTL_MS
   let changed = false
-  for (const [name, lastSeenAt] of clients) {
-    if (lastSeenAt < cutoff) {
-      clients.delete(name)
+  for (const client of clients.values()) {
+    if (client.connected && client.lastSeenAt < cutoff) {
+      client.connected = false
       changed = true
     }
   }
@@ -50,12 +56,12 @@ const pruneClients = (): boolean => {
 }
 
 export const getAgentBridgeStatus = (): AnnotaMDMcpStatus => {
-  pruneClients()
+  markStaleClientsDisconnected()
   return {
     enabled,
     running: server !== null,
     clients: [...clients.entries()]
-      .map(([name, lastSeenAt]) => ({ name, lastSeenAt }))
+      .map(([name, client]) => ({ name, ...client }))
       .sort((left, right) => right.lastSeenAt - left.lastSeenAt)
   }
 }
@@ -134,7 +140,10 @@ const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown>
       return { application: 'AnnotaMD', pid: process.pid }
     case 'register_client': {
       const name = stringParam(params, 'name')
-      clients.set(name, Date.now())
+      const version = typeof params.version === 'string' && params.version.trim()
+        ? params.version.trim()
+        : undefined
+      clients.set(name, { lastSeenAt: Date.now(), version, connected: true })
       broadcastMcpStatus()
       return getAgentBridgeStatus()
     }
@@ -227,7 +236,7 @@ export const startAgentBridgeServer = async(): Promise<void> => {
     }
     if (connectionPath && existsSync(connectionPath)) unlinkSync(connectionPath)
     server = null
-    clients.clear()
+    for (const client of clients.values()) client.connected = false
     broadcastMcpStatus()
     throw error
   }
@@ -243,7 +252,7 @@ export const startAgentBridgeServer = async(): Promise<void> => {
     })
   }
   clientCleanupTimer = setInterval(() => {
-    if (pruneClients()) broadcastMcpStatus()
+    if (markStaleClientsDisconnected()) broadcastMcpStatus()
   }, 5_000)
   clientCleanupTimer.unref()
   broadcastMcpStatus()
@@ -261,7 +270,7 @@ export const stopAgentBridgeServer = async(): Promise<void> => {
   const activeServer = server
   server = null
   if (activeServer) await new Promise<void>((resolve) => activeServer.close(() => resolve()))
-  clients.clear()
+  for (const client of clients.values()) client.connected = false
   if (connectionPath && existsSync(connectionPath)) unlinkSync(connectionPath)
   broadcastMcpStatus()
 }

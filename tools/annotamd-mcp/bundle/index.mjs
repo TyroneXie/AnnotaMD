@@ -22141,6 +22141,13 @@ var discoverRunningBridge = async (candidates, probe) => {
   return null;
 };
 
+// src/clientIdentity.ts
+var resolveClientIdentity = (configuredName, clientInfo) => {
+  const name = configuredName?.trim() || clientInfo?.name?.trim() || "Agent";
+  const version2 = clientInfo?.version?.trim() || void 0;
+  return { name, version: version2 };
+};
+
 // src/commentWorkflow.ts
 var COMMENT_DATA_MARKER = "\u8BC4\u8BBA\u6570\u636E\uFF08\u53EA\u8BFB\u7ED3\u679C\uFF09\uFF1A";
 var COMMENT_REVIEW_GUIDANCE = [
@@ -22158,7 +22165,19 @@ ${JSON.stringify(value, null, 2)}`;
 };
 
 // src/index.ts
-var clientName = process.env.ANNOTAMD_CLIENT_NAME?.trim() || "Agent";
+var configuredClientName = process.env.ANNOTAMD_CLIENT_NAME?.trim();
+var initialized = false;
+var clientIdentity = () => resolveClientIdentity(
+  configuredClientName,
+  server.server.getClientVersion()
+);
+var clientRegistration = () => {
+  const identity = clientIdentity();
+  return {
+    name: identity.name,
+    ...identity.version ? { version: identity.version } : {}
+  };
+};
 var requestBridge = async (config2, method, params = {}, signal) => {
   const response = await fetch(`http://127.0.0.1:${config2.port}`, {
     method: "POST",
@@ -22179,7 +22198,7 @@ var callBridge = async (method, params = {}) => {
       await requestBridge(
         candidate,
         "register_client",
-        { name: clientName },
+        clientRegistration(),
         AbortSignal.timeout(750)
       );
       return true;
@@ -22215,7 +22234,12 @@ var server = new McpServer({
   ].join("\n")
 });
 var touchBridge = async () => {
-  await callBridge("register_client", { name: clientName });
+  await callBridge("register_client", clientRegistration());
+};
+server.server.oninitialized = () => {
+  initialized = true;
+  void touchBridge().catch(() => {
+  });
 };
 server.registerResource(
   "annotamd-comment-inbox",
@@ -22353,10 +22377,8 @@ server.registerPrompt("annotamd_comment_workflow", {
 }));
 var transport = new StdioServerTransport();
 await server.connect(transport);
-void touchBridge().catch(() => {
-});
 var heartbeat = setInterval(() => {
-  void touchBridge().catch(() => {
+  if (initialized) void touchBridge().catch(() => {
   });
 }, 1e4);
 heartbeat.unref();
