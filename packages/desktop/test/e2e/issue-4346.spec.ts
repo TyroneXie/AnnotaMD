@@ -4,7 +4,7 @@
 // Adjacent-stack reproduction covers the same null-block-guard family the
 // original stack lives in (Muya.dispatchChange -> getMarkdown ->
 // ExportMarkdown.generate). The bug surface is list/backspace mutation in
-// packages/muyajs/lib/contentState/ + packages/muyajs/lib/utils/exportMarkdown.js.
+// pre-migration editor engine/lib/contentState/ + pre-migration editor engine/lib/utils/exportMarkdown.js.
 import { test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import {

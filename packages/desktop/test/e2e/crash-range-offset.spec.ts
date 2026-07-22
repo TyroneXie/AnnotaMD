@@ -14,7 +14,7 @@
 // reproduce the crash anymore — the existing clamp at
 // src/muya/lib/selection/index.js:528 plus other cumulative fixes appear to
 // have closed the bug surface. The tests assert zero
-// `mt::handle-renderer-error` IPC events (captured via the helper installed
+// `annotamd::handle-renderer-error` IPC events (captured via the helper installed
 // by launchElectron); if they start failing, the offset clamp has regressed.
 import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'

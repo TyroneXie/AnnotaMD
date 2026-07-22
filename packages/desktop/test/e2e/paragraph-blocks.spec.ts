@@ -178,7 +178,7 @@ test.describe('Insert table dialog (item 73)', () => {
     await setSourceMarkdown(page, app, '\n')
     await placeCaretInEditor(page)
 
-    // Paragraph › Table → main sends mt::editor-paragraph-action {type:'table'}
+    // Paragraph › Table → main sends annotamd::editor-paragraph-action {type:'table'}
     // → renderer bus 'paragraph' → handleEditParagraph opens the dialog and
     // seeds tableChecker to rows=4, columns=3.
     await clickMenuById(app, 'tableMenuItem')

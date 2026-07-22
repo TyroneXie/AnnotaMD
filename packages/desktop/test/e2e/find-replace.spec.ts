@@ -28,19 +28,19 @@ test.describe('Find bar', () => {
   })
 
   test('Find action reveals .search-bar', async() => {
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
     const searchBar = page.locator('.search-bar')
     await expect(searchBar).toBeVisible({ timeout: 5000 })
   })
 
   test('Replace action shows the search bar in replace mode', async() => {
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'replace')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'replace')
     const searchBar = page.locator('.search-bar')
     await expect(searchBar).toBeVisible({ timeout: 5000 })
   })
 
   test('Escape hides the search bar', async() => {
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
     const searchBar = page.locator('.search-bar')
     await expect(searchBar).toBeVisible({ timeout: 5000 })
     await page.keyboard.press('Escape')
@@ -52,7 +52,7 @@ test.describe('Find bar', () => {
 // Coverage backfill (checklist items 152, 153, 180, 181, 183, 184, 185, 186,
 // 187, 189, 191, 194). Each test exercises the DESKTOP find-bar Vue component
 // (packages/desktop/src/renderer/src/components/search/index.vue) wired to the
-// @muyajs/core engine through the renderer bus + `mt::editor-edit-action` IPC.
+// @muyajs/core engine through the renderer bus + `annotamd::editor-edit-action` IPC.
 // The engine-side search/replace/matchString behaviors are already unit-tested
 // in packages/muya; these specs only lock the desktop UI + IPC wiring.
 // ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ const clickByEval = async(page: Page, selector: string): Promise<void> => {
 }
 
 const undo = (app: ElectronApplication): Promise<void> =>
-  sendIpcToRenderer(app, 'mt::editor-edit-action', 'undo')
+  sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
 
 const counterText = (page: Page): Promise<string> =>
   page.locator(RESULT_COUNTER).innerText()
@@ -133,17 +133,17 @@ const seedDocClean = async(
     () => document.querySelector('.editor-tabs li.active')?.getAttribute('data-id') ?? null
   )
   if (!tabId) throw new Error('could not resolve the active tab id')
-  await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
+  await sendIpcToRenderer(app, 'annotamd::tab-saved', tabId)
   await expect.poll(() => isTabDirty(page)).toBe(false)
 }
 
 const openFind = async(app: ElectronApplication, page: Page): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+  await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
   await expect(page.locator(SEARCH_BAR)).toBeVisible({ timeout: 5000 })
 }
 
 const openReplace = async(app: ElectronApplication, page: Page): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-edit-action', 'replace')
+  await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'replace')
   await expect(page.locator(SEARCH_BAR)).toBeVisible({ timeout: 5000 })
   await expect(page.locator('.search-bar .replace')).toBeVisible({ timeout: 5000 })
 }
@@ -196,15 +196,15 @@ test.describe('Find bar — find next / previous navigation (items 152, 181)', (
     await expect.poll(() => counterText(page)).toContain('1 / 3')
     await expect.poll(() => page.locator('.mu-highlight').count()).toBe(1)
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'findNext')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'findNext')
     await expect.poll(() => counterText(page)).toContain('2 / 3')
     await expect.poll(() => page.locator('.mu-highlight').count()).toBe(1)
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'findNext')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'findNext')
     await expect.poll(() => counterText(page)).toContain('3 / 3')
 
     // Wrap around: 3/3 -> 1/3.
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'findNext')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'findNext')
     await expect.poll(() => counterText(page)).toContain('1 / 3')
     await expect.poll(() => page.locator('.mu-highlight').count()).toBe(1)
   })
@@ -213,11 +213,11 @@ test.describe('Find bar — find next / previous navigation (items 152, 181)', (
     // Continues from the previous test's 1/3 state.
     await expect.poll(() => counterText(page)).toContain('1 / 3')
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'findPrev')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'findPrev')
     await expect.poll(() => counterText(page)).toContain('3 / 3')
     await expect.poll(() => page.locator('.mu-highlight').count()).toBe(1)
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'findPrev')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'findPrev')
     await expect.poll(() => counterText(page)).toContain('2 / 3')
   })
 })
@@ -508,7 +508,7 @@ test.describe('Find bar — suppressed in source-code mode (item 194)', () => {
 
     // The find action is forwarded but the WYSIWYG `.search-bar` is `v-if`-gated
     // off in source mode, so it must not be present in the DOM.
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
     await page.waitForTimeout(300)
     await expect(page.locator(SEARCH_BAR)).toHaveCount(0)
 

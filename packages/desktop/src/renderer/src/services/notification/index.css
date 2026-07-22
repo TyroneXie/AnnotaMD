@@ -1,4 +1,4 @@
-.mt-notification {
+.annotamd-notification {
   position: fixed;
   z-index: 10000;
   overflow: hidden;
@@ -114,7 +114,7 @@
   }
 
   /* Notification style colors */
-  &.mt-primary {
+  &.annotamd-primary {
     & > .notice-bg {
       background: var(--notificationPrimaryBg);
     }
@@ -122,7 +122,7 @@
       color: var(--notificationPrimaryColor);
     }
   }
-  &.mt-info {
+  &.annotamd-info {
     & > .notice-bg {
       background: var(--notificationInfoBg);
     }
@@ -130,7 +130,7 @@
       color: var(--notificationInfoColor);
     }
   }
-  &.mt-warn {
+  &.annotamd-warn {
     & > .notice-bg {
       background: var(--notificationWarningBg);
     }
@@ -138,7 +138,7 @@
       color: var(--notificationWarningColor);
     }
   }
-  &.mt-error {
+  &.annotamd-error {
     & > .notice-bg {
       background: var(--notificationErrorBg);
     }
@@ -147,7 +147,7 @@
     }
   }
 }
-.mt-notification.mt-confirm .content .body {
+.annotamd-notification.annotamd-confirm .content .body {
   & .left-text {
     width: calc(100% - 45px);
   }

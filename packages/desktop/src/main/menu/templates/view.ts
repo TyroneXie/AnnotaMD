@@ -105,7 +105,7 @@ export default function(
     submenu
   }
 
-  if (global.MARKTEXT_DEBUG) {
+  if (global.ANNOTAMD_DEBUG) {
     submenu.push({
       type: 'separator'
     })

@@ -157,7 +157,7 @@ const handleSearchResultClick = (searchMatch: SearchMatch): void => {
       })
     }
   } else {
-    window.electron.ipcRenderer.send('mt::open-file', filePath, {
+    window.electron.ipcRenderer.send('annotamd::open-file', filePath, {
       cursor
     })
   }

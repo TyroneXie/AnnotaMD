@@ -3,7 +3,7 @@ import { COMMANDS, type CommandManager, type CommandCallback } from './index'
 
 const openQuickOpenDialog = (win: BrowserWindow | null | undefined): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::execute-command-by-id', 'file.quick-open')
+    win.webContents.send('annotamd::execute-command-by-id', 'file.quick-open')
   }
 }
 

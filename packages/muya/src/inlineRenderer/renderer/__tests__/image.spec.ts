@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { h } from '../../../utils/snabbdom';
 import image from '../image';
 
-// Regression tests for marktext commit cb7be189 (#1318):
+// Regression tests for pre-migration implementation commit cb7be189 (#1318):
 // "Feat: Support inline image and small image".
 // When the loaded image's natural width or height is smaller than 100px,
 // the wrapper element should receive an extra `.mu-small-image` class so
@@ -100,7 +100,7 @@ function asRenderer(r: IFakeRenderer): Renderer {
     return r as unknown as Renderer;
 }
 
-describe('image renderer — small image class (marktext cb7be189)', () => {
+describe('image renderer — small image class (pre-migration implementation cb7be189)', () => {
     it('centers an image when it is the paragraph\'s only content', () => {
         const renderer = makeRenderer({
             id: 'mu-image-centered',

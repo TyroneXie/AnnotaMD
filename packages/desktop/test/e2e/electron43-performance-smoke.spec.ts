@@ -49,7 +49,7 @@ test.describe('Electron 43 performance smoke', () => {
     await page.evaluate(() => {
       ;(window as unknown as {
         electron: { ipcRenderer: { send: (channel: string) => void } }
-      }).electron.ipcRenderer.send('mt::open-setting-window')
+      }).electron.ipcRenderer.send('annotamd::open-setting-window')
     })
     const settingPage = await settingWindowPromise
 
@@ -76,14 +76,14 @@ test.describe('Electron 43 performance smoke', () => {
       return (window as unknown as {
         electron: {
           ipcRenderer: {
-            invoke: (channel: 'mt::comments::mcp-status') => Promise<{
+            invoke: (channel: 'annotamd::comments::mcp-status') => Promise<{
               enabled: boolean
               running: boolean
               clients: unknown[]
             }>
           }
         }
-      }).electron.ipcRenderer.invoke('mt::comments::mcp-status')
+      }).electron.ipcRenderer.invoke('annotamd::comments::mcp-status')
     })
 
     expect(status).toEqual({ enabled: true, running: true, clients: [] })

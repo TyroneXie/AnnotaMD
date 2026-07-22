@@ -8,13 +8,13 @@ import { searchFilesAndDir } from '../../utils/imagePathAutoComplement'
 type Win = BrowserWindow | null | undefined
 
 // TODO(Refactor): Move to filesystem and provide generic API to search files in directories.
-ipcMain.on('mt::ask-for-image-auto-path', (e, { pathname, src, id }) => {
+ipcMain.on('annotamd::ask-for-image-auto-path', (e, { pathname, src, id }) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
   }
   if (!src || typeof src !== 'string') {
-    win.webContents.send(`mt::response-of-image-path-${id}`, [])
+    win.webContents.send(`annotamd::response-of-image-path-${id}`, [])
     return
   }
 
@@ -31,11 +31,11 @@ ipcMain.on('mt::ask-for-image-auto-path', (e, { pathname, src, id }) => {
   }
   searchFilesAndDir(dir, searchKey)
     .then((files) => {
-      return win.webContents.send(`mt::response-of-image-path-${id}`, files)
+      return win.webContents.send(`annotamd::response-of-image-path-${id}`, files)
     })
     .catch((err: unknown) => {
       log.error(err)
-      return win.webContents.send(`mt::response-of-image-path-${id}`, [])
+      return win.webContents.send(`annotamd::response-of-image-path-${id}`, [])
     })
 })
 
@@ -99,7 +99,7 @@ export const findInFolder = (win: Win): void => {
 
 export const edit = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-edit-action', type)
+    win.webContents.send('annotamd::editor-edit-action', type)
   }
 }
 
@@ -127,7 +127,7 @@ export const screenshot = (win: Win): void => {
 
 export const lineEnding = (win: Win, lineEnding: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::set-line-ending', lineEnding)
+    win.webContents.send('annotamd::set-line-ending', lineEnding)
   }
 }
 

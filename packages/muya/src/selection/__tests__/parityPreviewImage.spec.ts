@@ -6,7 +6,7 @@ import { Muya } from '../../muya';
 
 // PARITY SCOREBOARD — gap PG10 (file PG09/PG14, "Space preview").
 //
-// Legacy `packages/muyajs` dispatched `preview-image` { data: src } from
+// The pre-migration editor engine dispatched `preview-image` { data: src } from
 // `keyboard.js` when an image was selected and the user pressed Space; the
 // desktop renderer opened the full-screen `SimpleImageViewer`.
 //

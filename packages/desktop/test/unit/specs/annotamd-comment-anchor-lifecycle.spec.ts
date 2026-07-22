@@ -30,7 +30,7 @@ beforeEach(() => {
       ipcRenderer: {
         on: vi.fn(() => vi.fn()),
         invoke: vi.fn(async(channel: string, request: { comments?: AnnotaMDComment[] }) => {
-          if (channel === 'mt::comments::replace') structuredClone(request)
+          if (channel === 'annotamd::comments::replace') structuredClone(request)
           return {
             documentId: 'document-1',
             filePath,
@@ -90,7 +90,7 @@ describe('AnnotaMD live comment anchors', () => {
     expect(store.commentsByFile[filePath][0].focus?.path).toEqual([1, 'text'])
     await Promise.resolve()
     expect(window.electron.ipcRenderer.invoke).not.toHaveBeenCalledWith(
-      'mt::comments::replace',
+      'annotamd::comments::replace',
       expect.anything()
     )
   })
@@ -105,7 +105,7 @@ describe('AnnotaMD live comment anchors', () => {
     let revision = 0
     const invoke = vi.mocked(window.electron.ipcRenderer.invoke)
     invoke.mockImplementation((channel: string, request: { comments?: AnnotaMDComment[] }) => {
-      if (channel !== 'mt::comments::replace') {
+      if (channel !== 'annotamd::comments::replace') {
         return Promise.resolve({ comments: [], revision })
       }
       revision += 1
@@ -132,7 +132,7 @@ describe('AnnotaMD live comment anchors', () => {
     await pending
 
     const replaceCalls = invoke.mock.calls.filter(([channel]) => (
-      channel === 'mt::comments::replace'
+      channel === 'annotamd::comments::replace'
     ))
     expect(replaceCalls).toHaveLength(2)
     expect(replaceCalls[1][1]).toMatchObject({ markdown: 'latest' })

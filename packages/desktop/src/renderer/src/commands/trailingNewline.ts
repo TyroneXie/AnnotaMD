@@ -68,7 +68,7 @@ class TrailingNewlineCommand {
   }
 
   executeSubcommand = async(_: string, value: number): Promise<void> => {
-    bus.emit('mt::set-final-newline', value)
+    bus.emit('annotamd::set-final-newline', value)
   }
 
   unload = (): void => {}

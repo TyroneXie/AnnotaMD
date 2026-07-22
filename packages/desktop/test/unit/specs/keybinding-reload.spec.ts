@@ -39,7 +39,7 @@ type WinArg = Parameters<Keybindings['registerEditorKeyHandlers']>[0]
 const tmpDirs: string[] = []
 
 const makeKeybindings = () => {
-  const userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-keybindings-'))
+  const userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'annotamd-keybindings-'))
   tmpDirs.push(userDataPath)
   const commandManager = {
     has: () => true,

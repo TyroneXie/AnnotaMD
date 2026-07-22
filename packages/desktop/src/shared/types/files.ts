@@ -127,8 +127,8 @@ export interface SaveOptions {
 }
 
 /**
- * Per-tab payload sent with `mt::close-window-confirm` / `mt::save-tabs` /
- * `mt::save-and-close-tabs` when the renderer asks main to surface a
+ * Per-tab payload sent with `annotamd::close-window-confirm` / `annotamd::save-tabs` /
+ * `annotamd::save-and-close-tabs` when the renderer asks main to surface a
  * "save unsaved changes?" dialog. Mirrors the runtime shape consumed by
  * `showUnsavedFilesMessage` in `src/main/menu/actions/file.ts`.
  */
@@ -147,7 +147,7 @@ export interface BootstrapEditorConfig {
   /**
    * Raw markdown contents used to seed new untitled tabs. Main fills this
    * from `_markdownToOpen` (e.g. stdin-piped launches and
-   * `mt::new-tab-with-content`); empty when no seed content was supplied.
+   * `annotamd::new-tab-with-content`); empty when no seed content was supplied.
    */
   markdownList: string[]
   lineEnding: LineEnding

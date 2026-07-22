@@ -66,7 +66,7 @@ test.describe('Find bar prefill from selection', () => {
         )
     )
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
     const searchBar = page.locator('.search-bar')
     await expect(searchBar).toBeVisible({ timeout: 5000 })
 

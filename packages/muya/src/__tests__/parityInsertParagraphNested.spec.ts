@@ -6,7 +6,7 @@ import { Muya } from '../muya';
 
 // PARITY SCOREBOARD — gap PG13 (file PG11/PG13, "insert-paragraph anchor").
 //
-// Legacy `packages/muyajs` `insertParagraph(location, text, outMost=false)`
+// The pre-migration editor engine `insertParagraph(location, text, outMost=false)`
 // chose the insertion anchor via `getAnchor(block)` (the IMMEDIATE enclosing
 // block) for the context-menu / Paragraph-menu Insert-Paragraph path, and only
 // used `findOutMostBlock` for the explicit "Create Paragraph Below" action. So

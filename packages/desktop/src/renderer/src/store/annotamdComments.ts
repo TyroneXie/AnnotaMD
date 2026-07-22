@@ -257,7 +257,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     initializeMainSync(): void {
       if (stopMainCommentSync) return
       stopMainCommentSync = window.electron.ipcRenderer.on(
-        'mt::comments::changed',
+        'annotamd::comments::changed',
         (_event, filePath) => {
           if (synchronizingFiles.has(filePath)) return
           void this.loadForFile(filePath, this.markdownByFile[filePath] ?? '')
@@ -271,7 +271,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       this.markdownByFile[filePath] = markdown
       await this.migrateLegacyForFile(filePath, markdown)
       const document = await window.electron.ipcRenderer.invoke(
-        'mt::comments::load',
+        'annotamd::comments::load',
         filePath,
         markdown
       )
@@ -288,7 +288,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         markdown,
         comments: comments.map(normalizeLegacyComment)
       }]
-      await window.electron.ipcRenderer.invoke('mt::comments::migrate', entries)
+      await window.electron.ipcRenderer.invoke('annotamd::comments::migrate', entries)
       delete legacy[filePath]
       if (Object.keys(legacy).length) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy))
@@ -312,7 +312,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         try {
           while (persistRequested.delete(filePath)) {
             try {
-              const document = await window.electron.ipcRenderer.invoke('mt::comments::replace', {
+              const document = await window.electron.ipcRenderer.invoke('annotamd::comments::replace', {
                 filePath,
                 markdown: this.markdownByFile[filePath] ?? '',
                 expectedRevision: this.revisionByFile[filePath] ?? 0,
@@ -325,7 +325,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
                 error
               )
               const document = await window.electron.ipcRenderer.invoke(
-                'mt::comments::load',
+                'annotamd::comments::load',
                 filePath,
                 this.markdownByFile[filePath] ?? ''
               )

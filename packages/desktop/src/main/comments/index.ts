@@ -34,7 +34,7 @@ export const getCommentService = (): CommentService => {
 
 export const broadcastCommentsChanged = (filePath: string): void => {
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send('mt::comments::changed', filePath)
+    window.webContents.send('annotamd::comments::changed', filePath)
   }
 }
 

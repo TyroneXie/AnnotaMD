@@ -6,7 +6,7 @@ import { CopyType } from '../types';
 
 // PARITY SCOREBOARD — gap PG9 (file PG-COPYRICH).
 //
-// Legacy `packages/muyajs` "Copy as Rich Text" put the rendered HTML into
+// The pre-migration editor engine "Copy as Rich Text" put the rendered HTML into
 // `text/html` (so pasting into Word / email yields formatted rich text) plus
 // the markdown source into `text/plain`.
 //

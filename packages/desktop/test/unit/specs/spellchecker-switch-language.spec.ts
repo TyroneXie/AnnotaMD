@@ -35,7 +35,7 @@ describe('renderer SpellChecker.switchLanguage', () => {
 
     expect(result).toBe(true)
     expect(invoke).toHaveBeenCalledTimes(1)
-    expect(invoke).toHaveBeenCalledWith('mt::spellchecker-switch-language', 'de-DE')
+    expect(invoke).toHaveBeenCalledWith('annotamd::spellchecker-switch-language', 'de-DE')
     expect(checker.lang).toBe('de-DE')
     expect(checker.currentSpellcheckerLanguage).toBe('de-DE')
   })

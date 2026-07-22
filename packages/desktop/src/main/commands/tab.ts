@@ -5,19 +5,19 @@ type MaybeWin = BrowserWindow | null | undefined
 
 const switchToLeftTab = (win: MaybeWin): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::tabs-cycle-left')
+    win.webContents.send('annotamd::tabs-cycle-left')
   }
 }
 
 const switchToRightTab = (win: MaybeWin): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::tabs-cycle-right')
+    win.webContents.send('annotamd::tabs-cycle-right')
   }
 }
 
 const switchTabByIndex = (win: MaybeWin, index: number): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::switch-tab-by-index', index)
+    win.webContents.send('annotamd::switch-tab-by-index', index)
   }
 }
 

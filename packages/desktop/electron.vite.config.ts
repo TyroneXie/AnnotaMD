@@ -28,14 +28,13 @@ export default defineConfig({
       }
     },
     define: {
-      MARKTEXT_VERSION: JSON.stringify(packageJson.version),
-      MARKTEXT_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
+      ANNOTAMD_VERSION: JSON.stringify(packageJson.version),
+      ANNOTAMD_VERSION_STRING: JSON.stringify(`v${packageJson.version}`)
     },
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src/renderer/src'),
         common: resolve(__dirname, 'src/common'),
-        muya: resolve(__dirname, '../muyajs'),
         '@shared': resolve(__dirname, 'src/shared')
       },
       extensions: ['.mjs', '.ts', '.js', '.json']
@@ -55,7 +54,6 @@ export default defineConfig({
       alias: {
         '@': resolve(__dirname, 'src/renderer/src'),
         common: resolve(__dirname, 'src/common'),
-        muya: resolve(__dirname, '../muyajs'),
         '@shared': resolve(__dirname, 'src/shared')
       },
       extensions: ['.mjs', '.ts', '.js', '.json']
@@ -85,10 +83,8 @@ export default defineConfig({
       alias: {
         '@': resolve(__dirname, 'src/renderer/src'),
         common: resolve(__dirname, 'src/common'),
-        muya: resolve(__dirname, '../muyajs'),
         '@shared': resolve(__dirname, 'src/shared'),
         '@floating-ui/dom': resolve(__dirname, 'node_modules/@floating-ui/dom'),
-        '@marktext/file-icons': resolve(__dirname, 'node_modules/@marktext/file-icons'),
         dompurify: resolve(__dirname, 'node_modules/dompurify'),
         execall: resolve(__dirname, 'node_modules/execall'),
         'fast-diff': resolve(__dirname, 'node_modules/fast-diff'),

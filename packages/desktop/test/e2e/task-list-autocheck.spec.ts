@@ -22,17 +22,17 @@ import {
 // `event.target.checked` and runs `update(checked, 'user')`.
 //
 // `autoCheck` is a renderer editor option seeded from preferences (default
-// false). The renderer's preferences store listens on `mt::user-preference`
+// false). The renderer's preferences store listens on `annotamd::user-preference`
 // (store/preferences.ts) and the editor watches `autoCheck`
 // (editor.vue → editor.setOptions({ autoCheck })). So we flip it by sending
-// `mt::user-preference` to the renderer, which threads it into the live engine.
+// `annotamd::user-preference` to the renderer, which threads it into the live engine.
 
 // A parent task item with two nested children, all unchecked. Matches the
 // proven nesting fixture from the unit parity spec.
 const NESTED_TASKS = '- [ ] parent\n\n  - [ ] child1\n  - [ ] child2\n'
 
 const setAutoCheck = async(app: ElectronApplication, value: boolean): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::user-preference', { autoCheck: value })
+  await sendIpcToRenderer(app, 'annotamd::user-preference', { autoCheck: value })
 }
 
 // Read the `.checked` flag of the nth rendered task checkbox input.

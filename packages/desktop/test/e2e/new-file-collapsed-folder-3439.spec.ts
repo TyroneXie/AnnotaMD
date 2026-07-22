@@ -45,13 +45,13 @@ test.describe('New File on a collapsed folder (#3439)', () => {
         }
         return null
       }
-      ipcMain.removeAllListeners('mt::menu::popup')
-      ipcMain.on('mt::menu::popup', (event, template) => {
+      ipcMain.removeAllListeners('annotamd::menu::popup')
+      ipcMain.on('annotamd::menu::popup', (event, template) => {
         const id = findId(template as Array<{ id?: string }>)
         if (id) {
           setTimeout(() => {
             try {
-              event.sender.send('mt::menu::click', { id })
+              event.sender.send('annotamd::menu::click', { id })
             } catch { /* window gone */ }
           }, 30)
         }

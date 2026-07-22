@@ -34,7 +34,7 @@ class Preference extends TypedEmitter<PreferenceEvents> {
    * NOTE: This throws an exception when validation fails.
    */
   constructor(paths: AppPaths) {
-    // TODO: Preferences should not loaded if global.MARKTEXT_SAFE_MODE is set.
+    // TODO: Preferences should not loaded if global.ANNOTAMD_SAFE_MODE is set.
     super()
 
     const { preferencesPath } = paths
@@ -177,16 +177,16 @@ class Preference extends TypedEmitter<PreferenceEvents> {
   }
 
   _listenForIpcMain(): void {
-    ipcMain.on('mt::ask-for-user-preference', (e) => {
+    ipcMain.on('annotamd::ask-for-user-preference', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (win) {
-        win.webContents.send('mt::user-preference', this.getAll())
+        win.webContents.send('annotamd::user-preference', this.getAll())
       }
     })
-    ipcMain.on('mt::set-user-preference', (_e, settings: Record<string, unknown>) => {
+    ipcMain.on('annotamd::set-user-preference', (_e, settings: Record<string, unknown>) => {
       this.setItems(settings)
     })
-    ipcMain.on('mt::cmd-toggle-autosave', () => {
+    ipcMain.on('annotamd::cmd-toggle-autosave', () => {
       this.setItem('autoSave', !this.getItem('autoSave'))
     })
 

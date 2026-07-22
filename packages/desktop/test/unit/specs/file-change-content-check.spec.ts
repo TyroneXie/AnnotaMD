@@ -51,7 +51,7 @@ describe('useEditorStore LISTEN_FOR_FILE_CHANGE — automatic external reload', 
 
   const captureHandler = () => {
     const onMock = window.electron.ipcRenderer.on as Mock
-    const call = onMock.mock.calls.find((c) => c[0] === 'mt::update-file')!
+    const call = onMock.mock.calls.find((c) => c[0] === 'annotamd::update-file')!
     return call[1] as (e: unknown, payload: unknown) => void
   }
 

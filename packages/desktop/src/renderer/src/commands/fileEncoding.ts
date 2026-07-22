@@ -74,7 +74,7 @@ class FileEncodingCommand {
   executeSubcommand = async(id: string): Promise<void> => {
     // NOTE: We support UTF-BOM encodings but don't allow to set them.
     if (!id.endsWith('-bom')) {
-      bus.emit('mt::set-file-encoding', id)
+      bus.emit('annotamd::set-file-encoding', id)
     }
   }
 

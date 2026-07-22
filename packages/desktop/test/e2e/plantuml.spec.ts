@@ -38,7 +38,7 @@ test.describe('PlantUML render via plantuml-encoder', () => {
   test('plantuml block uses custom server URL when preference is set', async() => {
     // Set a custom PlantUML server URL via the preference system.
     await page.evaluate((url) => {
-      window.electron.ipcRenderer.send('mt::set-user-preference', { plantumlServer: url })
+      window.electron.ipcRenderer.send('annotamd::set-user-preference', { plantumlServer: url })
     }, CUSTOM_SERVER)
 
     // Re-focus the editor to trigger a re-render with the new option.

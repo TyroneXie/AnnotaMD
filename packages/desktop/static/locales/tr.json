@@ -97,7 +97,7 @@
       "about": "Hakkında",
       "checkUpdates": "Güncellemeleri Denetle"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "AnnotaMD Hakkında",
       "checkUpdates": "Güncellemeleri Denetle...",
@@ -745,7 +745,7 @@
     "copyrightContributors": "Github Katkıda Bulunanlar tarafından <3 ile yapıldı"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "AnnotaMD'i Gizle",
       "hideOthers": "Diğerlerini Gizle"
     },

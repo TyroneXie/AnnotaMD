@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 // PARITY SCOREBOARD — gaps PG5 (file PG05) + PG6 (file PG06).
 //
-// PG6: legacy `packages/muyajs` routed a pasted image FILE through
+// PG6: the pre-migration editor engine routed a pasted image FILE through
 // `imageAction(imagePath, id)` so the user's `imageInsertAction` preference
 // (copy-to-assets / upload / keep-path) applied. `@muyajs/core`'s path-paste
 // branch calls `insertImagePath(anchorBlock, imagePath)`, which writes
@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 // pasted image file is linked from its original on-disk location and the
 // document is non-portable.
 //
-// PG5: legacy `packages/muyajs` `pasteImage()` had a binary/bitmap branch:
+// PG5: the pre-migration editor engine `pasteImage()` had a binary/bitmap branch:
 // when no clipboard file path resolved, it read the in-memory image File via
 // `clipboardData.items[i].getAsFile()` + `FileReader.readAsDataURL` and
 // persisted it via `imageAction(file, id)`. `@muyajs/core`'s `pasteHandler`

@@ -61,7 +61,7 @@ const handleFileClick = (): void => {
     }
     editorStore.UPDATE_CURRENT_FILE(openedTab)
   } else {
-    window.electron.ipcRenderer.send('mt::open-file', pathname, {})
+    window.electron.ipcRenderer.send('annotamd::open-file', pathname, {})
   }
 }
 

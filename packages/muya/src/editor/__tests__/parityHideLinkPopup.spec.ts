@@ -6,7 +6,7 @@ import { Muya } from '../../muya';
 
 // PARITY SCOREBOARD — gap PG12 (file PG12).
 //
-// Legacy `packages/muyajs` read `muya.options.hideLinkPopup` in
+// The pre-migration editor engine read `muya.options.hideLinkPopup` in
 // `eventHandler/mouseEvent.js`: the link-hover handler only dispatched
 // `muya-link-tools` (the link-edit/jump popover) when `!hideLinkPopup`. So
 // `hideLinkPopup: true` suppressed the popover on link hover.

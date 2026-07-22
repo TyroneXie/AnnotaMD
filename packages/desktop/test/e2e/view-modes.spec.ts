@@ -10,7 +10,7 @@ import {
 // Read the live `checked`/`enabled` state of a view-mode menu item straight
 // from the active application menu — the same Menu instance that
 // `viewLayoutChanged` (main/menu/actions/view.ts) mutates after the renderer
-// round-trips `mt::view-layout-changed`. Mirrors menu-sanity.spec.ts:60 and
+// round-trips `annotamd::view-layout-changed`. Mirrors menu-sanity.spec.ts:60 and
 // parity-pg1-menu-state.spec.ts:23.
 const viewModeMenuItem = async(
   app: ElectronApplication,
@@ -22,7 +22,7 @@ const viewModeMenuItem = async(
   }, id)
 
 // Poll the menu item until its `checked` flag matches `want` (the toggle ->
-// renderer -> `mt::view-layout-changed` -> main round-trip is async).
+// renderer -> `annotamd::view-layout-changed` -> main round-trip is async).
 const waitForChecked = async(
   app: ElectronApplication,
   id: string,
@@ -119,7 +119,7 @@ test.describe('View modes', () => {
 
     await enterSourceMode(page, app)
 
-    // The renderer round-trips `mt::view-layout-changed` with sourceCode:true,
+    // The renderer round-trips `annotamd::view-layout-changed` with sourceCode:true,
     // which disables both editing-mode items.
     expect((await waitForEnabled(app, 'typewriterModeMenuItem', false)).enabled).toBe(false)
     expect((await waitForEnabled(app, 'focusModeMenuItem', false)).enabled).toBe(false)

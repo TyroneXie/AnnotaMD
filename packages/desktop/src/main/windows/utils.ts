@@ -7,7 +7,7 @@ export const zoomIn = (win: BrowserWindow | null | undefined): void => {
   const { webContents } = win
   const zoom = webContents.getZoomFactor()
   // WORKAROUND: We need to set zoom on the browser window due to Electron#16018.
-  webContents.send('mt::window-zoom', Math.min(2.0, zoom + 0.125))
+  webContents.send('annotamd::window-zoom', Math.min(2.0, zoom + 0.125))
 }
 
 export const zoomOut = (win: BrowserWindow | null | undefined): void => {
@@ -15,12 +15,12 @@ export const zoomOut = (win: BrowserWindow | null | undefined): void => {
   const { webContents } = win
   const zoom = webContents.getZoomFactor()
   // WORKAROUND: We need to set zoom on the browser window due to Electron#16018.
-  webContents.send('mt::window-zoom', Math.max(0.5, zoom - 0.125))
+  webContents.send('annotamd::window-zoom', Math.max(0.5, zoom - 0.125))
 }
 
 export const actualSize = (win: BrowserWindow | null | undefined): void => {
   if (!win) return
-  win.webContents.send('mt::window-zoom', 1.0)
+  win.webContents.send('annotamd::window-zoom', 1.0)
 }
 
 export const centerWindowOptions = (

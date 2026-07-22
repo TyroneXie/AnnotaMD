@@ -11,7 +11,7 @@ import ExportMarkdown from '../stateToMarkdown';
 //   * serialize: state/stateToMarkdown.ts::_serializeMathBlock picks the fence
 //                purely from meta.mathStyle ('' → $$, 'gitlab' → ```math) — it
 //                does NOT re-read the option, so a block keeps its origin style.
-// The legacy engine (packages/muyajs) detected the same syntax with a dedicated
+// The legacy engine (pre-migration editor engine) detected the same syntax with a dedicated
 // regex (`multiplemathGitlab` in parser/marked/blockRules.js). These specs lock
 // the state round-trip the renderer test (renderToStaticHTML.spec.ts) does not
 // cover, and pin where the two engines agree vs diverge.
@@ -111,7 +111,7 @@ describe('gitlab math — round-trip stability', () => {
 });
 
 // Characterization of where the new engine (@muyajs/core) agrees with and
-// diverges from the legacy engine (packages/muyajs) for the SAME input under
+// diverges from the legacy engine (pre-migration editor engine) for the SAME input under
 // gitlab compatibility. muyajs gated promotion on the regex
 //   /^ {0,3}(`{3,})math\n.../
 // — backtick-only, `math` immediately before the newline, ≤3 leading spaces.

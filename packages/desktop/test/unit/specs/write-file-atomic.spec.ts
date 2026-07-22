@@ -21,7 +21,7 @@ import { writeFile } from 'main_renderer/filesystem'
 
 const dirs: string[] = []
 function tempDir(): string {
-  const d = mkdtempSync(path.join(tmpdir(), 'mt-atomic-'))
+  const d = mkdtempSync(path.join(tmpdir(), 'annotamd-atomic-'))
   dirs.push(d)
   return d
 }

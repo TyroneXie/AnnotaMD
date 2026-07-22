@@ -13,7 +13,7 @@ const getDateAsFilename = (): string => {
 
 const getTempPath = (suffix = ''): string => {
   const name =
-    'marktext-e2etest-' +
+    'annotamd-e2etest-' +
     getDateAsFilename() +
     '-' +
     Math.random().toString(36).slice(2, 8) +
@@ -53,7 +53,7 @@ export interface LaunchResult {
 }
 
 export interface LaunchOptions {
-  // When true, sets MARKTEXT_ERROR_INTERACTION=1 in the launch env so
+  // When true, sets ANNOTAMD_ERROR_INTERACTION=1 in the launch env so
   // src/main/exceptionHandler.ts suppresses the modal "Unexpected error"
   // dialog. Only crash-guard specs that explicitly call expectNoRendererErrors
   // should opt in — otherwise existing specs would silently ignore renderer
@@ -74,7 +74,7 @@ export const launchElectron = async(
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
   env.PERF_TESTING = 'true'
-  if (options.suppressErrorDialog) env.MARKTEXT_ERROR_INTERACTION = '1'
+  if (options.suppressErrorDialog) env.ANNOTAMD_ERROR_INTERACTION = '1'
   const app = await _electron.launch({
     executablePath,
     args,
@@ -91,18 +91,18 @@ export const launchElectron = async(
 
 // Capture renderer-process errors that would otherwise pop the "Unexpected
 // error" dialog. We attach a parallel listener to the same IPC channel
-// (`mt::handle-renderer-error`) that exceptionHandler.ts listens on, and
+// (`annotamd::handle-renderer-error`) that exceptionHandler.ts listens on, and
 // accumulate the count in a shared global so specs can read it back via
 // `getRendererErrors`. Multiple listeners are allowed on ipcMain.
 const installRendererErrorCounter = async(app: ElectronApplication): Promise<void> => {
   await app.evaluate(({ ipcMain }) => {
     const g = global as unknown as {
-      __mt_renderer_errors__?: Array<{ message?: string; name?: string; stack?: string }>
+      __annotamd_renderer_errors__?: Array<{ message?: string; name?: string; stack?: string }>
     }
-    if (!g.__mt_renderer_errors__) {
+    if (!g.__annotamd_renderer_errors__) {
       const sink: Array<{ message?: string; name?: string; stack?: string }> = []
-      g.__mt_renderer_errors__ = sink
-      ipcMain.on('mt::handle-renderer-error', (_e, error) => {
+      g.__annotamd_renderer_errors__ = sink
+      ipcMain.on('annotamd::handle-renderer-error', (_e, error) => {
         sink.push(error)
       })
     }
@@ -114,18 +114,18 @@ export const getRendererErrors = async(
 ): Promise<Array<{ message?: string; name?: string; stack?: string }>> => {
   return await app.evaluate(() => {
     const g = global as unknown as {
-      __mt_renderer_errors__?: Array<{ message?: string; name?: string; stack?: string }>
+      __annotamd_renderer_errors__?: Array<{ message?: string; name?: string; stack?: string }>
     }
-    return (g.__mt_renderer_errors__ || []).slice()
+    return (g.__annotamd_renderer_errors__ || []).slice()
   })
 }
 
 export const clearRendererErrors = async(app: ElectronApplication): Promise<void> => {
   await app.evaluate(() => {
     const g = global as unknown as {
-      __mt_renderer_errors__?: Array<unknown>
+      __annotamd_renderer_errors__?: Array<unknown>
     }
-    if (g.__mt_renderer_errors__) g.__mt_renderer_errors__.length = 0
+    if (g.__annotamd_renderer_errors__) g.__annotamd_renderer_errors__.length = 0
   })
 }
 

@@ -43,7 +43,7 @@ export const useCommandCenterStore = defineStore('commandCenter', () => {
       SORT_COMMANDS()
     })
 
-    window.electron.ipcRenderer.on('mt::keybindings-response', (_e, keybindingMap) => {
+    window.electron.ipcRenderer.on('annotamd::keybindings-response', (_e, keybindingMap) => {
       const map = keybindingMap as Record<string, string>
       const { subcommands } = rootCommand.value
       for (const entry of subcommands) {
@@ -63,7 +63,7 @@ export const useCommandCenterStore = defineStore('commandCenter', () => {
     bus.on('cmd::execute', (commandId: unknown) => {
       executeCommand(rootCommand.value, String(commandId))
     })
-    window.electron.ipcRenderer.on('mt::execute-command-by-id', (_e, commandId) => {
+    window.electron.ipcRenderer.on('annotamd::execute-command-by-id', (_e, commandId) => {
       executeCommand(rootCommand.value, String(commandId))
     })
   }

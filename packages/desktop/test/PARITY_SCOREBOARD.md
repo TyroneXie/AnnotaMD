@@ -1,7 +1,7 @@
-# Parity scoreboard — muyajs → @muyajs/core (PR #4406 follow-ups)
+# Parity scoreboard — editor-engine migration to @muyajs/core
 
-This is a **failing-test scoreboard**. The desktop app migrated from the legacy
-`packages/muyajs` engine to `@muyajs/core` (`packages/muya`) in PR #4406. That
+This is a **failing-test scoreboard**. The desktop app migrated from its
+pre-migration editor engine to `@muyajs/core` (`packages/muya`) in PR #4406. That
 migration left **15 confirmed functional-parity gaps**. This board encoded each
 one as a regression test that *failed on `develop`* (proving the gap), marked as
 an *expected failure* so the suites stayed GREEN. **14 of the 15 are now fixed**

@@ -8,7 +8,7 @@ import log from 'electron-log'
 import { ensureDirSync } from 'common/filesystem'
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
 import { TypedEmitter } from '@shared/types/typedEmitter'
-import { migrateLegacyAssetPath } from '../app/userDataBranding'
+import { resolveAssetPath } from '../app/userDataBranding'
 
 const DATA_CENTER_NAME = 'dataCenter'
 
@@ -35,7 +35,7 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
     const { dataCenterPath, userDataPath } = paths
     this.dataCenterPath = dataCenterPath
     this.userDataPath = userDataPath
-    this.serviceName = 'marktext'
+    this.serviceName = 'annotamd'
     this.encryptKeys = []
     this.hasDataCenterFile = fs.existsSync(
       path.join(this.dataCenterPath, `./${DATA_CENTER_NAME}.json`)
@@ -61,12 +61,12 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       this.store.set(defaultData)
       ensureDirSync(this.store.get('screenshotFolderPath') as string)
     } else {
-      const imageFolderPath = migrateLegacyAssetPath(
+      const imageFolderPath = resolveAssetPath(
         this.store.get('imageFolderPath'),
         this.userDataPath,
         'images'
       )
-      const screenshotFolderPath = migrateLegacyAssetPath(
+      const screenshotFolderPath = resolveAssetPath(
         this.store.get('screenshotFolderPath'),
         this.userDataPath,
         'screenshot'
@@ -179,14 +179,14 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       this.setItem('imageFolderPath', newPath)
     })
 
-    ipcMain.on('mt::ask-for-user-data', async(e) => {
+    ipcMain.on('annotamd::ask-for-user-data', async(e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const userData = await this.getAll()
-      win.webContents.send('mt::user-preference', userData)
+      win.webContents.send('annotamd::user-preference', userData)
     })
 
-    ipcMain.on('mt::ask-for-modify-image-folder-path', async(e, imagePath?: string) => {
+    ipcMain.on('annotamd::ask-for-modify-image-folder-path', async(e, imagePath?: string) => {
       if (!imagePath) {
         const win = BrowserWindow.fromWebContents(e.sender)
         if (!win) return
@@ -202,11 +202,11 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       }
     })
 
-    ipcMain.on('mt::set-user-data', (_e, userData: Record<string, unknown>) => {
+    ipcMain.on('annotamd::set-user-data', (_e, userData: Record<string, unknown>) => {
       this.setItems(userData)
     })
 
-    ipcMain.handle('mt::ask-for-image-path', async(e) => {
+    ipcMain.handle('annotamd::ask-for-image-path', async(e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return ''
       const { filePaths } = await dialog.showOpenDialog(win, {

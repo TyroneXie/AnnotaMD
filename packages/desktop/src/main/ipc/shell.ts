@@ -197,7 +197,7 @@ const resolvePageMetadata = async(targetSession: Session, rawUrl: string): Promi
 }
 
 export const registerShellHandlers = (): void => {
-  ipcMain.handle('mt::shell::open-external', async(_e, url: string) => {
+  ipcMain.handle('annotamd::shell::open-external', async(_e, url: string) => {
     try {
       await shell.openExternal(url)
       return true
@@ -206,17 +206,17 @@ export const registerShellHandlers = (): void => {
       return false
     }
   })
-  ipcMain.on('mt::shell::open-external', (_e, url: string) => {
+  ipcMain.on('annotamd::shell::open-external', (_e, url: string) => {
     shell.openExternal(url).catch((err) => log.error('shell.openExternal failed:', err))
   })
-  ipcMain.on('mt::shell::show-item', (_e, fullPath: string) => {
+  ipcMain.on('annotamd::shell::show-item', (_e, fullPath: string) => {
     try {
       shell.showItemInFolder(fullPath)
     } catch (err) {
       log.error('shell.showItemInFolder failed:', err)
     }
   })
-  ipcMain.handle('mt::shell::open-path', async(_e, fullPath: string) => {
+  ipcMain.handle('annotamd::shell::open-path', async(_e, fullPath: string) => {
     try {
       return await shell.openPath(fullPath)
     } catch (err) {
@@ -224,7 +224,7 @@ export const registerShellHandlers = (): void => {
       return String(err instanceof Error ? err.message : err)
     }
   })
-  ipcMain.handle('mt::shell::get-link-metadata', async(event, rawUrl: string) => {
+  ipcMain.handle('annotamd::shell::get-link-metadata', async(event, rawUrl: string) => {
     try {
       return await resolvePageMetadata(event.sender.session, rawUrl)
     } catch (err) {
@@ -233,14 +233,14 @@ export const registerShellHandlers = (): void => {
     }
   })
 
-  ipcMain.on('mt::clipboard::write-text', (_e, text: string) => {
+  ipcMain.on('annotamd::clipboard::write-text', (_e, text: string) => {
     try {
       clipboard.writeText(text)
     } catch (err) {
       log.error('clipboard.writeText failed:', err)
     }
   })
-  ipcMain.on('mt::clipboard::write-image', (_e, dataUrl: string) => {
+  ipcMain.on('annotamd::clipboard::write-image', (_e, dataUrl: string) => {
     try {
       const image = nativeImage.createFromDataURL(dataUrl)
       if (!image.isEmpty()) clipboard.writeImage(image)
@@ -248,7 +248,7 @@ export const registerShellHandlers = (): void => {
       log.error('clipboard.writeImage failed:', err)
     }
   })
-  ipcMain.handle('mt::clipboard::read-text', () => {
+  ipcMain.handle('annotamd::clipboard::read-text', () => {
     try {
       return clipboard.readText()
     } catch {
@@ -256,7 +256,7 @@ export const registerShellHandlers = (): void => {
     }
   })
 
-  ipcMain.handle('mt::clipboard::guess-file-path', () => {
+  ipcMain.handle('annotamd::clipboard::guess-file-path', () => {
     try {
       if (process.platform === 'darwin') {
         if (clipboard.has('NSFilenamesPboardType')) {

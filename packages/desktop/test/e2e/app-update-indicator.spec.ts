@@ -24,7 +24,7 @@ test.describe('application update indicator', () => {
     const updateButton = page.locator('.app-update-sidebar')
     await expect(updateButton).toHaveCount(0)
     await expect(page.locator('.left-column .app-update-panel')).toHaveCount(0)
-    await sendIpcToRenderer(app, 'mt::update:state', {
+    await sendIpcToRenderer(app, 'annotamd::update:state', {
       status: 'error',
       currentVersion,
       message: 'offline'
@@ -32,7 +32,7 @@ test.describe('application update indicator', () => {
     await expect(updateButton).toHaveCount(0)
     await expect(page.locator('.left-column .app-update-panel')).toHaveCount(0)
 
-    await sendIpcToRenderer(app, 'mt::update:state', {
+    await sendIpcToRenderer(app, 'annotamd::update:state', {
       status: 'available',
       currentVersion,
       version: '2.12.0'
@@ -54,7 +54,7 @@ test.describe('application update indicator', () => {
       await page.screenshot({ path: process.env.ANNOTAMD_UPDATE_SCREENSHOT })
     }
 
-    await sendIpcToRenderer(app, 'mt::update:state', {
+    await sendIpcToRenderer(app, 'annotamd::update:state', {
       status: 'downloading',
       currentVersion,
       version: '2.12.0',
@@ -63,7 +63,7 @@ test.describe('application update indicator', () => {
     await expect(updateButton.locator('svg')).toHaveCount(1)
     await expect(updateButton).toHaveText('')
 
-    await sendIpcToRenderer(app, 'mt::update:state', {
+    await sendIpcToRenderer(app, 'annotamd::update:state', {
       status: 'downloaded',
       currentVersion,
       version: '2.12.0',
@@ -103,7 +103,7 @@ test.describe('application update indicator', () => {
       const settingsWindow = BrowserWindow.getAllWindows().find((window) =>
         window.webContents.getURL().includes('/preference')
       )
-      settingsWindow?.webContents.send('mt::update:state', {
+      settingsWindow?.webContents.send('annotamd::update:state', {
         status: 'available',
         currentVersion: '2.11.0',
         version: '2.12.0'

@@ -23,7 +23,7 @@ const cli = (): ParsedArgs => {
 
   const args = parseArgs(argv, true)
   if (args['--help']) {
-    write(`Usage: marktext [commands] [path ...]
+    write(`Usage: annotamd [commands] [path ...]
 
   Available commands:
 
@@ -41,7 +41,7 @@ const cli = (): ParsedArgs => {
   }
 
   if (args['--version']) {
-    writeLine(`AnnotaMD: ${MARKTEXT_VERSION_STRING}`)
+    writeLine(`AnnotaMD: ${ANNOTAMD_VERSION_STRING}`)
     writeLine(`Node.js: ${process.versions.node}`)
     writeLine(`Electron: ${process.versions.electron}`)
     writeLine(`Chromium: ${process.versions.chrome}`)
@@ -52,7 +52,7 @@ const cli = (): ParsedArgs => {
   // Check for portable mode and ensure the user data path is absolute. We assume
   // that the path is writable if not this lead to an application crash.
   if (!args['--user-data-dir']) {
-    const portablePath = path.join(app.getAppPath(), '..', '..', 'marktext-user-data')
+    const portablePath = path.join(app.getAppPath(), '..', '..', 'annotamd-user-data')
     if (isDirectory(portablePath)) {
       args['--user-data-dir'] = portablePath
     } else {

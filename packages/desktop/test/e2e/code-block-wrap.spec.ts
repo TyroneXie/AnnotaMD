@@ -25,7 +25,7 @@ const setPreference = async(
   prefs: Record<string, unknown>
 ): Promise<void> => {
   await page.evaluate((payload) => {
-    window.electron.ipcRenderer.send('mt::set-user-preference', payload)
+    window.electron.ipcRenderer.send('annotamd::set-user-preference', payload)
   }, prefs)
 }
 

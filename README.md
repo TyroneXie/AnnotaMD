@@ -127,6 +127,7 @@ AnnotaMD/
 
 ## 🙏 致谢与许可
 
-AnnotaMD V2 基于 [MarkText](https://github.com/marktext/marktext) 的开源编辑器能力继续开发，感谢 MarkText 与 Muya 的所有贡献者。
+AnnotaMD 使用 Muya 开源编辑器内核，并在此基础上持续发展本地写作、批注与 Agent 协作能力。
 
-本项目采用 [MIT License](LICENSE)。
+本项目采用 [MIT License](LICENSE)。上游代码与依赖的版权和许可声明见
+[`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt)。

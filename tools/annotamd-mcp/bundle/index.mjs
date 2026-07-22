@@ -21870,10 +21870,8 @@ var getBridgeFileCandidates = (options = {}) => {
   const baseDirectory = platform === "darwin" ? join(homeDirectory, "Library", "Application Support") : platform === "win32" ? environment.APPDATA ?? homeDirectory : environment.XDG_CONFIG_HOME ?? join(homeDirectory, ".config");
   return unique([
     join(baseDirectory, "AnnotaMD", "agent-bridge.json"),
-    join(baseDirectory, "marktext", "agent-bridge.json"),
     environment.ANNOTAMD_BRIDGE_FILE ?? "",
-    join(baseDirectory, "annotamd-dev", "agent-bridge.json"),
-    join(baseDirectory, "marktext-dev", "agent-bridge.json")
+    join(baseDirectory, "annotamd-dev", "agent-bridge.json")
   ]);
 };
 var parseBridgeConfig = (value) => {

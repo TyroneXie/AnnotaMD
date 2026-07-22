@@ -29,17 +29,11 @@ export const getBridgeFileCandidates = (
       ? environment.APPDATA ?? homeDirectory
       : environment.XDG_CONFIG_HOME ?? join(homeDirectory, '.config')
 
-  // Prefer installed profiles over development profiles. Older AnnotaMD
-  // releases wrote their bridge into the MarkText user-data directory, while
-  // early auto-generated MCP configs pinned ANNOTAMD_BRIDGE_FILE to a dev
-  // profile. Treat that environment value as a fallback so an installed app
-  // always wins when both are running.
+  // Prefer installed profiles over explicitly pinned and development profiles.
   return unique([
     join(baseDirectory, 'AnnotaMD', 'agent-bridge.json'),
-    join(baseDirectory, 'marktext', 'agent-bridge.json'),
     environment.ANNOTAMD_BRIDGE_FILE ?? '',
-    join(baseDirectory, 'annotamd-dev', 'agent-bridge.json'),
-    join(baseDirectory, 'marktext-dev', 'agent-bridge.json')
+    join(baseDirectory, 'annotamd-dev', 'agent-bridge.json')
   ])
 }
 

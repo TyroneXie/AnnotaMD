@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya as MuyaClass } from '../../muya';
 import { SelectionCaretType, SelectionDirection } from '../../selection/types';
 
-// Track C — Cut (clipboard chain step 2). Ports `packages/muyajs`
+// Track C — Cut (clipboard chain step 2). Ports pre-migration editor engine
 // `copyCutCtrl.cutHandler` + `removeBlocks` semantics into `@muyajs/core`:
 //   1. A cross-block cut merges at the LEAF level —
 //      `startBlock.text = start.head + end.tail` — keeping BOTH endpoint tails

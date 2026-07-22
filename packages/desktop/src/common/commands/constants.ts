@@ -51,8 +51,8 @@ const COMMANDS = Object.freeze({
   FORMAT_SUPERSCRIPT: 'format.superscript',
   FORMAT_UNDERLINE: 'format.underline',
 
-  MT_HIDE: 'mt.hide',
-  MT_HIDE_OTHERS: 'mt.hide-others',
+  ANNOTAMD_HIDE: 'annotamd.hide',
+  ANNOTAMD_HIDE_OTHERS: 'annotamd.hide-others',
 
   PARAGRAPH_BULLET_LIST: 'paragraph.bullet-list',
   PARAGRAPH_CODE_FENCE: 'paragraph.code-fence',

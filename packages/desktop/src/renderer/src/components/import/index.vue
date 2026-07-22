@@ -81,7 +81,7 @@ const dropHandler = (e: DragEvent) => {
       }
     }
   }
-  window.electron.ipcRenderer.send('mt::window::drop', fileList)
+  window.electron.ipcRenderer.send('annotamd::window::drop', fileList)
 }
 
 onMounted(() => {

@@ -97,7 +97,7 @@
       "about": "关于",
       "checkUpdates": "检查更新"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "关于 AnnotaMD",
       "checkUpdates": "检查更新…",
@@ -812,7 +812,7 @@
     "copyrightContributors": "版权贡献者"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "隐藏 AnnotaMD",
       "hideOthers": "隐藏其他"
     },

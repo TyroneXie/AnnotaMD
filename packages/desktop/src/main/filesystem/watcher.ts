@@ -17,8 +17,8 @@ export const WATCHER_STABILITY_THRESHOLD = 1000
 export const WATCHER_STABILITY_POLL_INTERVAL = 150
 
 const EVENT_NAME = {
-  dir: 'mt::update-object-tree' as const,
-  file: 'mt::update-file' as const
+  dir: 'annotamd::update-object-tree' as const,
+  file: 'annotamd::update-file' as const
 }
 
 type WatchType = 'dir' | 'file'
@@ -92,7 +92,7 @@ const add = async(
         )
         file.data = data
       } catch (err) {
-        win.webContents.send('mt::show-notification', {
+        win.webContents.send('annotamd::show-notification', {
           title: 'Watcher I/O error',
           type: 'error',
           message: err instanceof Error ? err.message : String(err)
@@ -150,13 +150,13 @@ const change = async(
         fsPromises.stat(pathname)
       ])
       const file = { pathname, data, mtimeMs: stats.mtimeMs }
-      win.webContents.send('mt::update-file', {
+      win.webContents.send('annotamd::update-file', {
         type: 'change',
         change: file
       })
     } catch (err) {
       if (type === 'file') {
-        win.webContents.send('mt::show-notification', {
+        win.webContents.send('annotamd::show-notification', {
           title: 'Watcher I/O error',
           type: 'error',
           message: err instanceof Error ? err.message : String(err)
@@ -282,7 +282,7 @@ class Watcher {
       if (disposed || treeUpdates.length === 0) return
       const updates = treeUpdates
       treeUpdates = []
-      win.webContents.send('mt::update-object-tree-batch', updates)
+      win.webContents.send('annotamd::update-object-tree-batch', updates)
     }
 
     const emitTreeUpdate: TreeUpdateEmitter = (update) => {
@@ -338,7 +338,7 @@ class Watcher {
       .on('unlinkDir', (pathname: string) => unlinkDir(pathname, type, emitTreeUpdate))
       .on('raw', (event: string, subpath: string, details: unknown) => {
         if (
-          globalThis.MARKTEXT_DEBUG_VERBOSE >= 3
+          globalThis.ANNOTAMD_DEBUG_VERBOSE >= 3
         ) {
           console.log('watcher: ', event, subpath, details)
         }
@@ -369,7 +369,7 @@ class Watcher {
             enospcReached = true
             log.warn('inotify limit reached: Too many file descriptors are opened.')
 
-            win.webContents.send('mt::show-notification', {
+            win.webContents.send('annotamd::show-notification', {
               title: 'inotify limit reached',
               type: 'warning',
               message:
@@ -454,7 +454,7 @@ class Watcher {
 
   /**
    * Check whether we should ignore the current event because the file may be
-   * changed from MarkText itself.
+   * changed from AnnotaMD itself.
    */
   async _shouldIgnoreEvent(
     winId: number,
@@ -483,7 +483,7 @@ class Watcher {
               const fileInfo = await fsPromises.stat(pathname)
               if (fileInfo.mtime.getTime() - start.getTime() < duration) {
                 if (
-                  globalThis.MARKTEXT_DEBUG_VERBOSE >= 3
+                  globalThis.ANNOTAMD_DEBUG_VERBOSE >= 3
                 ) {
                   console.log(
                     `Ignoring file event after "stat": current="${currentTime.toISOString()}", start="${start.toISOString()}", file="${fileInfo.mtime.toISOString()}".`

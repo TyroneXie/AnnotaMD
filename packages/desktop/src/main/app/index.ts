@@ -440,7 +440,7 @@ class App {
     //   const bufferImage = image.toPNG()
 
     //   if (this.launchScreenshotWin) {
-    //     this.launchScreenshotWin.webContents.send('mt::screenshot-captured')
+    //     this.launchScreenshotWin.webContents.send('annotamd::screenshot-captured')
     //     this.launchScreenshotWin = null
     //   }
 
@@ -697,9 +697,9 @@ class App {
     registerSpellcheckerListeners()
 
     // Handle language setting requests
-    ipcMain.on('mt::get-current-language', (event) => {
+    ipcMain.on('annotamd::get-current-language', (event) => {
       const { language } = this._accessor.preferences.getAll()
-      event.reply('mt::current-language', language || 'en')
+      event.reply('annotamd::current-language', language || 'en')
     })
 
     ipcMain.on('app-create-editor-window', () => {
@@ -731,7 +731,7 @@ class App {
           } catch (writeErr) {
             log.error(writeErr)
           }
-          win.webContents.send('mt::screenshot-captured', savedPath)
+          win.webContents.send('annotamd::screenshot-captured', savedPath)
         })
       } else {
         // TODO: Do nothing, maybe we'll add screenCapture later on Linux and Windows.
@@ -803,11 +803,11 @@ class App {
 
     // --- renderer -------------------
 
-    ipcMain.on('mt::app-try-quit', () => {
+    ipcMain.on('annotamd::app-try-quit', () => {
       app.quit()
     })
 
-    ipcMain.on('mt::open-file-by-window-id', (_e, windowId: number, filePath: string) => {
+    ipcMain.on('annotamd::open-file-by-window-id', (_e, windowId: number, filePath: string) => {
       const resolvedPath = normalizeAndResolvePath(filePath)
       const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
       if (openFilesInNewWindow) {
@@ -820,7 +820,7 @@ class App {
       }
     })
 
-    ipcMain.on('mt::select-default-directory-to-open', async(e) => {
+    ipcMain.on('annotamd::select-default-directory-to-open', async(e) => {
       const { preferences } = this._accessor
       const { defaultDirectoryToOpen } = preferences.getAll()
       const win = BrowserWindow.fromWebContents(e.sender)
@@ -835,36 +835,36 @@ class App {
       }
     })
 
-    ipcMain.on('mt::open-setting-window', (_event, category?: string) => {
+    ipcMain.on('annotamd::open-setting-window', (_event, category?: string) => {
       this._openSettingsWindow(category)
     })
 
-    ipcMain.on('mt::make-screenshot', (e) => {
+    ipcMain.on('annotamd::make-screenshot', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       ipcMain.emit('screen-capture', win)
     })
 
-    ipcMain.on('mt::request-keybindings', (e) => {
+    ipcMain.on('annotamd::request-keybindings', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const { keybindings } = this._accessor
       // Convert map to object
-      win.webContents.send('mt::keybindings-response', Object.fromEntries(keybindings.keys))
+      win.webContents.send('annotamd::keybindings-response', Object.fromEntries(keybindings.keys))
     })
 
-    ipcMain.on('mt::open-keybindings-config', () => {
+    ipcMain.on('annotamd::open-keybindings-config', () => {
       const { keybindings } = this._accessor
       keybindings.openConfigInFileManager()
     })
 
-    ipcMain.handle('mt::keybinding-get-pref-keybindings', () => {
+    ipcMain.handle('annotamd::keybinding-get-pref-keybindings', () => {
       const { keybindings } = this._accessor
       const defaultKeybindings = keybindings.getDefaultKeybindings()
       const userKeybindings = keybindings.getUserKeybindings()
       return { defaultKeybindings, userKeybindings }
     })
 
-    ipcMain.handle('mt::keybinding-save-user-keybindings', async(_event, userKeybindings) => {
+    ipcMain.handle('annotamd::keybinding-save-user-keybindings', async(_event, userKeybindings) => {
       const { keybindings, menu } = this._accessor
       const editorWindows = this._windowManager
         .getWindowsByType(WindowType.EDITOR)
@@ -875,13 +875,13 @@ class App {
       menu.updateKeybindings()
       const keybindingMap = Object.fromEntries(keybindings.keys)
       for (const win of editorWindows) {
-        win.webContents.send('mt::keybindings-response', keybindingMap)
+        win.webContents.send('annotamd::keybindings-response', keybindingMap)
       }
 
       return saved
     })
 
-    ipcMain.handle('mt::fs-trash-item', async(_event, fullPath: string) => {
+    ipcMain.handle('annotamd::fs-trash-item', async(_event, fullPath: string) => {
       return shell.trashItem(fullPath)
     })
   }

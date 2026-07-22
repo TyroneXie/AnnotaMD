@@ -24,7 +24,7 @@ import { launchWithMarkdown, expectNoRendererErrors } from './helpers'
 //   3. editor.vue subscribes to `heading-copy-link` and calls
 //      editorStore.copyGithubSlug(key), which finds the listToc entry whose
 //      `slug === key` and writes `'#' + entry.githubSlug` to the OS clipboard
-//      via window.electron.clipboard.writeText (IPC `mt::clipboard::write-text`,
+//      via window.electron.clipboard.writeText (IPC `annotamd::clipboard::write-text`,
 //      handled in packages/desktop/src/main/ipc/shell.ts -> Electron clipboard).
 //
 // We read the clipboard back from the MAIN process (Electron's `clipboard`
@@ -39,7 +39,7 @@ const COPY_LINK = `${HEADING} > i.mu-copy-header-link`
 const DOC = '## My Section\n\nA paragraph under the heading.\n'
 
 // Read the OS clipboard as seen by the main process (the side the
-// `mt::clipboard::write-text` handler writes to).
+// `annotamd::clipboard::write-text` handler writes to).
 const readClipboard = (app: ElectronApplication): Promise<string> =>
   app.evaluate(({ clipboard }) => clipboard.readText())
 

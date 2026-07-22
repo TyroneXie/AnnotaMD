@@ -21,18 +21,18 @@ export const scheduleMcpClientInspection = (delayMs = 1_000): void => {
 
 export const registerMcpClientHandlers = (): void => {
   ipcMain.handle(
-    'mt::mcp-clients::inspect',
+    'annotamd::mcp-clients::inspect',
     (_event, forceRefresh = false) => inspectMcpClients(forceRefresh)
   )
-  ipcMain.handle('mt::mcp-clients::configure', (_event, id: AnnotaMDMcpClientId) => (
+  ipcMain.handle('annotamd::mcp-clients::configure', (_event, id: AnnotaMDMcpClientId) => (
     configureMcpClient(id)
   ))
   ipcMain.handle(
-    'mt::mcp-clients::manual-config',
+    'annotamd::mcp-clients::manual-config',
     () => createCustomAgentManualConfig()
   )
   ipcMain.handle(
-    'mt::mcp-clients::install-portable-skill',
+    'annotamd::mcp-clients::install-portable-skill',
     () => configurePortableCommentSkill()
   )
 }

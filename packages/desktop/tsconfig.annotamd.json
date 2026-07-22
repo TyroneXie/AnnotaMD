@@ -18,7 +18,6 @@
     "out",
     "dist",
     "test",
-    "../muyajs/**/*",
     "src/renderer/src/assets/symbolIcon/index.js",
     "**/*.min.json"
   ]

@@ -109,8 +109,8 @@ if (window.electron && window.electron.ipcRenderer) {
   })
 
   // Request the current language setting at startup
-  window.electron.ipcRenderer.send('mt::get-current-language')
-  window.electron.ipcRenderer.on('mt::current-language', (_event, language) => {
+  window.electron.ipcRenderer.send('annotamd::get-current-language')
+  window.electron.ipcRenderer.on('annotamd::current-language', (_event, language) => {
     setLanguage(language)
     bus.emit('language-changed', language)
   })

@@ -277,7 +277,7 @@
 - Unified action icons and interaction styling across text, table, block, image, and preview toolbars.
 - Improved table row/column selection, movement, resizing, overflow behavior, and responsive layouts.
 - Improved editor, sidebar, settings, search, and empty-state styling for a more compact AnnotaMD interface.
-- Replaced remaining user-facing MarkText branding and paths with AnnotaMD equivalents where migrated.
+- Replaced remaining user-facing 旧品牌 branding and paths with AnnotaMD equivalents where migrated.
 
 ### Fixed
 
@@ -295,5 +295,5 @@
 - 改进 Mermaid 图表视图、全屏缩放和背景色控制。
 - 改进表格横向滚动、标题行吸顶和窄窗口适配。
 - 统一设置页样式、中英文界面和 AnnotaMD 品牌信息。
-- 修复安装包、应用窗口和关于页面误用 MarkText 图标的问题，统一使用 AnnotaMD 品牌图标。
-- 修复发布版继承 MarkText 旧布局状态、首次启动不显示左侧边栏的问题。
+- 修复安装包、应用窗口和关于页面误用 旧品牌 图标的问题，统一使用 AnnotaMD 品牌图标。
+- 修复发布版继承 旧品牌 旧布局状态、首次启动不显示左侧边栏的问题。

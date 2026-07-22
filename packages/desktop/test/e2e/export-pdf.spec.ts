@@ -10,17 +10,17 @@ import {
 // Item 231 — PDF export to a real file via the Electron menu (smoke).
 //
 // The full path is: File › Export › Export PDF →
-//   main `exportFile()` sends `mt::show-export-dialog` →
+//   main `exportFile()` sends `annotamd::show-export-dialog` →
 //   renderer export-settings dialog → confirm →
 //   renderer renders styled HTML into the hidden print webview and sends
-//   `mt::response-export` (store/editor.ts EXPORT) →
+//   `annotamd::response-export` (store/editor.ts EXPORT) →
 //   main `handleResponseForExport` → showSaveDialog → webContents.printToPDF →
-//   writeFile → `mt::export-success`.
+//   writeFile → `annotamd::export-success`.
 //
 // The native save dialog is the only non-headless seam: we stub
 // `electron.dialog.showSaveDialog` in the MAIN process to return a temp path,
 // then drive the REAL renderer export pipeline. We assert a non-empty file
-// beginning with the `%PDF-` magic bytes is written and that `mt::export-success`
+// beginning with the `%PDF-` magic bytes is written and that `annotamd::export-success`
 // fires back to the renderer. Pixel/layout fidelity stays a manual check.
 
 const PDF_DOC =
@@ -35,10 +35,10 @@ const PDF_DOC =
 const stubSaveDialog = async(app: ElectronApplication, targetPath: string): Promise<void> => {
   await app.evaluate(async({ dialog }, savePath) => {
     const g = global as unknown as {
-      __mt_orig_showSaveDialog__?: typeof dialog.showSaveDialog
+      __annotamd_orig_showSaveDialog__?: typeof dialog.showSaveDialog
     }
-    if (!g.__mt_orig_showSaveDialog__) {
-      g.__mt_orig_showSaveDialog__ = dialog.showSaveDialog.bind(dialog)
+    if (!g.__annotamd_orig_showSaveDialog__) {
+      g.__annotamd_orig_showSaveDialog__ = dialog.showSaveDialog.bind(dialog)
     }
     // Override with a resolved temp path so handleResponseForExport proceeds
     // straight to printToPDF + writeFile.
@@ -52,29 +52,29 @@ const stubSaveDialog = async(app: ElectronApplication, targetPath: string): Prom
 const restoreSaveDialog = async(app: ElectronApplication): Promise<void> => {
   await app.evaluate(({ dialog }) => {
     const g = global as unknown as {
-      __mt_orig_showSaveDialog__?: typeof dialog.showSaveDialog
+      __annotamd_orig_showSaveDialog__?: typeof dialog.showSaveDialog
     }
-    if (g.__mt_orig_showSaveDialog__) {
+    if (g.__annotamd_orig_showSaveDialog__) {
       ;(dialog as unknown as { showSaveDialog: unknown }).showSaveDialog =
-        g.__mt_orig_showSaveDialog__
+        g.__annotamd_orig_showSaveDialog__
     }
   })
 }
 
-// Attach a renderer-side listener on `mt::export-success` recording the payload
+// Attach a renderer-side listener on `annotamd::export-success` recording the payload
 // into a window global the spec can read back. Mirrors the app's own
 // LISTEN_FOR_EXPORT_SUCCESS handler but is observable from the test.
 const installExportSuccessProbe = async(page: Page): Promise<void> => {
   await page.evaluate(() => {
     const w = window as unknown as {
-      __mt_export_success__?: Array<{ type?: string; filePath?: string }>
-      __mt_export_probe_installed__?: boolean
+      __annotamd_export_success__?: Array<{ type?: string; filePath?: string }>
+      __annotamd_export_probe_installed__?: boolean
     }
-    if (w.__mt_export_probe_installed__) return
-    w.__mt_export_probe_installed__ = true
+    if (w.__annotamd_export_probe_installed__) return
+    w.__annotamd_export_probe_installed__ = true
     const sink: Array<{ type?: string; filePath?: string }> = []
-    w.__mt_export_success__ = sink
-    window.electron.ipcRenderer.on('mt::export-success', (_e: unknown, payload: unknown) => {
+    w.__annotamd_export_success__ = sink
+    window.electron.ipcRenderer.on('annotamd::export-success', (_e: unknown, payload: unknown) => {
       sink.push((payload ?? {}) as { type?: string; filePath?: string })
     })
   })
@@ -84,24 +84,24 @@ const getExportSuccesses = async(
   page: Page
 ): Promise<Array<{ type?: string; filePath?: string }>> => {
   return await page.evaluate(() => {
-    const w = window as unknown as { __mt_export_success__?: Array<{ type?: string; filePath?: string }> }
-    return (w.__mt_export_success__ ?? []).slice()
+    const w = window as unknown as { __annotamd_export_success__?: Array<{ type?: string; filePath?: string }> }
+    return (w.__annotamd_export_success__ ?? []).slice()
   })
 }
 
 const clearExportSuccesses = async(page: Page): Promise<void> => {
   await page.evaluate(() => {
-    const w = window as unknown as { __mt_export_success__?: Array<unknown> }
-    if (w.__mt_export_success__) w.__mt_export_success__.length = 0
+    const w = window as unknown as { __annotamd_export_success__?: Array<unknown> }
+    if (w.__annotamd_export_success__) w.__annotamd_export_success__.length = 0
   })
 }
 
 // Drive the real renderer export dialog: send the same IPC the menu item sends
-// (`mt::show-export-dialog`), wait for the export-settings dialog to render,
+// (`annotamd::show-export-dialog`), wait for the export-settings dialog to render,
 // then click its primary "Export" button. That runs the renderer pipeline that
-// renders the print webview and emits `mt::response-export` to main.
+// renders the print webview and emits `annotamd::response-export` to main.
 const triggerPdfExportViaDialog = async(app: ElectronApplication, page: Page): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::show-export-dialog', 'pdf')
+  await sendIpcToRenderer(app, 'annotamd::show-export-dialog', 'pdf')
   const confirm = page.locator('.print-settings-dialog .button-primary')
   await confirm.waitFor({ state: 'visible', timeout: 10000 })
   await confirm.click()
@@ -139,7 +139,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   })
 
   test('writes a non-empty file beginning with the %PDF- magic bytes', async() => {
-    const out = '/tmp/marktext-e2e-export-' + Date.now() + '-a.pdf'
+    const out = '/tmp/annotamd-e2e-export-' + Date.now() + '-a.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)
@@ -153,8 +153,8 @@ test.describe('PDF export to a real file (item 231)', () => {
     fs.rmSync(out, { force: true })
   })
 
-  test('fires mt::export-success with type "pdf" and the written file path', async() => {
-    const out = '/tmp/marktext-e2e-export-' + Date.now() + '-b.pdf'
+  test('fires annotamd::export-success with type "pdf" and the written file path', async() => {
+    const out = '/tmp/annotamd-e2e-export-' + Date.now() + '-b.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)
@@ -176,7 +176,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   })
 
   test('canceling the save dialog writes no file and fires no export-success', async() => {
-    const out = '/tmp/marktext-e2e-export-' + Date.now() + '-c.pdf'
+    const out = '/tmp/annotamd-e2e-export-' + Date.now() + '-c.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     // Stub the save dialog to report cancellation — main must skip printToPDF.
@@ -200,7 +200,7 @@ test.describe('PDF export to a real file (item 231)', () => {
   test('the renderer EXPORT path round-trips a second export to a fresh path', async() => {
     // Re-export to a different path to prove the print service is re-armed and
     // the wiring is not single-shot.
-    const out = '/tmp/marktext-e2e-export-' + Date.now() + '-d.pdf'
+    const out = '/tmp/annotamd-e2e-export-' + Date.now() + '-d.pdf'
     if (fs.existsSync(out)) fs.rmSync(out)
     await clearExportSuccesses(page)
     await stubSaveDialog(app, out)

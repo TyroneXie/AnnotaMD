@@ -8,9 +8,9 @@ import { discoverRunningBridge, getBridgeFileCandidates } from './bridgeDiscover
 test('prefers the running installed app over a pinned development bridge', async() => {
   const home = await mkdtemp(join(tmpdir(), 'annotamd-bridge-'))
   const base = join(home, 'Library', 'Application Support')
-  const installed = join(base, 'marktext', 'agent-bridge.json')
+  const installed = join(base, 'AnnotaMD', 'agent-bridge.json')
   const development = join(base, 'annotamd-dev', 'agent-bridge.json')
-  await mkdir(join(base, 'marktext'), { recursive: true })
+  await mkdir(join(base, 'AnnotaMD'), { recursive: true })
   await mkdir(join(base, 'annotamd-dev'), { recursive: true })
   await writeFile(installed, JSON.stringify({ port: 4100, token: 'installed' }))
   await writeFile(development, JSON.stringify({ port: 4200, token: 'development' }))

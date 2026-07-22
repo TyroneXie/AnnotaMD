@@ -42,8 +42,8 @@ export default class KeybindingConfigurator {
   ): UiKeybinding[] {
     const uiKeybindings: UiKeybinding[] = []
     for (const [id] of defaultKeybindings) {
-      if (!isOsx && id.startsWith('mt.')) {
-        // Skip MarkText menu that is only available on macOS.
+      if (!isOsx && id.startsWith('annotamd.')) {
+        // Skip AnnotaMD menu that is only available on macOS.
         continue
       }
       uiKeybindings.push(this._toUiKeybinding(id, defaultKeybindings, userKeybindings))
@@ -94,7 +94,7 @@ export default class KeybindingConfigurator {
     // The main-process handler returns Promise<boolean>, but the IPC contract
     // currently types `ret` as void; rely on the runtime value.
     const result = (await window.electron.ipcRenderer.invoke(
-      'mt::keybinding-save-user-keybindings',
+      'annotamd::keybinding-save-user-keybindings',
       userKeybindings
     )) as unknown as boolean
     if (result) {

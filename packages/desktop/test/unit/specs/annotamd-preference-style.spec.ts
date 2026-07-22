@@ -127,7 +127,7 @@ describe('AnnotaMD preference styling', () => {
     expect(config).not.toContain('zoomOptions')
     expect(windowMenu).toContain("t('commands.view.actualSize')")
     expect(windowMenu).toContain("getAccelerator('window.actualSize')")
-    expect(windowUtils).toMatch(/actualSize[\s\S]*'mt::window-zoom', 1\.0/)
+    expect(windowUtils).toMatch(/actualSize[\s\S]*'annotamd::window-zoom', 1\.0/)
     expect(windowActions).toContain('COMMANDS.WINDOW_ACTUAL_SIZE, actualSize')
     expect(macKeybindings).toContain("['window.actualSize', '']")
     expect(macKeybindings).toContain("['paragraph.paragraph', 'Command+0']")

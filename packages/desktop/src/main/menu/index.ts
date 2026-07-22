@@ -480,14 +480,14 @@ class AppMenu {
   }
 
   _listenForIpcMain(): void {
-    ipcMain.on('mt::add-recently-used-document', (_e, pathname: string) => {
+    ipcMain.on('annotamd::add-recently-used-document', (_e, pathname: string) => {
       this.addRecentlyUsedDocument(pathname)
     })
-    ipcMain.on('mt::update-line-ending-menu', (_e, windowId: number, lineEnding: string) => {
+    ipcMain.on('annotamd::update-line-ending-menu', (_e, windowId: number, lineEnding: string) => {
       this.updateLineEndingMenu(windowId, lineEnding)
     })
     ipcMain.on(
-      'mt::update-format-menu',
+      'annotamd::update-format-menu',
       (_e, windowId: number, formats: Record<string, boolean>) => {
         if (!this.has(windowId)) {
           log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
@@ -496,7 +496,7 @@ class AppMenu {
         updateFormatMenu(this.getWindowMenuById(windowId), formats)
       }
     )
-    ipcMain.on('mt::update-sidebar-menu', (_e, windowId: number, value: unknown) => {
+    ipcMain.on('annotamd::update-sidebar-menu', (_e, windowId: number, value: unknown) => {
       if (!this.has(windowId)) {
         log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
         return
@@ -504,7 +504,7 @@ class AppMenu {
       updateSidebarMenu(this.getWindowMenuById(windowId), value)
     })
     ipcMain.on(
-      'mt::view-layout-changed',
+      'annotamd::view-layout-changed',
       (_e, windowId: number, viewSettings: Record<string, unknown>) => {
         if (!this.has(windowId)) {
           log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
@@ -513,7 +513,7 @@ class AppMenu {
         viewLayoutChanged(this.getWindowMenuById(windowId), viewSettings)
       }
     )
-    ipcMain.on('mt::editor-selection-changed', (_e, windowId: number, changes: SelectionState) => {
+    ipcMain.on('annotamd::editor-selection-changed', (_e, windowId: number, changes: SelectionState) => {
       if (!this.has(windowId)) {
         log.error(`UpdateApplicationMenu: Cannot find window menu for window id ${windowId}.`)
         return
@@ -524,7 +524,7 @@ class AppMenu {
     // In source-code mode the Paragraph and Format commands act on the hidden
     // WYSIWYG engine, so grey them out; on return to WYSIWYG they are re-enabled
     // and the next selection change refines them (#3531).
-    ipcMain.on('mt::set-editor-format-menus-enabled', (_e, windowId: number, enabled: boolean) => {
+    ipcMain.on('annotamd::set-editor-format-menus-enabled', (_e, windowId: number, enabled: boolean) => {
       if (!this.has(windowId)) return
       const menu = this.getWindowMenuById(windowId)
       for (const id of ['paragraphMenuEntry', 'formatMenuItem']) {

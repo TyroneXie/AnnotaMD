@@ -142,6 +142,16 @@ if (selectedPacks.includes('comments')) {
   })
 }
 
+if (selectedPacks.includes('menu')) {
+  checks.push({
+    label: 'desktop product link branding test',
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
+    args: ['run', 'test/unit/specs/annotamd-branding.spec.ts'],
+    cwd: path.join(root, 'packages/desktop'),
+    env: { ...process.env, CI: '1' }
+  })
+}
+
 if (mode === 'feature') {
   checks.push({
     label: 'AnnotaMD desktop typecheck',

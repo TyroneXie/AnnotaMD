@@ -366,7 +366,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
 
   private _listenForIpcMain(): void {
     // HACK: Don't use this event! Please see #1034 and #1035
-    ipcMain.on('mt::window-add-file-path', (e, filePath: string) => {
+    ipcMain.on('annotamd::window-add-file-path', (e, filePath: string) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const editor = this.get(win.id) as EditorWindow | undefined
@@ -378,7 +378,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
     })
 
     // Force close a BrowserWindow
-    ipcMain.on('mt::close-window', (e) => {
+    ipcMain.on('annotamd::close-window', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       // Before closing, update the buffer store if needed
       this.editorBufferStore.handleClose(
@@ -388,7 +388,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       this.forceClose(win)
     })
 
-    ipcMain.on('mt::open-file', (e, filePath: string, options: Record<string, unknown>) => {
+    ipcMain.on('annotamd::open-file', (e, filePath: string, options: Record<string, unknown>) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const editor = this.get(win.id) as EditorWindow | undefined
@@ -399,7 +399,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       editor.openTab(filePath, options, true)
     })
 
-    ipcMain.on('mt::window-tab-closed', (e, pathname: string) => {
+    ipcMain.on('annotamd::window-tab-closed', (e, pathname: string) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const editor = this.get(win.id) as EditorWindow | undefined
@@ -408,14 +408,14 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       }
     })
 
-    ipcMain.on('mt::remove-directory-from-workspace', (e, pathname: string) => {
+    ipcMain.on('annotamd::remove-directory-from-workspace', (e, pathname: string) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const editor = this.get(win.id) as EditorWindow | undefined
       editor?.removeFolder(pathname)
     })
 
-    ipcMain.on('mt::window-toggle-always-on-top', (e) => {
+    ipcMain.on('annotamd::window-toggle-always-on-top', (e) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
       const flag = !win.isAlwaysOnTop()
@@ -489,14 +489,14 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       }
       if (Object.keys(prefs).length > 0) {
         for (const { browserWindow } of this._windows.values()) {
-          browserWindow?.webContents.send('mt::user-preference', prefs)
+          browserWindow?.webContents.send('annotamd::user-preference', prefs)
         }
       }
     })
 
     onInternalChannel('broadcast-user-data-changed', (userData: Record<string, unknown>) => {
       for (const { browserWindow } of this._windows.values()) {
-        browserWindow?.webContents.send('mt::user-preference', userData)
+        browserWindow?.webContents.send('annotamd::user-preference', userData)
       }
     })
   }

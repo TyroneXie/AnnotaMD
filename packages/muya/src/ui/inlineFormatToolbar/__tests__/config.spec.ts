@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import icons from '../config';
 
-// P3 defensive lock for marktext `ef9fe756` (underline `<u>`). These shortcuts already shipped in muya
+// P3 defensive lock for pre-migration implementation `ef9fe756` (underline `<u>`). These shortcuts already shipped in muya
 // alongside the other six inline format types, but nothing in the test
 // suite asserts that they stay wired into the toolbar config — quietly
 // dropping an entry would silently delete the user-visible button. Highlight
@@ -65,7 +65,7 @@ describe('inlineFormatToolbar config — required inline format types', () => {
     });
 });
 
-// marktext #3630: the inline_code / inline_math tooltips advertised Cmd/Ctrl+E
+// pre-migration implementation #3630: the inline_code / inline_math tooltips advertised Cmd/Ctrl+E
 // and Shift+Cmd/Ctrl+E, but no platform binds those — the defaults are
 // Cmd/Ctrl+` (inline code) and Shift+Cmd/Ctrl+M (inline math). The label must
 // match the actual keybinding.

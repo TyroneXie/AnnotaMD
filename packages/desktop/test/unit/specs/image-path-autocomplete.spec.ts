@@ -12,7 +12,7 @@ import { searchFilesAndDir, watchers } from 'main_renderer/utils/imagePathAutoCo
 // crosses test boundaries, and every watcher is torn down afterwards.
 
 const seedDir = (): string => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-img-ac-'))
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'annotamd-img-ac-'))
   fs.writeFileSync(path.join(dir, 'a.png'), '')
   fs.writeFileSync(path.join(dir, 'b.jpg'), '')
   fs.writeFileSync(path.join(dir, 'notes.txt'), '')
@@ -99,7 +99,7 @@ describe('searchFilesAndDir', () => {
   })
 
   it('rejects when the directory cannot be read', async() => {
-    const missing = path.join(os.tmpdir(), 'mt-img-ac-does-not-exist-xyz')
+    const missing = path.join(os.tmpdir(), 'annotamd-img-ac-does-not-exist-xyz')
 
     await expect(searchFilesAndDir(missing, '')).rejects.toBeTruthy()
   })

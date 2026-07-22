@@ -22,9 +22,9 @@ import {
 // DOM render is covered by fixture-render.spec.ts. Engine-level byte stability
 // is covered in packages/muya/test/spec/roundTrip.spec.ts. The MISSING slice
 // is one desktop doc with all block types + the full desktop save path:
-//   editor (loaded with a real file) -> Cmd/Ctrl+S (mt::editor-ask-file-save)
-//   -> store FILE_SAVE -> mt::response-file-save -> main writeMarkdownFile
-//   -> mt::tab-saved -> the tab's unsaved dot clears.
+//   editor (loaded with a real file) -> Cmd/Ctrl+S (annotamd::editor-ask-file-save)
+//   -> store FILE_SAVE -> annotamd::response-file-save -> main writeMarkdownFile
+//   -> annotamd::tab-saved -> the tab's unsaved dot clears.
 //
 // The fixture lives at test/e2e/data/all-blocks.md. It is written in the
 // engine's canonical serialized form (default desktop prefs: listIndentation 1,
@@ -41,11 +41,11 @@ const FIXTURE_ABS = path.resolve(__dirname, 'data', 'all-blocks.md')
 const UNSAVED_DOT = '.editor-tabs li.unsaved'
 
 // Trigger the desktop save through the exact IPC channel the File > Save menu
-// item sends (`mt::editor-ask-file-save` -> store FILE_SAVE). The file was
+// item sends (`annotamd::editor-ask-file-save` -> store FILE_SAVE). The file was
 // opened from a real path so main takes the alreadyExistOnDisk branch: it
-// writes the markdown to disk and replies `mt::tab-saved`, clearing the dot.
+// writes the markdown to disk and replies `annotamd::tab-saved`, clearing the dot.
 const save = async(app: ElectronApplication): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-ask-file-save')
+  await sendIpcToRenderer(app, 'annotamd::editor-ask-file-save')
 }
 
 const readDisk = (): string => fs.readFileSync(FIXTURE_ABS, 'utf-8')
@@ -148,7 +148,7 @@ test.describe('All blocks round-trip + save byte-stability (item 39)', () => {
     // the post-save state is clean and the on-disk bytes are unchanged.
     await save(app)
 
-    // The saved/clean indicator is set on the async mt::tab-saved reply.
+    // The saved/clean indicator is set on the async annotamd::tab-saved reply.
     await expect.poll(() => isDirty(page), { timeout: 5000 }).toBe(false)
 
     // The bytes written to disk equal the original fixture (no reformat on

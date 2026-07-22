@@ -12,10 +12,10 @@ const INON_HASH: Record<NotificationType, string> = {
   info: 'icon-info'
 }
 const TYPE_HASH: Record<NotificationType, string> = {
-  primary: 'mt-primary',
-  error: 'mt-error',
-  warning: 'mt-warn',
-  info: 'mt-info'
+  primary: 'annotamd-primary',
+  error: 'annotamd-error',
+  warning: 'annotamd-warn',
+  info: 'annotamd-info'
 }
 
 const fillTemplate = (type: NotificationType, title: string, message: string): string => {
@@ -67,7 +67,7 @@ const notification: NotificationService = {
     const fragment = document.createElement('div')
     fragment.innerHTML = fillTemplate(type, title, message)
 
-    const noticeContainer = fragment.querySelector('.mt-notification') as HTMLElement
+    const noticeContainer = fragment.querySelector('.annotamd-notification') as HTMLElement
     const bgNotice = noticeContainer.querySelector('.notice-bg') as HTMLElement
     const contentContainer = noticeContainer.querySelector('.content') as HTMLElement
     const fluent = noticeContainer.querySelector('.fluent') as HTMLElement
@@ -76,7 +76,7 @@ const notification: NotificationService = {
     let target: HTMLElement = noticeContainer
 
     if (showConfirm) {
-      noticeContainer.classList.add('mt-confirm')
+      noticeContainer.classList.add('annotamd-confirm')
       target = noticeContainer.querySelector('.confirm') as HTMLElement
     }
 
@@ -132,7 +132,7 @@ const notification: NotificationService = {
     }
 
     const rePositionNotices = (): void => {
-      const notices = document.querySelectorAll('.mt-notification')
+      const notices = document.querySelectorAll('.annotamd-notification')
       let i
       let hx = 0
       const len = notices.length

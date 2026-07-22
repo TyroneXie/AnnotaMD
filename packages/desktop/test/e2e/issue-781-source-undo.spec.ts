@@ -9,7 +9,7 @@ import {
 
 // Issue #781 — Undo/redo while in Source Code mode must act on the CodeMirror
 // editor, not the hidden WYSIWYG (muya) engine. The Edit › Undo menu item and
-// Cmd/Ctrl+Z both route through `mt::editor-edit-action` → bus `undo`. Before the
+// Cmd/Ctrl+Z both route through `annotamd::editor-edit-action` → bus `undo`. Before the
 // fix only editor.vue subscribed and called muya.undo() (invisible in source
 // mode), so undo did nothing. sourceCode.vue now also subscribes and runs
 // CodeMirror's `undo`/`redo` command, and editor.vue's handler bails out while
@@ -42,9 +42,9 @@ const typeInCm = (page: Page, text: string): Promise<void> =>
   }, text)
 
 const undo = (app: Parameters<typeof sendIpcToRenderer>[0]): Promise<void> =>
-  sendIpcToRenderer(app, 'mt::editor-edit-action', 'undo')
+  sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
 const redo = (app: Parameters<typeof sendIpcToRenderer>[0]): Promise<void> =>
-  sendIpcToRenderer(app, 'mt::editor-edit-action', 'redo')
+  sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'redo')
 
 test.describe('Issue #781 — undo/redo in source code mode', () => {
   test('undo reverts a source-mode edit; redo re-applies it', async() => {

@@ -125,11 +125,11 @@ test.describe('Parity G8 — language switch refreshes inline hints', () => {
 
     // Mirror the real main-process order: AppMenu registers its
     // `broadcast-preferences-changed` listener before WindowManager, so
-    // `language-changed` reaches the renderer BEFORE the `mt::user-preference`
+    // `language-changed` reaches the renderer BEFORE the `annotamd::user-preference`
     // that syncs the preferences store. The handler must therefore read the
     // locale from the event payload, not from the still-stale `language.value`.
     await sendIpcToRenderer(app, 'language-changed', 'zh-CN')
-    await sendIpcToRenderer(app, 'mt::user-preference', { language: 'zh-CN' })
+    await sendIpcToRenderer(app, 'annotamd::user-preference', { language: 'zh-CN' })
     await page.waitForTimeout(400)
 
     const zhHint = await hintFor()
@@ -153,7 +153,7 @@ test.describe('Parity G8 — language switch refreshes inline hints', () => {
 //
 // This desktop-e2e adds only the integration confirmation: through the REAL
 // Electron renderer + Vue shell, switch the app locale to zh-CN (the same
-// `language-changed` + `mt::user-preference` sequence the G8 test uses, which
+// `language-changed` + `annotamd::user-preference` sequence the G8 test uses, which
 // routes through editor.vue handleLanguageChanged -> muya.locale(zhCN) and
 // re-renders the block tree), then drive the live "type `# x`" input path and
 // confirm the heading renders with the right text and the renderer does NOT
@@ -176,7 +176,7 @@ test.describe('Heading creation under zh-CN does not crash the renderer (item 27
     // crash. Mirror the real main-process order (language-changed precedes the
     // preferences sync), same as the G8 test above.
     await sendIpcToRenderer(app, 'language-changed', 'zh-CN')
-    await sendIpcToRenderer(app, 'mt::user-preference', { language: 'zh-CN' })
+    await sendIpcToRenderer(app, 'annotamd::user-preference', { language: 'zh-CN' })
     await page.waitForTimeout(400)
   })
 

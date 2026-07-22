@@ -73,7 +73,7 @@ export const popupContextMenu = (
     handlers.clear()
   }
 
-  offClick = window.electron.ipcRenderer.on('mt::menu::click', (_e, message) => {
+  offClick = window.electron.ipcRenderer.on('annotamd::menu::click', (_e, message) => {
     // Main process actually sends `{ windowId, id }` (see src/main/ipc/window.ts);
     // the contract `[menuId: string]` is intentionally narrowed at the boundary.
     const id = (message as unknown as { id?: string } | undefined)?.id ?? ''
@@ -86,7 +86,7 @@ export const popupContextMenu = (
       }
     }
   })
-  offClosed = window.electron.ipcRenderer.on('mt::menu::closed', () => cleanup())
+  offClosed = window.electron.ipcRenderer.on('annotamd::menu::closed', () => cleanup())
 
   window.electron.windowControl.popupMenu(template, position)
 }

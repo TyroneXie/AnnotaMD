@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
 
-// `DataCenter` (main process) registers `mt::ask-for-image-path` via
+// `DataCenter` (main process) registers `annotamd::ask-for-image-path` via
 // `ipcMain.handle`. The handler opens a native file dialog and maps the
 // result to `filePaths[0]` or `''`. We mock the Electron surface, capture
 // the registered handler, and drive it directly — the dialog itself is
@@ -55,13 +55,13 @@ const fakeEvent = { sender: {} } as never
 function getHandler() {
   // Instantiating DataCenter registers the ipcMain handler (the side effect is the point).
   // eslint-disable-next-line no-new
-  new DataCenter({ dataCenterPath: '/tmp/mt-dc', userDataPath: '/tmp/mt-ud' })
-  const handler = handlers.get('mt::ask-for-image-path')
-  if (!handler) throw new Error('mt::ask-for-image-path handler was not registered')
+  new DataCenter({ dataCenterPath: '/tmp/annotamd-dc', userDataPath: '/tmp/annotamd-ud' })
+  const handler = handlers.get('annotamd::ask-for-image-path')
+  if (!handler) throw new Error('annotamd::ask-for-image-path handler was not registered')
   return handler
 }
 
-describe('mt::ask-for-image-path handler', () => {
+describe('annotamd::ask-for-image-path handler', () => {
   beforeEach(() => {
     handlers.clear()
     showOpenDialog.mockReset()

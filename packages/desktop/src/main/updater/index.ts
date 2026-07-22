@@ -20,7 +20,7 @@ const broadcast = (): void => {
   const state = snapshot()
   for (const browserWindow of BrowserWindow.getAllWindows()) {
     if (!browserWindow.isDestroyed()) {
-      browserWindow.webContents.send('mt::update:state', state)
+      browserWindow.webContents.send('annotamd::update:state', state)
     }
   }
 }
@@ -130,10 +130,10 @@ export const registerAppUpdater = (): void => {
     Object.assign(updateState, reduceUpdateState(updateState, { type: 'unsupported' }))
   }
 
-  ipcMain.handle('mt::update:get-state', () => getUpdateState())
-  ipcMain.handle('mt::update:check', () => checkForUpdates())
-  ipcMain.handle('mt::update:download', () => downloadUpdate())
-  ipcMain.handle('mt::update:install', () => installDownloadedUpdate())
+  ipcMain.handle('annotamd::update:get-state', () => getUpdateState())
+  ipcMain.handle('annotamd::update:check', () => checkForUpdates())
+  ipcMain.handle('annotamd::update:download', () => downloadUpdate())
+  ipcMain.handle('annotamd::update:install', () => installDownloadedUpdate())
 }
 
 export const scheduleStartupUpdateCheck = (delayMs = 4000): void => {

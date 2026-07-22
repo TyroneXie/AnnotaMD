@@ -8,7 +8,6 @@ import { languageDisplayName, search } from '../../utils/prism';
 
 import { h, patch } from '../../utils/snabbdom';
 import BaseScrollFloat from '../baseScrollFloat';
-import fileIcons from '../utils/fileIcons';
 import {
     buildLanguagePickerItems,
     languageCategory,
@@ -170,15 +169,6 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
         const { renderArray, _oldVNode: oldVNode, scrollElement, activeItem } = this;
         const renderedItems = (renderArray as LanguageItem[]).map((item) => {
             const isMoreItem = item.name === MORE_LANGUAGES_ITEM_NAME;
-            let iconClassNames;
-            if (!isMoreItem && item.name)
-                iconClassNames = fileIcons.getClassByLanguage(item.name);
-
-            // Because `markdown mode in Codemirror` don't have extensions.
-            // if still can not get the className, add a common className 'atom-icon light-cyan'
-            if (!iconClassNames && item.name === 'markdown')
-                iconClassNames = fileIcons.getClassByName('fakeName.md');
-
             const label = isMoreItem
                 ? this.muya.i18n.t(item.expanded ? 'Fewer Languages' : 'More Languages')
                 : item.name
@@ -196,16 +186,6 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
 
             if (isMoreItem) {
                 itemContent.push(h('span.mu-language-more-chevron', item.expanded ? '⌃' : '⌄'));
-            }
-            else if (iconClassNames) {
-                const iconSelector
-                    = `span${
-                        iconClassNames
-                            .split(/\s/)
-                            .map((s: string) => `.${s}`)
-                            .join('')}`;
-                const icon = h('div.icon-wrapper', h(iconSelector));
-                itemContent.push(icon);
             }
             else {
                 const category = languageCategory(item.name);

@@ -33,7 +33,7 @@ const send = <K extends keyof IpcSendChannels>(channel: K, ...args: IpcSendChann
 
 // One synchronous handshake at startup so the renderer can read platform/env
 // without an `await` from inside Vue computed properties etc.
-const bootInfo = ipcRenderer.sendSync('mt::boot-info') as BootInfo | undefined
+const bootInfo = ipcRenderer.sendSync('annotamd::boot-info') as BootInfo | undefined
 
 const ipcWrapper = {
   send,
@@ -68,17 +68,17 @@ const ipcWrapper = {
 }
 
 const shellAPI = {
-  openExternal: (url: string) => invoke('mt::shell::open-external', url),
-  getLinkMetadata: (url: string) => invoke('mt::shell::get-link-metadata', url),
-  showItemInFolder: (fullPath: string) => send('mt::shell::show-item', fullPath),
-  openPath: (fullPath: string) => invoke('mt::shell::open-path', fullPath)
+  openExternal: (url: string) => invoke('annotamd::shell::open-external', url),
+  getLinkMetadata: (url: string) => invoke('annotamd::shell::get-link-metadata', url),
+  showItemInFolder: (fullPath: string) => send('annotamd::shell::show-item', fullPath),
+  openPath: (fullPath: string) => invoke('annotamd::shell::open-path', fullPath)
 }
 
 const clipboardAPI = {
-  writeText: (text: string) => send('mt::clipboard::write-text', text),
-  writeImage: (dataUrl: string) => send('mt::clipboard::write-image', dataUrl),
-  readText: () => invoke('mt::clipboard::read-text'),
-  guessFilePath: () => invoke('mt::clipboard::guess-file-path')
+  writeText: (text: string) => send('annotamd::clipboard::write-text', text),
+  writeImage: (dataUrl: string) => send('annotamd::clipboard::write-image', dataUrl),
+  readText: () => invoke('annotamd::clipboard::read-text'),
+  guessFilePath: () => invoke('annotamd::clipboard::guess-file-path')
 }
 
 const webFrameAPI = {
@@ -95,19 +95,19 @@ const webUtilsAPI = {
 }
 
 const windowControlAPI = {
-  minimize: () => send('mt::win::minimize'),
-  maximize: () => send('mt::win::maximize'),
-  unmaximize: () => send('mt::win::unmaximize'),
-  toggleMaximize: () => send('mt::win::toggle-maximize'),
-  close: () => send('mt::win::close'),
-  setFullScreen: (flag: boolean) => send('mt::win::set-fullscreen', flag),
-  toggleFullScreen: () => send('mt::win::toggle-fullscreen'),
-  isMaximized: () => invoke('mt::win::is-maximized'),
-  isFullScreen: () => invoke('mt::win::is-fullscreen'),
+  minimize: () => send('annotamd::win::minimize'),
+  maximize: () => send('annotamd::win::maximize'),
+  unmaximize: () => send('annotamd::win::unmaximize'),
+  toggleMaximize: () => send('annotamd::win::toggle-maximize'),
+  close: () => send('annotamd::win::close'),
+  setFullScreen: (flag: boolean) => send('annotamd::win::set-fullscreen', flag),
+  toggleFullScreen: () => send('annotamd::win::toggle-fullscreen'),
+  isMaximized: () => invoke('annotamd::win::is-maximized'),
+  isFullScreen: () => invoke('annotamd::win::is-fullscreen'),
   popupMenu: (template: unknown, position?: { x: number; y: number }) =>
-    send('mt::menu::popup', template as never, position),
+    send('annotamd::menu::popup', template as never, position),
   popupApplicationMenu: (position?: { x: number; y: number }) =>
-    send('mt::menu::popup-application', position)
+    send('annotamd::menu::popup-application', position)
 }
 
 // These three predicates are pure path-string operations: implementing them
@@ -149,7 +149,7 @@ const isSamePathSync = (pathA: string, pathB: string, isNormalized: boolean = fa
     // Case-insensitive filesystem fallback — block briefly on a sync IPC
     // because callers (tab matching) need a boolean answer right now.
     try {
-      return ipcRenderer.sendSync('mt::paths::is-same-sync', a, b)
+      return ipcRenderer.sendSync('annotamd::paths::is-same-sync', a, b)
     } catch {
       return false
     }
@@ -158,74 +158,74 @@ const isSamePathSync = (pathA: string, pathB: string, isNormalized: boolean = fa
 }
 
 const fileUtilsAPI = {
-  isFile: (p: string) => invoke('mt::fs::is-file', p),
-  isDirectory: (p: string) => invoke('mt::fs::is-directory', p),
-  emptyDir: (p: string) => invoke('mt::fs::empty-dir', p),
-  copy: (src: string, dest: string) => invoke('mt::fs::copy', src, dest),
-  ensureDir: (p: string) => invoke('mt::fs::ensure-dir', p),
-  outputFile: (p: string, data: string | Uint8Array) => invoke('mt::fs::output-file', p, data),
-  move: (src: string, dest: string) => invoke('mt::fs::move', src, dest),
-  stat: (p: string) => invoke('mt::fs::stat', p),
-  writeFile: (p: string, data: string | Uint8Array) => invoke('mt::fs::write-file', p, data),
-  readFile: (p: string, encoding?: string) => invoke('mt::fs::read-file', p, encoding),
-  pathExists: (p: string) => invoke('mt::fs::path-exists', p),
-  unlink: (p: string) => invoke('mt::fs::unlink', p),
-  readdir: (p: string) => invoke('mt::fs::readdir', p),
-  isExecutable: (p: string) => invoke('mt::fs::is-executable', p),
+  isFile: (p: string) => invoke('annotamd::fs::is-file', p),
+  isDirectory: (p: string) => invoke('annotamd::fs::is-directory', p),
+  emptyDir: (p: string) => invoke('annotamd::fs::empty-dir', p),
+  copy: (src: string, dest: string) => invoke('annotamd::fs::copy', src, dest),
+  ensureDir: (p: string) => invoke('annotamd::fs::ensure-dir', p),
+  outputFile: (p: string, data: string | Uint8Array) => invoke('annotamd::fs::output-file', p, data),
+  move: (src: string, dest: string) => invoke('annotamd::fs::move', src, dest),
+  stat: (p: string) => invoke('annotamd::fs::stat', p),
+  writeFile: (p: string, data: string | Uint8Array) => invoke('annotamd::fs::write-file', p, data),
+  readFile: (p: string, encoding?: string) => invoke('annotamd::fs::read-file', p, encoding),
+  pathExists: (p: string) => invoke('annotamd::fs::path-exists', p),
+  unlink: (p: string) => invoke('annotamd::fs::unlink', p),
+  readdir: (p: string) => invoke('annotamd::fs::readdir', p),
+  isExecutable: (p: string) => invoke('annotamd::fs::is-executable', p),
   // Pure-string predicates — synchronous, no IPC for the common case.
   isChildOfDirectory,
   hasMarkdownExtension,
   isSamePathSync,
   // isImageFile needs an fs.statSync; keep it async via IPC.
-  isImageFile: (p: string) => invoke('mt::paths::is-image', p),
+  isImageFile: (p: string) => invoke('annotamd::paths::is-image', p),
   MARKDOWN_INCLUSIONS: bootInfo?.MARKDOWN_INCLUSIONS || []
 }
 
 const commandAPI = {
-  exists: (name: string) => invoke('mt::cmd::exists', name)
+  exists: (name: string) => invoke('annotamd::cmd::exists', name)
 }
 
 const i18nAPI = {
-  loadTranslations: (language: string) => invoke('mt::i18n::load', language)
+  loadTranslations: (language: string) => invoke('annotamd::i18n::load', language)
 }
 
 type RipgrepHandler = (payload: unknown) => void
 const ripgrepAPI = {
-  start: (req: unknown) => invoke('mt::rg::start', req),
-  cancel: (searchId: string) => send('mt::rg::cancel', searchId),
+  start: (req: unknown) => invoke('annotamd::rg::start', req),
+  cancel: (searchId: string) => send('annotamd::rg::cancel', searchId),
   onMatch: (handler: RipgrepHandler) => {
     const sub = (_e: IpcRendererEvent, payload: unknown) => handler(payload)
-    ipcRenderer.on('mt::rg::match', sub)
-    return () => ipcRenderer.removeListener('mt::rg::match', sub)
+    ipcRenderer.on('annotamd::rg::match', sub)
+    return () => ipcRenderer.removeListener('annotamd::rg::match', sub)
   },
   onProgress: (handler: RipgrepHandler) => {
     const sub = (_e: IpcRendererEvent, payload: unknown) => handler(payload)
-    ipcRenderer.on('mt::rg::progress', sub)
-    return () => ipcRenderer.removeListener('mt::rg::progress', sub)
+    ipcRenderer.on('annotamd::rg::progress', sub)
+    return () => ipcRenderer.removeListener('annotamd::rg::progress', sub)
   },
   onDone: (handler: RipgrepHandler) => {
     const sub = (_e: IpcRendererEvent, payload: unknown) => handler(payload)
-    ipcRenderer.on('mt::rg::done', sub)
-    return () => ipcRenderer.removeListener('mt::rg::done', sub)
+    ipcRenderer.on('annotamd::rg::done', sub)
+    return () => ipcRenderer.removeListener('annotamd::rg::done', sub)
   },
   onError: (handler: RipgrepHandler) => {
     const sub = (_e: IpcRendererEvent, payload: unknown) => handler(payload)
-    ipcRenderer.on('mt::rg::error', sub)
-    return () => ipcRenderer.removeListener('mt::rg::error', sub)
+    ipcRenderer.on('annotamd::rg::error', sub)
+    return () => ipcRenderer.removeListener('annotamd::rg::error', sub)
   },
   onCancelled: (handler: RipgrepHandler) => {
     const sub = (_e: IpcRendererEvent, payload: unknown) => handler(payload)
-    ipcRenderer.on('mt::rg::cancelled', sub)
-    return () => ipcRenderer.removeListener('mt::rg::cancelled', sub)
+    ipcRenderer.on('annotamd::rg::cancelled', sub)
+    return () => ipcRenderer.removeListener('annotamd::rg::cancelled', sub)
   }
 }
 
 const uploaderAPI = {
-  uploadImage: (req: unknown) => invoke('mt::uploader::upload', req)
+  uploadImage: (req: unknown) => invoke('annotamd::uploader::upload', req)
 }
 
 const fontsAPI = {
-  list: () => invoke('mt::fonts::list')
+  list: () => invoke('annotamd::fonts::list')
 }
 
 const electronAPI = {

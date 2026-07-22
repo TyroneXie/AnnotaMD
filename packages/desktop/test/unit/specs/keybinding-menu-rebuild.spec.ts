@@ -51,7 +51,7 @@ import type Keybindings from 'main_renderer/keyboard/shortcutHandler'
 const makeAppMenu = () => {
   const preferences = { getItem: () => 'en' } as unknown as Preference
   const keybindings = { registerEditorKeyHandlers: vi.fn() } as unknown as Keybindings
-  return new AppMenu(preferences, keybindings, '/tmp/mt-test')
+  return new AppMenu(preferences, keybindings, '/tmp/annotamd-test')
 }
 
 describe('AppMenu.updateKeybindings rebuilds menus after a keybinding change (#3998)', () => {

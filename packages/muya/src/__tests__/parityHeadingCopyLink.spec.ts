@@ -5,7 +5,7 @@ import { Muya } from '../muya';
 
 // PARITY SCOREBOARD — gap PG11 (file PG10, "heading-copy-link").
 //
-// Legacy `packages/muyajs` rendered a hover affordance
+// The pre-migration editor engine rendered a hover affordance
 // (`i.icon.ag-copy-header-link`) on each heading and dispatched
 // `heading-copy-link` { key } when clicked; the desktop renderer copied the
 // heading's GitHub slug/anchor to the clipboard (`copyGithubSlug`).

@@ -35,7 +35,7 @@ const buildMenu = (template: MenuTemplate | undefined, windowId: number): Menu =
         click: () => {
           const sender = popups.get(windowId)?.sender
           try {
-            sender?.send('mt::menu::click', { windowId, id })
+            sender?.send('annotamd::menu::click', { windowId, id })
           } catch {
             /* sender destroyed */
           }
@@ -48,46 +48,46 @@ const buildMenu = (template: MenuTemplate | undefined, windowId: number): Menu =
 }
 
 export const registerWindowHandlers = (): void => {
-  ipcMain.on('mt::win::minimize', (event) => {
+  ipcMain.on('annotamd::win::minimize', (event) => {
     const win = windowFromEvent(event)
     if (win) win.minimize()
   })
-  ipcMain.on('mt::win::toggle-maximize', (event) => {
+  ipcMain.on('annotamd::win::toggle-maximize', (event) => {
     const win = windowFromEvent(event)
     if (!win) return
     if (win.isMaximized()) win.unmaximize()
     else win.maximize()
   })
-  ipcMain.on('mt::win::maximize', (event) => {
+  ipcMain.on('annotamd::win::maximize', (event) => {
     const win = windowFromEvent(event)
     if (win) win.maximize()
   })
-  ipcMain.on('mt::win::unmaximize', (event) => {
+  ipcMain.on('annotamd::win::unmaximize', (event) => {
     const win = windowFromEvent(event)
     if (win) win.unmaximize()
   })
-  ipcMain.on('mt::win::close', (event) => {
+  ipcMain.on('annotamd::win::close', (event) => {
     const win = windowFromEvent(event)
     if (win) win.close()
   })
-  ipcMain.on('mt::win::set-fullscreen', (event, flag: boolean) => {
+  ipcMain.on('annotamd::win::set-fullscreen', (event, flag: boolean) => {
     const win = windowFromEvent(event)
     if (win) win.setFullScreen(!!flag)
   })
-  ipcMain.on('mt::win::toggle-fullscreen', (event) => {
+  ipcMain.on('annotamd::win::toggle-fullscreen', (event) => {
     const win = windowFromEvent(event)
     if (win) win.setFullScreen(!win.isFullScreen())
   })
-  ipcMain.handle('mt::win::is-maximized', (event) => {
+  ipcMain.handle('annotamd::win::is-maximized', (event) => {
     const win = windowFromEvent(event as unknown as IpcMainEvent)
     return !!win && win.isMaximized()
   })
-  ipcMain.handle('mt::win::is-fullscreen', (event) => {
+  ipcMain.handle('annotamd::win::is-fullscreen', (event) => {
     const win = windowFromEvent(event as unknown as IpcMainEvent)
     return !!win && win.isFullScreen()
   })
 
-  ipcMain.on('mt::menu::popup', (event, template: MenuTemplate, position?: MenuPopupPosition) => {
+  ipcMain.on('annotamd::menu::popup', (event, template: MenuTemplate, position?: MenuPopupPosition) => {
     const win = windowFromEvent(event)
     if (!win) return
     // Stash sender BEFORE menu.popup so buildMenu click handlers can resolve
@@ -104,7 +104,7 @@ export const registerWindowHandlers = (): void => {
         callback: () => {
           popups.delete(win.id)
           try {
-            event.sender.send('mt::menu::closed', { windowId: win.id })
+            event.sender.send('annotamd::menu::closed', { windowId: win.id })
           } catch {
             /* destroyed */
           }
@@ -116,7 +116,7 @@ export const registerWindowHandlers = (): void => {
     }
   })
 
-  ipcMain.on('mt::menu::popup-application', (event, position?: MenuPopupPosition) => {
+  ipcMain.on('annotamd::menu::popup-application', (event, position?: MenuPopupPosition) => {
     const win = windowFromEvent(event)
     if (!win) return
     try {

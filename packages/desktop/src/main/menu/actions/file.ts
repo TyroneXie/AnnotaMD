@@ -12,7 +12,7 @@ import {
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
 import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
-import { checkUpdates, userSetting } from './marktext'
+import { checkUpdates, userSetting } from './annotamd'
 import { showTabBar } from './view'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -35,7 +35,7 @@ interface PageOptions {
 
 // TODO(refactor): "save" and "save as" should be moved to the editor window (editor.js) and
 // the renderer should communicate only with the editor window for file relevant stuff.
-// E.g. "mt::save-tabs" --> "mt::window-save-tabs$wid:<windowId>"
+// E.g. "annotamd::save-tabs" --> "annotamd::window-save-tabs$wid:<windowId>"
 
 const getExportExtensionFilter = (type: string): Electron.FileFilter[] | undefined => {
   if (type === 'pdf') {
@@ -125,12 +125,12 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
         }
         await writeFile(filePath, content, extension!, 'utf8')
       }
-      win.webContents.send('mt::export-success', { type, filePath })
+      win.webContents.send('annotamd::export-success', { type, filePath })
     } catch (err) {
       log.error('Error while exporting:', err)
       const ERROR_MSG =
         (err instanceof Error && err.message) || `Error happened when export ${filePath}`
-      win.webContents.send('mt::show-notification', {
+      win.webContents.send('annotamd::show-notification', {
         title: 'Export failure',
         type: 'error',
         message: ERROR_MSG
@@ -174,7 +174,7 @@ const handleResponseForSave = async(
 
   // If the file doesn't exist on disk add it to the recently used documents later
   // and execute file from filesystem watcher for a short time. The file may exists
-  // on disk nevertheless but is already tracked by MarkText.
+  // on disk nevertheless but is already tracked by AnnotaMD.
   const alreadyExistOnDisk = !!pathname
 
   let filePath = pathname
@@ -210,17 +210,17 @@ const handleResponseForSave = async(
         ipcMain.emit('menu-add-recently-used', filePath)
 
         const newFilename = path.basename(filePath!)
-        win.webContents.send('mt::set-pathname', { id, pathname: filePath, filename: newFilename })
+        win.webContents.send('annotamd::set-pathname', { id, pathname: filePath, filename: newFilename })
       } else {
         ipcMain.emit('window-file-saved', win.id, filePath)
-        win.webContents.send('mt::tab-saved', id)
+        win.webContents.send('annotamd::tab-saved', id)
       }
       return id
     })
     .catch((err: unknown) => {
       log.error('Error while saving:', err)
       const msg = err instanceof Error ? err.message : String(err)
-      win.webContents.send('mt::tab-save-failure', id, msg)
+      win.webContents.send('annotamd::tab-save-failure', id, msg)
     })
 }
 
@@ -257,7 +257,7 @@ const showUnsavedFilesMessage = async(
 }
 
 const noticePandocNotFound = (win: BrowserWindow): void => {
-  win.webContents.send('mt::pandoc-not-exists', {
+  win.webContents.send('annotamd::pandoc-not-exists', {
     title: t('dialog.importWarning'),
     type: 'warning',
     message: t('dialog.installPandoc'),
@@ -277,12 +277,12 @@ const openPandocFile = async(windowId: number, pathname: string): Promise<void> 
 
 const removePrintServiceFromWindow = (win: BrowserWindow): void => {
   // remove print service content and restore GUI
-  win.webContents.send('mt::print-service-clearup')
+  win.webContents.send('annotamd::print-service-clearup')
 }
 
 // --- events -----------------------------------
 
-ipcMain.on('mt::save-tabs', (e, unsavedFiles: UnsavedFile[]) => {
+ipcMain.on('annotamd::save-tabs', (e, unsavedFiles: UnsavedFile[]) => {
   Promise.all(
     unsavedFiles.map((file) =>
       handleResponseForSave(
@@ -298,7 +298,7 @@ ipcMain.on('mt::save-tabs', (e, unsavedFiles: UnsavedFile[]) => {
   ).catch(log.error)
 })
 
-ipcMain.on('mt::save-and-close-tabs', async(e, unsavedFiles: UnsavedFile[]) => {
+ipcMain.on('annotamd::save-and-close-tabs', async(e, unsavedFiles: UnsavedFile[]) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
@@ -325,19 +325,19 @@ ipcMain.on('mt::save-and-close-tabs', async(e, unsavedFiles: UnsavedFile[]) => {
     )
       .then((arr) => {
         const tabIds = arr.filter((id): id is string => id != null)
-        win.webContents.send('mt::force-close-tabs-by-id', tabIds)
+        win.webContents.send('annotamd::force-close-tabs-by-id', tabIds)
       })
       .catch((err: unknown) => {
         log.error('Error while save all:', err)
       })
   } else {
     const tabIds = unsavedFiles.map((f) => f.id)
-    win.webContents.send('mt::force-close-tabs-by-id', tabIds)
+    win.webContents.send('annotamd::force-close-tabs-by-id', tabIds)
   }
 })
 
 ipcMain.on(
-  'mt::response-file-save-as',
+  'annotamd::response-file-save-as',
   async(
     e: IpcMainEvent,
     id: string,
@@ -358,7 +358,7 @@ ipcMain.on(
 
     // If the file doesn't exist on disk add it to the recently used documents later
     // and execute file from filesystem watcher for a short time. The file may exists
-    // on disk nevertheless but is already tracked by MarkText.
+    // on disk nevertheless but is already tracked by AnnotaMD.
     const alreadyExistOnDisk = !!pathname
 
     let { filePath, canceled } = await dialog.showSaveDialog(win, {
@@ -375,7 +375,7 @@ ipcMain.on(
             ipcMain.emit('menu-add-recently-used', filePath)
 
             const newFilename = path.basename(filePath!)
-            win.webContents.send('mt::set-pathname', {
+            win.webContents.send('annotamd::set-pathname', {
               id,
               pathname: filePath,
               filename: newFilename
@@ -385,26 +385,26 @@ ipcMain.on(
             ipcMain.emit('window-change-file-path', win.id, filePath, pathname)
 
             const newFilename = path.basename(filePath!)
-            win.webContents.send('mt::set-pathname', {
+            win.webContents.send('annotamd::set-pathname', {
               id,
               pathname: filePath,
               filename: newFilename
             })
           } else {
             ipcMain.emit('window-file-saved', win.id, filePath)
-            win.webContents.send('mt::tab-saved', id)
+            win.webContents.send('annotamd::tab-saved', id)
           }
         })
         .catch((err: unknown) => {
           log.error('Error while save as:', err)
           const msg = err instanceof Error ? err.message : String(err)
-          win.webContents.send('mt::tab-save-failure', id, msg)
+          win.webContents.send('annotamd::tab-save-failure', id, msg)
         })
     }
   }
 )
 
-ipcMain.on('mt::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => {
+ipcMain.on('annotamd::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
@@ -455,13 +455,13 @@ ipcMain.on('mt::close-window-confirm', async(e, unsavedFiles: UnsavedFile[]) => 
   }
 })
 
-ipcMain.on('mt::response-file-save', handleResponseForSave as Parameters<typeof ipcMain.on>[1])
+ipcMain.on('annotamd::response-file-save', handleResponseForSave as Parameters<typeof ipcMain.on>[1])
 
-ipcMain.on('mt::response-export', handleResponseForExport as Parameters<typeof ipcMain.on>[1])
+ipcMain.on('annotamd::response-export', handleResponseForExport as Parameters<typeof ipcMain.on>[1])
 
-ipcMain.on('mt::response-print', handleResponseForPrint as Parameters<typeof ipcMain.on>[1])
+ipcMain.on('annotamd::response-print', handleResponseForPrint as Parameters<typeof ipcMain.on>[1])
 
-ipcMain.on('mt::window::drop', async(e, fileList: string[]) => {
+ipcMain.on('annotamd::window::drop', async(e, fileList: string[]) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
@@ -491,7 +491,7 @@ interface RenamePayload {
   newPathname: string
 }
 
-ipcMain.on('mt::rename', async(e, { id, pathname, newPathname }: RenamePayload) => {
+ipcMain.on('annotamd::rename', async(e, { id, pathname, newPathname }: RenamePayload) => {
   if (pathname === newPathname) return
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
@@ -501,12 +501,12 @@ ipcMain.on('mt::rename', async(e, { id, pathname, newPathname }: RenamePayload) 
   const doRename = (): void => {
     fsRename(pathname, newPathname, (err: NodeJS.ErrnoException | null) => {
       if (err) {
-        log.error(`mt::rename: Cannot rename "${pathname}" to "${newPathname}".\n${err.stack}`)
+        log.error(`annotamd::rename: Cannot rename "${pathname}" to "${newPathname}".\n${err.stack}`)
         return
       }
 
       ipcMain.emit('window-change-file-path', win.id, newPathname, pathname)
-      e.sender.send('mt::set-pathname', {
+      e.sender.send('annotamd::set-pathname', {
         id,
         pathname: newPathname,
         filename: path.basename(newPathname)
@@ -533,7 +533,7 @@ ipcMain.on('mt::rename', async(e, { id, pathname, newPathname }: RenamePayload) 
 })
 
 ipcMain.on(
-  'mt::response-file-move-to',
+  'annotamd::response-file-move-to',
   async(e, { id, pathname }: { id: string; pathname: string }) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     if (!win) {
@@ -548,12 +548,12 @@ ipcMain.on(
     if (filePath && !canceled) {
       fsRename(pathname, filePath, (err: NodeJS.ErrnoException | null) => {
         if (err) {
-          log.error(`mt::rename: Cannot rename "${pathname}" to "${filePath}".\n${err.stack}`)
+          log.error(`annotamd::rename: Cannot rename "${pathname}" to "${filePath}".\n${err.stack}`)
           return
         }
 
         ipcMain.emit('window-change-file-path', win.id, filePath, pathname)
-        e.sender.send('mt::set-pathname', {
+        e.sender.send('annotamd::set-pathname', {
           id,
           pathname: filePath,
           filename: path.basename(filePath)
@@ -563,7 +563,7 @@ ipcMain.on(
   }
 )
 
-ipcMain.on('mt::ask-for-open-project-in-sidebar', async(e) => {
+ipcMain.on('annotamd::ask-for-open-project-in-sidebar', async(e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win) {
     return
@@ -583,7 +583,7 @@ interface FormatLinkPayload {
   dirname?: string
 }
 
-ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayload) => {
+ipcMain.on('annotamd::format-link-click', async(e, { data, dirname }: FormatLinkPayload) => {
   if (!data || (!data.href && !data.text)) {
     return
   }
@@ -597,7 +597,7 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
   if (urlCandidate === rawUrl) {
     // No <> found, no spaces should be allowed
     if (/\s/.test(rawUrl)) {
-      win.webContents.send('mt::show-notification', {
+      win.webContents.send('annotamd::show-notification', {
         title: 'Links cannot contain spaces',
         type: 'error',
         message:
@@ -621,7 +621,7 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
   }
 
   if (pathname) {
-    // decodeURIComponent() CommonMark #503, allow percent encoded path names to open files. https://github.com/marktext/marktext/issues/57
+    // decodeURIComponent() CommonMark #503: allow percent-encoded path names to open files.
     pathname = path.normalize(decodeURIComponent(pathname))
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
@@ -653,28 +653,28 @@ ipcMain.on('mt::format-link-click', async(e, { data, dirname }: FormatLinkPayloa
 
 // --- commands -------------------------------------
 
-ipcMain.on('mt::cmd-open-file', (e) => {
+ipcMain.on('annotamd::cmd-open-file', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   openFile(win)
 })
 
-ipcMain.on('mt::cmd-new-editor-window', () => {
+ipcMain.on('annotamd::cmd-new-editor-window', () => {
   newEditorWindow()
 })
 
-ipcMain.on('mt::cmd-open-folder', (e) => {
+ipcMain.on('annotamd::cmd-open-folder', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   openFolder(win)
 })
 
-ipcMain.on('mt::cmd-close-window', (e) => {
+ipcMain.on('annotamd::cmd-close-window', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (win) {
     win.close()
   }
 })
 
-ipcMain.on('mt::cmd-import-file', (e) => {
+ipcMain.on('annotamd::cmd-import-file', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (win) {
     importFile(win)
@@ -685,7 +685,7 @@ ipcMain.on('mt::cmd-import-file', (e) => {
 
 export const exportFile = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::show-export-dialog', type)
+    win.webContents.send('annotamd::show-export-dialog', type)
   }
 }
 
@@ -717,7 +717,7 @@ export const importFile = async(win: BrowserWindow | null): Promise<void> => {
 
 export const printDocument = (win: Win): void => {
   if (win) {
-    win.webContents.send('mt::show-export-dialog', 'print')
+    win.webContents.send('annotamd::show-export-dialog', 'print')
   }
 }
 
@@ -766,7 +766,7 @@ export const openFileOrFolder = (win: BrowserWindow, pathname: string): void => 
 
 export const newBlankTab = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::new-untitled-tab')
+    win.webContents.send('annotamd::new-untitled-tab')
     showTabBar(win)
   }
 }
@@ -777,7 +777,7 @@ export const newEditorWindow = (): void => {
 
 export const closeTab = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-close-tab')
+    win.webContents.send('annotamd::editor-close-tab')
   }
 }
 
@@ -789,13 +789,13 @@ export const closeWindow = (win: Win): void => {
 
 export const save = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-ask-file-save')
+    win.webContents.send('annotamd::editor-ask-file-save')
   }
 }
 
 export const saveAs = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-ask-file-save-as')
+    win.webContents.send('annotamd::editor-ask-file-save-as')
   }
 }
 
@@ -812,13 +812,13 @@ export const autoSave = (menuItem: MenuItem, _browserWindow: BrowserWindow | und
 
 export const moveTo = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-move-file')
+    win.webContents.send('annotamd::editor-move-file')
   }
 }
 
 export const rename = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-rename-file')
+    win.webContents.send('annotamd::editor-rename-file')
   }
 }
 

@@ -33,7 +33,7 @@ export class SpellChecker {
       this.isProviderAvailable = true
       if (isOsx) {
         // No language string needed on macOS.
-        await window.electron.ipcRenderer.invoke('mt::spellchecker-set-enabled', true)
+        await window.electron.ipcRenderer.invoke('annotamd::spellchecker-set-enabled', true)
         return true
       }
       return await this.switchLanguage(lang || this.currentSpellcheckerLanguage)
@@ -49,7 +49,7 @@ export class SpellChecker {
   deactivateSpellchecker(): void {
     this.enabled = false
     this.isProviderAvailable = false
-    window.electron.ipcRenderer.invoke('mt::spellchecker-set-enabled', false)
+    window.electron.ipcRenderer.invoke('annotamd::spellchecker-set-enabled', false)
   }
 
   /**
@@ -78,7 +78,7 @@ export class SpellChecker {
     } else if (!lang) {
       throw new Error('Expected non-empty language for spell checker.')
     } else if (this.isEnabled) {
-      await window.electron.ipcRenderer.invoke('mt::spellchecker-switch-language', lang)
+      await window.electron.ipcRenderer.invoke('annotamd::spellchecker-switch-language', lang)
       this.lang = lang
       return true
     }
@@ -93,6 +93,6 @@ export class SpellChecker {
       // NB: macOS uses the OS spell checker and detects language automatically.
       return []
     }
-    return window.electron.ipcRenderer.invoke('mt::spellchecker-get-available-dictionaries')
+    return window.electron.ipcRenderer.invoke('annotamd::spellchecker-get-available-dictionaries')
   }
 }

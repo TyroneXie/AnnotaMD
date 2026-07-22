@@ -23,7 +23,7 @@ export const delay = (time: number): CancellablePromise<void> => {
   return p
 }
 
-const ID_PREFIX = 'mt-'
+const ID_PREFIX = 'annotamd-'
 let id = 0
 
 export interface Cursor {

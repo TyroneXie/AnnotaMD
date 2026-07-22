@@ -17,7 +17,7 @@ const writeBufferStoreFile = EditorBufferStore.prototype.writeBufferStoreFile
 
 const dirs: string[] = []
 function tempDir(): string {
-  const d = mkdtempSync(path.join(tmpdir(), 'mt-buf-'))
+  const d = mkdtempSync(path.join(tmpdir(), 'annotamd-buf-'))
   dirs.push(d)
   return d
 }

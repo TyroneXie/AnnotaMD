@@ -5,17 +5,17 @@ import type {
 } from '@shared/types/comments'
 
 export const registerCommentHandlers = (): void => {
-  ipcMain.handle('mt::comments::mcp-status', async () => {
+  ipcMain.handle('annotamd::comments::mcp-status', async () => {
     const { getAgentBridgeStatus } = await import('../comments/AgentBridgeServer')
     return getAgentBridgeStatus()
   })
 
-  ipcMain.handle('mt::comments::load', async (_event, filePath: string, markdown = '') => {
+  ipcMain.handle('annotamd::comments::load', async (_event, filePath: string, markdown = '') => {
     const { getCommentService } = await import('../comments')
     return getCommentService().load(filePath, markdown)
   })
 
-  ipcMain.handle('mt::comments::replace', async (_event, request: AnnotaMDCommentReplaceRequest) => {
+  ipcMain.handle('annotamd::comments::replace', async (_event, request: AnnotaMDCommentReplaceRequest) => {
     const { broadcastCommentsChanged, getCommentService } = await import('../comments')
     const document = getCommentService().replace(request)
     broadcastCommentsChanged(request.filePath)
@@ -23,14 +23,14 @@ export const registerCommentHandlers = (): void => {
   })
 
   ipcMain.handle(
-    'mt::comments::migrate',
+    'annotamd::comments::migrate',
     async (_event, entries: AnnotaMDLegacyCommentMigration[]) => {
       const { getCommentService } = await import('../comments')
       return getCommentService().migrate(entries)
     }
   )
 
-  ipcMain.handle('mt::comments::mark-missing', async (_event, filePath: string) => {
+  ipcMain.handle('annotamd::comments::mark-missing', async (_event, filePath: string) => {
     const { getCommentService } = await import('../comments')
     getCommentService().markMissing(filePath)
   })

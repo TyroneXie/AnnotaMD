@@ -57,80 +57,80 @@ export interface LinkPreviewMetadata {
 // =================================================================
 
 export interface IpcInvokeChannels {
-  'mt::update:get-state': { args: []; ret: AppUpdateState }
-  'mt::update:check': { args: []; ret: AppUpdateState }
-  'mt::update:download': { args: []; ret: AppUpdateState }
-  'mt::update:install': { args: []; ret: AppUpdateState }
-  'mt::mcp-clients::inspect': {
+  'annotamd::update:get-state': { args: []; ret: AppUpdateState }
+  'annotamd::update:check': { args: []; ret: AppUpdateState }
+  'annotamd::update:download': { args: []; ret: AppUpdateState }
+  'annotamd::update:install': { args: []; ret: AppUpdateState }
+  'annotamd::mcp-clients::inspect': {
     args: [forceRefresh?: boolean]
     ret: AnnotaMDMcpClientState[]
   }
-  'mt::mcp-clients::configure': {
+  'annotamd::mcp-clients::configure': {
     args: [id: AnnotaMDMcpClientId]
     ret: AnnotaMDMcpClientConfigureResult
   }
-  'mt::mcp-clients::manual-config': {
+  'annotamd::mcp-clients::manual-config': {
     args: []
     ret: AnnotaMDMcpManualConfigResult
   }
-  'mt::mcp-clients::install-portable-skill': { args: []; ret: void }
-  'mt::comments::mcp-status': { args: []; ret: AnnotaMDMcpStatus }
-  'mt::comments::load': {
+  'annotamd::mcp-clients::install-portable-skill': { args: []; ret: void }
+  'annotamd::comments::mcp-status': { args: []; ret: AnnotaMDMcpStatus }
+  'annotamd::comments::load': {
     args: [filePath: string, markdown?: string]
     ret: AnnotaMDCommentDocument
   }
-  'mt::comments::replace': {
+  'annotamd::comments::replace': {
     args: [request: AnnotaMDCommentReplaceRequest]
     ret: AnnotaMDCommentDocument
   }
-  'mt::comments::migrate': {
+  'annotamd::comments::migrate': {
     args: [entries: AnnotaMDLegacyCommentMigration[]]
     ret: AnnotaMDCommentMigrationResult
   }
-  'mt::comments::mark-missing': { args: [filePath: string]; ret: void }
-  'mt::ask-for-image-path': { args: []; ret: string[] }
-  'mt::boot-info-async': { args: []; ret: BootInfo }
-  'mt::clipboard::guess-file-path': { args: []; ret: string | null }
-  'mt::clipboard::read-text': { args: []; ret: string }
-  'mt::cmd::exists': { args: [name: string]; ret: boolean }
-  'mt::fonts::list': { args: []; ret: string[] }
-  'mt::fs-trash-item': { args: [pathname: string]; ret: void }
-  'mt::fs::copy': { args: [src: string, dest: string]; ret: void }
-  'mt::fs::empty-dir': { args: [path: string]; ret: void }
-  'mt::fs::ensure-dir': { args: [path: string]; ret: void }
-  'mt::fs::is-directory': { args: [path: string]; ret: boolean }
-  'mt::fs::is-executable': { args: [path: string]; ret: boolean }
-  'mt::fs::is-file': { args: [path: string]; ret: boolean }
-  'mt::fs::move': { args: [src: string, dest: string]; ret: void }
-  'mt::fs::output-file': { args: [path: string, data: string | Uint8Array]; ret: void }
-  'mt::fs::path-exists': { args: [path: string]; ret: boolean }
-  'mt::fs::read-file': { args: [path: string, encoding?: string]; ret: string | Uint8Array }
-  'mt::fs::readdir': { args: [path: string]; ret: string[] }
-  'mt::fs::stat': { args: [path: string]; ret: SerializedStat }
-  'mt::fs::unlink': { args: [path: string]; ret: void }
-  'mt::fs::write-file': { args: [path: string, data: string | Uint8Array]; ret: void }
-  'mt::i18n::is-supported': { args: [lang: string]; ret: boolean }
-  'mt::i18n::load': { args: [language: string]; ret: Record<string, unknown> }
-  'mt::i18n::supported': { args: []; ret: string[] }
-  'mt::keybinding-get-keyboard-info': { args: []; ret: KeyboardInfo }
-  'mt::keybinding-get-pref-keybindings': {
+  'annotamd::comments::mark-missing': { args: [filePath: string]; ret: void }
+  'annotamd::ask-for-image-path': { args: []; ret: string[] }
+  'annotamd::boot-info-async': { args: []; ret: BootInfo }
+  'annotamd::clipboard::guess-file-path': { args: []; ret: string | null }
+  'annotamd::clipboard::read-text': { args: []; ret: string }
+  'annotamd::cmd::exists': { args: [name: string]; ret: boolean }
+  'annotamd::fonts::list': { args: []; ret: string[] }
+  'annotamd::fs-trash-item': { args: [pathname: string]; ret: void }
+  'annotamd::fs::copy': { args: [src: string, dest: string]; ret: void }
+  'annotamd::fs::empty-dir': { args: [path: string]; ret: void }
+  'annotamd::fs::ensure-dir': { args: [path: string]; ret: void }
+  'annotamd::fs::is-directory': { args: [path: string]; ret: boolean }
+  'annotamd::fs::is-executable': { args: [path: string]; ret: boolean }
+  'annotamd::fs::is-file': { args: [path: string]; ret: boolean }
+  'annotamd::fs::move': { args: [src: string, dest: string]; ret: void }
+  'annotamd::fs::output-file': { args: [path: string, data: string | Uint8Array]; ret: void }
+  'annotamd::fs::path-exists': { args: [path: string]; ret: boolean }
+  'annotamd::fs::read-file': { args: [path: string, encoding?: string]; ret: string | Uint8Array }
+  'annotamd::fs::readdir': { args: [path: string]; ret: string[] }
+  'annotamd::fs::stat': { args: [path: string]; ret: SerializedStat }
+  'annotamd::fs::unlink': { args: [path: string]; ret: void }
+  'annotamd::fs::write-file': { args: [path: string, data: string | Uint8Array]; ret: void }
+  'annotamd::i18n::is-supported': { args: [lang: string]; ret: boolean }
+  'annotamd::i18n::load': { args: [language: string]; ret: Record<string, unknown> }
+  'annotamd::i18n::supported': { args: []; ret: string[] }
+  'annotamd::keybinding-get-keyboard-info': { args: []; ret: KeyboardInfo }
+  'annotamd::keybinding-get-pref-keybindings': {
     args: []
     ret: { defaultKeybindings: Map<string, string>; userKeybindings: Map<string, string> }
   }
-  'mt::keybinding-save-user-keybindings': { args: [bindings: unknown]; ret: boolean }
-  'mt::paths::is-image': { args: [path: string]; ret: boolean }
-  'mt::rg::start': { args: [req: unknown]; ret: { searchId: string } }
-  'mt::shell::open-external': { args: [url: string]; ret: void }
-  'mt::shell::get-link-metadata': { args: [url: string]; ret: LinkPreviewMetadata }
-  'mt::shell::open-path': { args: [fullPath: string]; ret: string }
-  'mt::spellchecker-get-available-dictionaries': { args: []; ret: string[] }
-  'mt::spellchecker-get-custom-dictionary-words': { args: []; ret: string[] }
-  'mt::spellchecker-remove-word': { args: [word: string]; ret: boolean }
-  'mt::spellchecker-set-enabled': { args: [enabled: boolean]; ret: void }
-  'mt::spellchecker-switch-language': { args: [language: string]; ret: void }
-  'mt::uploader::upload': { args: [req: unknown]; ret: unknown }
-  'mt::win::is-fullscreen': { args: []; ret: boolean }
-  'mt::win::is-maximized': { args: []; ret: boolean }
+  'annotamd::keybinding-save-user-keybindings': { args: [bindings: unknown]; ret: boolean }
+  'annotamd::paths::is-image': { args: [path: string]; ret: boolean }
+  'annotamd::rg::start': { args: [req: unknown]; ret: { searchId: string } }
+  'annotamd::shell::open-external': { args: [url: string]; ret: void }
+  'annotamd::shell::get-link-metadata': { args: [url: string]; ret: LinkPreviewMetadata }
+  'annotamd::shell::open-path': { args: [fullPath: string]; ret: string }
+  'annotamd::spellchecker-get-available-dictionaries': { args: []; ret: string[] }
+  'annotamd::spellchecker-get-custom-dictionary-words': { args: []; ret: string[] }
+  'annotamd::spellchecker-remove-word': { args: [word: string]; ret: boolean }
+  'annotamd::spellchecker-set-enabled': { args: [enabled: boolean]; ret: void }
+  'annotamd::spellchecker-switch-language': { args: [language: string]; ret: void }
+  'annotamd::uploader::upload': { args: [req: unknown]; ret: unknown }
+  'annotamd::win::is-fullscreen': { args: []; ret: boolean }
+  'annotamd::win::is-maximized': { args: []; ret: boolean }
   // Main derives the BrowserWindow via BrowserWindow.fromWebContents(e.sender);
   // no need to pass windowId. Payload is the editor+project+layout snapshot.
   'update-buffer-state': { args: [payload: unknown]; ret: void }
@@ -151,40 +151,40 @@ export interface IpcSendChannels {
   'broadcast-user-data-changed': [partial: unknown]
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
-  'mt::add-recently-used-document': [filePath: string]
-  'mt::app-try-quit': []
-  'mt::ask-for-image-auto-path': [payload: unknown]
-  'mt::ask-for-modify-image-folder-path': [imagePath?: string]
-  'mt::ask-for-open-project-in-sidebar': []
-  'mt::remove-directory-from-workspace': [pathname: string]
-  'mt::ask-for-user-data': []
-  'mt::ask-for-user-preference': []
-  'mt::clipboard::write-text': [text: string]
-  'mt::clipboard::write-image': [dataUrl: string]
-  'mt::close-window': []
-  'mt::close-window-confirm': [unsavedFiles: UnsavedFile[]]
-  'mt::cmd-close-window': []
-  'mt::cmd-import-file': []
-  'mt::cmd-new-editor-window': []
-  'mt::cmd-open-file': []
-  'mt::cmd-open-folder': []
-  'mt::cmd-toggle-autosave': []
-  'mt::editor-selection-changed': [windowId: number, state: unknown]
-  'mt::format-link-click': [payload: { data: unknown; dirname: string }]
-  'mt::get-current-language': []
-  'mt::handle-renderer-error': [error: unknown]
-  'mt::keybinding-debug-dump-keyboard-info': []
-  'mt::make-screenshot': []
-  'mt::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
-  'mt::menu::popup-application': [position?: MenuPopupPosition]
-  'mt::open-file': [filePath: string, options?: unknown]
-  'mt::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
-  'mt::open-keybindings-config': []
-  'mt::open-setting-window': [category?: string]
-  'mt::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
-  'mt::request-keybindings': []
-  'mt::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
-  'mt::response-export': [
+  'annotamd::add-recently-used-document': [filePath: string]
+  'annotamd::app-try-quit': []
+  'annotamd::ask-for-image-auto-path': [payload: unknown]
+  'annotamd::ask-for-modify-image-folder-path': [imagePath?: string]
+  'annotamd::ask-for-open-project-in-sidebar': []
+  'annotamd::remove-directory-from-workspace': [pathname: string]
+  'annotamd::ask-for-user-data': []
+  'annotamd::ask-for-user-preference': []
+  'annotamd::clipboard::write-text': [text: string]
+  'annotamd::clipboard::write-image': [dataUrl: string]
+  'annotamd::close-window': []
+  'annotamd::close-window-confirm': [unsavedFiles: UnsavedFile[]]
+  'annotamd::cmd-close-window': []
+  'annotamd::cmd-import-file': []
+  'annotamd::cmd-new-editor-window': []
+  'annotamd::cmd-open-file': []
+  'annotamd::cmd-open-folder': []
+  'annotamd::cmd-toggle-autosave': []
+  'annotamd::editor-selection-changed': [windowId: number, state: unknown]
+  'annotamd::format-link-click': [payload: { data: unknown; dirname: string }]
+  'annotamd::get-current-language': []
+  'annotamd::handle-renderer-error': [error: unknown]
+  'annotamd::keybinding-debug-dump-keyboard-info': []
+  'annotamd::make-screenshot': []
+  'annotamd::menu::popup': [template: MenuTemplate, position?: MenuPopupPosition]
+  'annotamd::menu::popup-application': [position?: MenuPopupPosition]
+  'annotamd::open-file': [filePath: string, options?: unknown]
+  'annotamd::open-file-by-window-id': [windowId: number, filePath: string, options?: unknown]
+  'annotamd::open-keybindings-config': []
+  'annotamd::open-setting-window': [category?: string]
+  'annotamd::rename': [payload: { id: string; pathname: string; newPathname: string; currentFile?: unknown }]
+  'annotamd::request-keybindings': []
+  'annotamd::set-editor-format-menus-enabled': [windowId: number, enabled: boolean]
+  'annotamd::response-export': [
     payload: {
       type: ExportType
       title: string
@@ -194,8 +194,8 @@ export interface IpcSendChannels {
       pageOptions: PageOptions
     }
   ]
-  'mt::response-file-move-to': [payload: { id: string; pathname: string }]
-  'mt::response-file-save': [
+  'annotamd::response-file-move-to': [payload: { id: string; pathname: string }]
+  'annotamd::response-file-save': [
     id: string,
     filename: string,
     pathname: string,
@@ -203,7 +203,7 @@ export interface IpcSendChannels {
     options: SaveOptions,
     defaultPath: string
   ]
-  'mt::response-file-save-as': [
+  'annotamd::response-file-save-as': [
     id: string,
     filename: string,
     pathname: string,
@@ -211,31 +211,31 @@ export interface IpcSendChannels {
     options: SaveOptions,
     defaultPath: string
   ]
-  'mt::response-print': []
-  'mt::rg::cancel': [searchId: string]
-  'mt::save-and-close-tabs': [tabs: unknown[]]
-  'mt::save-tabs': [tabs: unknown[]]
-  'mt::select-default-directory-to-open': []
-  'mt::set-user-data': [partial: unknown]
-  'mt::set-user-preference': [partial: unknown]
-  'mt::shell::open-external': [url: string]
-  'mt::shell::show-item': [fullPath: string]
-  'mt::update-format-menu': [windowId: number, state: Record<string, boolean>]
-  'mt::update-line-ending-menu': [windowId: number, lineEnding: LineEnding]
-  'mt::update-sidebar-menu': [windowId: number, visible: boolean]
-  'mt::view-layout-changed': [windowId: number, layout: unknown]
-  'mt::win::close': []
-  'mt::win::maximize': []
-  'mt::win::minimize': []
-  'mt::win::set-fullscreen': [flag: boolean]
-  'mt::win::toggle-fullscreen': []
-  'mt::win::toggle-maximize': []
-  'mt::win::unmaximize': []
-  'mt::window-add-file-path': [windowId: number, filePath: string]
-  'mt::window-initialized': []
-  'mt::window-tab-closed': [pathname: string]
-  'mt::window-toggle-always-on-top': []
-  'mt::window::drop': [payload: unknown]
+  'annotamd::response-print': []
+  'annotamd::rg::cancel': [searchId: string]
+  'annotamd::save-and-close-tabs': [tabs: unknown[]]
+  'annotamd::save-tabs': [tabs: unknown[]]
+  'annotamd::select-default-directory-to-open': []
+  'annotamd::set-user-data': [partial: unknown]
+  'annotamd::set-user-preference': [partial: unknown]
+  'annotamd::shell::open-external': [url: string]
+  'annotamd::shell::show-item': [fullPath: string]
+  'annotamd::update-format-menu': [windowId: number, state: Record<string, boolean>]
+  'annotamd::update-line-ending-menu': [windowId: number, lineEnding: LineEnding]
+  'annotamd::update-sidebar-menu': [windowId: number, visible: boolean]
+  'annotamd::view-layout-changed': [windowId: number, layout: unknown]
+  'annotamd::win::close': []
+  'annotamd::win::maximize': []
+  'annotamd::win::minimize': []
+  'annotamd::win::set-fullscreen': [flag: boolean]
+  'annotamd::win::toggle-fullscreen': []
+  'annotamd::win::toggle-maximize': []
+  'annotamd::win::unmaximize': []
+  'annotamd::window-add-file-path': [windowId: number, filePath: string]
+  'annotamd::window-initialized': []
+  'annotamd::window-tab-closed': [pathname: string]
+  'annotamd::window-toggle-always-on-top': []
+  'annotamd::window::drop': [payload: unknown]
   'screen-capture': [payload: unknown]
   'set-image-folder-path': [path: string]
   'set-user-preference': [partial: unknown]
@@ -257,8 +257,8 @@ export interface IpcSendChannels {
 // =================================================================
 
 export interface IpcSyncChannels {
-  'mt::boot-info': { args: []; ret: BootInfo }
-  'mt::paths::is-same-sync': { args: [a: string, b: string]; ret: boolean }
+  'annotamd::boot-info': { args: []; ret: BootInfo }
+  'annotamd::paths::is-same-sync': { args: [a: string, b: string]; ret: boolean }
 }
 
 // =================================================================
@@ -266,77 +266,77 @@ export interface IpcSyncChannels {
 // =================================================================
 
 export interface IpcMainEventChannels {
-  'mt::comments::changed': [filePath: string]
-  'mt::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
+  'annotamd::comments::changed': [filePath: string]
+  'annotamd::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
   'language-changed': [language: string]
-  'mt::update:state': [state: AppUpdateState]
-  'mt::about-dialog': []
-  'mt::ask-for-close': []
-  'mt::bootstrap-editor': [config: BootstrapEditorConfig]
-  'mt::cm-copy-as-html': []
-  'mt::cm-copy-as-rich': []
-  'mt::cm-insert-paragraph': [direction: 'before' | 'after']
-  'mt::cm-paste-as-plain-text': []
-  'mt::current-language': [language: string]
-  'mt::editor-ask-file-save': []
-  'mt::editor-ask-file-save-as': []
-  'mt::editor-close-tab': [tabId?: string]
-  'mt::editor-edit-action': [action: string]
-  'mt::editor-format-action': [payload: { type: string }]
-  'mt::editor-move-file': []
-  'mt::editor-paragraph-action': [payload: { type: string }]
-  'mt::editor-rename-file': []
-  'mt::execute-command-by-id': [commandId: string]
-  'mt::export-success': [payload: { type: string; filePath: string }]
-  'mt::file-saved': [tabId: string]
-  'mt::force-close-tabs-by-id': [tabIds: string[]]
-  'mt::invalidate-image-cache': []
-  'mt::keybindings-response': [bindings: unknown]
-  'mt::load-state': [state: BufferedStateType]
-  'mt::menu::click': [menuId: string]
-  'mt::menu::closed': []
-  'mt::new-untitled-tab': [selected?: boolean, markdown?: string]
-  'mt::open-directory': [directoryPath: string]
-  'mt::remove-directory': [directoryPath: string]
-  'mt::open-new-tab': [
+  'annotamd::update:state': [state: AppUpdateState]
+  'annotamd::about-dialog': []
+  'annotamd::ask-for-close': []
+  'annotamd::bootstrap-editor': [config: BootstrapEditorConfig]
+  'annotamd::cm-copy-as-html': []
+  'annotamd::cm-copy-as-rich': []
+  'annotamd::cm-insert-paragraph': [direction: 'before' | 'after']
+  'annotamd::cm-paste-as-plain-text': []
+  'annotamd::current-language': [language: string]
+  'annotamd::editor-ask-file-save': []
+  'annotamd::editor-ask-file-save-as': []
+  'annotamd::editor-close-tab': [tabId?: string]
+  'annotamd::editor-edit-action': [action: string]
+  'annotamd::editor-format-action': [payload: { type: string }]
+  'annotamd::editor-move-file': []
+  'annotamd::editor-paragraph-action': [payload: { type: string }]
+  'annotamd::editor-rename-file': []
+  'annotamd::execute-command-by-id': [commandId: string]
+  'annotamd::export-success': [payload: { type: string; filePath: string }]
+  'annotamd::file-saved': [tabId: string]
+  'annotamd::force-close-tabs-by-id': [tabIds: string[]]
+  'annotamd::invalidate-image-cache': []
+  'annotamd::keybindings-response': [bindings: unknown]
+  'annotamd::load-state': [state: BufferedStateType]
+  'annotamd::menu::click': [menuId: string]
+  'annotamd::menu::closed': []
+  'annotamd::new-untitled-tab': [selected?: boolean, markdown?: string]
+  'annotamd::open-directory': [directoryPath: string]
+  'annotamd::remove-directory': [directoryPath: string]
+  'annotamd::open-new-tab': [
     markdownDocument: MarkdownDocument | null,
     options?: TabOptions,
     selected?: boolean
   ]
-  'mt::pandoc-not-exists': [opts: Record<string, unknown>]
-  'mt::print-service-clearup': []
-  'mt::rg::cancelled': [payload: unknown]
-  'mt::rg::done': [payload: unknown]
-  'mt::rg::error': [payload: unknown]
-  'mt::rg::match': [payload: unknown]
-  'mt::rg::progress': [payload: unknown]
-  'mt::screenshot-captured': [filePath: string]
-  'mt::set-line-ending': [lineEnding: LineEnding]
-  'mt::set-pathname': [payload: { id: string; pathname: string; filename: string }]
-  'mt::set-view-layout': [layout: unknown]
-  'mt::show-command-palette': []
-  'mt::show-export-dialog': [type: ExportType]
-  'mt::show-notification': [payload: unknown]
-  'mt::spelling-replace-misspelling': [payload: unknown]
-  'mt::spelling-show-switch-language': []
-  'mt::switch-tab-by-file_path': [filePath: string]
-  'mt::switch-tab-by-index': [index: number]
-  'mt::tab-save-failure': [tabId: string, message: string]
-  'mt::tab-saved': [tabId: string]
-  'mt::tabs-cycle-left': []
-  'mt::tabs-cycle-right': []
-  'mt::toggle-view-layout-entry': [entry: string]
-  'mt::toggle-view-mode-entry': [entry: string]
-  'mt::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
-  'mt::update-object-tree': [payload: unknown]
-  'mt::update-object-tree-batch': [payload: unknown]
-  'mt::user-preference': [partial: unknown]
-  'mt::window-active-status': [active: boolean]
-  'mt::window-enter-full-screen': []
-  'mt::window-leave-full-screen': []
-  'mt::window-maximize': []
-  'mt::window-unmaximize': []
-  'mt::window-zoom': [zoomLevel: number]
+  'annotamd::pandoc-not-exists': [opts: Record<string, unknown>]
+  'annotamd::print-service-clearup': []
+  'annotamd::rg::cancelled': [payload: unknown]
+  'annotamd::rg::done': [payload: unknown]
+  'annotamd::rg::error': [payload: unknown]
+  'annotamd::rg::match': [payload: unknown]
+  'annotamd::rg::progress': [payload: unknown]
+  'annotamd::screenshot-captured': [filePath: string]
+  'annotamd::set-line-ending': [lineEnding: LineEnding]
+  'annotamd::set-pathname': [payload: { id: string; pathname: string; filename: string }]
+  'annotamd::set-view-layout': [layout: unknown]
+  'annotamd::show-command-palette': []
+  'annotamd::show-export-dialog': [type: ExportType]
+  'annotamd::show-notification': [payload: unknown]
+  'annotamd::spelling-replace-misspelling': [payload: unknown]
+  'annotamd::spelling-show-switch-language': []
+  'annotamd::switch-tab-by-file_path': [filePath: string]
+  'annotamd::switch-tab-by-index': [index: number]
+  'annotamd::tab-save-failure': [tabId: string, message: string]
+  'annotamd::tab-saved': [tabId: string]
+  'annotamd::tabs-cycle-left': []
+  'annotamd::tabs-cycle-right': []
+  'annotamd::toggle-view-layout-entry': [entry: string]
+  'annotamd::toggle-view-mode-entry': [entry: string]
+  'annotamd::update-file': [payload: { type: 'add' | 'change' | 'unlink'; change: FileChangeDetail }]
+  'annotamd::update-object-tree': [payload: unknown]
+  'annotamd::update-object-tree-batch': [payload: unknown]
+  'annotamd::user-preference': [partial: unknown]
+  'annotamd::window-active-status': [active: boolean]
+  'annotamd::window-enter-full-screen': []
+  'annotamd::window-leave-full-screen': []
+  'annotamd::window-maximize': []
+  'annotamd::window-unmaximize': []
+  'annotamd::window-zoom': [zoomLevel: number]
   'settings::change-tab': [tab: string]
 }
 
@@ -346,7 +346,7 @@ export interface IpcMainEventChannels {
 
 /**
  * Snapshot of the active OS keyboard layout, returned by
- * `mt::keybinding-get-keyboard-info`. Mirrors the runtime shape produced
+ * `annotamd::keybinding-get-keyboard-info`. Mirrors the runtime shape produced
  * by `native-keymap` (see `src/main/keyboard/index.ts#getKeyboardInfo`).
  */
 export interface KeyboardInfo {

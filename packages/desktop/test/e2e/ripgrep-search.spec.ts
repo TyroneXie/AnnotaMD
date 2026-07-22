@@ -5,13 +5,13 @@ import { expect, test } from '@playwright/test'
 import type { ElectronApplication, Page } from 'playwright'
 import { launchElectron } from './helpers'
 
-// End-to-end smoke for the streaming ripgrep IPC (mt::rg::start /
-// mt::rg::match / mt::rg::done). Writes a small fixture tree, drives the
+// End-to-end smoke for the streaming ripgrep IPC (annotamd::rg::start /
+// annotamd::rg::match / annotamd::rg::done). Writes a small fixture tree, drives the
 // search directly through window.ripgrep so we don't depend on the sidebar
 // being open + focused, and asserts results stream back to the renderer.
 
 const writeFixtureTree = (): string => {
-  const dir = path.join(os.tmpdir(), 'mt-rg-' + Math.random().toString(36).slice(2, 8))
+  const dir = path.join(os.tmpdir(), 'annotamd-rg-' + Math.random().toString(36).slice(2, 8))
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(path.join(dir, 'one.md'), '# Hello\n\nmagic-needle-XYZ in body.\n')
   fs.writeFileSync(path.join(dir, 'two.md'), '# Other\n\nnothing here.\n')

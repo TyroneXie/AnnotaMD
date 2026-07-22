@@ -23,7 +23,7 @@ const splitButton = readFileSync(
 
 describe('empty editor start actions', () => {
   it('uses the same Open File split button in the sidebar and start panel', () => {
-    expect(recentComponent).toContain("send('mt::cmd-open-file')")
+    expect(recentComponent).toContain("send('annotamd::cmd-open-file')")
     expect(recentComponent).toMatch(/<OpenFileSplitButton[\s\S]*?@open-file="openFile"[\s\S]*?@open-folder="openFolder"/)
     expect(sidebarTree).toMatch(/<OpenFileSplitButton[\s\S]*?@open-file="openFile"[\s\S]*?@open-folder="openFolder"/)
     expect(recentComponent).toMatch(/class="start-secondary"[^>]*@click="newFile"/s)

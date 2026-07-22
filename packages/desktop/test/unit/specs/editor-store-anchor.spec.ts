@@ -67,7 +67,7 @@ describe('useEditorStore FORMAT_LINK_CLICK (anchor links)', () => {
     getByIdSpy.mockRestore()
   })
 
-  // marktext #3609: `[text](#id)` where `#id` is a custom `<a id="id">` (not a
+  // annotamd #3609: `[text](#id)` where `#id` is a custom `<a id="id">` (not a
   // heading) was silently swallowed — it isn't in the TOC. Fall back to the DOM.
   it('emits scroll-to-anchor-element for a non-heading anchor id found in the DOM', () => {
     const store = useEditorStore()
@@ -110,7 +110,7 @@ describe('useEditorStore FORMAT_LINK_CLICK (anchor links)', () => {
     store.FORMAT_LINK_CLICK(payload)
 
     expect(emitSpy).not.toHaveBeenCalledWith('scroll-to-header', expect.anything())
-    expect(sendSpy).toHaveBeenCalledWith('mt::format-link-click', {
+    expect(sendSpy).toHaveBeenCalledWith('annotamd::format-link-click', {
       data: { href: 'http://x' },
       dirname: '/docs'
     })
@@ -176,7 +176,7 @@ describe('useEditorStore EXPORT (title derivation from listToc)', () => {
 
     expect(sendSpy).toHaveBeenCalledTimes(1)
     const [channel, payload] = sendSpy.mock.calls[0]
-    expect(channel).toBe('mt::response-export')
+    expect(channel).toBe('annotamd::response-export')
     expect(payload).toMatchObject({
       type: 'pdf',
       title: 'Top',

@@ -16,14 +16,14 @@ import {
 // PG15 (file PG16).
 
 // Trigger an editor undo through the same IPC channel the Edit › Undo menu item
-// uses (`mt::editor-edit-action` → bus `undo` → editor.undo()). More reliable
+// uses (`annotamd::editor-edit-action` → bus `undo` → editor.undo()). More reliable
 // than synthesizing the Cmd/Ctrl+Z keystroke against the contenteditable.
 const undo = async(app: Parameters<typeof sendIpcToRenderer>[0]): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-edit-action', 'undo')
+  await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
 }
 
 const redo = async(app: Parameters<typeof sendIpcToRenderer>[0]): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-edit-action', 'redo')
+  await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'redo')
 }
 
 test.describe('Parity PG2 — WYSIWYG caret restored after a source-mode edit', () => {
@@ -184,7 +184,7 @@ test.describe('Parity PG15 — undo back to on-disk content restores the saved i
       () => document.querySelector('.editor-tabs li.active')?.getAttribute('data-id') ?? null
     )
     expect(tabId).toBeTruthy()
-    await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
+    await sendIpcToRenderer(app, 'annotamd::tab-saved', tabId)
     await expect
       .poll(() => page.evaluate(() => !!document.querySelector('.editor-tabs li.unsaved')))
       .toBe(false)
@@ -291,7 +291,7 @@ test.describe('Item 248 — a real source-mode keystroke dirties the tab dot', (
 })
 
 test.describe('Item 256 — save -> clean -> edit -> dirty -> undo-to-saved cycle', () => {
-  // A focused save/clean/edit/dirty loop. The G6 test only USES mt::tab-saved as
+  // A focused save/clean/edit/dirty loop. The G6 test only USES annotamd::tab-saved as
   // a setup step; there is no standalone assertion that a real save clears the
   // dot, that a fresh edit re-marks it, and that undoing back to the saved state
   // clears it again. This exercises the full content-keyed synthetic-history
@@ -327,7 +327,7 @@ test.describe('Item 256 — save -> clean -> edit -> dirty -> undo-to-saved cycl
     //    records the current synthetic id as lastSavedHistoryId and clears dirty.
     const tabId = await activeTabId(page)
     expect(tabId).toBeTruthy()
-    await sendIpcToRenderer(app, 'mt::tab-saved', tabId)
+    await sendIpcToRenderer(app, 'annotamd::tab-saved', tabId)
     await expect.poll(() => isTabDirty(page)).toBe(false)
 
     // 3) A fresh edit past the saved state re-marks the tab dirty.

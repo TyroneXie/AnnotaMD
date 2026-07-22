@@ -35,18 +35,6 @@ declare module 'minimatch' {
   export function minimatch(target: string, pattern: string, options?: unknown): boolean
 }
 
-declare module '@marktext/file-icons' {
-  interface FileIcon {
-    getClass(colourMode?: number, asObject?: boolean): string
-  }
-  interface FileIcons {
-    matchName(name: string): FileIcon | null
-    matchLanguage(lang: string): FileIcon | null
-  }
-  const fileIcons: FileIcons
-  export default fileIcons
-}
-
 // Electron augments `process` with `resourcesPath` (and a few other fields)
 // at runtime. Surface them so common/* code can read them without casts.
 declare namespace NodeJS {
@@ -55,9 +43,9 @@ declare namespace NodeJS {
   }
   interface Global {
     __static: string
-    MARKTEXT_DEBUG: boolean
-    MARKTEXT_DEBUG_VERBOSE: number
-    MARKTEXT_SAFE_MODE: boolean
+    ANNOTAMD_DEBUG: boolean
+    ANNOTAMD_DEBUG_VERBOSE: number
+    ANNOTAMD_SAFE_MODE: boolean
   }
 }
 
@@ -66,8 +54,8 @@ declare namespace NodeJS {
 // eslint-disable-next-line no-var
 declare var __static: string
 // eslint-disable-next-line no-var
-declare var MARKTEXT_DEBUG: boolean
+declare var ANNOTAMD_DEBUG: boolean
 // eslint-disable-next-line no-var
-declare var MARKTEXT_DEBUG_VERBOSE: number
+declare var ANNOTAMD_DEBUG_VERBOSE: number
 // eslint-disable-next-line no-var
-declare var MARKTEXT_SAFE_MODE: boolean
+declare var ANNOTAMD_SAFE_MODE: boolean

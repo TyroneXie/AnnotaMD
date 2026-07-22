@@ -74,7 +74,7 @@ export function attachLinkMouseHandlers(muya: Muya): void {
     const { eventCenter, domNode } = muya;
 
     const overHandler = (event: Event) => {
-        // marktext `eventHandler/mouseEvent.js` gated the link-tools dispatch
+        // pre-migration implementation `eventHandler/mouseEvent.js` gated the link-tools dispatch
         // on `!hideLinkPopup`: when the user sets `hideLinkPopup: true`, the
         // hover popover is suppressed entirely. Read it live so a runtime
         // `setOptions({ hideLinkPopup })` toggle takes effect immediately.
@@ -143,7 +143,7 @@ export function attachLinkMouseHandlers(muya: Muya): void {
         if (anchor)
             event.preventDefault();
 
-        // Click a link → ask the host to open it. marktext's
+        // Click a link → ask the host to open it. pre-migration implementation's
         // `clickCtrl.js` dispatched `format-click` with `{ event, formatType:
         // 'link', data: { text, href } }`; the desktop renderer forwards that
         // to `FORMAT_LINK_CLICK({ data })`, so the only contract it needs is a

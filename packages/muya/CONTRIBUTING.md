@@ -2,7 +2,7 @@
 
 Thanks for your interest in improving Muya! This document covers everything you need to file a useful issue or land a pull request against `@muyajs/core`.
 
-Muya is a web-based Markdown editor engine extracted from [MarkText](https://github.com/marktext/marktext). The bulk of the source today lives in `packages/core/`.
+Muya is the web-based Markdown editor engine used by [AnnotaMD](https://github.com/TyroneXie/AnnotaMD). Its source lives in `packages/muya/`.
 
 ## Table of contents
 
@@ -22,7 +22,7 @@ Be kind, assume good intent, and keep discussions on-topic. Personal attacks, ha
 
 ## Ways to contribute
 
-- **Report a bug** — open an issue with a clear title, a minimal reproduction (Markdown input + steps), and the muya / browser version. Search [existing issues](https://github.com/marktext/muya/issues) first to avoid duplicates.
+- **Report a bug** — open an issue with a clear title, a minimal reproduction (Markdown input + steps), and the muya / browser version. Search [existing issues](https://github.com/TyroneXie/AnnotaMD/issues) first to avoid duplicates.
 - **Suggest an enhancement** — open an issue tagged with `enhancement` and explain the use case. Larger proposals (new public API, new block type) benefit from a short design sketch before the PR.
 - **Improve docs** — README, `CLAUDE.md`, `docs/`, and the per-package READMEs are all fair game.
 - **Send a pull request** — bug fixes, parser conformance improvements, new UI plugins, performance wins, tests, and CI hardening are all appreciated. See [Commits and pull requests](#commits-and-pull-requests) below.
@@ -38,18 +38,15 @@ Be kind, assume good intent, and keep discussions on-topic. Personal attacks, ha
 **First-time setup**
 
 ```sh
-# 1. Fork on GitHub, then clone your fork.
-git clone git@github.com:<your-user>/muya.git
-cd muya
+# 1. Fork AnnotaMD on GitHub, then clone your fork.
+git clone git@github.com:<your-user>/AnnotaMD.git
+cd AnnotaMD
 
-# 2. Add the upstream remote so you can keep master in sync.
-git remote add upstream git@github.com:marktext/muya.git
-
-# 3. Install dependencies (also wires up husky git hooks).
+# 2. Install dependencies.
 pnpm install
 
-# 4. Boot the examples app to try your changes in a real editor.
-pnpm dev
+# 3. Boot the examples app to try your changes in a real editor.
+pnpm -C packages/muya/examples dev:demo
 ```
 
 `pnpm dev` runs `turbo dev:demo`, which starts the Vite dev server in `examples/` and serves `@muyajs/core` directly from `packages/core/src/` — no rebuild step needed while iterating.
@@ -171,7 +168,7 @@ Maintainers will review and may ask for changes. PRs are merged via **squash mer
 
 ## Where to ask questions
 
-- **Usage or bug reports** → open an [issue](https://github.com/marktext/muya/issues). Search first; tag with `enhancement` if it's a feature request.
+- **Usage or bug reports** → open an [issue](https://github.com/TyroneXie/AnnotaMD/issues). Search first; tag with `enhancement` if it's a feature request.
 - **Architecture deep-dives** → `CLAUDE.md` is the canonical agent/human-readable map of the codebase.
 - **Release tooling** → `README.md` (Publishing section) and `.release-it.json`.
 

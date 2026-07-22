@@ -83,7 +83,7 @@ test.describe('Tab management', () => {
 
   test('Creating a new untitled tab grows the tab count', async() => {
     const before = await page.locator(tabSelector).count()
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, '')
     await page.waitForFunction(
       ({ selector, prev }) => {
         return document.querySelectorAll(selector).length > prev
@@ -101,7 +101,7 @@ test.describe('Tab management', () => {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
 
     const before = await page.locator(tabSelector).count()
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, '')
     await page.waitForFunction(
       ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
       { selector: tabSelector, prev: before },
@@ -138,7 +138,7 @@ test.describe('Tab management', () => {
     // Tab index 0 is the launch tab ('# Tab base'); open a fresh tab B whose
     // body is distinct, auto-selected.
     const before = await page.locator(tabSelector).count()
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'second body\n')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, 'second body\n')
     await page.waitForFunction(
       ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
       { selector: tabSelector, prev: before },
@@ -154,7 +154,7 @@ test.describe('Tab management', () => {
 
     // Switch to index 0 — the editor body must revert to tab A's content and the
     // active tab id must change away from B.
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', 0)
     await expect
       .poll(async() => (await getMarkdownContent(page, app)).trim(), { timeout: 5000 })
       .toBe('# Tab base')
@@ -164,7 +164,7 @@ test.describe('Tab management', () => {
     const ids = await readTabIds(page)
     const bIndex = ids.indexOf(bId as string)
     expect(bIndex).toBeGreaterThanOrEqual(0)
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', bIndex)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', bIndex)
     await expect
       .poll(async() => (await getMarkdownContent(page, app)).trim(), { timeout: 5000 })
       .toBe('second body')
@@ -176,7 +176,7 @@ test.describe('Tab management', () => {
   // LISTEN_FOR_CONTENT_CHANGE), and flips to unsaved on the first real keystroke.
   test('Blank untitled tab is clean until the first keystroke', async() => {
     const before = await page.locator(tabSelector).count()
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, '')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, '')
     await page.waitForFunction(
       ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
       { selector: tabSelector, prev: before },
@@ -245,7 +245,7 @@ test.describe('Tab management', () => {
       expect(aTabId).toBeTruthy()
 
       // Open tab B (auto-selected) and make a DIFFERENT edit in it.
-      await sendIpcToRenderer(aApp, 'mt::new-untitled-tab', true, 'bravo\n')
+      await sendIpcToRenderer(aApp, 'annotamd::new-untitled-tab', true, 'bravo\n')
       await aPage.waitForFunction(
         (sel) => document.querySelectorAll(sel).length >= 2,
         tabSelector,
@@ -262,7 +262,7 @@ test.describe('Tab management', () => {
       const ids = await readTabIds(aPage)
       const aIndex = ids.indexOf(aTabId as string)
       expect(aIndex).toBeGreaterThanOrEqual(0)
-      await sendIpcToRenderer(aApp, 'mt::switch-tab-by-index', aIndex)
+      await sendIpcToRenderer(aApp, 'annotamd::switch-tab-by-index', aIndex)
       await expect
         .poll(async() => (await getMarkdownContent(aPage, aApp)).trim(), { timeout: 5000 })
         .toContain('MARKERA')
@@ -283,7 +283,7 @@ test.describe('Tab management', () => {
           async() => {
             const current = (await getMarkdownContent(aPage, aApp)).trim()
             if (current === 'alpha') return current
-            await sendIpcToRenderer(aApp, 'mt::editor-edit-action', 'undo')
+            await sendIpcToRenderer(aApp, 'annotamd::editor-edit-action', 'undo')
             await aPage.waitForTimeout(300)
             return (await getMarkdownContent(aPage, aApp)).trim()
           },
@@ -314,7 +314,7 @@ test.describe('Tab management', () => {
       const TAB_COUNT = 25
       for (let i = 0; i < TAB_COUNT; i++) {
         const before = await sPage.locator(tabSelector).count()
-        await sendIpcToRenderer(sApp, 'mt::new-untitled-tab', true, `overflow body ${i}\n`)
+        await sendIpcToRenderer(sApp, 'annotamd::new-untitled-tab', true, `overflow body ${i}\n`)
         await sPage.waitForFunction(
           ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
           { selector: tabSelector, prev: before },
@@ -347,17 +347,17 @@ test.describe('Tab management', () => {
         })
 
       // Far-left tab: must be brought into view.
-      await sendIpcToRenderer(sApp, 'mt::switch-tab-by-index', 0)
+      await sendIpcToRenderer(sApp, 'annotamd::switch-tab-by-index', 0)
       await expect.poll(activeTabVisible, { timeout: 5000 }).toBe(true)
 
       // Far-right (last) tab: at scrollLeft 0 it is off the right edge — the
       // regression. Switching to it must scroll the strip so it's visible.
       const ids = await readTabIds(sPage)
-      await sendIpcToRenderer(sApp, 'mt::switch-tab-by-index', ids.length - 1)
+      await sendIpcToRenderer(sApp, 'annotamd::switch-tab-by-index', ids.length - 1)
       await expect.poll(activeTabVisible, { timeout: 5000 }).toBe(true)
 
       // Back to the first tab: must scroll left again.
-      await sendIpcToRenderer(sApp, 'mt::switch-tab-by-index', 0)
+      await sendIpcToRenderer(sApp, 'annotamd::switch-tab-by-index', 0)
       await expect.poll(activeTabVisible, { timeout: 5000 }).toBe(true)
     } finally {
       await sApp.close()
@@ -376,11 +376,11 @@ test.describe('Tab management', () => {
     const cPage = launch.page
     try {
       // Helper: open `n` extra untitled tabs with distinct content and mark
-      // every existing tab SAVED via the real `mt::tab-saved` save-confirm IPC.
+      // every existing tab SAVED via the real `annotamd::tab-saved` save-confirm IPC.
       const openSavedTabs = async(bodies: string[]): Promise<void> => {
         for (const body of bodies) {
           const before = await cPage.locator(tabSelector).count()
-          await sendIpcToRenderer(cApp, 'mt::new-untitled-tab', true, body)
+          await sendIpcToRenderer(cApp, 'annotamd::new-untitled-tab', true, body)
           await cPage.waitForFunction(
             ({ selector, prev }) => document.querySelectorAll(selector).length > prev,
             { selector: tabSelector, prev: before },
@@ -389,7 +389,7 @@ test.describe('Tab management', () => {
           await cPage.waitForTimeout(150)
         }
         const ids = await readTabIds(cPage)
-        for (const id of ids) await sendIpcToRenderer(cApp, 'mt::tab-saved', id)
+        for (const id of ids) await sendIpcToRenderer(cApp, 'annotamd::tab-saved', id)
         await expect
           .poll(
             () => cPage.evaluate(() => !!document.querySelector('.tabs-container > li.unsaved')),

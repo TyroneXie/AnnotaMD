@@ -1441,7 +1441,7 @@ class Format extends Content {
 
         this.muya.editor.history.markInputBoundary('deleteContentBackward', null);
 
-        // fix: #897 in marktext repo
+        // fix: #897 in pre-migration implementation repo
         const { text } = this;
         const { footnote, superSubScript } = this.muya.options;
         const { labels } = this.inlineRenderer;
@@ -1514,7 +1514,7 @@ class Format extends Content {
                 return { needRender: false, imageToken: null, referenceImageToken: token };
 
             // handle delete the second marker(et:*、$) in inline syntax.(Firefox compatible)
-            // Fix: https://github.com/marktext/muya/issues/113
+            // Fix: https://github.com/TyroneXie/AnnotaMD/issues/113
             // for example: foo **strong**|
             if (token.range.end === offset) {
                 token.raw = token.raw.substring(0, token.raw.length - 1);
@@ -1522,7 +1522,7 @@ class Format extends Content {
             }
 
             // If preToken is a syntax token, the the cursor is at offset 1, need to set the cursor manually.(Firefox compatible)
-            // // Fix: https://github.com/marktext/muya/issues/113
+            // // Fix: https://github.com/TyroneXie/AnnotaMD/issues/113
             // for example: foo **strong**w|
             if (token.range.start + 1 === offset) {
                 token.raw = token.raw.substring(1);

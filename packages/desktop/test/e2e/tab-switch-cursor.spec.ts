@@ -89,7 +89,7 @@ test.describe('Tab switch restores the per-tab caret', () => {
     expect(await readCaret(page)).toEqual({ index: 2, offset: 6 })
 
     // Open a second, auto-selected tab — this switches away from tab A.
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'other tab body\n')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, 'other tab body\n')
     await page.waitForFunction(
       (sel) => document.querySelectorAll(sel).length >= 2,
       tabSelector,
@@ -98,7 +98,7 @@ test.describe('Tab switch restores the per-tab caret', () => {
     await page.waitForTimeout(200)
 
     // Switch back to tab A (index 0).
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', 0)
     await page.waitForTimeout(300)
 
     // The caret must be restored to the third paragraph at offset 6.
@@ -157,7 +157,7 @@ test.describe('Tab switch restores the per-tab undo history', () => {
     await page.waitForTimeout(300)
 
     // Open tab B (auto-selected) with its own body, then build B's history.
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'beta\n')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, 'beta\n')
     await page.waitForFunction(
       (sel) => document.querySelectorAll(sel).length >= 2,
       tabSelector,
@@ -175,15 +175,15 @@ test.describe('Tab switch restores the per-tab undo history', () => {
     await page.waitForTimeout(300)
 
     // Switch back to tab A (index 0). Its engine history must be restored.
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', 0)
     await expect.poll(() => paragraphText(0)).toContain('alpha AEDIT')
 
     // A single undo walks tab A's OWN history: it drops ' AEDIT', not ' BEDIT'.
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'undo')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
     await expect.poll(() => paragraphText(0)).toBe('alpha')
 
     // Tab B is untouched by tab A's undo — its edit survives on switch back.
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 1)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', 1)
     await expect.poll(() => paragraphText(0)).toContain('beta BEDIT')
   })
 })
@@ -227,7 +227,7 @@ test.describe('Tab switch restores the per-tab scroll position', () => {
     const captured = await scrollTop()
 
     // Open tab B (auto-selected, short body) — it starts at the top.
-    await sendIpcToRenderer(app, 'mt::new-untitled-tab', true, 'short\n')
+    await sendIpcToRenderer(app, 'annotamd::new-untitled-tab', true, 'short\n')
     await page.waitForFunction(
       (sel) => document.querySelectorAll(sel).length >= 2,
       tabSelector,
@@ -237,7 +237,7 @@ test.describe('Tab switch restores the per-tab scroll position', () => {
 
     // Switch back to tab A — its scrollTop must be (approximately) restored.
     // Tolerance is generous: real layout height drives `scrollToCords` clamping.
-    await sendIpcToRenderer(app, 'mt::switch-tab-by-index', 0)
+    await sendIpcToRenderer(app, 'annotamd::switch-tab-by-index', 0)
     await expect.poll(() => scrollTop(), { timeout: 5000 }).toBeGreaterThan(1000)
     const restored = await scrollTop()
     expect(Math.abs(restored - captured)).toBeLessThan(captured)

@@ -5,7 +5,7 @@ import log from 'electron-log'
 import { rgPath as bundledRgPath } from '@vscode/ripgrep'
 
 const resolveRgPath = (): string => {
-  if (process.env.MARKTEXT_RIPGREP_PATH) return process.env.MARKTEXT_RIPGREP_PATH
+  if (process.env.ANNOTAMD_RIPGREP_PATH) return process.env.ANNOTAMD_RIPGREP_PATH
   return bundledRgPath.replace(/\bapp\.asar\b/, 'app.asar.unpacked')
 }
 
@@ -192,12 +192,12 @@ const startTextSearch = (
       finished = true
       activeSearches.delete(searchId)
       if (err) {
-        sendIfAlive(sender, 'mt::rg::error', {
+        sendIfAlive(sender, 'annotamd::rg::error', {
           searchId,
           error: err instanceof Error ? err.message : String(err)
         })
       } else {
-        sendIfAlive(sender, 'mt::rg::done', { searchId })
+        sendIfAlive(sender, 'annotamd::rg::done', { searchId })
       }
     }
   }
@@ -214,7 +214,7 @@ const startTextSearch = (
     if (!finished) {
       finished = true
       activeSearches.delete(searchId)
-      sendIfAlive(sender, 'mt::rg::cancelled', { searchId })
+      sendIfAlive(sender, 'annotamd::rg::cancelled', { searchId })
     }
   }
   activeSearches.set(searchId, { sender, cancel })
@@ -270,8 +270,8 @@ const startTextSearch = (
           const message = JSON.parse(buffer)
           if (message.type === 'end' && pendingEvent) {
             pendingPaths++
-            sendIfAlive(sender, 'mt::rg::progress', { searchId, num: pendingPaths })
-            sendIfAlive(sender, 'mt::rg::match', { searchId, payload: pendingEvent })
+            sendIfAlive(sender, 'annotamd::rg::progress', { searchId, num: pendingPaths })
+            sendIfAlive(sender, 'annotamd::rg::match', { searchId, payload: pendingEvent })
           }
         } catch {
           /* parse error */
@@ -317,8 +317,8 @@ const startTextSearch = (
             }
           } else if (message.type === 'end') {
             pendingPaths++
-            sendIfAlive(sender, 'mt::rg::progress', { searchId, num: pendingPaths })
-            sendIfAlive(sender, 'mt::rg::match', { searchId, payload: pendingEvent })
+            sendIfAlive(sender, 'annotamd::rg::progress', { searchId, num: pendingPaths })
+            sendIfAlive(sender, 'annotamd::rg::match', { searchId, payload: pendingEvent })
             pendingEvent = null
           }
         } catch (err) {
@@ -348,12 +348,12 @@ const startFileSearch = (
       finished = true
       activeSearches.delete(searchId)
       if (err) {
-        sendIfAlive(sender, 'mt::rg::error', {
+        sendIfAlive(sender, 'annotamd::rg::error', {
           searchId,
           error: err instanceof Error ? err.message : String(err)
         })
       } else {
-        sendIfAlive(sender, 'mt::rg::done', { searchId })
+        sendIfAlive(sender, 'annotamd::rg::done', { searchId })
       }
     }
   }
@@ -370,7 +370,7 @@ const startFileSearch = (
     if (!finished) {
       finished = true
       activeSearches.delete(searchId)
-      sendIfAlive(sender, 'mt::rg::cancelled', { searchId })
+      sendIfAlive(sender, 'annotamd::rg::cancelled', { searchId })
     }
   }
   activeSearches.set(searchId, { sender, cancel })
@@ -414,8 +414,8 @@ const startFileSearch = (
       buffer = lines.pop() ?? ''
       for (const line of lines) {
         pendingPaths++
-        sendIfAlive(sender, 'mt::rg::progress', { searchId, num: pendingPaths })
-        sendIfAlive(sender, 'mt::rg::match', { searchId, payload: line })
+        sendIfAlive(sender, 'annotamd::rg::progress', { searchId, num: pendingPaths })
+        sendIfAlive(sender, 'annotamd::rg::match', { searchId, payload: line })
       }
     })
   }
@@ -430,14 +430,14 @@ interface RipgrepRequest {
 }
 
 export const registerRipgrepHandlers = (): void => {
-  ipcMain.handle('mt::rg::start', (event, req: RipgrepRequest) => {
+  ipcMain.handle('annotamd::rg::start', (event, req: RipgrepRequest) => {
     const { searchId, mode, directories, pattern, options } = req
     cleanupAtSenderDestroy(event.sender)
     if (mode === 'files') startFileSearch(event.sender, searchId, directories, options || {})
     else startTextSearch(event.sender, searchId, directories, pattern, options || {})
     return true
   })
-  ipcMain.on('mt::rg::cancel', (_event, searchId: string) => {
+  ipcMain.on('annotamd::rg::cancel', (_event, searchId: string) => {
     const entry = activeSearches.get(searchId)
     if (entry) entry.cancel()
   })

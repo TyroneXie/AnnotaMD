@@ -97,7 +97,7 @@
       "about": "關於",
       "checkUpdates": "檢查更新"
     },
-    "marktext": {
+    "annotamd": {
       "title": "關於",
       "about": "關於 AnnotaMD",
       "checkUpdates": "檢查更新…",
@@ -745,7 +745,7 @@
     "copyrightContributors": "版權貢獻者"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "隱藏 AnnotaMD",
       "hideOthers": "隱藏其他"
     },

@@ -43,4 +43,4 @@ xattr -cr /Applications/AnnotaMD.app
 
 ## 致谢
 
-AnnotaMD 基于 MarkText 与 Muya 的开源编辑器能力开发，感谢所有上游贡献者和图标库维护者。
+AnnotaMD 基于 Muya 的开源编辑器能力开发，感谢所有上游贡献者和图标库维护者。

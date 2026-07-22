@@ -66,7 +66,7 @@ class LineEndingCommand {
   }
 
   executeSubcommand = async(_: string, value: 'crlf' | 'lf'): Promise<void> => {
-    bus.emit('mt::set-line-ending', value)
+    bus.emit('annotamd::set-line-ending', value)
   }
 
   unload = (): void => {}

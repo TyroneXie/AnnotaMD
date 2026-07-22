@@ -5,7 +5,7 @@ import { Muya } from '../muya';
 
 // Coverage for `muya.invalidateImageCache()` — the public API the desktop
 // shell calls to force inline images to reload (e.g. after a watched image
-// file changes on disk, or on the `mt::invalidate-image-cache` IPC).
+// file changes on disk, or on the `annotamd::invalidate-image-cache` IPC).
 //
 // The inline renderer memoises loaded images in two maps keyed by src:
 //   - `loadImageMap` (skipped on the next render once `isSuccess` is true)

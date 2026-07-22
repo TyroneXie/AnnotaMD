@@ -9,37 +9,37 @@ const focusModeMenuItemId = 'focusModeMenuItem'
 
 const toggleTypeMode = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::toggle-view-mode-entry', type)
+    win.webContents.send('annotamd::toggle-view-mode-entry', type)
   }
 }
 
 const setLayout = (win: Win, type: string, value: unknown): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::set-view-layout', { [type]: value })
+    win.webContents.send('annotamd::set-view-layout', { [type]: value })
   }
 }
 
 const toggleLayout = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::toggle-view-layout-entry', type)
+    win.webContents.send('annotamd::toggle-view-layout-entry', type)
   }
 }
 
 export const debugToggleDevTools = (win: Win): void => {
-  if (win && global.MARKTEXT_DEBUG) {
+  if (win && global.ANNOTAMD_DEBUG) {
     win.webContents.toggleDevTools()
   }
 }
 
 export const debugReloadWindow = (win: Win): void => {
-  if (win && global.MARKTEXT_DEBUG) {
+  if (win && global.ANNOTAMD_DEBUG) {
     ipcMain.emit('window-reload-by-id', win.id)
   }
 }
 
 export const showCommandPalette = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::show-command-palette')
+    win.webContents.send('annotamd::show-command-palette')
   }
 }
 
@@ -73,7 +73,7 @@ export const toggleTypewriterMode = (win: Win): void => {
 
 export const reloadImageCache = (win: Win): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::invalidate-image-cache')
+    win.webContents.send('annotamd::invalidate-image-cache')
   }
 }
 

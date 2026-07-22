@@ -28,7 +28,6 @@
       <template #head>
         <bool
           :description="t('preferences.image.folderSetting.preferRelative')"
-          more="https://marktext.me/docs/images"
           :bool="imagePreferRelativeDirectory"
           :on-change="(value) => onSelectChange('imagePreferRelativeDirectory', value)"
         />
@@ -102,7 +101,7 @@ const openImageFolder = (): void => {
 
 const modifyImageFolderPath = (value: string | undefined): void => {
   // Passing `undefined` is the documented way to ask the main process to
-  // open a folder picker (see `mt::ask-for-modify-image-folder-path`).
+  // open a folder picker (see `annotamd::ask-for-modify-image-folder-path`).
   preferenceStore.SET_IMAGE_FOLDER_PATH(value)
 }
 

@@ -97,7 +97,7 @@
       "about": "À propos",
       "checkUpdates": "Vérifier les mises à jour"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "À propos de AnnotaMD",
       "checkUpdates": "Vérifier les mises à jour...",
@@ -745,7 +745,7 @@
     "copyrightContributors": "Contributeurs aux droits d'auteur"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "Masquer AnnotaMD",
       "hideOthers": "Masquer les autres"
     },

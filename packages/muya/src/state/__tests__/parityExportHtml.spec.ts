@@ -5,7 +5,7 @@ import { MarkdownToHtml } from '../markdownToHtml';
 
 // PARITY SCOREBOARD — gaps PG7 (file PG07) + PG8 (file PG08).
 //
-// PG7: legacy `packages/muyajs` `ExportHtml.generate` inlined
+// PG7: the pre-migration editor engine `ExportHtml.generate` inlined
 // github-markdown-css, the prism theme, and katex CSS as `<style>…</style>`
 // blocks (via `?inline` imports), so exported HTML/PDF/print was fully
 // self-contained and rendered offline. `@muyajs/core`'s
@@ -84,7 +84,7 @@ describe('parity PG8: exported headings carry slug ids (live TOC anchors)', () =
     );
 
     it(
-        'PG8: the heading id matches the marktext slug of the heading text',
+        'PG8: the heading id matches the pre-migration implementation slug of the heading text',
         async () => {
             const out = await generateExport(SAMPLE);
 

@@ -51,8 +51,8 @@ describe('MCP client initial rendering', () => {
   })
 
   it('subscribes to real MCP heartbeat status and renders arbitrary connected Agents', () => {
-    expect(source).toContain("invoke('mt::comments::mcp-status')")
-    expect(source).toContain("'mt::comments::mcp-status-changed'")
+    expect(source).toContain("invoke('annotamd::comments::mcp-status')")
+    expect(source).toContain("'annotamd::comments::mcp-status-changed'")
     expect(source).toContain('v-for="client in otherClients"')
     expect(source).toContain("if (normalized.includes('workbuddy')) return 'WorkBuddy'")
     expect(source).toContain("if (normalized.includes('qoderwork') || normalized === 'qoder') return 'QoderWork'")
@@ -68,7 +68,7 @@ describe('MCP client initial rendering', () => {
   })
 
   it('installs the portable comment skill when copying setup for other Agents', () => {
-    expect(source).toContain("invoke('mt::mcp-clients::install-portable-skill')")
+    expect(source).toContain("invoke('annotamd::mcp-clients::install-portable-skill')")
     expect(source).toContain("t('preferences.agent.customClientStepSkill')")
     expect(source).toContain('v-if="connectedClient(client.id) && client.configured"')
   })

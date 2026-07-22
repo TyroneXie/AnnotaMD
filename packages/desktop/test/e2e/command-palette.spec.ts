@@ -17,7 +17,7 @@ test.describe('Command palette', () => {
   })
 
   test('IPC opens the palette', async() => {
-    await sendIpcToRenderer(app, 'mt::show-command-palette')
+    await sendIpcToRenderer(app, 'annotamd::show-command-palette')
     // The el-dialog renders a search input. It may be teleported outside
     // the .command-palette wrapper; locate by the search-wrapper or input.search.
     const searchInput = page.locator('.search-wrapper input.search, input.search').first()

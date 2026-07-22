@@ -10,7 +10,7 @@ import '../../../ui/tooltip/index.css';
 
 const debug = logger('headingCopyLink:');
 
-// marktext rendered an `i.icon.ag-copy-header-link` hover affordance on every
+// pre-migration implementation rendered an `i.icon.ag-copy-header-link` hover affordance on every
 // heading; clicking it dispatched `heading-copy-link` { key } and the desktop
 // renderer copied the heading's GitHub slug/anchor to the clipboard. The new
 // engine has no equivalent affordance — this attachment block restores it.

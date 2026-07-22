@@ -19,7 +19,7 @@ describe('multi-root editor window integration', () => {
 
     expect(source).toContain('removeFolder(pathname: string): void')
     expect(source).toContain("ipcMain.emit('watcher-unwatch-directory'")
-    expect(source).toContain("webContents.send('mt::remove-directory'")
+    expect(source).toContain("webContents.send('annotamd::remove-directory'")
   })
 
   it('restores rootDirectories and exposes the renderer detach channel', () => {
@@ -29,7 +29,7 @@ describe('multi-root editor window integration', () => {
 
     expect(editor).toContain('bufferState.project?.rootDirectories')
     expect(app).toContain('openedRootDirectories')
-    expect(ipc).toContain("'mt::remove-directory-from-workspace': [pathname: string]")
+    expect(ipc).toContain("'annotamd::remove-directory-from-workspace': [pathname: string]")
   })
 
   it('focuses an existing tab when Finder opens the same file again', () => {
@@ -37,7 +37,7 @@ describe('multi-root editor window integration', () => {
     const app = read('packages/desktop/src/main/app/index.ts')
 
     expect(editor).toContain('focusOpenedFile(pathname: string): boolean')
-    expect(editor).toContain("webContents.send('mt::switch-tab-by-file_path', pathname)")
+    expect(editor).toContain("webContents.send('annotamd::switch-tab-by-file_path', pathname)")
     expect(app).toContain('editor.focusOpenedFile(pathname)')
   })
 })

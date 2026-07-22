@@ -20,7 +20,7 @@ type Win = BrowserWindow | null | undefined
 
 const format = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-format-action', { type })
+    win.webContents.send('annotamd::editor-format-action', { type })
   }
 }
 

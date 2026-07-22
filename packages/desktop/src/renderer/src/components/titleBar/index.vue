@@ -242,14 +242,14 @@ const onLeaveFullScreen = () => {
   isFullScreen.value = false
 }
 
-const offMaximize = window.electron.ipcRenderer.on('mt::window-maximize', onMaximize)
-const offUnmaximize = window.electron.ipcRenderer.on('mt::window-unmaximize', onUnmaximize)
+const offMaximize = window.electron.ipcRenderer.on('annotamd::window-maximize', onMaximize)
+const offUnmaximize = window.electron.ipcRenderer.on('annotamd::window-unmaximize', onUnmaximize)
 const offEnterFullScreen = window.electron.ipcRenderer.on(
-  'mt::window-enter-full-screen',
+  'annotamd::window-enter-full-screen',
   onEnterFullScreen
 )
 const offLeaveFullScreen = window.electron.ipcRenderer.on(
-  'mt::window-leave-full-screen',
+  'annotamd::window-leave-full-screen',
   onLeaveFullScreen
 )
 

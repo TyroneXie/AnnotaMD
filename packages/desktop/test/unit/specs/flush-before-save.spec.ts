@@ -104,7 +104,7 @@ describe('editor store — flush pending edits before saving (#3803)', () => {
 
     store.FILE_SAVE()
 
-    const call = sendSpy.mock.calls.find((c) => c[0] === 'mt::response-file-save')
+    const call = sendSpy.mock.calls.find((c) => c[0] === 'annotamd::response-file-save')
     expect(call).toBeDefined()
     expect(call?.[MARKDOWN_ARG]).toBe(FLUSHED)
   })
@@ -117,13 +117,13 @@ describe('editor store — flush pending edits before saving (#3803)', () => {
 
     store.FILE_SAVE_AS()
 
-    const call = sendSpy.mock.calls.find((c) => c[0] === 'mt::response-file-save-as')
+    const call = sendSpy.mock.calls.find((c) => c[0] === 'annotamd::response-file-save-as')
     expect(call).toBeDefined()
     expect(call?.[MARKDOWN_ARG]).toBe(FLUSHED)
   })
 
   // MOVE_FILE_TO / RESPONSE_FOR_RENAME only transmit `markdown` in their untitled
-  // (no-pathname) branch, which reuses `mt::response-file-save` — that is where
+  // (no-pathname) branch, which reuses `annotamd::response-file-save` — that is where
   // the flush actually matters, so assert the payload there too.
   it('MOVE_FILE_TO (untitled) sends the flushed markdown', () => {
     const store = useEditorStore()
@@ -133,7 +133,7 @@ describe('editor store — flush pending edits before saving (#3803)', () => {
 
     store.MOVE_FILE_TO()
 
-    const call = sendSpy.mock.calls.find((c) => c[0] === 'mt::response-file-save')
+    const call = sendSpy.mock.calls.find((c) => c[0] === 'annotamd::response-file-save')
     expect(call).toBeDefined()
     expect(call?.[MARKDOWN_ARG]).toBe(FLUSHED)
   })
@@ -146,7 +146,7 @@ describe('editor store — flush pending edits before saving (#3803)', () => {
 
     store.RESPONSE_FOR_RENAME()
 
-    const call = sendSpy.mock.calls.find((c) => c[0] === 'mt::response-file-save')
+    const call = sendSpy.mock.calls.find((c) => c[0] === 'annotamd::response-file-save')
     expect(call).toBeDefined()
     expect(call?.[MARKDOWN_ARG]).toBe(FLUSHED)
   })

@@ -11,12 +11,12 @@ export const useNotificationStore = defineStore('notification', () => {
       message: t('notifications.defaultMessage')
     }
 
-    window.electron.ipcRenderer.on('mt::show-notification', (_e, opts) => {
+    window.electron.ipcRenderer.on('annotamd::show-notification', (_e, opts) => {
       const options = Object.assign({ ...DEFAULT_OPTS }, opts as Partial<NotifyOptions>)
       notice.notify(options)
     })
 
-    window.electron.ipcRenderer.on('mt::pandoc-not-exists', async(_e, opts) => {
+    window.electron.ipcRenderer.on('annotamd::pandoc-not-exists', async(_e, opts) => {
       // Preserve the custom title/message from main (e.g. dialog.importWarning
       // / dialog.installPandoc); previously the opts arg was dropped and the
       // user saw the generic defaultTitle/defaultMessage.

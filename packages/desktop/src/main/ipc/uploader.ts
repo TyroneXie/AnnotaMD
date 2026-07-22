@@ -173,7 +173,7 @@ interface UploadRequest {
 }
 
 export const registerUploaderHandlers = (): void => {
-  ipcMain.handle('mt::uploader::upload', async(_event, req: UploadRequest) => {
+  ipcMain.handle('annotamd::uploader::upload', async(_event, req: UploadRequest) => {
     const { pathname, image, isPath, preferences } = req
     if (isPath) {
       const dir = path.dirname(pathname)

@@ -93,7 +93,7 @@ const handleRendererError = (event: ErrorEvent | PromiseRejectionEvent | Event):
     exceptionLogger(errorEvent.error)
 
     // Pass exception to main process exception handler to show a error dialog.
-    window.electron.ipcRenderer.send('mt::handle-renderer-error', copy)
+    window.electron.ipcRenderer.send('annotamd::handle-renderer-error', copy)
   } else {
     console.error(event)
   }
@@ -107,7 +107,7 @@ const bootstrapRenderer = (): void => {
   const { debug, initialState, userDataPath, windowId, type } = parseUrlArgs()
   // RendererPaths throws when userDataPath is missing; preserve that runtime check.
   const paths = new RendererPaths(userDataPath as string)
-  const marktext = {
+  const annotamd = {
     initialState,
     env: {
       debug,
@@ -119,13 +119,13 @@ const bootstrapRenderer = (): void => {
   }
   // `global` is not available in a sandboxed renderer — attach to window.
   // RendererPaths has no string index signature, so widen through `unknown`.
-  window.marktext = marktext as unknown as Window['marktext']
+  window.annotamd = annotamd as unknown as Window['annotamd']
 
   // The main process sends this once at did-finish-load. Editor routes are
   // lazy-loaded, so capture the payload in the eager renderer entry and hand
   // it to the store after the editor chunk mounts.
   if (type === 'editor') {
-    window.electron.ipcRenderer.on('mt::bootstrap-editor', (_event, config) => {
+    window.electron.ipcRenderer.on('annotamd::bootstrap-editor', (_event, config) => {
       captureEditorBootstrap(config)
     })
   }

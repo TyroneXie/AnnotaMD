@@ -177,7 +177,7 @@ test.describe('Title-bar word counter (item 24)', () => {
 
 // ---------------------------------------------------------------------------
 // Coverage backfill (checklist item 169). Edit > Select All flows through
-// `mt::editor-edit-action` ('selectAll') -> store/listenForMain.ts
+// `annotamd::editor-edit-action` ('selectAll') -> store/listenForMain.ts
 // EDITOR_EDIT_ACTION -> bus 'selectAll' -> editor.vue handleSelectAll, which
 // calls editor.value.selectAll() ONLY when editor.value.hasFocus(); when focus
 // is in an INPUT/TEXTAREA it does a field .select() and skips the editor.
@@ -211,7 +211,7 @@ test.describe('Edit > Select All (item 169)', () => {
     await placeCaretInEditor(page)
 
     const wholeDoc = async(): Promise<boolean> => {
-      await sendIpcToRenderer(app, 'mt::editor-edit-action', 'selectAll')
+      await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'selectAll')
       await page.waitForTimeout(120)
       const selected = await page.evaluate(() => window.getSelection()?.toString() ?? '')
       return (
@@ -233,7 +233,7 @@ test.describe('Edit > Select All (item 169)', () => {
     await placeCaretInEditor(page)
     await expect
       .poll(async() => {
-        await sendIpcToRenderer(app, 'mt::editor-edit-action', 'selectAll')
+        await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'selectAll')
         await page.waitForTimeout(120)
         return page.evaluate(() => window.getSelection()?.toString() ?? '')
       }, { timeout: 5000 })
@@ -242,7 +242,7 @@ test.describe('Edit > Select All (item 169)', () => {
     // Open the find bar and move focus into its search input. handleSelectAll
     // takes the !hasFocus() branch and does a field select on the input, so the
     // editor's DOM selection must NOT be re-expanded by this action.
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'find')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'find')
     const findInput = page.locator('.search-bar .search input')
     await expect(findInput).toBeVisible({ timeout: 5000 })
     await findInput.fill('beta')
@@ -251,7 +251,7 @@ test.describe('Edit > Select All (item 169)', () => {
       .poll(() => page.evaluate(() => document.activeElement?.nodeName ?? ''))
       .toBe('INPUT')
 
-    await sendIpcToRenderer(app, 'mt::editor-edit-action', 'selectAll')
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'selectAll')
     await page.waitForTimeout(200)
 
     // The input's own field selection is what got selected (its full value),

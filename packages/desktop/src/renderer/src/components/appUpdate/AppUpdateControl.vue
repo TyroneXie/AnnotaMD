@@ -111,20 +111,20 @@ const runAction = async(): Promise<void> => {
     return
   }
   if (state.status === 'available' || (state.status === 'error' && state.version)) {
-    next = await window.electron.ipcRenderer.invoke('mt::update:download')
+    next = await window.electron.ipcRenderer.invoke('annotamd::update:download')
   } else if (state.status === 'downloaded') {
-    next = await window.electron.ipcRenderer.invoke('mt::update:install')
+    next = await window.electron.ipcRenderer.invoke('annotamd::update:install')
   } else if (!busy.value) {
-    next = await window.electron.ipcRenderer.invoke('mt::update:check')
+    next = await window.electron.ipcRenderer.invoke('annotamd::update:check')
   }
   if (next) applyState(next)
 }
 
 onMounted(async() => {
-  stopUpdateListener = window.electron.ipcRenderer.on('mt::update:state', (_event, next) => {
+  stopUpdateListener = window.electron.ipcRenderer.on('annotamd::update:state', (_event, next) => {
     applyState(next)
   })
-  applyState(await window.electron.ipcRenderer.invoke('mt::update:get-state'))
+  applyState(await window.electron.ipcRenderer.invoke('annotamd::update:get-state'))
 })
 
 onBeforeUnmount(() => {

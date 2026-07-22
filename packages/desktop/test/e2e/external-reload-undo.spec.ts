@@ -8,12 +8,12 @@ import {
 } from './helpers'
 
 // Trigger an editor undo through the same IPC channel the Edit › Undo menu item
-// uses (`mt::editor-edit-action` → bus `undo` → editor.undo()).
+// uses (`annotamd::editor-edit-action` → bus `undo` → editor.undo()).
 const undo = async(app: Parameters<typeof sendIpcToRenderer>[0]): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::editor-edit-action', 'undo')
+  await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
 }
 
-// Reproduce the watcher's external-change report: the same `mt::update-file`
+// Reproduce the watcher's external-change report: the same `annotamd::update-file`
 // payload shape the main-process watcher sends (a `loadMarkdownFile` result in
 // `change.data`). Drives the real renderer reload path
 // LISTEN_FOR_FILE_CHANGE → loadChange → bus `file-changed` → handleFileChange.
@@ -22,7 +22,7 @@ const reportExternalChange = async(
   pathname: string,
   markdown: string
 ): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::update-file', {
+  await sendIpcToRenderer(app, 'annotamd::update-file', {
     type: 'change',
     change: {
       pathname,
@@ -76,7 +76,7 @@ test.describe('External disk reload — undo restores the pre-change document', 
 })
 
 test.describe('External disk reload — source-mode scroll position survives a same-tab reload', () => {
-  // Item 258: a same-id `mt::update-file` reload must not yank the CodeMirror
+  // Item 258: a same-id `annotamd::update-file` reload must not yank the CodeMirror
   // view back to the top. sourceCode.vue handleFileChange snapshots every
   // plausible scroll element on `isSameTabReload`, runs `editor.setValue`, then
   // re-applies the captured scrollTop synchronously, on nextTick, and on the

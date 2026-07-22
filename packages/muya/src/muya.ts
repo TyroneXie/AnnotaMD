@@ -626,7 +626,7 @@ export class Muya {
      *
      * The renderer memoises loaded images, so an image whose file changed on
      * disk would otherwise keep showing the stale bitmap. Desktop calls this
-     * after a watched image file changes or on the `mt::invalidate-image-cache`
+     * after a watched image file changes or on the `annotamd::invalidate-image-cache`
      * IPC; it clears the image caches and re-renders all content blocks so the
      * images load afresh.
      */
@@ -1645,7 +1645,7 @@ export class Muya {
             : text;
     }
 
-    /** Cycle the heading level (marktext upgrade/degrade semantics). */
+    /** Cycle the heading level (pre-migration implementation upgrade/degrade semantics). */
     private _changeHeadingLevel(block: Parent, type: 'upgrade heading' | 'degrade heading') {
         const state = block.getState();
         const level = isAtxHeadingState(state) ? state.meta.level : 0;

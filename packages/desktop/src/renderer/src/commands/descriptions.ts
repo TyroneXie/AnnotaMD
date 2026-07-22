@@ -4,8 +4,8 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   // ============================================
   // # Application Level Commands
   // ============================================
-  'mt.hide': 'commands.mt.hide',
-  'mt.hide-others': 'commands.mt.hideOthers',
+  'annotamd.hide': 'commands.annotamd.hide',
+  'annotamd.hide-others': 'commands.annotamd.hideOthers',
 
   // ============================================
   // # File Operations
@@ -206,12 +206,6 @@ const COMMAND_KEY_MAP: Record<string, string> = {
   'tabs.switchToEighth': 'commands.tabs.switchToEighth',
   'tabs.switchToNinth': 'commands.tabs.switchToNinth',
   'tabs.switchToTenth': 'commands.tabs.switchToTenth',
-
-  // ============================================
-  // # Documentation & Help
-  // ============================================
-  'docs.user-guide': 'commands.docs.userGuide',
-  'docs.markdown-syntax': 'commands.docs.markdownSyntax',
 
   // ============================================
   // # Spell Checker

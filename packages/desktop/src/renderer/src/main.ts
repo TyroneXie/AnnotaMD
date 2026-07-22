@@ -68,7 +68,7 @@ import './assets/styles/printService.css'
 
 // -----------------------------------------------
 
-window.marktext = {}
+window.annotamd = {}
 bootstrapRenderer()
 
 // -----------------------------------------------
@@ -103,7 +103,7 @@ const elementPlusComponents = [
 ]
 elementPlusComponents.forEach((component) => app.use(component))
 
-const envType = window.marktext?.env?.type as string | undefined
+const envType = window.annotamd?.env?.type as string | undefined
 
 const router = createRouter({
   history: createWebHashHistory(),

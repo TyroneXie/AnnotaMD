@@ -103,7 +103,7 @@ test('keeps partial edits, removes whole replacements, and permanently resolves 
     await page.keyboard.type('WHOLE_REPLACEMENT')
     await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(0)
     await expect.poll(async() => page.evaluate(async({ pathname, content }) => {
-      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      const document = await window.electron.ipcRenderer.invoke('annotamd::comments::load', pathname, content)
       return document.comments.length
     }, { pathname: filePath, content: 'WHOLE_REPLACEMENT' })).toBe(0)
 
@@ -113,7 +113,7 @@ test('keeps partial edits, removes whole replacements, and permanently resolves 
     ).click()
     await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(0)
     await expect.poll(async() => page.evaluate(async({ pathname, content }) => {
-      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      const document = await window.electron.ipcRenderer.invoke('annotamd::comments::load', pathname, content)
       return document.comments.length
     }, { pathname: filePath, content: 'WHOLE_REPLACEMENT' })).toBe(0)
   } finally {
@@ -440,13 +440,13 @@ test('keeps every reply separate and lets every Local message edit or delete', a
     await expect(replies.nth(1).locator('p')).toHaveText('Local 第二轮回复')
 
     await expect.poll(async() => page.evaluate(async({ pathname, content }) => {
-      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      const document = await window.electron.ipcRenderer.invoke('annotamd::comments::load', pathname, content)
       return document.comments[0]?.replies.length ?? 0
     }, { pathname: filePath, content: markdown })).toBe(2)
 
     const agentReplyId = `agent-reply-${Date.now()}`
     await page.evaluate(async({ pathname, replyId, content }) => {
-      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      const document = await window.electron.ipcRenderer.invoke('annotamd::comments::load', pathname, content)
       const comment = document.comments[0]
       comment.replies.push({
         id: replyId,
@@ -454,14 +454,14 @@ test('keeps every reply separate and lets every Local message edit or delete', a
         author: 'agent',
         createdAt: Date.now()
       })
-      await window.electron.ipcRenderer.invoke('mt::comments::replace', {
+      await window.electron.ipcRenderer.invoke('annotamd::comments::replace', {
         filePath: pathname,
         markdown: content,
         expectedRevision: document.revision,
         comments: document.comments
       })
     }, { pathname: filePath, replyId: agentReplyId, content: markdown })
-    await sendIpcToRenderer(app, 'mt::comments::changed', filePath)
+    await sendIpcToRenderer(app, 'annotamd::comments::changed', filePath)
 
     await expect(replies).toHaveCount(3)
     await expect(replies.nth(2).locator('.annotamd-message-author')).toHaveText('Agent')
@@ -490,7 +490,7 @@ test('centers the start panel after closing the last tab with comments open', as
     await addComment(page, 0, '保持批注栏开启', 1, '关闭标签页后的居中锚点。')
     await expect(page.locator('.editor-container')).toHaveClass(/comment-pane-open/)
 
-    await sendIpcToRenderer(app, 'mt::editor-close-tab')
+    await sendIpcToRenderer(app, 'annotamd::editor-close-tab')
     const emptyState = page.locator('.recent-files-projects')
     const startPanel = page.locator('.start-panel')
     await expect(emptyState).toBeVisible()

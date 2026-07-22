@@ -97,7 +97,7 @@
       "about": "について",
       "checkUpdates": "アップデートを確認"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "AnnotaMDについて",
       "checkUpdates": "アップデートを確認...",
@@ -745,7 +745,7 @@
     "copyrightContributors": "著作権貢献者"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "AnnotaMDを隠す",
       "hideOthers": "他を隠す"
     },

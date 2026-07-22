@@ -18,9 +18,9 @@ describe('performance regression guards', () => {
     expect(router).toContain("const Agent = () => import('@/prefComponents/agent/index.vue')")
     expect(router).not.toMatch(/^import App from/m)
     expect(router).not.toMatch(/^import Preference from/m)
-    expect(bootstrap).toContain("ipcRenderer.on('mt::bootstrap-editor'")
+    expect(bootstrap).toContain("ipcRenderer.on('annotamd::bootstrap-editor'")
     expect(editorStore).toContain('listenForEditorBootstrap((config) =>')
-    expect(editorWindow).toContain("ipcMain.on('mt::window-initialized'")
+    expect(editorWindow).toContain("ipcMain.on('annotamd::window-initialized'")
     expect(editorWindow).toContain('this._doOpenFilesToOpen()')
     expect(mainConfig).toMatch(
       /export const editorWinOptions:[\s\S]*?Object\.freeze\(\{[\s\S]*?show:\s*false/
@@ -137,8 +137,8 @@ describe('performance regression guards', () => {
     const project = read('packages/desktop/src/renderer/src/store/project.ts')
 
     expect(watcher).toMatch(/if \(type === 'file'\) \{[\s\S]*?loadMarkdownFile\(/)
-    expect(watcher).toContain("win.webContents.send('mt::update-object-tree-batch', updates)")
-    expect(project).toContain("ipcRenderer.on('mt::update-object-tree-batch'")
+    expect(watcher).toContain("win.webContents.send('annotamd::update-object-tree-batch', updates)")
+    expect(project).toContain("ipcRenderer.on('annotamd::update-object-tree-batch'")
     expect(project).toContain('addFiles(')
     expect(project).toContain('editorStore.UPDATE_CURRENT_FILE(getFileStateFromData({')
     expect(project).not.toContain('newFileNameCache')
@@ -163,6 +163,8 @@ describe('performance regression guards', () => {
     expect(commentPane).toContain('commentLayoutFrame = requestAnimationFrame(() =>')
     expect(commentPane).toContain('const commentCardHeights = new Map<string, number>()')
     expect(commentPane).toContain('commentResizeObserver?.observe(card)')
+    expect(commentPane).toContain('const commentCardHeight = (commentId: string, fallback: number)')
+    expect(commentPane).toContain('const measuredHeight = commentCardHeights.get(commentId) ?? fallback')
     expect(commentPane).toContain('height: commentCardHeight(comment.id, 120)')
     expect(commentPane).not.toMatch(
       /selectionComments\.value\.map[\s\S]*?height:\s*card\?\.offsetHeight/

@@ -21,7 +21,7 @@
   WriteRegExpandStr HKCU "Software\Classes\AnnotaMD.Document\DefaultIcon" \
     "" "$INSTDIR\resources\icons\md.ico,0"
   WriteRegExpandStr HKCU "Software\Classes\AnnotaMD.Document\shell\open\command" \
-    "" '"$INSTDIR\marktext.exe" "%1"'
+    "" '"$INSTDIR\annotamd.exe" "%1"'
 
 SkipAssoc:
 !macroend
@@ -49,6 +49,6 @@ SkipAssoc:
 
   MessageBox MB_YESNO "Do you want to delete user settings?" /SD IDNO IDNO SkipRemoval
     SetShellVarContext current
-    RMDir /r "$APPDATA\marktext"
+    RMDir /r "$APPDATA\AnnotaMD"
   SkipRemoval:
 !macroend

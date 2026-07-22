@@ -97,7 +97,7 @@
       "about": "정보",
       "checkUpdates": "업데이트 확인"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "AnnotaMD 정보",
       "checkUpdates": "업데이트 확인...",
@@ -745,7 +745,7 @@
     "copyrightContributors": "저작권 기여자"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "AnnotaMD 숨기기",
       "hideOthers": "다른 앱 숨기기"
     },

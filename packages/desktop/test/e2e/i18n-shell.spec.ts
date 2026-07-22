@@ -9,14 +9,14 @@ import { launchWithMarkdown, sendIpcToRenderer, waitForMenuReady } from './helpe
 // We drive the command palette: its search input placeholder is rendered by
 // Vue via `t('commandPalette.placeholder')`. Reading it in English, switching
 // to zh-CN the way the main process does (`language-changed` BEFORE
-// `mt::user-preference`), then reopening the palette must surface the Chinese
+// `annotamd::user-preference`), then reopening the palette must surface the Chinese
 // string — and never the raw dotted i18n key.
 
 const SEARCH_INPUT = '.search-wrapper input.search, input.search'
 
 // Open the command palette and wait for its search input to be visible.
 const openPalette = async(app: ElectronApplication, page: Page): Promise<void> => {
-  await sendIpcToRenderer(app, 'mt::show-command-palette')
+  await sendIpcToRenderer(app, 'annotamd::show-command-palette')
   await expect(page.locator(SEARCH_INPUT).first()).toBeVisible({ timeout: 5000 })
 }
 
@@ -71,12 +71,12 @@ test.describe('i18n shell — language switch re-translates the Vue shell', () =
 
     // 2) Drive a language switch the way the main process does: the
     // `language-changed` broadcast reaches the renderer BEFORE the
-    // `mt::user-preference` that syncs the preferences store.
+    // `annotamd::user-preference` that syncs the preferences store.
     await sendIpcToRenderer(app, 'language-changed', 'zh-CN')
-    await sendIpcToRenderer(app, 'mt::user-preference', { language: 'zh-CN' })
+    await sendIpcToRenderer(app, 'annotamd::user-preference', { language: 'zh-CN' })
 
     // The renderer loads the zh-CN locale asynchronously via
-    // window.i18nUtils.loadTranslations -> `mt::i18n::load` IPC, so poll the
+    // window.i18nUtils.loadTranslations -> `annotamd::i18n::load` IPC, so poll the
     // freshly-reopened palette until the placeholder reflects the new locale.
     await expect
       .poll(

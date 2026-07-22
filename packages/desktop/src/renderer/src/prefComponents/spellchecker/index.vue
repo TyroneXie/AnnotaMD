@@ -106,7 +106,7 @@ onMounted(async () => {
   availableDictionaries.value = await getAvailableDictionaries()
 
   window.electron.ipcRenderer
-    .invoke('mt::spellchecker-get-custom-dictionary-words')
+    .invoke('annotamd::spellchecker-get-custom-dictionary-words')
     .then((words) => {
       wordsInCustomDictionary.value = words.map((word) => {
         return { word }
@@ -130,7 +130,7 @@ const handleSpellcheckerLanguage = async (
 ): Promise<void> => {
   onSelectChange('spellcheckerLanguage', languageCode)
 
-  await window.electron.ipcRenderer.invoke('mt::spellchecker-switch-language', String(languageCode))
+  await window.electron.ipcRenderer.invoke('annotamd::spellchecker-switch-language', String(languageCode))
 }
 
 const handleSpellcheckerEnabled = (isEnabled: boolean): void => {
@@ -144,7 +144,7 @@ const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
 const handleDeleteClick = (selectedItem: CustomDictionaryWord): void => {
   if (selectedItem && typeof selectedItem.word === 'string') {
     window.electron.ipcRenderer
-      .invoke('mt::spellchecker-remove-word', selectedItem.word)
+      .invoke('annotamd::spellchecker-remove-word', selectedItem.word)
       .then((result) => {
         // The IPC contract types `ret` as void, but the main handler returns
         // a boolean indicating success. Coerce to boolean for the branch.

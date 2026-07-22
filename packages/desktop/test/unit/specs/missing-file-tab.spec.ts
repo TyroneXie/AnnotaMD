@@ -66,7 +66,7 @@ describe('missing file tab state', () => {
     const tab = makeTab(store)
     store.LISTEN_FOR_FILE_CHANGE()
 
-    captureHandler('mt::update-file')(null, {
+    captureHandler('annotamd::update-file')(null, {
       type: 'unlink',
       change: { pathname: '/x/a.md' }
     })
@@ -90,7 +90,7 @@ describe('missing file tab state', () => {
     const loadSpy = vi.spyOn(store, 'loadChange')
     store.LISTEN_FOR_FILE_CHANGE()
 
-    captureHandler('mt::update-file')(null, {
+    captureHandler('annotamd::update-file')(null, {
       type: 'add',
       change: { pathname: '/x/a.md', data: { filename: 'a.md', markdown: 'hello' } }
     })
@@ -106,7 +106,7 @@ describe('missing file tab state', () => {
     tab.isMissingOnDisk = true
     store.LISTEN_FOR_FILE_CHANGE()
 
-    captureHandler('mt::update-file')(null, {
+    captureHandler('annotamd::update-file')(null, {
       type: 'add',
       change: {
         pathname: '/x/a.md',
@@ -145,7 +145,7 @@ describe('missing file tab state', () => {
     })
     store.LISTEN_FOR_SET_PATHNAME()
 
-    captureHandler('mt::tab-saved')(null, 'tab-1')
+    captureHandler('annotamd::tab-saved')(null, 'tab-1')
 
     expect(tab.isMissingOnDisk).toBe(false)
     expect(tab.isSaved).toBe(true)

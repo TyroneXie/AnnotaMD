@@ -5,7 +5,7 @@ import type { Muya } from '../../muya';
 import { describe, expect, it, vi } from 'vitest';
 import { CopyType } from '../types';
 
-// Track B — Copy (clipboard chain step 1). Ports `packages/muyajs`
+// Track B — Copy (clipboard chain step 1). Ports pre-migration editor engine
 // `copyCutCtrl.copyHandler` behaviour into `@muyajs/core`:
 //   1. `normal` copy writes ONLY text/plain (markdown source); text/html is
 //      blanked so an internal copy → paste round-trips through the markdown

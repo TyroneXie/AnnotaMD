@@ -5,7 +5,7 @@ import { CLASS_NAMES } from '../config';
 import { Muya } from '../muya';
 
 // Coverage for the desktop-migration interaction events ported from legacy
-// `packages/muyajs` (`clickCtrl.js` link path + `clickEvent.js` image path):
+// pre-migration editor engine (`clickCtrl.js` link path + `clickEvent.js` image path):
 //
 //   - `format-click` { event, formatType: 'link', data } on a Cmd/Ctrl-click
 //     of a rendered link. `data` is the `getLinkInfo` payload (superset of

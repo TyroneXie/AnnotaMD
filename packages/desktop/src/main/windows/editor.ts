@@ -151,7 +151,7 @@ class EditorWindow extends BaseWindow {
     // wait for the renderer acknowledgement before opening files/directories.
     const handleWindowInitialized = (event: IpcMainEvent): void => {
       if (!win || event.sender !== win.webContents) return
-      ipcMain.off('mt::window-initialized', handleWindowInitialized)
+      ipcMain.off('annotamd::window-initialized', handleWindowInitialized)
       if (this.bufferStoreInfo!.filePath) {
         this._restoreAllState()
       } else {
@@ -163,7 +163,7 @@ class EditorWindow extends BaseWindow {
       // preserving the existing focus/restore behavior.
       this.bringToFront()
     }
-    ipcMain.on('mt::window-initialized', handleWindowInitialized)
+    ipcMain.on('annotamd::window-initialized', handleWindowInitialized)
 
     if (spellcheckerEnabled && !isOsx) {
       try {
@@ -187,7 +187,7 @@ class EditorWindow extends BaseWindow {
       const lineEnding = preferences.getPreferredEol()
       appMenu.updateLineEndingMenu(this.id!, lineEnding)
 
-      win!.webContents.send('mt::bootstrap-editor', {
+      win!.webContents.send('annotamd::bootstrap-editor', {
         addBlankTab,
         markdownList: this.bufferStoreInfo!.filePath ? [] : this._markdownToOpen,
         lineEnding,
@@ -243,20 +243,20 @@ class EditorWindow extends BaseWindow {
 
     win.on('focus', () => {
       this.emit('window-focus')
-      win!.webContents.send('mt::window-active-status', { status: true })
+      win!.webContents.send('annotamd::window-active-status', { status: true })
     })
 
     // Lost focus
     win.on('blur', () => {
       this.emit('window-blur')
-      win!.webContents.send('mt::window-active-status', { status: false })
+      win!.webContents.send('annotamd::window-active-status', { status: false })
     })
     ;(['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen'] as const).forEach(
       (channel) => {
         // Electron's BrowserWindow.on() is heavily overloaded — the union of
         // event names can't be satisfied by a single overload, so we widen.
         ;(win! as { on(event: string, listener: () => void): void }).on(channel, () => {
-          win!.webContents.send(`mt::window-${channel}`)
+          win!.webContents.send(`annotamd::window-${channel}`)
         })
       }
     )
@@ -266,14 +266,14 @@ class EditorWindow extends BaseWindow {
       this.emit('window-close')
 
       event.preventDefault()
-      win!.webContents.send('mt::ask-for-close')
+      win!.webContents.send('annotamd::ask-for-close')
 
       // TODO: Close all watchers etc. Should we do this manually or listen to 'quit' event?
     })
 
     // The window is now destroyed.
     win.on('closed', () => {
-      ipcMain.off('mt::window-initialized', handleWindowInitialized)
+      ipcMain.off('annotamd::window-initialized', handleWindowInitialized)
       this.lifecycle = WindowLifecycle.QUITTED
       this.emit('window-closed')
 
@@ -341,7 +341,7 @@ class EditorWindow extends BaseWindow {
     for (const { filePath, options, selected } of fileList) {
       if (this._openedFiles!.includes(filePath)) {
         // File is already opened - avoid opening it again so we dont have duplicate watchers
-        browserWindow!.webContents.send('mt::switch-tab-by-file_path', filePath)
+        browserWindow!.webContents.send('annotamd::switch-tab-by-file_path', filePath)
         continue
       }
       loadMarkdownFile(
@@ -361,7 +361,7 @@ class EditorWindow extends BaseWindow {
         .catch((err: Error) => {
           const { message, stack } = err
           log.error(`[ERROR] Cannot open file or directory: ${message}\n\n${stack}`)
-          browserWindow!.webContents.send('mt::show-notification', {
+          browserWindow!.webContents.send('annotamd::show-notification', {
             title: 'Cannot open tab',
             type: 'error',
             message: err.message
@@ -379,7 +379,7 @@ class EditorWindow extends BaseWindow {
 
     if (this.lifecycle === WindowLifecycle.READY) {
       const { browserWindow } = this
-      browserWindow!.webContents.send('mt::new-untitled-tab', selected, markdown)
+      browserWindow!.webContents.send('annotamd::new-untitled-tab', selected, markdown)
     } else {
       this._markdownToOpen!.push(markdown)
     }
@@ -405,7 +405,7 @@ class EditorWindow extends BaseWindow {
       appMenu.addRecentlyUsedDocument(root)
       this._openedRootDirectories.push(root)
       ipcMain.emit('watcher-watch-directory', browserWindow, root)
-      browserWindow!.webContents.send('mt::open-directory', root)
+      browserWindow!.webContents.send('annotamd::open-directory', root)
     } else {
       this._directoriesToOpen.push(root)
     }
@@ -424,7 +424,7 @@ class EditorWindow extends BaseWindow {
       preferences.setItems({ lastOpenedFolder: remaining[remaining.length - 1] ?? '' })
     }
     ipcMain.emit('watcher-unwatch-directory', browserWindow, pathname)
-    browserWindow?.webContents.send('mt::remove-directory', pathname)
+    browserWindow?.webContents.send('annotamd::remove-directory', pathname)
   }
 
   /**
@@ -466,7 +466,7 @@ class EditorWindow extends BaseWindow {
 
   focusOpenedFile(pathname: string): boolean {
     if (!this._openedFiles?.includes(pathname) || !this.browserWindow) return false
-    this.browserWindow.webContents.send('mt::switch-tab-by-file_path', pathname)
+    this.browserWindow.webContents.send('annotamd::switch-tab-by-file_path', pathname)
     this.bringToFront()
     return true
   }
@@ -515,7 +515,7 @@ class EditorWindow extends BaseWindow {
       const { sideBarVisibility, restoreLayoutState, tabBarVisibility } = preferences.getAll()
       const resolvedSideBarVisibility = restoreLayoutState ? !!sideBarVisibility : true
       const lineEnding = preferences.getPreferredEol()
-      browserWindow!.webContents.send('mt::bootstrap-editor', {
+      browserWindow!.webContents.send('annotamd::bootstrap-editor', {
         addBlankTab: true,
         markdownList: [],
         lineEnding,
@@ -568,7 +568,7 @@ class EditorWindow extends BaseWindow {
 
     appMenu.addRecentlyUsedDocument(pathname)
     _openedFiles!.push(pathname)
-    browserWindow!.webContents.send('mt::open-new-tab', rawDocument, options, selected)
+    browserWindow!.webContents.send('annotamd::open-new-tab', rawDocument, options, selected)
   }
 
   private _doOpenFilesToOpen(): void {
@@ -646,7 +646,7 @@ class EditorWindow extends BaseWindow {
               const { message, stack } = err
               tab.isSaved = false // Set to false as base file could not be found, needs saving
               log.error(`[ERROR] Cannot open file: ${message}\n\n${stack}`)
-              browserWindow!.webContents.send('mt::show-notification', {
+              browserWindow!.webContents.send('annotamd::show-notification', {
                 title: `Could not find file ${tab.filename} on disk, please save your work.`,
                 type: 'error',
                 message: err.message
@@ -658,11 +658,11 @@ class EditorWindow extends BaseWindow {
       Promise.all(fileOpenRequests)
         .then(() => {
           // After all files are loaded, we can send the state to the renderer and open the tabs
-          browserWindow!.webContents.send('mt::load-state', bufferState)
+          browserWindow!.webContents.send('annotamd::load-state', bufferState)
         })
         .catch((err: Error) => {
           log.error('Failed to load files for restoring editor state:', err)
-          browserWindow!.webContents.send('mt::show-notification', {
+          browserWindow!.webContents.send('annotamd::show-notification', {
             title: 'Failed to restore buffered state',
             type: 'error',
             message: err.message

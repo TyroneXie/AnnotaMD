@@ -7,7 +7,7 @@ import { Muya } from '../../../../muya';
 
 // PARITY SCOREBOARD — gap PG3 (file PG03).
 //
-// Legacy `packages/muyajs` read `muya.options.autoCheck` in
+// The pre-migration editor engine read `muya.options.autoCheck` in
 // `clickCtrl.js#listItemCheckBoxClick`: toggling a task-list checkbox with
 // `autoCheck` on cascaded the state to all descendant checkboxes
 // (`updateChildrenCheckBoxState`) and re-derived ancestors

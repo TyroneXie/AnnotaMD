@@ -38,6 +38,12 @@ files:
   - '!jsconfig.json'
   - '!docs/*'
 extraResources:
+  - from: ../../LICENSE
+    to: legal/AnnotaMD-LICENSE.txt
+  - from: ../../THIRD-PARTY-NOTICES.txt
+    to: legal/THIRD-PARTY-NOTICES.txt
+  - from: build/THIRD-PARTY-LICENSES.txt
+    to: legal/DEPENDENCY-LICENSES.txt
   - from: ../../tools/annotamd-mcp/bundle
     to: annotamd-mcp
     filter:

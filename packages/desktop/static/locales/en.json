@@ -97,7 +97,7 @@
       "about": "About",
       "checkUpdates": "Check for Updates"
     },
-    "marktext": {
+    "annotamd": {
       "title": "AnnotaMD",
       "about": "About AnnotaMD",
       "checkUpdates": "Check for Updates...",
@@ -812,7 +812,7 @@
     "copyrightContributors": "Made with <3 by Github Contributors"
   },
   "commands": {
-    "mt": {
+    "annotamd": {
       "hide": "Hide AnnotaMD",
       "hideOthers": "Hide Others"
     },

@@ -6,7 +6,7 @@ import { Muya } from '../../muya';
 
 // PARITY SCOREBOARD — gap PG1 (file PG01).
 //
-// Legacy `packages/muyajs` emitted `selectionChange` with an `affiliation`
+// The pre-migration editor engine emitted `selectionChange` with an `affiliation`
 // chain of the ancestor PARAGRAPH-type blocks plus per-block `.type` (the
 // markdown block type: `h1`, `p`, `pre`, …) and `.functionType`
 // (`codeContent`, `cellContent`, …). The desktop store

@@ -31,7 +31,7 @@ const CLIENT_TTL_MS = 30_000
 const broadcastMcpStatus = (): void => {
   const status = getAgentBridgeStatus()
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send('mt::comments::mcp-status-changed', status)
+    window.webContents.send('annotamd::comments::mcp-status-changed', status)
   }
 }
 

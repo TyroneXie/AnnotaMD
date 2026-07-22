@@ -280,7 +280,7 @@ const openFolder = (): void => {
 }
 
 const openFile = (): void => {
-  window.electron.ipcRenderer.send('mt::cmd-open-file')
+  window.electron.ipcRenderer.send('annotamd::cmd-open-file')
 }
 
 const closeAll = (): void => {

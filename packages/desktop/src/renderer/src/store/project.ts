@@ -170,22 +170,22 @@ export const useProjectStore = defineStore('project', () => {
       (event) => !findProjectRootForPath([pathname], event.change.pathname)
     )
     if (notifyMain) {
-      window.electron.ipcRenderer.send('mt::remove-directory-from-workspace', pathname)
+      window.electron.ipcRenderer.send('annotamd::remove-directory-from-workspace', pathname)
     }
     debouncedSendBufferedState()
   }
 
   function LISTEN_FOR_LOAD_PROJECT(): void {
-    window.electron.ipcRenderer.on('mt::open-directory', (_e, pathname) => {
+    window.electron.ipcRenderer.on('annotamd::open-directory', (_e, pathname) => {
       OPEN_PROJECT(String(pathname))
     })
-    window.electron.ipcRenderer.on('mt::remove-directory', (_e, pathname) => {
+    window.electron.ipcRenderer.on('annotamd::remove-directory', (_e, pathname) => {
       REMOVE_PROJECT(String(pathname), false)
     })
   }
 
   function LISTEN_FOR_UPDATE_PROJECT(): void {
-    window.electron.ipcRenderer.on('mt::update-object-tree', (_e, payload) => {
+    window.electron.ipcRenderer.on('annotamd::update-object-tree', (_e, payload) => {
       const { type, change } = (payload as { type: string; change: TreeChange }) ?? {}
       if (!findProjectRootForPath(projectTrees.value.map((tree) => tree.pathname), change.pathname)) {
         pendingTreeEvents.value.push({ type, change })
@@ -193,7 +193,7 @@ export const useProjectStore = defineStore('project', () => {
       }
       _processTreeEvent(type, change)
     })
-    window.electron.ipcRenderer.on('mt::update-object-tree-batch', (_e, payload) => {
+    window.electron.ipcRenderer.on('annotamd::update-object-tree-batch', (_e, payload) => {
       _processTreeEventBatch((payload as PendingEvent[] | undefined) ?? [])
     })
   }
@@ -290,7 +290,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function ASK_FOR_OPEN_PROJECT(): void {
-    window.electron.ipcRenderer.send('mt::ask-for-open-project-in-sidebar')
+    window.electron.ipcRenderer.send('annotamd::ask-for-open-project-in-sidebar')
   }
 
   function LISTEN_FOR_SIDEBAR_CONTEXT_MENU(): void {
@@ -314,7 +314,7 @@ export const useProjectStore = defineStore('project', () => {
     })
     bus.on('SIDEBAR::remove', () => {
       const { pathname } = activeItem.value
-      window.electron.ipcRenderer.invoke('mt::fs-trash-item', pathname).catch((err) => {
+      window.electron.ipcRenderer.invoke('annotamd::fs-trash-item', pathname).catch((err) => {
         notice.notify({
           title: 'Error while deleting',
           type: 'error',
@@ -419,7 +419,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   function OPEN_SETTING_WINDOW(): void {
-    window.electron.ipcRenderer.send('mt::open-setting-window')
+    window.electron.ipcRenderer.send('annotamd::open-setting-window')
   }
 
   return {

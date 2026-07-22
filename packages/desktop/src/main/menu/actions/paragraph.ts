@@ -36,7 +36,7 @@ const MENU_ID_MAP: Readonly<Record<string, string>> = Object.freeze({
 
 const transformEditorElement = (win: Win, type: string): void => {
   if (win && win.webContents) {
-    win.webContents.send('mt::editor-paragraph-action', { type })
+    win.webContents.send('annotamd::editor-paragraph-action', { type })
   }
 }
 

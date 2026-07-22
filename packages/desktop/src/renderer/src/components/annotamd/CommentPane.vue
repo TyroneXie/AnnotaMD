@@ -694,7 +694,7 @@ const handleCommentListScroll = (): void => {
 }
 
 const openAgentSettings = (): void => {
-  window.electron.ipcRenderer.send('mt::open-setting-window', 'agent')
+  window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
 }
 
 const openComposer = (): void => {
@@ -866,11 +866,11 @@ watch(filePath, () => {
 
 onMounted(() => {
   bindSharedEditorScroller()
-  void window.electron.ipcRenderer.invoke('mt::comments::mcp-status').then((status) => {
+  void window.electron.ipcRenderer.invoke('annotamd::comments::mcp-status').then((status) => {
     mcpStatus.value = status
   })
   stopMcpStatusListener = window.electron.ipcRenderer.on(
-    'mt::comments::mcp-status-changed',
+    'annotamd::comments::mcp-status-changed',
     (_event, status) => {
       mcpStatus.value = status
     }

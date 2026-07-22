@@ -17,7 +17,7 @@ import {
 // exists in the desktop renderer (editor.vue) is the menu/IPC chain:
 //
 //   Format -> Image menu  (main: menu/actions/format.ts `image`)
-//     -> ipc 'mt::editor-format-action' { type: 'image' }
+//     -> ipc 'annotamd::editor-format-action' { type: 'image' }
 //     -> renderer store/listenForMain.ts re-emits bus 'format'
 //     -> editor.vue handleInlineFormat -> editor.value.format('image')
 //     -> muya block/base/format.ts inserts `![]()` and, inside a
@@ -91,8 +91,8 @@ test.describe('Format -> Image edit tool wiring', () => {
     await resetToEmpty(page, app)
   })
 
-  test('IPC mt::editor-format-action {image} opens the edit tool with a focused src input', async() => {
-    await sendIpcToRenderer(app, 'mt::editor-format-action', { type: 'image' })
+  test('IPC annotamd::editor-format-action {image} opens the edit tool with a focused src input', async() => {
+    await sendIpcToRenderer(app, 'annotamd::editor-format-action', { type: 'image' })
 
     // The empty `![]()` placeholder is inserted and the edit tool float renders
     // and is shown (inline opacity 1 on its wrapper).
@@ -122,7 +122,7 @@ test.describe('Format -> Image edit tool wiring', () => {
   })
 
   test('The opened edit tool is the empty link/embed editor (src input, no value)', async() => {
-    await sendIpcToRenderer(app, 'mt::editor-format-action', { type: 'image' })
+    await sendIpcToRenderer(app, 'annotamd::editor-format-action', { type: 'image' })
 
     await page.waitForSelector(srcInput, { state: 'attached', timeout: 5000 })
     await expect.poll(() => toolShown(page), { timeout: 5000 }).toBe(true)

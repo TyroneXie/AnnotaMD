@@ -8,9 +8,9 @@ const ENV_ALLOWLIST = [
   'NODE_ENV',
   'PERF_TESTING',
   'APPIMAGE',
-  'MARKTEXT_VERSION',
-  'MARKTEXT_VERSION_STRING',
-  'MARKTEXT_RIPGREP_PATH',
+  'ANNOTAMD_VERSION',
+  'ANNOTAMD_VERSION_STRING',
+  'ANNOTAMD_RIPGREP_PATH',
   'PATH',
   'HOME'
 ]
@@ -25,8 +25,8 @@ const pickEnv = (): Record<string, string> => {
 }
 
 const resolveRipgrepBinary = (): string => {
-  if (process.env.MARKTEXT_RIPGREP_PATH) {
-    return process.env.MARKTEXT_RIPGREP_PATH
+  if (process.env.ANNOTAMD_RIPGREP_PATH) {
+    return process.env.ANNOTAMD_RIPGREP_PATH
   }
   return rgPath.replace(/\bapp\.asar\b/, 'app.asar.unpacked')
 }
@@ -53,11 +53,11 @@ const buildBootInfo = (): BootInfo => ({
 let cached: BootInfo | null = null
 
 export const registerBootInfo = (): void => {
-  ipcMain.on('mt::boot-info', (event) => {
+  ipcMain.on('annotamd::boot-info', (event) => {
     if (!cached) cached = buildBootInfo()
     event.returnValue = cached
   })
-  ipcMain.handle('mt::boot-info-async', () => {
+  ipcMain.handle('annotamd::boot-info-async', () => {
     if (!cached) cached = buildBootInfo()
     return cached
   })

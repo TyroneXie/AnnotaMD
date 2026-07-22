@@ -358,7 +358,7 @@ const markIconMissing = (id: string): void => {
 
 const refresh = async(): Promise<void> => {
   try {
-    const inspected = await window.electron.ipcRenderer.invoke('mt::mcp-clients::inspect')
+    const inspected = await window.electron.ipcRenderer.invoke('annotamd::mcp-clients::inspect')
     inspectedClients.value = clientIds.map((id) =>
       inspected.find((client) => client.id === id) ?? {
         ...emptyClientState(id),
@@ -379,7 +379,7 @@ const configure = async(id: ClientId): Promise<void> => {
   busyClient.value = id
   setConfigureError(id)
   try {
-    const result = await window.electron.ipcRenderer.invoke('mt::mcp-clients::configure', id)
+    const result = await window.electron.ipcRenderer.invoke('annotamd::mcp-clients::configure', id)
     const index = inspectedClients.value.findIndex((client) => client.id === id)
     if (index >= 0) inspectedClients.value[index] = result.client
     if (!result.success) {
@@ -399,13 +399,13 @@ const copyCustomConfig = async(): Promise<void> => {
   customConfigError.value = null
   try {
     try {
-      await window.electron.ipcRenderer.invoke('mt::mcp-clients::install-portable-skill')
+      await window.electron.ipcRenderer.invoke('annotamd::mcp-clients::install-portable-skill')
     } catch (error) {
       customConfigError.value = error instanceof Error ? error.message : String(error)
       customDetailsExpanded.value = true
     }
 
-    const result = await window.electron.ipcRenderer.invoke('mt::mcp-clients::manual-config')
+    const result = await window.electron.ipcRenderer.invoke('annotamd::mcp-clients::manual-config')
     window.electron.clipboard.writeText(result.manualConfig)
     customConfigCopied.value = true
     window.setTimeout(() => {
@@ -421,11 +421,11 @@ const copyCustomConfig = async(): Promise<void> => {
 
 onMounted(() => {
   void refresh()
-  void window.electron.ipcRenderer.invoke('mt::comments::mcp-status').then((status) => {
+  void window.electron.ipcRenderer.invoke('annotamd::comments::mcp-status').then((status) => {
     mcpStatus.value = status
   })
   stopMcpStatusListener = window.electron.ipcRenderer.on(
-    'mt::comments::mcp-status-changed',
+    'annotamd::comments::mcp-status-changed',
     (_event, status) => {
       mcpStatus.value = status
     }

@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { isEmptyHtmlBlock, renderMarkdownInDetails } from '../htmlPreview';
 
-// Regression for marktext #3821. The html-block "empty block" guard replaced
+// Regression for pre-migration implementation #3821. The html-block "empty block" guard replaced
 // any single element with an empty body by the "<Empty HTML Block>"
 // placeholder. Media elements (`<video>`/`<audio>`) carry their content in
 // attributes, so an empty body is not an empty block and they must render.

@@ -448,11 +448,11 @@ export const useEditorStore = defineStore('editor', {
         return
       }
 
-      window.electron.ipcRenderer.send('mt::format-link-click', { data, dirname })
+      window.electron.ipcRenderer.send('annotamd::format-link-click', { data, dirname })
     },
 
     LISTEN_SCREEN_SHOT(): void {
-      window.electron.ipcRenderer.on('mt::screenshot-captured', (_, filePath) => {
+      window.electron.ipcRenderer.on('annotamd::screenshot-captured', (_, filePath) => {
         bus.emit('screenshot-captured', filePath)
       })
     },
@@ -473,10 +473,10 @@ export const useEditorStore = defineStore('editor', {
             channel: string,
             listener: (event: unknown, files: string[]) => void
           ) => void
-        )(`mt::response-of-image-path-${id}`, (_: unknown, files: string[]) => {
+        )(`annotamd::response-of-image-path-${id}`, (_: unknown, files: string[]) => {
           rs(files)
         })
-        window.electron.ipcRenderer.send('mt::ask-for-image-auto-path', {
+        window.electron.ipcRenderer.send('annotamd::ask-for-image-auto-path', {
           pathname,
           src,
           id,
@@ -511,9 +511,9 @@ export const useEditorStore = defineStore('editor', {
       if (!this.currentFile) return
       const { lineEnding } = this.currentFile
       if (lineEnding) {
-        const { windowId } = window.marktext?.env ?? { windowId: -1 }
+        const { windowId } = window.annotamd?.env ?? { windowId: -1 }
         window.electron.ipcRenderer.send(
-          'mt::update-line-ending-menu',
+          'annotamd::update-line-ending-menu',
           windowId,
           lineEnding as LineEnding
         )
@@ -538,7 +538,7 @@ export const useEditorStore = defineStore('editor', {
       const defaultPath = getRootFolderFromState(projectStore)
       if (id) {
         window.electron.ipcRenderer.send(
-          'mt::response-file-save',
+          'annotamd::response-file-save',
           id,
           filename,
           pathname,
@@ -551,10 +551,10 @@ export const useEditorStore = defineStore('editor', {
 
     // need pass some data to main process when `save` menu item clicked
     LISTEN_FOR_SAVE(): void {
-      window.electron.ipcRenderer.on('mt::editor-ask-file-save', () => {
+      window.electron.ipcRenderer.on('annotamd::editor-ask-file-save', () => {
         this.FILE_SAVE()
       })
-      bus.on('mt::editor-ask-file-save', () => {
+      bus.on('annotamd::editor-ask-file-save', () => {
         this.FILE_SAVE()
       })
     },
@@ -569,7 +569,7 @@ export const useEditorStore = defineStore('editor', {
 
       if (id) {
         window.electron.ipcRenderer.send(
-          'mt::response-file-save-as',
+          'annotamd::response-file-save-as',
           id,
           filename,
           pathname,
@@ -582,16 +582,16 @@ export const useEditorStore = defineStore('editor', {
 
     // need pass some data to main process when `save as` menu item clicked
     LISTEN_FOR_SAVE_AS(): void {
-      window.electron.ipcRenderer.on('mt::editor-ask-file-save-as', () => {
+      window.electron.ipcRenderer.on('annotamd::editor-ask-file-save-as', () => {
         this.FILE_SAVE_AS()
       })
-      bus.on('mt::editor-ask-file-save-as', () => {
+      bus.on('annotamd::editor-ask-file-save-as', () => {
         this.FILE_SAVE_AS()
       })
     },
 
     LISTEN_FOR_SET_PATHNAME(): void {
-      window.electron.ipcRenderer.on('mt::set-pathname', (_, fileInfo) => {
+      window.electron.ipcRenderer.on('annotamd::set-pathname', (_, fileInfo) => {
         const { tabs } = this
         const { pathname, id } = fileInfo
         const tab = tabs.find((f) => f.id === id)
@@ -621,7 +621,7 @@ export const useEditorStore = defineStore('editor', {
         }
       })
 
-      window.electron.ipcRenderer.on('mt::tab-saved', (_, tabId) => {
+      window.electron.ipcRenderer.on('annotamd::tab-saved', (_, tabId) => {
         const tab = this.tabs.find((f) => f.id === tabId)
         if (tab) {
           const lastEditIndex = tab.history.lastEditIndex
@@ -641,7 +641,7 @@ export const useEditorStore = defineStore('editor', {
         }
       })
 
-      window.electron.ipcRenderer.on('mt::tab-save-failure', (_, tabId, msg) => {
+      window.electron.ipcRenderer.on('annotamd::tab-save-failure', (_, tabId, msg) => {
         const tab = this.tabs.find((t) => t.id === tabId)
         if (!tab) {
           notice.notify({
@@ -667,7 +667,7 @@ export const useEditorStore = defineStore('editor', {
     LISTEN_FOR_CLOSE(): void {
       const projectStore = useProjectStore()
       const preferencesStore = usePreferencesStore()
-      window.electron.ipcRenderer.on('mt::ask-for-close', () => {
+      window.electron.ipcRenderer.on('annotamd::ask-for-close', () => {
         sendBufferedState()
           .catch((err) => {
             console.error('Failed to update buffered state before closing', err)
@@ -690,16 +690,16 @@ export const useEditorStore = defineStore('editor', {
 
             if (unsavedFiles.length && preferencesStore.startUpAction !== 'restoreAll') {
               // Ignore unsaved files when user has chosen to restore all on startup, as they will be restored anyway.
-              window.electron.ipcRenderer.send('mt::close-window-confirm', deepClone(unsavedFiles))
+              window.electron.ipcRenderer.send('annotamd::close-window-confirm', deepClone(unsavedFiles))
             } else {
-              window.electron.ipcRenderer.send('mt::close-window')
+              window.electron.ipcRenderer.send('annotamd::close-window')
             }
           })
       })
     },
 
     LISTEN_FOR_SAVE_CLOSE(): void {
-      window.electron.ipcRenderer.on('mt::force-close-tabs-by-id', (_, tabIdList) => {
+      window.electron.ipcRenderer.on('annotamd::force-close-tabs-by-id', (_, tabIdList) => {
         if (Array.isArray(tabIdList) && tabIdList.length) {
           this.CLOSE_TABS(tabIdList)
         }
@@ -727,12 +727,12 @@ export const useEditorStore = defineStore('editor', {
       if (closeTabs) {
         if (unsavedFiles.length) {
           this.CLOSE_TABS(tabs.filter((f) => f.isSaved).map((f) => f.id))
-          window.electron.ipcRenderer.send('mt::save-and-close-tabs', deepClone(unsavedFiles))
+          window.electron.ipcRenderer.send('annotamd::save-and-close-tabs', deepClone(unsavedFiles))
         } else {
           this.CLOSE_TABS(tabs.map((f) => f.id))
         }
       } else {
-        window.electron.ipcRenderer.send('mt::save-tabs', deepClone(unsavedFiles))
+        window.electron.ipcRenderer.send('annotamd::save-tabs', deepClone(unsavedFiles))
       }
     },
 
@@ -747,7 +747,7 @@ export const useEditorStore = defineStore('editor', {
       if (!pathname) {
         // if current file is a newly created file, just save it!
         window.electron.ipcRenderer.send(
-          'mt::response-file-save',
+          'annotamd::response-file-save',
           id,
           filename,
           pathname,
@@ -757,24 +757,24 @@ export const useEditorStore = defineStore('editor', {
         )
       } else {
         // if not, move to a new(maybe) folder
-        window.electron.ipcRenderer.send('mt::response-file-move-to', { id, pathname })
+        window.electron.ipcRenderer.send('annotamd::response-file-move-to', { id, pathname })
       }
     },
 
     LISTEN_FOR_MOVE_TO(): void {
-      window.electron.ipcRenderer.on('mt::editor-move-file', () => {
+      window.electron.ipcRenderer.on('annotamd::editor-move-file', () => {
         this.MOVE_FILE_TO()
       })
-      bus.on('mt::editor-move-file', () => {
+      bus.on('annotamd::editor-move-file', () => {
         this.MOVE_FILE_TO()
       })
     },
 
     LISTEN_FOR_RENAME(): void {
-      window.electron.ipcRenderer.on('mt::editor-rename-file', () => {
+      window.electron.ipcRenderer.on('annotamd::editor-rename-file', () => {
         this.RESPONSE_FOR_RENAME()
       })
-      bus.on('mt::editor-rename-file', () => {
+      bus.on('annotamd::editor-rename-file', () => {
         this.RESPONSE_FOR_RENAME()
       })
     },
@@ -790,7 +790,7 @@ export const useEditorStore = defineStore('editor', {
       if (!pathname) {
         // if current file is a newly created file, just save it!
         window.electron.ipcRenderer.send(
-          'mt::response-file-save',
+          'annotamd::response-file-save',
           id,
           filename,
           pathname,
@@ -809,7 +809,7 @@ export const useEditorStore = defineStore('editor', {
       const { id, pathname, filename } = this.currentFile
       if (typeof filename === 'string' && filename !== newFilename) {
         const newPathname = window.path.join(window.path.dirname(pathname), newFilename)
-        window.electron.ipcRenderer.send('mt::rename', {
+        window.electron.ipcRenderer.send('annotamd::rename', {
           id,
           pathname,
           newPathname,
@@ -906,7 +906,7 @@ export const useEditorStore = defineStore('editor', {
         )
 
         setTimeout(() => {
-          window.electron.ipcRenderer.send('mt::request-keybindings')
+          window.electron.ipcRenderer.send('annotamd::request-keybindings')
           bus.emit('cmd::sort-commands')
         }, 100)
       }, 400)
@@ -920,7 +920,7 @@ export const useEditorStore = defineStore('editor', {
           tabBarVisibility
         } = config
 
-        window.electron.ipcRenderer.send('mt::window-initialized')
+        window.electron.ipcRenderer.send('annotamd::window-initialized')
         mainStore.SET_INITIALIZED()
         preferencesStore.SET_USER_PREFERENCE({ endOfLine: lineEnding })
         layoutStore.SET_LAYOUT({
@@ -952,7 +952,7 @@ export const useEditorStore = defineStore('editor', {
     // Open a new tab, optionally with content.
     LISTEN_FOR_NEW_TAB(): void {
       window.electron.ipcRenderer.on(
-        'mt::open-new-tab',
+        'annotamd::open-new-tab',
         (_, markdownDocument, options = {}, selected = true) => {
           if (markdownDocument) {
             // Create tab with content.
@@ -965,13 +965,13 @@ export const useEditorStore = defineStore('editor', {
       )
 
       window.electron.ipcRenderer.on(
-        'mt::new-untitled-tab',
+        'annotamd::new-untitled-tab',
         (_, selected = true, markdown = '') => {
           // Create a blank tab
           this.NEW_UNTITLED_TAB({ markdown, selected })
         }
       )
-      bus.on('mt::new-untitled-tab', (payload) => {
+      bus.on('annotamd::new-untitled-tab', (payload) => {
         const { selected = true, markdown = '' } =
           (payload as { selected?: boolean; markdown?: string } | undefined) ?? {}
         this.NEW_UNTITLED_TAB({ markdown, selected })
@@ -990,34 +990,34 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_CLOSE_TAB(): void {
-      window.electron.ipcRenderer.on('mt::editor-close-tab', () => {
+      window.electron.ipcRenderer.on('annotamd::editor-close-tab', () => {
         this.CLOSE_TAB()
       })
-      bus.on('mt::editor-close-tab', () => {
+      bus.on('annotamd::editor-close-tab', () => {
         this.CLOSE_TAB()
       })
     },
 
     LISTEN_FOR_TAB_CYCLE(): void {
-      window.electron.ipcRenderer.on('mt::tabs-cycle-left', () => {
+      window.electron.ipcRenderer.on('annotamd::tabs-cycle-left', () => {
         this.CYCLE_TABS(false)
       })
-      window.electron.ipcRenderer.on('mt::tabs-cycle-right', () => {
+      window.electron.ipcRenderer.on('annotamd::tabs-cycle-right', () => {
         this.CYCLE_TABS(true)
       })
-      bus.on('mt::tabs-cycle-left', () => {
+      bus.on('annotamd::tabs-cycle-left', () => {
         this.CYCLE_TABS(false)
       })
-      bus.on('mt::tabs-cycle-right', () => {
+      bus.on('annotamd::tabs-cycle-right', () => {
         this.CYCLE_TABS(true)
       })
     },
 
     LISTEN_FOR_SWITCH_TABS(): void {
-      window.electron.ipcRenderer.on('mt::switch-tab-by-index', (_, index) => {
+      window.electron.ipcRenderer.on('annotamd::switch-tab-by-index', (_, index) => {
         this.SWITCH_TAB_BY_INDEX(index)
       })
-      window.electron.ipcRenderer.on('mt::switch-tab-by-file_path', (_, filePath) => {
+      window.electron.ipcRenderer.on('annotamd::switch-tab-by-file_path', (_, filePath) => {
         this.SWITCH_TAB_BY_FILEPATH(filePath)
       })
     },
@@ -1068,7 +1068,7 @@ export const useEditorStore = defineStore('editor', {
 
       const { pathname } = file
       if (pathname) {
-        window.electron.ipcRenderer.send('mt::window-tab-closed', pathname)
+        window.electron.ipcRenderer.send('annotamd::window-tab-closed', pathname)
       }
       debouncedSendBufferedState()
     },
@@ -1076,7 +1076,7 @@ export const useEditorStore = defineStore('editor', {
     CLOSE_UNSAVED_TAB(file: IFileState): void {
       const { id, pathname, filename, markdown } = file
       const options = getOptionsFromState(file)
-      window.electron.ipcRenderer.send('mt::save-and-close-tabs', [
+      window.electron.ipcRenderer.send('annotamd::save-and-close-tabs', [
         { id, pathname, filename, markdown, options: deepClone(options) }
       ])
     },
@@ -1115,7 +1115,7 @@ export const useEditorStore = defineStore('editor', {
         const { pathname } = closed ?? { pathname: '' }
 
         if (pathname) {
-          window.electron.ipcRenderer.send('mt::window-tab-closed', pathname)
+          window.electron.ipcRenderer.send('annotamd::window-tab-closed', pathname)
         }
 
         this.tabs.splice(index, 1)
@@ -1537,7 +1537,7 @@ export const useEditorStore = defineStore('editor', {
         if (tab && !tab.isSaved && !tab.isMissingOnDisk) {
           const defaultPath = getRootFolderFromState(projectStore)
           window.electron.ipcRenderer.send(
-            'mt::response-file-save',
+            'annotamd::response-file-save',
             id,
             filename,
             pathname,
@@ -1561,9 +1561,9 @@ export const useEditorStore = defineStore('editor', {
         }
       }
 
-      const { windowId } = window.marktext?.env ?? { windowId: -1 }
+      const { windowId } = window.annotamd?.env ?? { windowId: -1 }
       window.electron.ipcRenderer.send(
-        'mt::editor-selection-changed',
+        'annotamd::editor-selection-changed',
         windowId,
         createApplicationMenuState(changes)
       )
@@ -1585,9 +1585,9 @@ export const useEditorStore = defineStore('editor', {
     },
 
     SELECTION_FORMATS(formats: SelectionFormat[]): void {
-      const { windowId } = window.marktext?.env ?? { windowId: -1 }
+      const { windowId } = window.annotamd?.env ?? { windowId: -1 }
       window.electron.ipcRenderer.send(
-        'mt::update-format-menu',
+        'annotamd::update-format-menu',
         windowId,
         createSelectionFormatState(formats)
       )
@@ -1612,7 +1612,7 @@ export const useEditorStore = defineStore('editor', {
       }
 
       const { filename, pathname } = this.currentFile
-      window.electron.ipcRenderer.send('mt::response-export', {
+      window.electron.ipcRenderer.send('annotamd::response-export', {
         type: type as ExportPayload['type'] as never,
         title,
         content: content ?? '',
@@ -1623,7 +1623,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_EXPORT_SUCCESS(): void {
-      window.electron.ipcRenderer.on('mt::export-success', (_, payload) => {
+      window.electron.ipcRenderer.on('annotamd::export-success', (_, payload) => {
         const filePath = payload?.filePath ?? ''
         notice
           .notify({
@@ -1640,11 +1640,11 @@ export const useEditorStore = defineStore('editor', {
     },
 
     PRINT_RESPONSE(): void {
-      window.electron.ipcRenderer.send('mt::response-print')
+      window.electron.ipcRenderer.send('annotamd::response-print')
     },
 
     LISTEN_FOR_PRINT_SERVICE_CLEARUP(): void {
-      window.electron.ipcRenderer.on('mt::print-service-clearup', () => {
+      window.electron.ipcRenderer.on('annotamd::print-service-clearup', () => {
         bus.emit('print-service-clearup')
       })
     },
@@ -1662,16 +1662,16 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_SET_LINE_ENDING(): void {
-      window.electron.ipcRenderer.on('mt::set-line-ending', (_, lineEnding) => {
+      window.electron.ipcRenderer.on('annotamd::set-line-ending', (_, lineEnding) => {
         this.SET_LINE_ENDING(lineEnding)
       })
-      bus.on('mt::set-line-ending', (lineEnding) => {
+      bus.on('annotamd::set-line-ending', (lineEnding) => {
         this.SET_LINE_ENDING(lineEnding as LineEnding)
       })
     },
 
     LISTEN_FOR_SET_ENCODING(): void {
-      bus.on('mt::set-file-encoding', (encodingName) => {
+      bus.on('annotamd::set-file-encoding', (encodingName) => {
         if (!this.currentFile) return
         const { encoding } = this.currentFile.encoding
         if (encoding !== encodingName) {
@@ -1684,7 +1684,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_SET_FINAL_NEWLINE(): void {
-      bus.on('mt::set-final-newline', (value) => {
+      bus.on('annotamd::set-final-newline', (value) => {
         if (!this.currentFile) return
         const { trimTrailingNewline } = this.currentFile
         if (trimTrailingNewline !== value) {
@@ -1696,7 +1696,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_FOR_FILE_CHANGE(): void {
-      window.electron.ipcRenderer.on('mt::update-file', (_, payload) => {
+      window.electron.ipcRenderer.on('annotamd::update-file', (_, payload) => {
         const { type, change } = payload
         const { tabs } = this
         const { pathname } = change
@@ -1758,7 +1758,7 @@ export const useEditorStore = defineStore('editor', {
     },
 
     ASK_FOR_IMAGE_PATH(): Promise<string[]> {
-      return window.electron.ipcRenderer.invoke('mt::ask-for-image-path')
+      return window.electron.ipcRenderer.invoke('annotamd::ask-for-image-path')
     },
 
     EDIT_ZOOM(zoomFactor: number): void {
@@ -1772,46 +1772,46 @@ export const useEditorStore = defineStore('editor', {
     },
 
     LISTEN_WINDOW_ZOOM(): void {
-      window.electron.ipcRenderer.on('mt::window-zoom', (_, zoomFactor) => {
+      window.electron.ipcRenderer.on('annotamd::window-zoom', (_, zoomFactor) => {
         this.EDIT_ZOOM(zoomFactor)
       })
-      bus.on('mt::window-zoom', (zoomFactor) => {
+      bus.on('annotamd::window-zoom', (zoomFactor) => {
         this.EDIT_ZOOM(zoomFactor as number)
       })
     },
 
     LISTEN_FOR_RELOAD_IMAGES(): void {
-      window.electron.ipcRenderer.on('mt::invalidate-image-cache', () => {
+      window.electron.ipcRenderer.on('annotamd::invalidate-image-cache', () => {
         bus.emit('invalidate-image-cache')
       })
     },
 
     LISTEN_FOR_CONTEXT_MENU(): void {
       // General context menu
-      window.electron.ipcRenderer.on('mt::cm-copy-as-rich', () => {
+      window.electron.ipcRenderer.on('annotamd::cm-copy-as-rich', () => {
         bus.emit('copyAsRich', 'copyAsRich')
       })
-      window.electron.ipcRenderer.on('mt::cm-copy-as-html', () => {
+      window.electron.ipcRenderer.on('annotamd::cm-copy-as-html', () => {
         bus.emit('copyAsHtml', 'copyAsHtml')
       })
-      window.electron.ipcRenderer.on('mt::cm-paste-as-plain-text', () => {
+      window.electron.ipcRenderer.on('annotamd::cm-paste-as-plain-text', () => {
         bus.emit('pasteAsPlainText', 'pasteAsPlainText')
       })
-      window.electron.ipcRenderer.on('mt::cm-insert-paragraph', (_, location) => {
+      window.electron.ipcRenderer.on('annotamd::cm-insert-paragraph', (_, location) => {
         bus.emit('insertParagraph', location)
       })
 
       // Spelling
-      window.electron.ipcRenderer.on('mt::spelling-replace-misspelling', (_, info) => {
+      window.electron.ipcRenderer.on('annotamd::spelling-replace-misspelling', (_, info) => {
         bus.emit('replace-misspelling', info)
       })
-      window.electron.ipcRenderer.on('mt::spelling-show-switch-language', () => {
+      window.electron.ipcRenderer.on('annotamd::spelling-show-switch-language', () => {
         bus.emit('open-command-spellchecker-switch-language')
       })
     },
 
     LISTEN_FOR_STATE_REPLACE(): void {
-      window.electron.ipcRenderer.on('mt::load-state', (_, state) => {
+      window.electron.ipcRenderer.on('annotamd::load-state', (_, state) => {
         this.RESTORE_BUFFERED_STATE(state)
       })
     }

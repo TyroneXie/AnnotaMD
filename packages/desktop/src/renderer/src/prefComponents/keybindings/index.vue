@@ -4,15 +4,6 @@
     <section class="keybindings">
       <div class="text">
         {{ t('preferences.keybindings.description') }}
-        <a
-          class="link"
-          :title="t('preferences.keybindings.online')"
-          :aria-label="t('preferences.keybindings.online')"
-          @click="openKeybindingDocs"
-        ><LinkIcon
-          :size="14"
-          class="link-icon"
-        /></a>.
       </div>
       <el-table
         :data="keybindingList"
@@ -117,7 +108,6 @@ import KeybindingConfigurator from './KeybindingConfigurator'
 import type { UiKeybinding } from './KeybindingConfigurator'
 import notice from '@/services/notification'
 import { Edit, RefreshRight, Delete } from '@element-plus/icons-vue'
-import LinkIcon from '@/components/icons/LinkIcon.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
@@ -141,7 +131,7 @@ watch(locale, () => {
 
 onMounted(() => {
   window.electron.ipcRenderer
-    .invoke('mt::keybinding-get-keyboard-info')
+    .invoke('annotamd::keybinding-get-keyboard-info')
     .then(({ layout, keymap }) => {
       // Update the key mapper to prevent problems on non-US keyboards.
       setKeyboardLayout(layout, keymap)
@@ -149,7 +139,7 @@ onMounted(() => {
     .catch((error) => log.error('Error while loading keyboard information for settings:', error))
 
   window.electron.ipcRenderer
-    .invoke('mt::keybinding-get-pref-keybindings')
+    .invoke('annotamd::keybinding-get-pref-keybindings')
     .then(({ defaultKeybindings, userKeybindings }) => {
       const configurator = new KeybindingConfigurator(defaultKeybindings, userKeybindings)
       keybindingConfigurator.value = configurator
@@ -159,19 +149,13 @@ onMounted(() => {
 
   // Show keyboard debugging tools which has been moved from CLI because we
   // need an active window on Windows.
-  showDebugTools.value = Boolean(window.marktext?.env?.debug)
+  showDebugTools.value = Boolean(window.annotamd?.env?.debug)
 })
 
 onUnmounted(() => {
   keybindingList.value = []
   keybindingConfigurator.value = null
 })
-
-const openKeybindingDocs = (): void => {
-  window.electron.shell.openExternal(
-    'https://marktext.me/docs/key-bindings'
-  )
-}
 
 const saveKeybindings = (): void => {
   if (keybindingConfigurator.value && keybindingList.value.length > 0) {
@@ -245,7 +229,7 @@ const handleDuplicateShortcut = (_id: string, accelerator: string): void => {
 }
 
 const dumpKeyboardInformation = (): void => {
-  window.electron.ipcRenderer.send('mt::keybinding-debug-dump-keyboard-info')
+  window.electron.ipcRenderer.send('annotamd::keybinding-debug-dump-keyboard-info')
 }
 </script>
 
@@ -256,25 +240,9 @@ const dumpKeyboardInformation = (): void => {
     font-size: 14px;
     margin: 20px 0;
     color: var(--editorColor);
-    & .link {
-      cursor: pointer;
-    }
   }
   & .keybindings > div.text {
     margin-bottom: 10px;
-  }
-  & .link {
-    color: var(--themeColor);
-    cursor: pointer;
-    & .link-icon {
-      margin-left: 2px;
-      vertical-align: -2px;
-      opacity: 0.7;
-      color: var(--iconColor);
-    }
-    & .link-icon:hover {
-      color: var(--themeColor);
-    }
   }
   & button.el-button {
     font-size: 13px;

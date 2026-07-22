@@ -6,7 +6,7 @@ import TurndownService, { usePluginsAddRules } from '../utils/turndownService';
 function turnSoftBreakToSpan(html: string) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(
-        `<x-mt id="turn-root">${html}</x-mt>`,
+        `<x-annotamd id="turn-root">${html}</x-annotamd>`,
         'text/html',
     );
     const root = doc.querySelector('#turn-root');

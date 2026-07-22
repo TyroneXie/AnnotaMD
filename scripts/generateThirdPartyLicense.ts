@@ -30,7 +30,14 @@ thirdPartyChecker.getLicenses(desktopRoot, (err, packages) => {
     }
     addedKeys[packageName] = 1
 
-    const { licenses, licenseText } = packages[key]
+    const { licenses, licenseFile } = packages[key]
+    if (!licenseFile || !fs.existsSync(licenseFile)) {
+      throw new Error(`Missing license file for ${packageName}`)
+    }
+    const licenseText = fs
+      .readFileSync(licenseFile, 'utf8')
+      .trim()
+      .replace(/[ \t]+$/gm, '')
     summary += `${index++}. ${packageName} (${licenses})\n`
     licenseList += `# ${packageName} (${licenses})
 -------------------------------------------------\
@@ -43,7 +50,7 @@ ${licenseText}
   const output = `# Third Party Notices
 -------------------------------------------------
 
-This file contains all third-party packages that are bundled and shipped with MarkText.
+This file contains all third-party packages that are bundled and shipped with AnnotaMD.
 
 -------------------------------------------------
 # Summary

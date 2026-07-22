@@ -11,7 +11,7 @@
 // child of children[0], so findIndex returns -1 and the next statement
 // crashes on `children[-1].nextSibling = null`.
 //
-// Fix (packages/muyajs/lib/contentState/enterCtrl.js): capture the active
+// Fix (pre-migration editor engine/lib/contentState/enterCtrl.js): capture the active
 // paragraph before promoting `block` to its `li` parent, locate it inside
 // li.children, and move any blocks AFTER it (sublist + trailing
 // paragraphs) into the new list item. Added a defensive `index === -1`
