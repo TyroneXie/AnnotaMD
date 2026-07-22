@@ -34,6 +34,24 @@ function selectFirstTwoBlocks(muya: Muya) {
 }
 
 describe('cross-block paragraph wrapping', () => {
+    it('converts every selected paragraph to the chosen heading level', async () => {
+        const muya = boot('alpha\n\nbravo\n');
+        selectFirstTwoBlocks(muya);
+
+        muya.updateParagraph('heading 2');
+
+        await vi.waitFor(() => {
+            const state = muya.getState() as unknown as Array<{
+                name: string;
+                meta?: { level?: number };
+            }>;
+            expect(state.map(block => block.name)).toEqual(['atx-heading', 'atx-heading']);
+            expect(state.map(block => block.meta?.level)).toEqual([2, 2]);
+        });
+        expect(muya.editor.selection.anchorBlock!.text).toBe('## alpha');
+        expect(muya.editor.selection.focusBlock!.text).toBe('## bravo');
+    });
+
     it('wraps selected paragraphs into a bullet list (one item per block)', async () => {
         const muya = boot('alpha\n\nbravo\n');
         selectFirstTwoBlocks(muya);

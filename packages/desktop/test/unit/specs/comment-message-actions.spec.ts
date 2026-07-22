@@ -59,21 +59,17 @@ describe('Feishu-style comment messages', () => {
     expect(documentFooter).not.toMatch(/\.annotamd-document-replies\s*\{[^}]*border-left:/s)
   })
 
-  it('keeps the document comment composer free of technical storage details', () => {
+  it('keeps storage details in Agent settings instead of repeating them in comment composers', () => {
     const chinese = JSON.parse(read('packages/desktop/static/locales/zh-CN.json'))
     const english = JSON.parse(read('packages/desktop/static/locales/en.json'))
 
     expect(documentFooter).not.toContain('annotamd-document-comments-header')
     expect(documentFooter).not.toContain("t('annotamd.comments.documentTitle')")
     expect(documentFooter).not.toContain("t('annotamd.comments.documentSummary'")
-    expect(chinese.annotamd.comments.documentStorageDescription).toBe(
-      '批注仅保存在本机，不会写入文档内容。'
-    )
-    expect(english.annotamd.comments.documentStorageDescription).toBe(
-      'Comments stay on this device and do not change the document.'
-    )
-    expect(chinese.annotamd.comments.documentStorageDescription).not.toMatch(/SQLite|Markdown/)
-    expect(english.annotamd.comments.documentStorageDescription).not.toMatch(/SQLite|Markdown/)
+    expect(commentPane).not.toContain("t('annotamd.comments.excludeFromRenderedMarkdown')")
+    expect(documentFooter).not.toContain("t('annotamd.comments.documentStorageDescription')")
+    expect(chinese.preferences.agent.permissionBoundary).toContain('评论只保存在本机')
+    expect(english.preferences.agent.permissionBoundary).toContain('Comments stay on this device')
   })
 
   it('keeps anchored cards in the scroll flow instead of hiding and animating their top', () => {

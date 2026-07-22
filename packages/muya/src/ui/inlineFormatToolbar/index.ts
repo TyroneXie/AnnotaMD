@@ -107,7 +107,7 @@ export class InlineFormatToolbar extends BaseFloat {
     private _linkSelection: { block: Format; start: number; end: number } | null = null;
     private _reference: ReferenceElement | null = null;
 
-    /** Cross-block selections expose commenting without enabling block-wide formatting. */
+    /** Whether the active range spans more than one content block. */
     private _crossBlockSelection = false;
 
     /** Toolbar configuration options */
@@ -172,9 +172,7 @@ export class InlineFormatToolbar extends BaseFloat {
 
         // While open, re-sync the highlight from the selection's current
         // formats — this is how formats applied outside the toolbar (menu /
-        // command / shortcut) light up their buttons. A cross-block selection
-        // gets a compact comment-only toolbar: the comment range is safe to
-        // persist, while inline formatting remains a single-block action here.
+        // command / shortcut) light up their buttons.
         eventCenter.subscribe('selection-change', ({
             formats,
             isCollapsed,
@@ -205,7 +203,7 @@ export class InlineFormatToolbar extends BaseFloat {
                 this._crossBlockSelection = true;
                 this._openPalette = null;
                 this._textStyleOpen = false;
-                this.options.placement = 'top';
+                this.options.placement = 'bottom';
                 requestAnimationFrame(() => {
                     const current = editor.selection.getSelection();
                     if (!current || current.isSelectionInSameBlock)
@@ -347,7 +345,7 @@ export class InlineFormatToolbar extends BaseFloat {
         }
 
         const visibleIcons = this._crossBlockSelection
-            ? icons.filter(icon => icon.type === 'annotamd_comment')
+            ? icons.filter(icon => icon.type !== 'link')
             : icons;
         const children = visibleIcons.map(icon => this._createIconItem(icon, formats, i18n));
         const vnode = h('ul', children);
@@ -401,6 +399,10 @@ export class InlineFormatToolbar extends BaseFloat {
                     'aria-label': i18n.t(icon.tooltip),
                 },
                 on: {
+                    mousedown: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    },
                     click: event => this._selectItem(event, icon),
                 },
             },
@@ -459,7 +461,7 @@ export class InlineFormatToolbar extends BaseFloat {
             return;
 
         this._textStyleOpen = false;
-        if (this._currentTextStyle() === type) {
+        if (!this._crossBlockSelection && this._currentTextStyle() === type) {
             this.hide();
             return;
         }
@@ -522,9 +524,12 @@ export class InlineFormatToolbar extends BaseFloat {
             { offset: anchor.offset, block: anchorBlock, path: anchorPath },
             { offset: focus.offset, block: focusBlock, path: focusPath },
         );
-        this._block.format(type, value);
+        if (this._crossBlockSelection)
+            this.muya.format(type, value);
+        else
+            this._block.format(type, value);
         this._openPalette = null;
-        this._formats = this._block.getFormatsInRange().formats;
+        this._formats = this._crossBlockSelection ? [] : this._block.getFormatsInRange().formats;
         this._render();
     }
 
@@ -578,6 +583,13 @@ export class InlineFormatToolbar extends BaseFloat {
             this._render();
             if (this._reference)
                 this.show(this._reference);
+            return;
+        }
+
+        if (this._crossBlockSelection) {
+            this.muya.format(item.type);
+            this._formats = [];
+            this._render();
             return;
         }
 

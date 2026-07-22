@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../muya';
 import { InlineFormatToolbar } from '../index';
 
@@ -104,7 +104,7 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
         expect(toolbar.container!.querySelector('li.item.strong')).toBeNull();
     });
 
-    it('shows a comment-only toolbar for a cross-block selection', async () => {
+    it('shows the safe formatting, color, comment and delete actions for a cross-block selection', async () => {
         const muya = bootMuya('first paragraph\n\nsecond paragraph\n');
         const toolbar = new InlineFormatToolbar(muya);
         const first = muya.editor.scrollPage!.firstContentInDescendant()!;
@@ -135,14 +135,44 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
         expect(toolbar.status).toBe(true);
         const commentItem = toolbar.container!.querySelector<HTMLElement>('li.item.annotamd_comment');
         expect(commentItem).toBeTruthy();
-        expect(toolbar.container!.querySelector('li.item.strong')).toBeNull();
-        expect(toolbar.container!.querySelector('li.item.text_style')).toBeNull();
+        for (const type of [
+            'text_style',
+            'strong',
+            'del',
+            'em',
+            'u',
+            'inline_code',
+            'color_palette',
+            'annotamd_comment',
+            'annotamd_delete_selection',
+        ]) {
+            expect(toolbar.container!.querySelector(`li.item.${type}`), type).toBeTruthy();
+        }
+        expect(toolbar.container!.querySelector('li.item.link')).toBeNull();
+        expect(toolbar.options.placement).toBe('bottom');
+
+        const mouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        toolbar.container!.querySelector<HTMLElement>('li.item.text_style')!.dispatchEvent(mouseDown);
+        expect(mouseDown.defaultPrevented).toBe(true);
+
+        const format = vi.spyOn(muya, 'format').mockImplementation(() => {});
+        toolbar.container!.querySelector<HTMLElement>('li.item.strong')!.click();
+        expect(format).toHaveBeenCalledWith('strong');
+
+        format.mockClear();
+        toolbar.container!.querySelector<HTMLElement>('li.item.color_palette')!.click();
+        toolbar.container!
+            .querySelector<HTMLElement>('.mu-color-swatch[aria-label="#ffec99"]')!
+            .click();
+        expect(format).toHaveBeenCalledWith('background_color', '#ffec99');
 
         let commentSelection: Record<string, unknown> | null = null;
         muya.on('annotamd-comment-selection', (payload: unknown) => {
             commentSelection = payload as Record<string, unknown>;
         });
-        commentItem!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        toolbar.container!
+            .querySelector<HTMLElement>('li.item.annotamd_comment')!
+            .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(commentSelection).toMatchObject({
             isCrossBlock: true,

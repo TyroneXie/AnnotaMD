@@ -144,6 +144,45 @@ test('batches cached comment-card height changes into one anchored relayout', as
   }
 })
 
+test('opens a new comment composer after dragging across an existing comment highlight', async() => {
+  const text = '允许在已有批注范围内继续创建独立批注。'
+  const { app, page } = await launchWithMarkdown(`${text}\n`)
+  try {
+    await addComment(page, 0, '原有批注', 1, text)
+
+    const paragraph = page.locator('span.mu-paragraph-content').first()
+    const box = await paragraph.boundingBox()
+    expect(box).not.toBeNull()
+    await page.mouse.move(box!.x + 16, box!.y + box!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box!.x + box!.width - 16, box!.y + box!.height / 2, { steps: 10 })
+    await page.mouse.up()
+
+    const toolbarComment = page.locator('.mu-format-picker li.annotamd_comment')
+    await expect(toolbarComment).toBeVisible()
+    await toolbarComment.click()
+
+    const composer = page.locator('.annotamd-composer-card')
+    const savedCard = page.locator(
+      '.annotamd-comment-card[data-comment-id]:not(.annotamd-composer-card)'
+    )
+    await expect(composer).toBeInViewport()
+    const [composerBox, savedBox] = await Promise.all([
+      composer.boundingBox(),
+      savedCard.boundingBox()
+    ])
+    expect(composerBox).not.toBeNull()
+    expect(savedBox).not.toBeNull()
+    expect(composerBox!.y).toBeLessThan(savedBox!.y)
+
+    await composer.locator('textarea').fill('覆盖范围的新批注')
+    await composer.locator('.annotamd-composer-actions button').click()
+    await expect(savedCard).toHaveCount(2)
+  } finally {
+    await app.close()
+  }
+})
+
 test('uses a one-line reply input with cancel, blur, and automatic growth', async() => {
   const { app, page } = await launchWithMarkdown('回复输入框锚点。\n')
   try {
@@ -580,8 +619,27 @@ test('creates one comment across paragraphs and list items', async() => {
     await selectAcrossParagraphs(page, 0, 3)
     const toolbar = page.locator('.mu-format-picker')
     await expect(toolbar).toBeVisible()
-    await expect(toolbar.locator('li.annotamd_comment')).toBeVisible()
-    await expect(toolbar.locator('li.strong')).toHaveCount(0)
+    for (const item of [
+      'text_style',
+      'strong',
+      'del',
+      'em',
+      'u',
+      'inline_code',
+      'color_palette',
+      'annotamd_comment',
+      'annotamd_delete_selection'
+    ]) await expect(toolbar.locator(`li.${item}`)).toBeVisible()
+    await expect(toolbar.locator('li.link')).toHaveCount(0)
+
+    const endParagraph = page.locator('span.mu-paragraph-content').nth(3)
+    const [toolbarBox, endBox] = await Promise.all([
+      toolbar.boundingBox(),
+      endParagraph.boundingBox()
+    ])
+    expect(toolbarBox).not.toBeNull()
+    expect(endBox).not.toBeNull()
+    expect(toolbarBox!.y).toBeGreaterThanOrEqual(endBox!.y + endBox!.height - 1)
 
     await toolbar.locator('li.annotamd_comment').click()
     const composer = page.locator('.annotamd-composer-card')
@@ -599,6 +657,39 @@ test('creates one comment across paragraphs and list items', async() => {
     await expect(card.locator('blockquote')).toHaveCSS('white-space', 'nowrap')
     await expect(card.locator('blockquote')).toHaveCSS('text-overflow', 'ellipsis')
     await expect(page.locator('.annotamd-comment-list')).toHaveCSS('padding-left', '8px')
+  } finally {
+    await app.close()
+  }
+})
+
+test('keeps a cross-block selection after choosing the current paragraph style', async() => {
+  const { app, page } = await launchWithMarkdown('第一段选区。\n\n第二段选区。\n')
+  try {
+    const paragraphs = page.locator('span.mu-paragraph-content')
+    const [firstBox, secondBox] = await Promise.all([
+      paragraphs.nth(0).boundingBox(),
+      paragraphs.nth(1).boundingBox()
+    ])
+    expect(firstBox).not.toBeNull()
+    expect(secondBox).not.toBeNull()
+    await page.mouse.move(firstBox!.x + 1, firstBox!.y + firstBox!.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(
+      secondBox!.x + secondBox!.width - 1,
+      secondBox!.y + secondBox!.height / 2,
+      { steps: 10 }
+    )
+    await page.mouse.up()
+    await page.waitForTimeout(150)
+    const selectedText = '第一段选区。\n\n第二段选区。'
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(selectedText)
+
+    const toolbar = page.locator('.mu-format-picker')
+    await toolbar.locator('li.text_style').click()
+    await toolbar.locator('[data-paragraph-type="paragraph"]').click()
+
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(selectedText)
+    await expect(page.locator('span.mu-paragraph-content')).toHaveCount(2)
   } finally {
     await app.close()
   }

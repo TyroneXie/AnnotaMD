@@ -73,7 +73,6 @@
           @keydown.ctrl.enter.prevent="submitComment"
         />
         <div class="annotamd-comment-action-row annotamd-composer-actions">
-          <span>{{ t('annotamd.comments.excludeFromRenderedMarkdown') }}</span>
           <button
             type="button"
             :disabled="!draftBody.trim() || !activeSelection"
@@ -491,7 +490,7 @@ const recalculateCommentBubbleLayout = (): void => {
   const listRect = list.getBoundingClientRect()
   const anchorById = new Map(commentAnchors.value.map((anchor) => [anchor.id, anchor]))
   const hiddenIds = new Set<string>()
-  const bubbles = selectionComments.value.flatMap((comment) => {
+  const savedBubbles = selectionComments.value.flatMap((comment) => {
     const anchor = anchorById.get(comment.id)
     return [{
       id: comment.id,
@@ -499,9 +498,12 @@ const recalculateCommentBubbleLayout = (): void => {
       height: commentCardHeight(comment.id, 120)
     }]
   })
+  const bubbles = [...savedBubbles]
   if (composerOpen.value) {
     const anchor = anchorById.get(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID)
-    bubbles.push({
+    // The draft is the active item. Put it before saved comments that share
+    // the same anchor so it stays visible and those threads yield downward.
+    bubbles.unshift({
       id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
       anchorTop: anchor ? list.scrollTop + anchor.top - listRect.top : null,
       height: commentCardHeights.get(ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID) ?? 220
@@ -513,7 +515,7 @@ const recalculateCommentBubbleLayout = (): void => {
     list.scrollTop,
     Math.max(sharedScrollHeight.value, list.clientHeight),
     12,
-    selectedCommentId.value
+    composerOpen.value ? ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID : selectedCommentId.value
   )
 }
 
@@ -1215,12 +1217,6 @@ onBeforeUnmount(() => {
   padding: 0 10px 10px;
 }
 
-.annotamd-composer-actions span {
-  margin-right: auto;
-  color: var(--annotamd-muted);
-  font-size: 12px;
-}
-
 .annotamd-composer-actions button,
 .annotamd-reply-submit {
   padding: 0 12px;
@@ -1380,6 +1376,10 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 10px 10px;
+}
+
+.annotamd-comment-action-row.annotamd-composer-actions {
+  justify-content: flex-end;
 }
 
 .annotamd-reply-controls {

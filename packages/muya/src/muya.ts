@@ -407,7 +407,7 @@ export class Muya {
         this.editor.selection.selectAll();
     }
 
-    format(type: string) {
+    format(type: string, value?: string) {
         const { selection } = this.editor;
 
         // Cross-leaf selection: apply to each formattable leaf in range. The
@@ -416,7 +416,7 @@ export class Muya {
         // at the LEAF level, not the outmost block: two paragraphs nested in the
         // same blockquote share an outmost block but are distinct leaves (#3462).
         if (!this._selectionInSameLeaf()) {
-            this._formatAcrossBlocks(type);
+            this._formatAcrossBlocks(type, value);
             return;
         }
 
@@ -448,10 +448,10 @@ export class Muya {
             { offset: hi, block: anchorBlock, path: focus.path },
         );
 
-        anchorBlock.format(type);
+        anchorBlock.format(type, value);
     }
 
-    private _formatAcrossBlocks(type: string) {
+    private _formatAcrossBlocks(type: string, value?: string) {
         if (type === 'link' || type === 'image')
             return;
 
@@ -474,7 +474,7 @@ export class Muya {
         while (leaf) {
             const start = leaf === first ? firstOffset : 0;
             const end = leaf === last ? lastOffset : leaf.text.length;
-            const adjusted = this._formatLeafInRange(type, leaf, start, end);
+            const adjusted = this._formatLeafInRange(type, leaf, start, end, value);
             if (adjusted) {
                 if (!anchorLeaf) {
                     anchorLeaf = leaf;
@@ -523,7 +523,7 @@ export class Muya {
      * range AFTER formatting (offsets shift past inserted markers), or null when
      * the leaf was skipped.
      */
-    private _formatLeafInRange(type: string, leaf: Content, start: number, end: number): { start: number; end: number } | null {
+    private _formatLeafInRange(type: string, leaf: Content, start: number, end: number, value?: string): { start: number; end: number } | null {
         // Code-block rich formatting is deliberately a same-block action.
         // A drag spanning prose around a code block must not silently rewrite
         // the intervening code with Markdown markers.
@@ -540,7 +540,7 @@ export class Muya {
             { offset: from, block: leaf, path: leaf.path },
             { offset: end, block: leaf, path: leaf.path },
         );
-        leaf.format(type);
+        leaf.format(type, value);
 
         // leaf.format ends with setCursor(adjustedStart, adjustedEnd), which
         // updates the cached selection — read the adjusted range back from it.
@@ -702,6 +702,10 @@ export class Muya {
             return false;
 
         const label = PARAGRAPH_LABEL_MAP[type];
+        if (label === 'paragraph' || label?.startsWith('atx-heading ')) {
+            this._convertSelectedTextBlocks(label);
+            return true;
+        }
         if (CROSS_BLOCK_LIST_LABELS.has(label)) {
             this._wrapSelectedBlocksInList(label as 'bullet-list' | 'order-list' | 'task-list');
             return true;
@@ -716,6 +720,79 @@ export class Muya {
         }
 
         return false;
+    }
+
+    /** Convert a cross-block run of plain paragraphs/headings without flattening structured blocks. */
+    private _convertSelectedTextBlocks(label: string) {
+        const blocks = this._selectedOutmostBlocks();
+        if (!blocks.length || blocks.some(block => block.blockName !== 'paragraph' && block.blockName !== 'atx-heading'))
+            return;
+
+        const { selection } = this.editor;
+        const originalAnchor = selection.anchorBlock;
+        const originalFocus = selection.focusBlock;
+        const anchorOffset = selection.anchor?.offset ?? 0;
+        const focusOffset = selection.focus?.offset ?? anchorOffset;
+        if (!originalAnchor || !originalFocus)
+            return;
+
+        const targetHeadingLevel = label.startsWith('atx-heading ')
+            ? Number(label.slice('atx-heading '.length))
+            : 0;
+        const replacements = new Map<Content, {
+            leaf: Content;
+            oldMarkerLength: number;
+            newMarkerLength: number;
+        }>();
+
+        for (const block of blocks) {
+            const oldLeaf = block.firstContentInDescendant();
+            if (!oldLeaf)
+                return;
+
+            const state = block.getState();
+            const alreadyTarget = label === 'paragraph'
+                ? block.blockName === 'paragraph'
+                : isAtxHeadingState(state) && state.meta.level === targetHeadingLevel;
+            const replacement = alreadyTarget
+                ? block
+                : replaceBlockByLabel({
+                    block,
+                    muya: this,
+                    label,
+                    text: this._blockLeadingText(block),
+                });
+            const newLeaf = replacement?.firstContentInDescendant();
+            if (!newLeaf)
+                return;
+
+            replacements.set(oldLeaf, {
+                leaf: newLeaf,
+                oldMarkerLength: this._headingMarkerLen(oldLeaf),
+                newMarkerLength: targetHeadingLevel > 0 ? targetHeadingLevel + 1 : 0,
+            });
+        }
+
+        const restoreEndpoint = (oldLeaf: Content, offset: number) => {
+            const replacement = replacements.get(oldLeaf);
+            if (!replacement)
+                return null;
+            const contentOffset = Math.max(0, offset - replacement.oldMarkerLength);
+            return {
+                block: replacement.leaf,
+                offset: Math.min(replacement.leaf.text.length, contentOffset + replacement.newMarkerLength),
+            };
+        };
+        const anchor = restoreEndpoint(originalAnchor, anchorOffset);
+        const focus = restoreEndpoint(originalFocus, focusOffset);
+        if (!anchor || !focus)
+            return;
+
+        this.editor.activeContentBlock = focus.block;
+        selection.setSelection(
+            { offset: anchor.offset, block: anchor.block, path: anchor.block.path },
+            { offset: focus.offset, block: focus.block, path: focus.block.path },
+        );
     }
 
     /**

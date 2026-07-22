@@ -150,7 +150,6 @@
         @keydown.ctrl.enter.prevent="submitComment"
       />
       <div class="annotamd-document-composer-footer">
-        <span>{{ t('annotamd.comments.documentStorageDescription') }}</span>
         <button
           type="button"
           :disabled="!draftBody.trim()"
@@ -453,15 +452,9 @@ const saveReply = (id: string): void => {
 .annotamd-document-composer-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   min-width: 0;
   padding: 0 0 12px 12px;
-}
-
-.annotamd-document-composer-footer span {
-  min-width: 0;
-  color: #8f959e;
-  font-size: 12px;
 }
 </style>

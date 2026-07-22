@@ -126,6 +126,31 @@ describe('cross-block format', () => {
             expect(md).not.toContain('**code**');
         });
     });
+
+    it.each([
+        ['text_color', '#3370ff', 'color'],
+        ['background_color', '#ffec99', 'background-color'],
+    ])('applies %s to every selected text fragment', async (type, value, property) => {
+        const muya = boot('alpha\n\nbravo\n');
+        const sp = muya.editor.scrollPage!;
+        const first = sp.firstContentInDescendant()!;
+        const second = (sp.firstChild!.next as Parent).firstContentInDescendant()!;
+        stubDynamicCursor(muya, first);
+        stubDynamicCursor(muya, second);
+        muya.editor.activeContentBlock = second;
+        muya.editor.selection.setSelection(
+            { offset: 1, block: first, path: first.path },
+            { offset: 4, block: second, path: second.path },
+        );
+
+        muya.format(type, value);
+
+        await vi.waitFor(() => {
+            expect(first.text).toContain(`<span style="${property}: ${value}">lpha</span>`);
+            expect(second.text).toContain(`<span style="${property}: ${value}">brav</span>`);
+        });
+        expect(muya.editor.selection.anchorBlock).not.toBe(muya.editor.selection.focusBlock);
+    });
 });
 
 // happy-dom does not track range offsets, so getCursor must report whatever the
