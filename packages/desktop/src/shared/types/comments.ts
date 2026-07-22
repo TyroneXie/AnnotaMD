@@ -61,6 +61,7 @@ export interface AnnotaMDCommentInboxItem {
   documentId: string
   filePath: string
   revision: number
+  localEndingCount: number
   unresolvedCount: number
   updatedAt: number
 }

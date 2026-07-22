@@ -1,4 +1,4 @@
 interface:
   display_name: "AnnotaMD Comment Review"
   short_description: "Handle local Markdown comments with AnnotaMD"
-  default_prompt: "Use $annotamd-comment-review to read and respond to the latest comments on this Markdown document."
+  default_prompt: "Use $annotamd-comment-review to read all comment threads on this Markdown document and handle every thread whose final message is from Local."

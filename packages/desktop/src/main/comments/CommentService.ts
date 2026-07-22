@@ -89,10 +89,22 @@ export class CommentService {
     this.refreshMissingDocuments()
     return this.db.prepare(`
       SELECT d.id AS document_id, d.path, d.revision, d.updated_at,
-             COUNT(c.id) AS unresolved_count
+             COUNT(c.id) AS local_ending_count,
+             (
+               SELECT COUNT(*) FROM comments unresolved
+               WHERE unresolved.document_id = d.id AND unresolved.resolved = 0
+             ) AS unresolved_count
       FROM documents d
-      JOIN comments c ON c.document_id = d.id AND c.resolved = 0
+      JOIN comments c ON c.document_id = d.id
+      LEFT JOIN messages last_message ON last_message.rowid = (
+        SELECT message.rowid
+        FROM messages message
+        WHERE message.comment_id = c.id
+        ORDER BY message.created_at DESC, message.rowid DESC
+        LIMIT 1
+      )
       WHERE d.missing_since IS NULL
+        AND (last_message.rowid IS NULL OR last_message.author = 'user')
       GROUP BY d.id
       ORDER BY d.updated_at DESC
     `).all().map((row) => {
@@ -101,6 +113,7 @@ export class CommentService {
         documentId: String(item.document_id),
         filePath: String(item.path),
         revision: Number(item.revision),
+        localEndingCount: Number(item.local_ending_count),
         unresolvedCount: Number(item.unresolved_count),
         updatedAt: Number(item.updated_at)
       }
@@ -380,7 +393,7 @@ export class CommentService {
       SELECT * FROM comments WHERE document_id = ? ORDER BY created_at DESC
     `).all(row.id) as unknown as CommentRow[]
     const messageStatement = this.db.prepare(`
-      SELECT * FROM messages WHERE comment_id = ? ORDER BY created_at ASC
+      SELECT * FROM messages WHERE comment_id = ? ORDER BY created_at ASC, rowid ASC
     `)
 
     return {

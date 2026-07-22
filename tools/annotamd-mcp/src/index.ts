@@ -87,11 +87,12 @@ const server = new McpServer({
   instructions: [
     '当用户提到“根据文档中的评论修改文档”、处理批注或审阅意见时，主动使用 AnnotaMD MCP 查找并读取评论，无需用户明确说出 AnnotaMD。',
     'AnnotaMD MCP 为本地 Markdown 提供私有批注上下文，不限制你按原有文件权限读取正文。',
-    '处理批注时先用 annotamd_list_inbox 发现待处理文档，再用 annotamd_read_document 阅读完整正文、当前 revision、精确锚点和线程回复。',
+    '处理批注时先用 annotamd_list_inbox 发现待处理文档，再用 annotamd_read_document 阅读完整正文、当前 revision、精确锚点、所有评论线程和回复。',
+    '遍历所有评论线程，处理每个最后一条消息来自 Local（author=user）的线程。使用返回的 localEndingComments 清单；不得只取最新根评论，也不得用 resolved、updatedAt 或数组顺序判定是否待处理。',
     '读取全部评论不等于授权修改全部关联正文。任何写操作前必须逐条识别意图：明确的修改建议才精确修改正文；问题、讨论或征询意见直接在线程中回复，默认保留为未解决；信息不足或存在歧义时先回复询问，不擅自修改。用户的明确要求优先。',
     '重复文字必须依靠 commentId 区分；修改正文时使用 annotamd_apply_comment_edit，不要搜索同名文本猜测位置。',
     'annotamd_apply_comment_edit 成功后会自动保留 Agent 处理回复并将评论标记为已解决，无需再次调用解决工具。',
-    '所有写操作使用刚读取的 expectedRevision；过期时重新读取。需要沟通时在线程中回复。',
+    '每次只处理一个 Local 结尾线程，写入后重新读取并使用最新 expectedRevision。宣称全部处理完成前，必须再读取并确认 localEndingCommentCount 为 0。',
     '批注服务关闭时，你仍可使用自己的文件能力读取 Markdown，但无法访问 AnnotaMD SQLite 中的私有批注。'
   ].join('\n')
 })
@@ -162,19 +163,19 @@ server.registerResource(
 
 server.registerTool('annotamd_read_document', {
   title: '读取带评论的本地 Markdown',
-  description: '读取完整 Markdown 正文、revision、选区批注、全文批注及线程回复。返回结果会要求先逐条识别评论意图；读取不等于授权修改全部正文。后续写操作必须使用返回的 revision。',
+  description: '读取完整 Markdown 正文、revision、所有批注及线程回复。返回 localEndingComments，列出所有最后一条消息来自 Local 的待处理线程；不得只看最新根评论。后续写操作必须使用返回的 revision。',
   inputSchema: { documentId: z.string().min(1) }
 }, async({ documentId }) => commentReviewResult(await callBridge('read_document', { documentId })))
 
 server.registerTool('annotamd_list_comments', {
   title: '列出文档评论',
-  description: '按 documentId 列出评论及其精确锚点和线程回复。必须先逐条识别意图：问题类回复评论，明确修改建议才修改正文，不清楚时先追问；不得默认批量修改所有评论关联正文。',
+  description: '按 documentId 列出所有评论、精确锚点和线程回复，并返回全量 localEndingComments 待处理清单。每条须先识别意图：问题类回复评论，明确修改建议才修改正文，不清楚时先追问。',
   inputSchema: { documentId: z.string().min(1) }
 }, async({ documentId }) => commentReviewResult(await callBridge('list_comments', { documentId })))
 
 server.registerTool('annotamd_list_inbox', {
   title: '列出待处理批注文档',
-  description: '列出包含未解决 AnnotaMD 批注的本地文档。先用此工具发现待处理文档，再读取正文与完整批注。',
+  description: '列出包含 Local 结尾评论线程的本地文档，包括已解决后又被 Local 追问的线程。每项返回 localEndingCount；再读取正文与完整评论。',
   inputSchema: {}
 }, async() => result(await callBridge('inbox')))
 
@@ -238,12 +239,13 @@ server.registerPrompt('annotamd_comment_workflow', {
       type: 'text',
       text: [
         '请处理 AnnotaMD 中的本地 Markdown 批注。',
-        '1. 先调用 annotamd_list_inbox 查找有未解决批注的文档。',
-        '2. 调用 annotamd_read_document，完整阅读 markdown 正文、选区批注、全文批注和线程回复；批注只是补充上下文，不代表只能读取批注。',
-        '3. 用 commentId 区分重复文字上的不同批注，不要自行搜索同名文本来猜测位置。',
-        '4. 读取全部评论不等于授权修改全部关联正文。在任何写操作前逐条判断意图：明确的修改建议才使用 annotamd_apply_comment_edit，并提供简短的处理说明；问题、讨论或征询意见使用 annotamd_reply_comment 回答，默认不解决；不明确时先回复询问，不擅自修改。',
-        '5. 写操作使用刚读取到的 expectedRevision；revision 过期时重新读取，不要覆盖新内容。',
-        '6. annotamd_apply_comment_edit 会自动将评论标记为已解决并保留处理记录，不要再次解决；仅回复的问题评论应保留，方便用户确认或追问。',
+        '1. 先调用 annotamd_list_inbox 查找包含 Local 结尾评论线程的文档。',
+        '2. 调用 annotamd_read_document，完整阅读 markdown 正文、所有评论线程和回复；批注只是补充上下文，不代表只能读取批注。',
+        '3. 使用 localEndingComments 处理所有最后一条消息来自 Local 的线程；不只取最新根评论，也不用 resolved、updatedAt 或数组顺序替代该判定。',
+        '4. 用 commentId 区分重复文字上的不同批注，不要自行搜索同名文本来猜测位置。',
+        '5. 读取全部评论不等于授权修改全部关联正文。在任何写操作前逐条判断意图：明确的修改建议才使用 annotamd_apply_comment_edit；问题、讨论或征询意见使用 annotamd_reply_comment 回答；不明确时先回复询问。',
+        '6. 每次写操作后重新读取，再处理下一条；声称全部处理完成前，必须再读取并确认 localEndingCommentCount 为 0。',
+        '7. annotamd_apply_comment_edit 会自动将评论标记为已解决并保留处理记录，不要再次解决；仅回复的问题评论应保留，方便用户确认或追问。',
         '如果 AnnotaMD MCP 批注服务关闭，仍可按你原有的文件权限读取 Markdown，但不能读取 AnnotaMD 私有批注。'
       ].join('\n')
     }

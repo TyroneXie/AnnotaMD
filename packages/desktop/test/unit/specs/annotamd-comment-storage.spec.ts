@@ -146,6 +146,7 @@ describe('AnnotaMD SQLite comment storage', () => {
 
     expect(service.listInbox()).toMatchObject([{
       documentId: loaded.documentId,
+      localEndingCount: 1,
       unresolvedCount: 1
     }])
     expect(saved.comments[0]).not.toHaveProperty('agentReadable')
@@ -155,6 +156,21 @@ describe('AnnotaMD SQLite comment storage', () => {
       author: 'agent'
     })
     expect(replied.document.revision).toBe(saved.revision + 1)
+    expect(service.listInbox()).toEqual([])
+
+    const resolved = service.setResolved('comment-1', true, replied.document.revision)
+    const followedUp = service.reply(
+      'comment-1',
+      '还有一个问题',
+      'user',
+      resolved.document.revision
+    )
+    expect(followedUp.comment.resolved).toBe(true)
+    expect(service.listInbox()).toMatchObject([{
+      documentId: loaded.documentId,
+      localEndingCount: 1,
+      unresolvedCount: 0
+    }])
     service.close()
   })
 })
