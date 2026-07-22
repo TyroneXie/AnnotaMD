@@ -171,9 +171,19 @@ test('keeps the document still when focusing the reply input at the bottom of a 
     }
 
     await page.waitForTimeout(500)
-    await replyEditor.scrollIntoViewIfNeeded()
     const anchor = page.locator('span.mu-paragraph-content').nth(4)
     const editor = page.locator('.editor-component')
+    await card.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await page.evaluate(() => {
+      const editor = document.querySelector<HTMLElement>('.editor-component')
+      const anchor = editor?.querySelectorAll<HTMLElement>('span.mu-paragraph-content')[4]
+      if (!editor || !anchor) throw new Error('comment anchor is unavailable')
+      const viewport = editor.getBoundingClientRect()
+      const anchorRect = anchor.getBoundingClientRect()
+      editor.scrollTop += anchorRect.bottom - viewport.top + 24
+    })
     await expect(replyEditor).toBeInViewport()
     await expect(anchor).not.toBeInViewport()
     const scrollTopBefore = await editor.evaluate((element) => element.scrollTop)
@@ -218,15 +228,22 @@ test('scrolls only the selected long thread when the pointer is inside its card'
       }
     })
     expect(cardMetrics.scrollHeight).toBeGreaterThan(cardMetrics.availableHeight)
+    await expect(card).toHaveClass(/local-scroll/)
+    await expect(card).toHaveCSS('overflow-y', 'auto')
+    await expect(header).toHaveCSS('position', 'sticky')
+    const cardHeightBeforeFirstWheel = await card.evaluate(
+      (element) => element.getBoundingClientRect().height
+    )
     await page.mouse.move(headerBox.x + 20, headerBox.y + 16)
     const editorScrollTopBefore = await editor.evaluate((element) => element.scrollTop)
 
     await page.mouse.wheel(0, 360)
 
-    await expect(card).toHaveClass(/local-scroll/)
-    await expect(card).toHaveCSS('overflow-y', 'auto')
-    await expect(header).toHaveCSS('position', 'sticky')
     await expect.poll(() => card.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    const cardHeightAfterFirstWheel = await card.evaluate(
+      (element) => element.getBoundingClientRect().height
+    )
+    expect(Math.abs(cardHeightAfterFirstWheel - cardHeightBeforeFirstWheel)).toBeLessThan(1)
     const firstLocalScrollTop = await card.evaluate((element) => element.scrollTop)
     const activeWheelPrevented = await card.evaluate((element) => {
       const event = new WheelEvent('wheel', {

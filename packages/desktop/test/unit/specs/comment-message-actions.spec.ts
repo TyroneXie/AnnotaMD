@@ -79,11 +79,14 @@ describe('Feishu-style comment messages', () => {
 
   it('isolates wheel scrolling inside only the selected overlong thread', () => {
     expect(commentPane).toContain("'local-scroll': localScrollCommentId === comment.id")
-    expect(commentPane).toContain('@wheel="handleCommentCardWheel($event, comment)"')
-    expect(commentPane).toContain('selectedCommentId.value !== comment.id')
-    expect(commentPane).toContain('event.preventDefault()')
+    expect(commentPane).not.toContain('@wheel="handleCommentCardWheel($event, comment)"')
+    expect(commentPane).not.toContain('event.preventDefault()')
     expect(commentPane).toContain('@wheel.passive="handleCommentListWheel"')
     expect(commentPane).toContain('const handleCommentListWheel = (): void =>')
+    expect(commentPane).toContain('const ensureSelectedCommentViewport = (): void =>')
+    expect(commentPane).toMatch(
+      /updateCommentBubbleLayout[\s\S]*?nextTick[\s\S]*?ensureSelectedCommentViewport\(\)/
+    )
     expect(commentPane).not.toContain("addEventListener('wheel', handleEditorWheel")
     expect(commentPane).not.toContain('wheelTargetsLocalComment')
     expect(commentPane).not.toContain('card.scrollTop += delta')

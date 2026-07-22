@@ -99,7 +99,6 @@
         :style="commentCardStyle(comment.id)"
         @mouseenter="commentStore.setActiveComment(comment.id)"
         @mouseleave="clearActiveComment(comment.id)"
-        @wheel="handleCommentCardWheel($event, comment)"
         @click="selectComment(comment.id)"
       >
         <div class="annotamd-comment-row">
@@ -520,8 +519,44 @@ const recalculateCommentBubbleLayout = (): void => {
   )
 }
 
+const resetLocalCommentScroll = (): void => {
+  const previousCommentId = localScrollCommentId.value
+  if (previousCommentId) {
+    const previousCard = observedCommentCards.get(previousCommentId)
+    if (previousCard) previousCard.scrollTop = 0
+  }
+  localScrollCommentId.value = null
+  localScrollMaxHeight.value = 0
+}
+
+const ensureSelectedCommentViewport = (): void => {
+  const commentId = selectedCommentId.value
+  if (!commentId) return
+  if (localScrollCommentId.value === commentId) return
+  if (localScrollCommentId.value) resetLocalCommentScroll()
+
+  const comment = selectionComments.value.find((item) => item.id === commentId)
+  const list = commentList.value
+  if (!comment || !list || !isCommentExpanded(comment)) return
+
+  syncObservedCommentCards(list)
+  const card = observedCommentCards.get(commentId)
+  if (!card) return
+  const listRect = list.getBoundingClientRect()
+  const cardRect = card.getBoundingClientRect()
+  const visibleCardTop = Math.max(cardRect.top, listRect.top)
+  const availableHeight = Math.floor(
+    listRect.bottom - visibleCardTop - LOCAL_SCROLL_BOTTOM_GAP
+  )
+  if (availableHeight < LOCAL_SCROLL_MIN_HEIGHT || card.scrollHeight <= availableHeight + 1) return
+
+  localScrollCommentId.value = commentId
+  localScrollMaxHeight.value = availableHeight
+}
+
 const updateCommentBubbleLayout = (): void => {
   void nextTick().then(() => {
+    ensureSelectedCommentViewport()
     if (commentLayoutDisposed || commentLayoutFrame != null) return
     commentLayoutFrame = requestAnimationFrame(() => {
       commentLayoutFrame = null
@@ -541,59 +576,8 @@ const clearActiveComment = (commentId: string): void => {
   }
 }
 
-const resetLocalCommentScroll = (): void => {
-  const previousCommentId = localScrollCommentId.value
-  if (previousCommentId) {
-    const previousCard = observedCommentCards.get(previousCommentId)
-    if (previousCard) previousCard.scrollTop = 0
-  }
-  localScrollCommentId.value = null
-  localScrollMaxHeight.value = 0
-}
-
 const handleCommentListWheel = (): void => {
   revealScrollbar()
-}
-
-const wheelDeltaInPixels = (event: WheelEvent, pageHeight: number): number => {
-  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) return event.deltaY * 20
-  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) return event.deltaY * pageHeight
-  return event.deltaY
-}
-
-const handleCommentCardWheel = (
-  event: WheelEvent,
-  comment: AnnotaMDComment
-): void => {
-  if (selectedCommentId.value !== comment.id || !isCommentExpanded(comment)) return
-  if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
-
-  const card = event.currentTarget as HTMLElement
-  const list = commentList.value
-  if (!list) return
-  const delta = wheelDeltaInPixels(event, card.clientHeight)
-
-  if (localScrollCommentId.value === comment.id) {
-    return
-  }
-
-  const listRect = list.getBoundingClientRect()
-  const cardRect = card.getBoundingClientRect()
-  const visibleCardTop = Math.max(cardRect.top, listRect.top)
-  const availableHeight = Math.floor(
-    listRect.bottom - visibleCardTop - LOCAL_SCROLL_BOTTOM_GAP
-  )
-  if (availableHeight < LOCAL_SCROLL_MIN_HEIGHT || card.scrollHeight <= availableHeight + 1) return
-
-  event.preventDefault()
-  event.stopPropagation()
-  localScrollCommentId.value = comment.id
-  localScrollMaxHeight.value = availableHeight
-  void nextTick().then(() => {
-    if (localScrollCommentId.value !== comment.id || !card.isConnected) return
-    card.scrollBy({ top: delta })
-    recalculateCommentBubbleLayout()
-  })
 }
 
 const scrollCommentAnchorIntoView = (
