@@ -184,8 +184,10 @@ export class InlineFormatToolbar extends BaseFloat {
                 return;
 
             if (isCollapsed) {
-                this._crossBlockSelection = false;
-                this.hide();
+                if (this._crossBlockSelection) {
+                    this._crossBlockSelection = false;
+                    this.hide();
+                }
                 return;
             }
 

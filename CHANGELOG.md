@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.13.0 - 2026-07-22
+
+### Added
+
+- Added cross-block comments for selections spanning paragraphs and list items, with one thread and one continuous anchor for the complete selection.
+- Added safe cross-block formatting and block conversion for multi-paragraph selections, while protecting code blocks from incompatible formatting.
+- Added live MCP Agent connection status, recent-connection history, and guided comment-workflow setup for Codex, Claude Code, and other compatible Agents.
+- Added previous/next comment navigation, collapsible conversation threads, and independent editing or deletion for each Local message.
+
+### Changed
+
+- Kept comment resolution under user control: Agents can list comments, read complete threads, and reply, while Local-ending threads clearly identify work that still needs Agent attention.
+- Anchored the selected comment card to its text while nearby cards yield in both directions, and compacted inactive threads to their latest message.
+- Let overlong selected threads scroll inside the card with native momentum without moving the document, while the editor and comment pane share one synchronized scrollbar.
+- Preserved comments through partial edits to annotated text and expanded the anchor when text is appended at its boundary.
+
+### Fixed
+
+- Fixed long comment threads jumping the document when replying, expanding, collapsing, switching threads, or beginning the first scroll.
+- Fixed new comments created over an existing highlighted range appearing below the visible viewport.
+- Fixed comment cards lingering after their text anchor left the viewport and repaired underline gaps around inline code.
+- Fixed the inline format toolbar closing after applying bold or another format to an ordinary single-block selection.
+- Fixed code-block language suggestions appearing at the window corner after a code-block title was cleared.
+
 ## 2.12.0 - 2026-07-20
 
 ### Added

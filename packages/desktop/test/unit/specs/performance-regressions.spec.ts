@@ -163,7 +163,7 @@ describe('performance regression guards', () => {
     expect(commentPane).toContain('commentLayoutFrame = requestAnimationFrame(() =>')
     expect(commentPane).toContain('const commentCardHeights = new Map<string, number>()')
     expect(commentPane).toContain('commentResizeObserver?.observe(card)')
-    expect(commentPane).toContain('height: commentCardHeights.get(comment.id) ?? 120')
+    expect(commentPane).toContain('height: commentCardHeight(comment.id, 120)')
     expect(commentPane).not.toMatch(
       /selectionComments\.value\.map[\s\S]*?height:\s*card\?\.offsetHeight/
     )
