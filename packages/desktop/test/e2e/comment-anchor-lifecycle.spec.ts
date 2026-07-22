@@ -257,6 +257,51 @@ test('scrolls only the selected long thread when the pointer is inside its card'
   }
 })
 
+test('resets a long thread to the top after switching to another comment', async() => {
+  const paragraphs = Array.from({ length: 40 }, (_, index) => `评论切换段落 ${index + 1}。`)
+  const { app, page } = await launchWithMarkdown(paragraphs.join('\n\n'))
+  try {
+    await addComment(page, 4, '第一个长评论', 1, paragraphs[4])
+    const cards = page.locator('.annotamd-comment-card[data-comment-id]')
+    const firstCard = cards.nth(0)
+    const firstCommentId = await firstCard.getAttribute('data-comment-id')
+    if (!firstCommentId) throw new Error('first comment id is unavailable')
+    const replyEditor = firstCard.locator('.annotamd-reply-editor textarea')
+    const replySubmit = firstCard.locator('.annotamd-reply-submit')
+    for (let index = 0; index < 3; index++) {
+      await replyEditor.fill(`第 ${index + 1} 条超长回复。${'用于验证重新打开评论时从顶部开始。'.repeat(24)}`)
+      await replySubmit.click()
+    }
+    await addComment(page, 10, '第二个评论。'.repeat(40), 2, paragraphs[10])
+    const firstLongCard = page.locator(
+      `.annotamd-comment-card[data-comment-id="${firstCommentId}"]`
+    )
+    const secondCard = page.locator(
+      `.annotamd-comment-card[data-comment-id]:not([data-comment-id="${firstCommentId}"])`
+    ).first()
+
+    await firstLongCard.locator('.annotamd-thread-toggle').click()
+
+    const header = firstLongCard.locator('.annotamd-comment-row')
+    await header.scrollIntoViewIfNeeded()
+    const headerBox = await header.boundingBox()
+    if (!headerBox) throw new Error('first comment header is unavailable')
+    await page.mouse.move(headerBox.x + 20, headerBox.y + 16)
+    await page.mouse.wheel(0, 520)
+    await expect(firstLongCard).toHaveClass(/local-scroll/)
+    await expect.poll(() => firstLongCard.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+
+    await secondCard.locator('.annotamd-thread-toggle').click()
+    await expect(firstLongCard).not.toHaveClass(/local-scroll/)
+    await expect.poll(() => firstLongCard.evaluate((element) => element.scrollTop)).toBe(0)
+
+    await firstLongCard.locator('.annotamd-thread-toggle').click()
+    await expect(firstLongCard.evaluate((element) => element.scrollTop)).resolves.toBe(0)
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps every reply separate and lets every Local message edit or delete', async() => {
   const markdown = '多轮评论锚点。\n'
   const { app, page, filePath } = await launchWithMarkdown(markdown)

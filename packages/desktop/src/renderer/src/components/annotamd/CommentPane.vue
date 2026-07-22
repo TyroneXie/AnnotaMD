@@ -541,8 +541,12 @@ const clearActiveComment = (commentId: string): void => {
   }
 }
 
-const resetLocalCommentScroll = (commentId?: string): void => {
-  if (commentId && localScrollCommentId.value !== commentId) return
+const resetLocalCommentScroll = (): void => {
+  const previousCommentId = localScrollCommentId.value
+  if (previousCommentId) {
+    const previousCard = observedCommentCards.get(previousCommentId)
+    if (previousCard) previousCard.scrollTop = 0
+  }
   localScrollCommentId.value = null
   localScrollMaxHeight.value = 0
 }
@@ -630,7 +634,7 @@ const selectComment = async(
 
 const toggleCommentExpanded = (comment: AnnotaMDComment): void => {
   if (commentHasActiveInteraction(comment)) return
-  resetLocalCommentScroll(comment.id)
+  resetLocalCommentScroll()
   const preservedScrollTop = sharedEditorScroller?.scrollTop
   if (isCommentExpanded(comment)) {
     collapsedCommentId.value = comment.id
@@ -731,6 +735,7 @@ const submitComment = (): void => {
     commentStore.addSelectionComment(filePath.value, draftBody.value)
     const addedComment = selectionComments.value.find((comment) => !previousIds.has(comment.id))
     if (addedComment) {
+      resetLocalCommentScroll()
       selectedCommentId.value = addedComment.id
       collapsedCommentId.value = null
       commentStore.setActiveComment(addedComment.id)
