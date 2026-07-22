@@ -2838,7 +2838,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
 .editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end::after,
 .editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
   position: absolute;
-  bottom: 0.08em;
+  bottom: 0;
   width: 0.35em;
   height: 2px;
   background: rgb(51 112 255 / 85%);

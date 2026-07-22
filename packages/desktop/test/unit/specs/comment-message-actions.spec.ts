@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { formatCommentTimestamp } from '../../../src/renderer/src/util/annotamdCommentTime'
 
 const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
@@ -11,6 +12,21 @@ const documentFooter = read(
 const commentStore = read('packages/desktop/src/renderer/src/store/annotamdComments.ts')
 
 describe('Feishu-style comment messages', () => {
+  it('shows each message own localized date and time', () => {
+    const now = new Date(2026, 6, 22, 14, 0).getTime()
+    const today = new Date(2026, 6, 22, 10, 25).getTime()
+    const yesterday = new Date(2026, 6, 21, 10, 25).getTime()
+    const older = new Date(2026, 6, 20, 10, 25).getTime()
+
+    expect(formatCommentTimestamp(today, 'zh-CN', now)).toBe('今天 10:25')
+    expect(formatCommentTimestamp(yesterday, 'zh-CN', now)).toBe('昨天 10:25')
+    expect(formatCommentTimestamp(older, 'zh-CN', now)).toBe('7月20日 10:25')
+    expect(commentPane).toContain('formatMessageTime(comment.createdAt)')
+    expect(commentPane).toContain('formatMessageTime(reply.createdAt)')
+    expect(documentFooter).toContain('formatMessageTime(comment.createdAt)')
+    expect(documentFooter).toContain('formatMessageTime(reply.createdAt)')
+  })
+
   it('lets every Local message edit and delete while keeping Agent messages read-only', () => {
     for (const component of [commentPane, documentFooter]) {
       expect(component).toContain('v-if="reply.author === \'user\'"')
@@ -48,11 +64,36 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('class="annotamd-thread-toggle"')
     expect(commentPane).toContain(':aria-expanded="false"')
     expect(commentPane).toContain(':aria-expanded="true"')
-    expect(commentPane).toContain('class="annotamd-reply-action"')
+    expect(commentPane).not.toContain('class="annotamd-reply-action"')
     expect(commentPane).toMatch(
-      /class="annotamd-comment-action-row"[\s\S]*?annotamd-reply-action[\s\S]*?annotamd-thread-toggle/
+      /class="annotamd-reply-editor"[\s\S]*?rows="1"[\s\S]*?@focus="startReply\(comment\.id\)"/
     )
+    expect(commentPane).toContain('class="annotamd-reply-cancel"')
+    expect(commentPane).toContain('class="annotamd-reply-submit"')
+    expect(commentPane).toContain('@blur="stopReply(comment.id)"')
+    expect(commentPane).toContain('@input="resizeReplyEditor"')
+    expect(commentPane).toContain("Math.min(textarea.scrollHeight, 96)")
+    expect(commentPane).toContain("replyingId.value = null")
     expect(commentPane).not.toMatch(/\.annotamd-comment-card\s*\{[^}]*overflow-y:\s*(auto|scroll)/s)
+  })
+
+  it('isolates wheel scrolling inside only the selected overlong thread', () => {
+    expect(commentPane).toContain("'local-scroll': localScrollCommentId === comment.id")
+    expect(commentPane).toContain('@wheel="handleCommentCardWheel($event, comment)"')
+    expect(commentPane).toContain('selectedCommentId.value !== comment.id')
+    expect(commentPane).toContain('event.preventDefault()')
+    expect(commentPane).toContain("addEventListener('wheel', handleEditorWheel")
+    expect(commentPane).toContain('@wheel.passive="handleCommentListWheel"')
+    expect(commentPane).toContain('const handleCommentListWheel = (event: WheelEvent): void =>')
+    expect(commentPane).toContain('if (wheelTargetsLocalComment(event)) return')
+    expect(commentPane).toContain('if (onVerticalScrollbar) resetLocalCommentScroll()')
+    expect(commentPane).not.toContain('@mouseleave="handleCommentCardLeave(comment.id)"')
+    expect(commentPane).toMatch(
+      /\.annotamd-comment-card\.local-scroll\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s
+    )
+    expect(commentPane).toMatch(
+      /\.annotamd-comment-card\.local-scroll \.annotamd-comment-row\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s
+    )
   })
 
   it('keeps the compact card header on one line in English', () => {

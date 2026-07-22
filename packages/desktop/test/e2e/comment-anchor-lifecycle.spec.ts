@@ -100,12 +100,144 @@ test('batches cached comment-card height changes into one anchored relayout', as
     await expect.poll(readSecondTop).toBeGreaterThan(0)
     const secondTopBefore = await readSecondTop()
 
-    await cards.nth(0).locator('.annotamd-reply-action').click()
-    await expect(cards.nth(0).locator('.annotamd-reply-editor')).toBeVisible()
+    await cards.nth(0).locator('.annotamd-reply-editor textarea').focus()
+    await expect(cards.nth(0).locator('.annotamd-reply-controls')).toBeVisible()
 
     await expect.poll(async() => {
       return cards.nth(1).evaluate((card) => Number.parseFloat((card as HTMLElement).style.top))
     }).toBeGreaterThan(secondTopBefore)
+  } finally {
+    await app.close()
+  }
+})
+
+test('uses a one-line reply input with cancel, blur, and automatic growth', async() => {
+  const { app, page } = await launchWithMarkdown('回复输入框锚点。\n')
+  try {
+    await addComment(page, 0, '验证回复输入框', 1, '回复输入框锚点。')
+    const card = page.locator('.annotamd-comment-card[data-comment-id]')
+    const editor = card.locator('.annotamd-reply-editor textarea')
+    const controls = card.locator('.annotamd-reply-controls')
+
+    await expect(editor).toHaveAttribute('rows', '1')
+    await expect(controls).toHaveCount(0)
+    const initialHeight = await editor.evaluate((element) => element.getBoundingClientRect().height)
+    await editor.focus()
+    await expect(controls).toBeVisible()
+    await expect(card.locator('.annotamd-reply-submit')).toBeDisabled()
+    await editor.fill('dd')
+    await editor.fill('这是一段超过单行宽度的回复内容，用于验证输入框能够随着文字自动增加高度。')
+    await expect.poll(
+      () => editor.evaluate((element) => element.getBoundingClientRect().height)
+    ).toBeGreaterThan(initialHeight)
+
+    await editor.fill(Array.from({ length: 8 }, (_, index) => `第 ${index + 1} 行`).join('\n'))
+    await expect.poll(
+      () => editor.evaluate((element) => element.getBoundingClientRect().height)
+    ).toBeLessThanOrEqual(96)
+    await expect(editor).toHaveCSS('overflow-y', 'auto')
+    await expect.poll(
+      () => editor.evaluate((element) => element.scrollHeight > element.clientHeight)
+    ).toBe(true)
+
+    await card.locator('.annotamd-reply-cancel').click()
+    await expect(editor).toHaveValue('')
+    await expect(controls).toHaveCount(0)
+    await expect.poll(
+      () => editor.evaluate((element) => element.getBoundingClientRect().height)
+    ).toBeLessThanOrEqual(initialHeight + 1)
+
+    await editor.fill('保留的草稿')
+    await expect(controls).toBeVisible()
+    await page.locator('.annotamd-comment-header').click()
+    await expect(controls).toHaveCount(0)
+    await expect(editor).toHaveValue('保留的草稿')
+  } finally {
+    await app.close()
+  }
+})
+
+test('keeps the document still when focusing the reply input at the bottom of a long thread', async() => {
+  const paragraphs = Array.from({ length: 40 }, (_, index) => `长线程定位段落 ${index + 1}。`)
+  const { app, page } = await launchWithMarkdown(paragraphs.join('\n\n'))
+  try {
+    await addComment(page, 4, '长线程根评论', 1, paragraphs[4])
+    const card = page.locator('.annotamd-comment-card[data-comment-id]')
+    const replyEditor = card.locator('.annotamd-reply-editor textarea')
+    const replySubmit = card.locator('.annotamd-reply-submit')
+    for (let index = 0; index < 3; index++) {
+      await replyEditor.fill(`第 ${index + 1} 条长回复。${'用于撑开评论卡片的内容。'.repeat(24)}`)
+      await replySubmit.click()
+    }
+
+    await page.waitForTimeout(500)
+    await replyEditor.scrollIntoViewIfNeeded()
+    const anchor = page.locator('span.mu-paragraph-content').nth(4)
+    const editor = page.locator('.editor-component')
+    await expect(replyEditor).toBeInViewport()
+    await expect(anchor).not.toBeInViewport()
+    const scrollTopBefore = await editor.evaluate((element) => element.scrollTop)
+
+    await replyEditor.click()
+    await page.waitForTimeout(700)
+
+    const scrollTopAfter = await editor.evaluate((element) => element.scrollTop)
+    expect(Math.abs(scrollTopAfter - scrollTopBefore)).toBeLessThan(2)
+  } finally {
+    await app.close()
+  }
+})
+
+test('scrolls only the selected long thread when the pointer is inside its card', async() => {
+  const paragraphs = Array.from({ length: 40 }, (_, index) => `局部滚动段落 ${index + 1}。`)
+  const { app, page } = await launchWithMarkdown(paragraphs.join('\n\n'))
+  try {
+    await addComment(page, 4, '局部滚动根评论', 1, paragraphs[4])
+    const card = page.locator('.annotamd-comment-card[data-comment-id]')
+    const replyEditor = card.locator('.annotamd-reply-editor textarea')
+    const replySubmit = card.locator('.annotamd-reply-submit')
+    for (let index = 0; index < 3; index++) {
+      await replyEditor.fill(`第 ${index + 1} 条超长回复。${'用于验证评论内部滚动而正文保持不动。'.repeat(24)}`)
+      await replySubmit.click()
+    }
+
+    const editor = page.locator('.editor-component')
+    const header = card.locator('.annotamd-comment-row')
+    await header.scrollIntoViewIfNeeded()
+    const headerBox = await header.boundingBox()
+    if (!headerBox) throw new Error('comment header is unavailable')
+    const cardMetrics = await card.evaluate((element) => {
+      const list = document.querySelector<HTMLElement>('.annotamd-comment-list')
+      if (!list) throw new Error('comment list is unavailable')
+      const listRect = list.getBoundingClientRect()
+      const cardRect = element.getBoundingClientRect()
+      return {
+        availableHeight: Math.floor(listRect.bottom - Math.max(cardRect.top, listRect.top) - 12),
+        cardHeight: cardRect.height,
+        scrollHeight: element.scrollHeight
+      }
+    })
+    expect(cardMetrics.scrollHeight).toBeGreaterThan(cardMetrics.availableHeight)
+    await page.mouse.move(headerBox.x + 20, headerBox.y + 16)
+    const editorScrollTopBefore = await editor.evaluate((element) => element.scrollTop)
+
+    await page.mouse.wheel(0, 360)
+
+    await expect(card).toHaveClass(/local-scroll/)
+    await expect(card).toHaveCSS('overflow-y', 'auto')
+    await expect(header).toHaveCSS('position', 'sticky')
+    await expect.poll(() => card.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    const editorScrollTopAfter = await editor.evaluate((element) => element.scrollTop)
+    expect(Math.abs(editorScrollTopAfter - editorScrollTopBefore)).toBeLessThan(2)
+
+    await editor.hover({ position: { x: 40, y: 80 } })
+    await expect(card).toHaveClass(/local-scroll/)
+    const externalScrollTopBefore = await editor.evaluate((element) => element.scrollTop)
+    await page.mouse.wheel(0, 320)
+    await expect(card).not.toHaveClass(/local-scroll/)
+    await expect.poll(
+      () => editor.evaluate((element) => element.scrollTop)
+    ).toBeGreaterThan(externalScrollTopBefore)
   } finally {
     await app.close()
   }
@@ -117,23 +249,35 @@ test('keeps every reply separate and lets every Local message edit or delete', a
   try {
     await addComment(page, 0, '最开始的评论', 1, '多轮评论锚点。')
     const card = page.locator('.annotamd-comment-card[data-comment-id]')
-    const replyButton = card.locator('.annotamd-reply-action')
+    const replyEditor = card.locator('.annotamd-reply-editor textarea')
+    const replySubmit = card.locator('.annotamd-reply-submit')
 
-    await expect(replyButton).toHaveCount(1)
-    await replyButton.click()
-    await card.locator('.annotamd-reply-editor textarea').fill('Local 第一轮回复')
-    await card.locator('.annotamd-reply-editor button').click()
-    await replyButton.click()
-    await card.locator('.annotamd-reply-editor textarea').fill('Local 第二轮回复')
-    await card.locator('.annotamd-reply-editor button').click()
+    await expect(card.locator('.annotamd-reply-action')).toHaveCount(0)
+    await replyEditor.fill('Local 第一轮回复')
+    await replySubmit.click()
+    await replyEditor.fill('Local 第二轮回复')
+    await replySubmit.click()
 
     const replies = card.locator('.annotamd-reply-message')
     await expect(replies).toHaveCount(2)
+    await expect(card.locator('.annotamd-root-message .annotamd-message-time')).toContainText(/\d{2}:\d{2}/)
     await expect(replies.nth(0).locator('.annotamd-message-author')).toHaveText('Local')
+    await expect(replies.nth(0).locator('.annotamd-message-time')).toContainText(/\d{2}:\d{2}/)
     await expect(replies.nth(0).locator('p')).toHaveText('Local 第一轮回复')
     await expect(replies.nth(1).locator('.annotamd-message-author')).toHaveText('Local')
     await expect(replies.nth(1).locator('p')).toHaveText('Local 第二轮回复')
     await expect(card.locator('.annotamd-replies')).toHaveCSS('border-left-width', '0px')
+    await replyEditor.focus()
+    const actionRow = card.locator('.annotamd-comment-action-row')
+    await expect(actionRow.locator('.annotamd-thread-toggle')).toBeVisible()
+    await expect(actionRow.locator('.annotamd-reply-controls')).toBeVisible()
+    await expect.poll(async() => {
+      const [collapseBox, controlsBox] = await Promise.all([
+        actionRow.locator('.annotamd-thread-toggle').boundingBox(),
+        actionRow.locator('.annotamd-reply-controls').boundingBox()
+      ])
+      return Math.abs((collapseBox?.y ?? 0) - (controlsBox?.y ?? 0))
+    }).toBeLessThan(2)
 
     const rootMessage = card.locator('.annotamd-root-message')
     await rootMessage.locator('.annotamd-message-actions button').nth(0).click()
@@ -178,9 +322,8 @@ test('keeps every reply separate and lets every Local message edit or delete', a
     await expect(rootMessage.locator('.annotamd-message-actions button').nth(0)).toBeVisible()
     await expect(replies.nth(0).locator('.annotamd-message-actions button').nth(0)).toBeVisible()
 
-    await replyButton.click()
-    await card.locator('.annotamd-reply-editor textarea').fill('Local 第四轮回复')
-    await card.locator('.annotamd-reply-editor button').click()
+    await replyEditor.fill('Local 第四轮回复')
+    await replySubmit.click()
     await expect(replies).toHaveCount(4)
     await expect(replies.nth(3).locator('.annotamd-message-author')).toHaveText('Local')
 
@@ -305,7 +448,10 @@ test('connects a comment underline across inline-code padding', async() => {
     await expect.poll(async() => code.evaluate((element) => {
       const before = getComputedStyle(element, '::before')
       const after = getComputedStyle(element, '::after')
-      return before.content !== 'none' && after.content !== 'none'
+      return before.content !== 'none' &&
+        after.content !== 'none' &&
+        before.bottom === '0px' &&
+        after.bottom === '0px'
     })).toBe(true)
   } finally {
     await app.close()
@@ -365,11 +511,11 @@ test('keeps the text anchor visible while expanding threads and navigating comme
     const firstCard = page.locator('.annotamd-comment-card[data-comment-id]').filter({
       hasText: '第一条长评论'
     })
-    const replyButton = firstCard.locator('.annotamd-reply-action')
+    const replyEditor = firstCard.locator('.annotamd-reply-editor textarea')
+    const replySubmit = firstCard.locator('.annotamd-reply-submit')
     for (const reply of ['第一轮较长回复内容', '第二轮较长回复内容', '第三轮最新回复内容']) {
-      await replyButton.click()
-      await firstCard.locator('.annotamd-reply-editor textarea').fill(reply)
-      await firstCard.locator('.annotamd-reply-editor button').click()
+      await replyEditor.fill(reply)
+      await replySubmit.click()
     }
 
     const secondAnchorBeforeComment = page.locator('span.mu-paragraph-content').nth(secondIndex)

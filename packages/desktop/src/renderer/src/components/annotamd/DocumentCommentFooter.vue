@@ -29,6 +29,10 @@
 
       <div class="annotamd-document-thread-message annotamd-document-root-message">
         <span class="annotamd-document-message-author">{{ t('annotamd.comments.userAuthor') }}</span>
+        <time
+          class="annotamd-document-message-time"
+          :datetime="new Date(comment.createdAt).toISOString()"
+        >{{ formatMessageTime(comment.createdAt) }}</time>
         <textarea
           v-if="editingId === comment.id"
           v-model="editBody"
@@ -76,6 +80,10 @@
               ? 'annotamd.comments.agentAuthor'
               : 'annotamd.comments.userAuthor') }}
           </span>
+          <time
+            class="annotamd-document-message-time"
+            :datetime="new Date(reply.createdAt).toISOString()"
+          >{{ formatMessageTime(reply.createdAt) }}</time>
           <textarea
             v-if="editingReplyId === reply.id"
             v-model="editReplyBody"
@@ -167,10 +175,14 @@ import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
 import { useI18n } from 'vue-i18n'
+import { formatCommentTimestamp } from '@/util/annotamdCommentTime'
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const formatMessageTime = (createdAt: number): string =>
+  formatCommentTimestamp(createdAt, locale.value)
 const { currentFile } = storeToRefs(editorStore)
 
 const draftBody = ref('')
@@ -361,6 +373,14 @@ const saveReply = (id: string): void => {
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.annotamd-document-message-time {
+  margin-left: 5px;
+  color: #8f959e;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .annotamd-document-replies {
