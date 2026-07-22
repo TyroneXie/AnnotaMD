@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { isAppUpdateSupported } from '../../../src/main/updater/support'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import {
+  isAppUpdateSupported,
+  isAutomaticUpdateInstallSupported
+} from '../../../src/main/updater/support'
 import { reduceUpdateState, shouldAutomaticallyDownload } from '../../../src/main/updater/state'
 import type { AppUpdateState } from '../../../src/shared/types/update'
 import preferenceSchema from '../../../src/main/preferences/schema.json'
@@ -18,6 +23,17 @@ const initialState = (): AppUpdateState => ({
 })
 
 describe('application updater support', () => {
+  it('embeds an explicit GitHub update provider in every packaged app', () => {
+    const builderConfig = readFileSync(
+      resolve(__dirname, '../../../electron-builder.yml'),
+      'utf8'
+    )
+
+    expect(builderConfig).toMatch(
+      /publish:\s+provider:\s+github\s+owner:\s+TyroneXie\s+repo:\s+AnnotaMD/
+    )
+  })
+
   it('enables automatic downloads by default while keeping installation explicit', () => {
     expect(preferenceSchema.autoDownloadUpdates.default).toBe(true)
     expect(defaultPreferences.autoDownloadUpdates).toBe(true)
@@ -33,6 +49,14 @@ describe('application updater support', () => {
         status: 'available',
         currentVersion: '2.11.0',
         version: '2.12.0'
+      })
+    ).toBe(false)
+    expect(
+      shouldAutomaticallyDownload(true, {
+        status: 'available',
+        currentVersion: '2.11.0',
+        version: '2.12.0',
+        manualInstallRequired: true
       })
     ).toBe(false)
   })
@@ -66,6 +90,28 @@ describe('application updater support', () => {
         resourcesPath: '/app/resources',
         platform: 'darwin',
         pathExists: (filePath) => filePath.endsWith('app-update.yml')
+      })
+    ).toBe(true)
+  })
+
+  it('only installs macOS updates automatically with a trusted code signature', () => {
+    const baseOptions = {
+      resourcesPath: '/app/resources',
+      executablePath: '/app/AnnotaMD',
+      platform: 'darwin' as const,
+      pathExists: (filePath: string) => filePath.endsWith('app-update.yml')
+    }
+
+    expect(
+      isAutomaticUpdateInstallSupported({
+        ...baseOptions,
+        hasTrustedMacSignature: () => false
+      })
+    ).toBe(false)
+    expect(
+      isAutomaticUpdateInstallSupported({
+        ...baseOptions,
+        hasTrustedMacSignature: () => true
       })
     ).toBe(true)
   })

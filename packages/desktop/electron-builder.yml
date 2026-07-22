@@ -3,6 +3,10 @@ productName: AnnotaMD
 directories:
   buildResources: build
   output: ../../dist
+publish:
+  provider: github
+  owner: TyroneXie
+  repo: AnnotaMD
 files:
   - '!**/.vscode/*'
   - '!src/*'

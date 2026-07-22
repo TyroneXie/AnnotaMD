@@ -11,6 +11,7 @@ export type AppUpdateStatus =
 export interface AppUpdateState {
   status: AppUpdateStatus
   currentVersion: string
+  manualInstallRequired?: boolean
   version?: string
   progress?: number
   transferred?: number

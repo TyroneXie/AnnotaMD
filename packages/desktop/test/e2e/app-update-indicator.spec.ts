@@ -116,6 +116,22 @@ test.describe('application update indicator', () => {
     )
     await expect(settingsPage!.locator('.app-update-panel button')).toContainText('Download update')
 
+    await app.evaluate(({ BrowserWindow }) => {
+      const settingsWindow = BrowserWindow.getAllWindows().find((window) =>
+        window.webContents.getURL().includes('/preference')
+      )
+      settingsWindow?.webContents.send('annotamd::update:state', {
+        status: 'available',
+        currentVersion: '2.11.0',
+        version: '2.12.0',
+        manualInstallRequired: true
+      })
+    })
+    await expect(settingsPage!.locator('.app-update-panel')).toContainText(
+      'This package cannot update itself.'
+    )
+    await expect(settingsPage!.locator('.app-update-panel button')).toContainText('View downloads')
+
     const switchBox = await persistedAutomaticDownload.locator('.el-switch').boundingBox()
     const switchLabelBox = await persistedAutomaticDownload.locator('.description').boundingBox()
     const updateActionBox = await settingsPage!

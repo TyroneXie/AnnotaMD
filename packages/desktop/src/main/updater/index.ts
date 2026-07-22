@@ -1,13 +1,18 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import log from 'electron-log'
 import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater'
 import type { AppUpdateState } from '@shared/types/update'
-import { isAppUpdateSupported } from './support'
+import { t } from '../i18n'
+import { isAppUpdateSupported, isAutomaticUpdateInstallSupported } from './support'
 import { reduceUpdateState, shouldAutomaticallyDownload, type AppUpdateEvent } from './state'
 
+const updateSupported = isAppUpdateSupported()
 const updateState: AppUpdateState = {
   status: 'idle',
-  currentVersion: app.getVersion()
+  currentVersion: app.getVersion(),
+  ...(updateSupported && !isAutomaticUpdateInstallSupported()
+    ? { manualInstallRequired: true }
+    : {})
 }
 
 let registered = false
@@ -35,6 +40,50 @@ const setError = (error: unknown): void => {
   const message = error instanceof Error ? error.message : String(error || 'Unknown update error')
   log.error('Application update failed:', message)
   dispatch({ type: 'error', message })
+}
+
+const showManualCheckResult = async(
+  browserWindow: BrowserWindow | null | undefined,
+  state: AppUpdateState
+): Promise<void> => {
+  if (!browserWindow || browserWindow.isDestroyed()) return
+
+  let type: 'info' | 'error'
+  let message: string
+  let detail: string
+  switch (state.status) {
+    case 'up-to-date':
+      type = 'info'
+      message = t('updates.upToDate')
+      detail = t('updates.currentVersion', { version: state.currentVersion })
+      break
+    case 'error':
+      type = 'error'
+      message = t('updates.error')
+      detail = state.message ?? ''
+      break
+    case 'unsupported':
+      type = 'info'
+      message = t('updates.unsupported')
+      detail = t('updates.currentVersion', { version: state.currentVersion })
+      break
+    default:
+      return
+  }
+
+  try {
+    await dialog.showMessageBox(browserWindow, {
+      type,
+      title: t('updates.title'),
+      message,
+      detail,
+      buttons: [t('common.ok')],
+      defaultId: 0,
+      noLink: true
+    })
+  } catch (error) {
+    log.error('Failed to show application update result:', error)
+  }
 }
 
 const bindUpdaterEvents = (): void => {
@@ -72,10 +121,12 @@ const bindUpdaterEvents = (): void => {
 export const getUpdateState = (): AppUpdateState => snapshot()
 
 export const checkForUpdates = async(
-  _browserWindow?: BrowserWindow | null
+  browserWindow?: BrowserWindow | null
 ): Promise<AppUpdateState> => {
   if (!isAppUpdateSupported()) {
-    return dispatch({ type: 'unsupported' })
+    const state = dispatch({ type: 'unsupported' })
+    await showManualCheckResult(browserWindow, state)
+    return state
   }
   if (updateState.status === 'checking' || updateState.status === 'downloading') {
     return snapshot()
@@ -87,10 +138,13 @@ export const checkForUpdates = async(
   } catch (error) {
     setError(error)
   }
-  return snapshot()
+  const state = snapshot()
+  await showManualCheckResult(browserWindow, state)
+  return state
 }
 
 export const downloadUpdate = async(): Promise<AppUpdateState> => {
+  if (updateState.manualInstallRequired) return snapshot()
   if (updateState.status === 'downloading' || updateState.status === 'downloaded') {
     return snapshot()
   }

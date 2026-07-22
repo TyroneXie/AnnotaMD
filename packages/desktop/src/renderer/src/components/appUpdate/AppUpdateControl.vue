@@ -59,6 +59,7 @@ const applyState = (next: AppUpdateState): void => {
 
 const roundedProgress = computed(() => Math.round(state.progress ?? 0))
 const busy = computed(() => state.status === 'checking' || state.status === 'downloading')
+const manualInstallRequired = computed(() => Boolean(state.manualInstallRequired))
 const showCompact = computed(() => {
   if (state.status === 'error') return Boolean(state.version)
   return ['available', 'downloading', 'downloaded'].includes(state.status)
@@ -69,7 +70,9 @@ const statusText = computed(() => {
     case 'checking':
       return t('updates.checking')
     case 'available':
-      return t('updates.available', { version: state.version ?? '' })
+      return manualInstallRequired.value
+        ? `${t('updates.available', { version: state.version ?? '' })} ${t('updates.unsupported')}`
+        : t('updates.available', { version: state.version ?? '' })
     case 'downloading':
       return t('updates.downloading', { progress: roundedProgress.value })
     case 'downloaded':
@@ -81,14 +84,14 @@ const statusText = computed(() => {
     case 'unsupported':
       return t('updates.unsupported')
     default:
-      return t('updates.ready')
+      return manualInstallRequired.value ? t('updates.unsupported') : t('updates.ready')
   }
 })
 
 const actionLabel = computed(() => {
   switch (state.status) {
     case 'available':
-      return t('updates.download')
+      return manualInstallRequired.value ? t('updates.viewDownloads') : t('updates.download')
     case 'downloading':
       return `${roundedProgress.value}%`
     case 'downloaded':
@@ -106,7 +109,12 @@ const actionLabel = computed(() => {
 
 const runAction = async(): Promise<void> => {
   let next: AppUpdateState | null = null
-  if (state.status === 'unsupported') {
+  if (
+    state.status === 'unsupported' ||
+    (manualInstallRequired.value && (
+      state.status === 'available' || (state.status === 'error' && Boolean(state.version))
+    ))
+  ) {
     await window.electron.shell.openExternal('https://github.com/TyroneXie/AnnotaMD/releases/latest')
     return
   }

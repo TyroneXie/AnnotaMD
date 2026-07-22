@@ -13,7 +13,7 @@ export type AppUpdateEvent =
 export const shouldAutomaticallyDownload = (
   enabled: boolean,
   state: AppUpdateState
-): boolean => enabled && state.status === 'available'
+): boolean => enabled && state.status === 'available' && !state.manualInstallRequired
 
 export const reduceUpdateState = (
   current: AppUpdateState,
@@ -35,7 +35,8 @@ export const reduceUpdateState = (
     case 'not-available':
       return {
         status: 'up-to-date',
-        currentVersion: current.currentVersion
+        currentVersion: current.currentVersion,
+        ...(current.manualInstallRequired ? { manualInstallRequired: true } : {})
       }
     case 'download-started':
       return { ...current, status: 'downloading', progress: 0, message: undefined }
@@ -59,6 +60,10 @@ export const reduceUpdateState = (
     case 'error':
       return { ...current, status: 'error', message: event.message, progress: undefined }
     case 'unsupported':
-      return { status: 'unsupported', currentVersion: current.currentVersion }
+      return {
+        status: 'unsupported',
+        currentVersion: current.currentVersion,
+        ...(current.manualInstallRequired ? { manualInstallRequired: true } : {})
+      }
   }
 }
