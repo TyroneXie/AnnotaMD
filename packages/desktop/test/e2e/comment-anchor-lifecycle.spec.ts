@@ -227,6 +227,20 @@ test('scrolls only the selected long thread when the pointer is inside its card'
     await expect(card).toHaveCSS('overflow-y', 'auto')
     await expect(header).toHaveCSS('position', 'sticky')
     await expect.poll(() => card.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    const firstLocalScrollTop = await card.evaluate((element) => element.scrollTop)
+    const activeWheelPrevented = await card.evaluate((element) => {
+      const event = new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        deltaY: 120
+      })
+      element.dispatchEvent(event)
+      return event.defaultPrevented
+    })
+    expect(activeWheelPrevented).toBe(false)
+    await page.mouse.wheel(0, 240)
+    await expect.poll(() => card.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(firstLocalScrollTop)
     const editorScrollTopAfter = await editor.evaluate((element) => element.scrollTop)
     expect(Math.abs(editorScrollTopAfter - editorScrollTopBefore)).toBeLessThan(2)
 
@@ -234,7 +248,7 @@ test('scrolls only the selected long thread when the pointer is inside its card'
     await expect(card).toHaveClass(/local-scroll/)
     const externalScrollTopBefore = await editor.evaluate((element) => element.scrollTop)
     await page.mouse.wheel(0, 320)
-    await expect(card).not.toHaveClass(/local-scroll/)
+    await expect(card).toHaveClass(/local-scroll/)
     await expect.poll(
       () => editor.evaluate((element) => element.scrollTop)
     ).toBeGreaterThan(externalScrollTopBefore)

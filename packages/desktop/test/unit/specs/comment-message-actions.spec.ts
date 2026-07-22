@@ -82,11 +82,11 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('@wheel="handleCommentCardWheel($event, comment)"')
     expect(commentPane).toContain('selectedCommentId.value !== comment.id')
     expect(commentPane).toContain('event.preventDefault()')
-    expect(commentPane).toContain("addEventListener('wheel', handleEditorWheel")
     expect(commentPane).toContain('@wheel.passive="handleCommentListWheel"')
-    expect(commentPane).toContain('const handleCommentListWheel = (event: WheelEvent): void =>')
-    expect(commentPane).toContain('if (wheelTargetsLocalComment(event)) return')
-    expect(commentPane).toContain('if (onVerticalScrollbar) resetLocalCommentScroll()')
+    expect(commentPane).toContain('const handleCommentListWheel = (): void =>')
+    expect(commentPane).not.toContain("addEventListener('wheel', handleEditorWheel")
+    expect(commentPane).not.toContain('wheelTargetsLocalComment')
+    expect(commentPane).not.toContain('card.scrollTop += delta')
     expect(commentPane).not.toContain('@mouseleave="handleCommentCardLeave(comment.id)"')
     expect(commentPane).toMatch(
       /\.annotamd-comment-card\.local-scroll\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s

@@ -42,7 +42,7 @@
       :aria-label="t('annotamd.comments.listLabel')"
       @scroll.passive="handleCommentListScroll"
       @wheel.passive="handleCommentListWheel"
-      @pointerdown="handleCommentListPointerDown"
+      @pointerdown="handleAutoHideScrollbarPointerDown"
     >
       <article
         v-if="composerOpen"
@@ -457,6 +457,14 @@ const commentNeedsCollapse = (comment: AnnotaMDComment): boolean => (
   comment.body.length + comment.replies.reduce((total, reply) => total + reply.body.length, 0) > 180
 )
 
+const commentCardHeight = (commentId: string, fallback: number): number => {
+  const measuredHeight = commentCardHeights.get(commentId) ?? fallback
+  if (localScrollCommentId.value !== commentId || localScrollMaxHeight.value <= 0) {
+    return measuredHeight
+  }
+  return Math.min(measuredHeight, localScrollMaxHeight.value)
+}
+
 const syncObservedCommentCards = (list: HTMLElement): void => {
   const currentIds = new Set<string>()
   for (const card of list.querySelectorAll<HTMLElement>('[data-comment-id]')) {
@@ -491,7 +499,7 @@ const recalculateCommentBubbleLayout = (): void => {
     return [{
       id: comment.id,
       anchorTop: anchor ? list.scrollTop + anchor.top - listRect.top : null,
-      height: commentCardHeights.get(comment.id) ?? 120
+      height: commentCardHeight(comment.id, 120)
     }]
   })
   if (composerOpen.value) {
@@ -539,33 +547,8 @@ const resetLocalCommentScroll = (commentId?: string): void => {
   localScrollMaxHeight.value = 0
 }
 
-const wheelTargetsLocalComment = (event: WheelEvent): boolean => {
-  const target = event.target
-  if (!(target instanceof Element) || !localScrollCommentId.value) return false
-  return target.closest<HTMLElement>('.annotamd-comment-card')?.dataset.commentId
-    === localScrollCommentId.value
-}
-
-const handleCommentListWheel = (event: WheelEvent): void => {
+const handleCommentListWheel = (): void => {
   revealScrollbar()
-  if (wheelTargetsLocalComment(event)) return
-  resetLocalCommentScroll()
-}
-
-const handleCommentListPointerDown = (event: PointerEvent): void => {
-  const target = event.currentTarget
-  if (target instanceof HTMLElement) {
-    const rect = target.getBoundingClientRect()
-    const onVerticalScrollbar = target.scrollHeight > target.clientHeight
-      && event.clientX >= rect.right - 12
-    if (onVerticalScrollbar) resetLocalCommentScroll()
-  }
-  handleAutoHideScrollbarPointerDown(event)
-}
-
-const handleEditorWheel = (event: WheelEvent): void => {
-  if (wheelTargetsLocalComment(event)) return
-  resetLocalCommentScroll()
 }
 
 const wheelDeltaInPixels = (event: WheelEvent, pageHeight: number): number => {
@@ -587,9 +570,6 @@ const handleCommentCardWheel = (
   const delta = wheelDeltaInPixels(event, card.clientHeight)
 
   if (localScrollCommentId.value === comment.id) {
-    event.preventDefault()
-    event.stopPropagation()
-    card.scrollTop += delta
     return
   }
 
@@ -607,8 +587,8 @@ const handleCommentCardWheel = (
   localScrollMaxHeight.value = availableHeight
   void nextTick().then(() => {
     if (localScrollCommentId.value !== comment.id || !card.isConnected) return
-    card.scrollTop += delta
-    updateCommentBubbleLayout()
+    card.scrollBy({ top: delta })
+    recalculateCommentBubbleLayout()
   })
 }
 
@@ -701,10 +681,8 @@ const bindSharedEditorScroller = (): void => {
     return
   }
   sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
-  sharedEditorScroller?.removeEventListener('wheel', handleEditorWheel)
   sharedEditorScroller = next
   sharedEditorScroller?.addEventListener('scroll', syncSharedScrollFromEditor, { passive: true })
-  sharedEditorScroller?.addEventListener('wheel', handleEditorWheel, { passive: true })
   syncSharedScrollFromEditor()
 }
 
@@ -930,7 +908,6 @@ onBeforeUnmount(() => {
   stopMcpStatusListener?.()
   stopMcpStatusListener = null
   sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
-  sharedEditorScroller?.removeEventListener('wheel', handleEditorWheel)
   sharedEditorScroller = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
   if (commentLayoutFrame != null) cancelAnimationFrame(commentLayoutFrame)
