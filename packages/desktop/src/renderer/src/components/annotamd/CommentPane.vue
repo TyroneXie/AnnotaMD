@@ -90,7 +90,6 @@
         :data-comment-id="comment.id"
         class="annotamd-comment-card"
         :class="{
-          resolved: comment.resolved,
           emphasized: activeCommentId === comment.id || selectedCommentId === comment.id,
           selected: selectedCommentId === comment.id,
           compact: !isCommentExpanded(comment),
@@ -130,11 +129,10 @@
               </button>
             </div>
             <button
-              v-if="!comment.resolved || (comment.anchor && comment.focus)"
               type="button"
-              @click="commentStore.toggleResolved(filePath, comment.id)"
+              @click="commentStore.deleteComment(filePath, comment.id)"
             >
-              {{ t(comment.resolved ? 'annotamd.comments.restore' : 'annotamd.comments.markResolved') }}
+              {{ t('annotamd.comments.markResolved') }}
             </button>
           </div>
         </div>
@@ -1113,10 +1111,6 @@ onBeforeUnmount(() => {
   padding-bottom: 8px;
   border-radius: 9px 9px 0 0;
   background: inherit;
-}
-
-.annotamd-comment-card.resolved {
-  opacity: 0.72;
 }
 
 .annotamd-comment-row {

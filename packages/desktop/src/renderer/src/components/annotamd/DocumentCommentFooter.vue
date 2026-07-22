@@ -6,24 +6,18 @@
     @click.stop
     @mousedown.stop
   >
-    <header class="annotamd-document-comments-header">
-      <h2>{{ t('annotamd.comments.documentTitle') }}</h2>
-      <span>{{ t('annotamd.comments.documentSummary', { count: documentComments.length }) }}</span>
-    </header>
-
     <article
       v-for="comment in documentComments"
       :key="comment.id"
       class="annotamd-document-comment"
-      :class="{ resolved: comment.resolved }"
     >
       <div class="annotamd-document-comment-top">
-        <span>{{ t(comment.resolved ? 'annotamd.comments.resolved' : 'annotamd.comments.documentScope') }}</span>
+        <span>{{ t('annotamd.comments.documentScope') }}</span>
         <button
           type="button"
-          @click="commentStore.toggleResolved(filePath, comment.id)"
+          @click="commentStore.deleteComment(filePath, comment.id)"
         >
-          {{ t(comment.resolved ? 'annotamd.comments.restore' : 'annotamd.comments.markResolved') }}
+          {{ t('annotamd.comments.markResolved') }}
         </button>
       </div>
 
@@ -274,26 +268,6 @@ const saveReply = (id: string): void => {
   user-select: text;
 }
 
-.annotamd-document-comments-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.annotamd-document-comments-header h2 {
-  margin: 0;
-  color: #1f2329;
-  font-size: 17px;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.annotamd-document-comments-header span {
-  color: #8f959e;
-  font-size: 12px;
-}
-
 .annotamd-document-comment,
 .annotamd-document-composer {
   max-width: 100%;
@@ -308,10 +282,6 @@ const saveReply = (id: string): void => {
   padding: 12px 14px;
   background: #fbfcfd;
   border-color: #eceff3;
-}
-
-.annotamd-document-comment.resolved {
-  opacity: 0.68;
 }
 
 .annotamd-document-comment-top {

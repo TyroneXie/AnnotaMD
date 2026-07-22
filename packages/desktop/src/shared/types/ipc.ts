@@ -37,8 +37,6 @@ import type {
   AnnotaMDCommentReplaceRequest,
   AnnotaMDLegacyCommentMigration,
   AnnotaMDCommentMigrationResult,
-  AnnotaMDAgentEditResult,
-  AnnotaMDAgentEditRequest,
   AnnotaMDMcpStatus
 } from './comments'
 import type {
@@ -90,7 +88,6 @@ export interface IpcInvokeChannels {
     ret: AnnotaMDCommentMigrationResult
   }
   'mt::comments::mark-missing': { args: [filePath: string]; ret: void }
-  'mt::comments::apply-edit-result': { args: [result: AnnotaMDAgentEditResult]; ret: void }
   'mt::ask-for-image-path': { args: []; ret: string[] }
   'mt::boot-info-async': { args: []; ret: BootInfo }
   'mt::clipboard::guess-file-path': { args: []; ret: string | null }
@@ -270,7 +267,6 @@ export interface IpcSyncChannels {
 
 export interface IpcMainEventChannels {
   'mt::comments::changed': [filePath: string]
-  'mt::comments::apply-edit': [request: AnnotaMDAgentEditRequest]
   'mt::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
   'language-changed': [language: string]
   'mt::update:state': [state: AppUpdateState]

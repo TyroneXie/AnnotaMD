@@ -144,7 +144,7 @@ describe('performance regression guards', () => {
     expect(project).not.toContain('newFileNameCache')
   })
 
-  it('reuses one comment range layout for highlights, anchors and text validation', () => {
+  it('reuses one comment range layout for highlights and anchors', () => {
     const editor = read(
       'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
     )
@@ -152,7 +152,7 @@ describe('performance regression guards', () => {
     expect(editor).toContain('commentRangeLayout = buildAnnotaMDCommentRangeLayout(')
     expect(editor).toContain('composerAnchorSources')
     expect(editor).toContain("bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)")
-    expect(editor).toContain('const readCommentText = createAnnotaMDCommentTextReader(root)')
+    expect(editor).not.toContain('createAnnotaMDCommentTextReader')
   })
 
   it('batches comment bubble layout and caches observed card heights', () => {

@@ -125,7 +125,6 @@ import {
   ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
   buildAnnotaMDCommentRangeLayout,
   clearAnnotaMDCommentHighlights,
-  createAnnotaMDCommentTextReader,
   findAnnotaMDCommentAtPosition,
   readAnnotaMDCommentText,
   syncAnnotaMDCommentHighlights,
@@ -335,7 +334,6 @@ let documentCommentFooterObserver: MutationObserver | null = null
 let commentHighlightFrame: number | null = null
 let commentRangeLayout: CommentRangeLayout | null = null
 let stopCommentHighlightSubscription: (() => void) | null = null
-let stopAgentEditSubscription: (() => void) | null = null
 let stickyTableHeader: AnnotaMDStickyTableHeader | null = null
 let derivedStateTimer: ReturnType<typeof setTimeout> | null = null
 let pendingDerivedState: { id: string; markdown: string } | null = null
@@ -2218,15 +2216,6 @@ onMounted(() => {
       } else {
         annotaMDCommentsStore.transformSelectionAnchors(filePath, op, prevDoc, doc)
       }
-      requestAnimationFrame(() => {
-        const root = getScrollContainer()
-        if (!root) return
-        const readCommentText = createAnnotaMDCommentTextReader(root)
-        annotaMDCommentsStore.removeCommentsWithChangedText(
-          filePath,
-          readCommentText
-        )
-      })
     }
     // Markdown, dirty tracking and autosave remain synchronous. Word count and
     // TOC are display-only derived state, so coalesce them after an input burst.
@@ -2248,61 +2237,6 @@ onMounted(() => {
     ensureDocumentCommentFooterTarget()
     queueAnnotaMDCommentHighlights()
   })
-
-  stopAgentEditSubscription?.()
-  stopAgentEditSubscription = window.electron.ipcRenderer.on(
-    'mt::comments::apply-edit',
-    async(_event, request) => {
-      if (!editor.value || currentFile.value?.pathname !== request.filePath) return
-      const comment = currentFileComments.value.find((item) => item.id === request.commentId)
-      if (!comment?.anchor?.path || !comment.focus?.path) {
-        await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
-          requestId: request.requestId,
-          success: false,
-          error: 'Comment anchor is unavailable'
-        })
-        return
-      }
-      if ((annotaMDCommentsStore.revisionByFile[request.filePath] ?? 0) !== request.expectedRevision) {
-        await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
-          requestId: request.requestId,
-          success: false,
-          error: 'Comment revision changed; read the comment again'
-        })
-        return
-      }
-      skipNextCommentOtTransform = true
-      let success = false
-      try {
-        success = editor.value.replaceTextRangeExact({
-          anchor: { offset: comment.anchor.offset },
-          focus: { offset: comment.focus.offset },
-          anchorPath: comment.anchor.path,
-          focusPath: comment.focus.path
-        }, comment.exactQuote ?? comment.quote, request.replacement)
-      } finally {
-        skipNextCommentOtTransform = false
-      }
-      if (success) {
-        await annotaMDCommentsStore.completeAgentEdit(
-          request.filePath,
-          request.commentId,
-          request.summary?.trim() || t('annotamd.comments.agentEditReply')
-        )
-        void notice.notify({
-          title: t('annotamd.comments.agentEditCompletedTitle'),
-          message: t('annotamd.comments.agentEditCompletedMessage'),
-          type: 'primary',
-          time: 5000
-        })
-      }
-      await window.electron.ipcRenderer.invoke('mt::comments::apply-edit-result', {
-        requestId: request.requestId,
-        success,
-        error: success ? undefined : 'Commented text changed or the range cannot be edited'
-      })
-    }
-  )
 
   // The engine does not emit `scroll`; listen on the scroll container directly
   // so the desktop can persist each tab's scroll position.
@@ -2536,8 +2470,6 @@ onBeforeUnmount(() => {
   commentHighlightFrame = null
   stopCommentHighlightSubscription?.()
   stopCommentHighlightSubscription = null
-  stopAgentEditSubscription?.()
-  stopAgentEditSubscription = null
   clearAnnotaMDCommentHighlights()
 
   if (imageViewer) {

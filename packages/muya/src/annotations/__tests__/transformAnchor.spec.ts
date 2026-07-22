@@ -89,6 +89,18 @@ describe('annotation anchor OT mapping', () => {
         )).toEqual({ path: [2, 'text'], offset: 2 });
     });
 
+    it('keeps a right-affinity endpoint at the end of its text leaf', () => {
+        const previousDocument = [{ name: 'paragraph', text: 'same' }];
+        const nextDocument = [{ name: 'paragraph', text: 'same!' }];
+
+        expect(mapAnnotationPointBetweenDocumentsUtf16(
+            { path: [0, 'text'], offset: 4 },
+            previousDocument,
+            nextDocument,
+            'right',
+        )).toEqual({ path: [0, 'text'], offset: 5 });
+    });
+
     it('drops an ambiguous full replacement when an identical block is added', () => {
         const previousDocument = [
             { name: 'paragraph', text: 'same' },

@@ -88,6 +88,39 @@ const addComment = async(
   await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(expectedCount)
 }
 
+test('keeps partial edits, removes whole replacements, and permanently resolves comments', async() => {
+  const original = 'ANCHOR_TARGET_ABCDE'
+  const { app, page, filePath } = await launchWithMarkdown(original)
+  try {
+    await addComment(page, 0, '锚点行为 QA', 1, original)
+
+    await selectParagraphText(page, 0, 10, 10)
+    await page.keyboard.type('X')
+    await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(1)
+    await expect(page.locator('span.mu-paragraph-content')).toHaveText('ANCHOR_TARXGET_ABCDE')
+
+    await selectParagraphText(page, 0)
+    await page.keyboard.type('WHOLE_REPLACEMENT')
+    await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(0)
+    await expect.poll(async() => page.evaluate(async({ pathname, content }) => {
+      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      return document.comments.length
+    }, { pathname: filePath, content: 'WHOLE_REPLACEMENT' })).toBe(0)
+
+    await addComment(page, 0, '已解决删除 QA', 1, 'WHOLE_REPLACEMENT')
+    await page.locator(
+      '.annotamd-comment-card .annotamd-comment-row > .annotamd-comment-card-actions > button'
+    ).click()
+    await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(0)
+    await expect.poll(async() => page.evaluate(async({ pathname, content }) => {
+      const document = await window.electron.ipcRenderer.invoke('mt::comments::load', pathname, content)
+      return document.comments.length
+    }, { pathname: filePath, content: 'WHOLE_REPLACEMENT' })).toBe(0)
+  } finally {
+    await app.close()
+  }
+})
+
 test('batches cached comment-card height changes into one anchored relayout', async() => {
   const { app, page } = await launchWithMarkdown('同一锚点文字。\n')
   try {

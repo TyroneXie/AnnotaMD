@@ -57,33 +57,50 @@ export interface AnnotaMDCommentMigrationResult {
   skipped: number
 }
 
-export interface AnnotaMDCommentInboxItem {
+export interface AnnotaMDCommentIndexItem {
+  commentId: string
+  scope: AnnotaMDCommentScope
+  quotePreview: string
+  anchor?: AnnotaMDCommentAnchor
+  focus?: AnnotaMDCommentAnchor
+  isCrossBlock?: boolean
+  messageCount: number
+  lastAuthor: AnnotaMDCommentAuthor
+  lastMessageAt: number
+  lastMessagePreview: string
+}
+
+export interface AnnotaMDCommentIndex {
+  filePath: string
+  revision: number
+  commentCount: number
+  localEndingCommentCount: number
+  comments: AnnotaMDCommentIndexItem[]
+}
+
+export interface AnnotaMDCommentDetails {
+  filePath?: string
+  revision?: number
+  comments: AnnotaMDCommentRecord[]
+  missingCommentIds: string[]
+}
+
+export interface AnnotaMDCommentDocumentRef {
   documentId: string
   filePath: string
   revision: number
-  localEndingCount: number
-  unresolvedCount: number
-  updatedAt: number
 }
 
 export interface AnnotaMDCommentThread {
-  document: AnnotaMDCommentDocument
+  document: AnnotaMDCommentDocumentRef
   comment: AnnotaMDCommentRecord
 }
 
-export interface AnnotaMDAgentEditRequest {
-  requestId: string
-  commentId: string
+export interface AnnotaMDCommentReplyResult {
   filePath: string
-  replacement: string
-  summary?: string
-  expectedRevision: number
-}
-
-export interface AnnotaMDAgentEditResult {
-  requestId: string
-  success: boolean
-  error?: string
+  revision: number
+  commentId: string
+  reply: AnnotaMDCommentReplyRecord
 }
 
 export interface AnnotaMDMcpClientStatus {

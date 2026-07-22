@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import type { JSONOp } from 'ot-json1'
+import { ReadCursor, type JSONOp } from 'ot-json1'
+import diff from 'fast-diff'
 import {
   mapAnnotationPointBetweenDocumentsUtf16,
   transformAnnotationPointUtf16
@@ -98,11 +99,107 @@ const comparePaths = (
   return first.length - second.length
 }
 
-const pointIsBefore = (first: AnnotaMDCommentAnchor, second: AnnotaMDCommentAnchor): boolean => {
-  const firstPath = first.path ?? parseAnchorKey(first.key)
-  const secondPath = second.path ?? parseAnchorKey(second.key)
-  const comparison = comparePaths(firstPath, secondPath)
-  return comparison < 0 || (comparison === 0 && first.offset <= second.offset)
+const pathsEqual = (
+  first: Array<string | number>,
+  second: Array<string | number>
+): boolean => comparePaths(first, second) === 0
+
+type TextOperation = Array<number | string | { d: string }>
+
+const readTextAtPath = (document: unknown, path: Array<string | number>): string | null => {
+  let value = document
+  for (const segment of path) {
+    if (value == null || typeof value !== 'object') return null
+    value = (value as Record<string | number, unknown>)[segment]
+  }
+  return typeof value === 'string' ? value : null
+}
+
+const textOperationDeletesRange = (
+  operation: TextOperation,
+  text: string,
+  startUtf16: number,
+  endUtf16: number
+): boolean => {
+  const start = Array.from(text.slice(0, startUtf16)).length
+  const end = Array.from(text.slice(0, endUtf16)).length
+  if (start >= end) return false
+
+  let previousOffset = 0
+  let coveredUntil = start
+  for (const component of operation) {
+    if (typeof component === 'number') {
+      previousOffset += component
+      continue
+    }
+    if (typeof component === 'string') continue
+    const deletedLength = Array.from(component.d).length
+    const deletionEnd = previousOffset + deletedLength
+    if (previousOffset <= coveredUntil && deletionEnd > coveredUntil) {
+      coveredUntil = Math.min(end, deletionEnd)
+      if (coveredUntil === end) return true
+    }
+    previousOffset = deletionEnd
+  }
+  return false
+}
+
+const operationDeletesWholeSelection = (
+  operation: JSONOp,
+  previousDocument: unknown,
+  anchor: AnnotaMDCommentAnchor,
+  focus: AnnotaMDCommentAnchor
+): boolean => {
+  const anchorPath = anchor.path ?? parseAnchorKey(anchor.key)
+  const focusPath = focus.path ?? parseAnchorKey(focus.key)
+  if (!pathsEqual(anchorPath, focusPath)) return false
+
+  const text = readTextAtPath(previousDocument, anchorPath)
+  if (text == null) return false
+  const start = Math.min(anchor.offset, focus.offset)
+  const end = Math.max(anchor.offset, focus.offset)
+  let deletesWholeSelection = false
+  const cursor = new ReadCursor(operation)
+  cursor.traverse(null, (component) => {
+    if (component.es && pathsEqual(cursor.getPath(), anchorPath)) {
+      deletesWholeSelection ||= textOperationDeletesRange(
+        component.es as TextOperation,
+        text,
+        start,
+        end
+      )
+    }
+  })
+  return deletesWholeSelection
+}
+
+const documentChangeDeletesWholeSelection = (
+  previousDocument: unknown,
+  nextDocument: unknown,
+  anchor: AnnotaMDCommentAnchor,
+  focus: AnnotaMDCommentAnchor,
+  nextAnchor: { path: Array<string | number>; offset: number },
+  nextFocus: { path: Array<string | number>; offset: number }
+): boolean => {
+  const anchorPath = anchor.path ?? parseAnchorKey(anchor.key)
+  const focusPath = focus.path ?? parseAnchorKey(focus.key)
+  if (!pathsEqual(anchorPath, focusPath) || !pathsEqual(nextAnchor.path, nextFocus.path)) {
+    return false
+  }
+  const previousText = readTextAtPath(previousDocument, anchorPath)
+  const nextText = readTextAtPath(nextDocument, nextAnchor.path)
+  if (previousText == null || nextText == null) return false
+  const textOperation: TextOperation = diff(previousText, nextText).map(([kind, text]) => {
+    if (kind === diff.INSERT) return text
+    if (kind === diff.DELETE) return { d: text }
+    return Array.from(text).length
+  })
+  return textOperationDeletesRange(
+    textOperation,
+    previousText,
+    Math.min(anchor.offset, focus.offset),
+    Math.max(anchor.offset, focus.offset)
+  )
 }
 
 const createId = (): string => {
@@ -258,24 +355,36 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
 
       this.commentsByFile[filePath] = comments.flatMap((comment) => {
         if (comment.scope !== 'selection' || !comment.anchor || !comment.focus) return [comment]
+        if (operationDeletesWholeSelection(
+          operation,
+          previousDocument,
+          comment.anchor,
+          comment.focus
+        )) {
+          changed = true
+          return []
+        }
         const anchorPath = comment.anchor.path ?? parseAnchorKey(comment.anchor.key)
         const focusPath = comment.focus.path ?? parseAnchorKey(comment.focus.key)
-        const anchorFirst = pointIsBefore(comment.anchor, comment.focus)
         const anchor = transformAnnotationPointUtf16(
           { path: anchorPath, offset: comment.anchor.offset },
           operation,
           previousDocument,
           nextDocument,
-          anchorFirst ? 'right' : 'left'
+          'right'
         )
         const focus = transformAnnotationPointUtf16(
           { path: focusPath, offset: comment.focus.offset },
           operation,
           previousDocument,
           nextDocument,
-          anchorFirst ? 'left' : 'right'
+          'right'
         )
         if (!anchor || !focus) {
+          changed = true
+          return []
+        }
+        if (comparePaths(anchor.path, focus.path) === 0 && anchor.offset === focus.offset) {
           changed = true
           return []
         }
@@ -309,9 +418,8 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         if (comment.scope !== 'selection' || !comment.anchor || !comment.focus) return [comment]
         const anchorPath = comment.anchor.path ?? parseAnchorKey(comment.anchor.key)
         const focusPath = comment.focus.path ?? parseAnchorKey(comment.focus.key)
-        const anchorFirst = pointIsBefore(comment.anchor, comment.focus)
-        const anchorAffinity = anchorFirst ? 'right' : 'left'
-        const focusAffinity = anchorFirst ? 'left' : 'right'
+        const anchorAffinity = 'right'
+        const focusAffinity = 'right'
         const anchor = mapAnnotationPointBetweenDocumentsUtf16(
           { path: anchorPath, offset: comment.anchor.offset },
           previousDocument,
@@ -328,25 +436,18 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           changed = true
           return []
         }
-
-        const anchorRoundTrip = mapAnnotationPointBetweenDocumentsUtf16(
+        if (documentChangeDeletesWholeSelection(
+          previousDocument,
+          nextDocument,
+          comment.anchor,
+          comment.focus,
           anchor,
-          nextDocument,
-          previousDocument,
-          anchorAffinity
-        )
-        const focusRoundTrip = mapAnnotationPointBetweenDocumentsUtf16(
-          focus,
-          nextDocument,
-          previousDocument,
-          focusAffinity
-        )
-        const stable = anchorRoundTrip && focusRoundTrip
-          && comparePaths(anchorRoundTrip.path, anchorPath) === 0
-          && anchorRoundTrip.offset === comment.anchor.offset
-          && comparePaths(focusRoundTrip.path, focusPath) === 0
-          && focusRoundTrip.offset === comment.focus.offset
-        if (!stable) {
+          focus
+        )) {
+          changed = true
+          return []
+        }
+        if (comparePaths(anchor.path, focus.path) === 0 && anchor.offset === focus.offset) {
           changed = true
           return []
         }
@@ -361,22 +462,6 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       })
 
       if (changed) void this.persistFile(filePath)
-    },
-
-    removeCommentsWithChangedText(
-      filePath: string,
-      readText: (comment: AnnotaMDComment) => string | null
-    ): void {
-      const comments = this.commentsByFile[filePath]
-      if (!comments?.length) return
-      const next = comments.filter((comment) => {
-        if (comment.scope !== 'selection' || comment.resolved) return true
-        const currentText = readText(comment)
-        return currentText != null && currentText === (comment.exactQuote ?? comment.quote)
-      })
-      if (next.length === comments.length) return
-      this.commentsByFile[filePath] = next
-      void this.persistFile(filePath)
     },
 
     setActiveSelection(selection: AnnotaMDSelection | null): void {
@@ -521,31 +606,6 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       const reply = comment?.replies.find((item) => item.id === replyId)
       if (!comment || !reply || reply.author !== 'user') return
       comment.replies = comment.replies.filter((item) => item.id !== replyId)
-      comment.updatedAt = Date.now()
-      void this.persistFile(filePath)
-    },
-
-    completeAgentEdit(filePath: string, id: string, body: string): Promise<void> {
-      const comment = this.commentsByFile[filePath]?.find((item) => item.id === id)
-      if (!comment || !body.trim()) return Promise.resolve()
-      const now = Date.now()
-      comment.resolved = true
-      comment.anchor = undefined
-      comment.focus = undefined
-      comment.replies.push({
-        id: createId(),
-        body: body.trim(),
-        author: 'agent',
-        createdAt: now
-      })
-      comment.updatedAt = now
-      return this.persistFile(filePath)
-    },
-
-    toggleResolved(filePath: string, id: string): void {
-      const comment = this.commentsByFile[filePath]?.find((item) => item.id === id)
-      if (!comment) return
-      comment.resolved = !comment.resolved
       comment.updatedAt = Date.now()
       void this.persistFile(filePath)
     },

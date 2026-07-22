@@ -458,10 +458,10 @@
       "statusDisabled": "Comment access is off",
       "capabilitiesTitle": "Let Agents handle document comments",
       "capabilitiesSummary": "In ChatGPT, Claude Code or another Agent, simply say: “Handle this document based on its comments.” The Agent reads the document and decides whether to edit, answer a question or ask you first.",
-      "capabilityDocument": "For edit requests, it updates the exact content and keeps a resolved record",
+      "capabilityDocument": "For edit requests, it updates the exact content while leaving resolution to you",
       "capabilityComments": "For questions, it replies in the comment thread so the conversation can continue",
       "capabilityActions": "When a comment is unclear, it asks before making changes",
-      "permissionBoundary": "You can also say “reply only—do not edit”, “review the comments first” or “handle every unresolved comment”. Comments stay on this device and are never written into Markdown.",
+      "permissionBoundary": "You can also say “reply only—do not edit”, “review the comments first” or “handle every Local-ending comment”. Comments stay on this device and are never written into Markdown.",
       "clientsTitle": "Agent connections",
       "clientDescription": "Supports the AnnotaMD comment workflow",
       "connected": "Connected",
@@ -1018,7 +1018,7 @@
       "documentSummary": "{count} comments · stored locally",
       "documentScope": "Document comment",
       "documentPlaceholder": "Describe document-wide changes for the Agent",
-      "documentStorageDescription": "Stored only in local SQLite and never written into Markdown."
+      "documentStorageDescription": "Comments stay on this device and do not change the document."
     }
   },
   "common": {

@@ -208,7 +208,7 @@ export function mapAnnotationPointBetweenDocumentsUtf16(
     ) || (
         nextAbsoluteOffset === leaf.start && affinity === 'right'
     ) || (
-        nextAbsoluteOffset === leaf.end && affinity === 'left'
+        nextAbsoluteOffset === leaf.end
     ));
     if (!nextLeaf)
         return null;

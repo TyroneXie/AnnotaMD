@@ -40,6 +40,16 @@ describe('Feishu-style comment messages', () => {
     )
   })
 
+  it('permanently deletes a comment when the user marks it resolved', () => {
+    for (const component of [commentPane, documentFooter]) {
+      expect(component).toContain("commentStore.deleteComment(filePath, comment.id)")
+      expect(component).not.toContain('commentStore.toggleResolved')
+      expect(component).not.toContain("t('annotamd.comments.restore')")
+    }
+    expect(commentStore).not.toContain('toggleResolved(')
+    expect(commentStore).not.toContain('completeAgentEdit(')
+  })
+
   it('uses a compact one-line quote and removes reply connector lines', () => {
     expect(commentPane).toMatch(
       /\.annotamd-comment-card blockquote\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s
@@ -47,6 +57,23 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toMatch(/\.annotamd-comment-list\s*\{[^}]*padding:\s*0 8px;/s)
     expect(commentPane).not.toMatch(/\.annotamd-replies\s*\{[^}]*border-left:/s)
     expect(documentFooter).not.toMatch(/\.annotamd-document-replies\s*\{[^}]*border-left:/s)
+  })
+
+  it('keeps the document comment composer free of technical storage details', () => {
+    const chinese = JSON.parse(read('packages/desktop/static/locales/zh-CN.json'))
+    const english = JSON.parse(read('packages/desktop/static/locales/en.json'))
+
+    expect(documentFooter).not.toContain('annotamd-document-comments-header')
+    expect(documentFooter).not.toContain("t('annotamd.comments.documentTitle')")
+    expect(documentFooter).not.toContain("t('annotamd.comments.documentSummary'")
+    expect(chinese.annotamd.comments.documentStorageDescription).toBe(
+      '批注仅保存在本机，不会写入文档内容。'
+    )
+    expect(english.annotamd.comments.documentStorageDescription).toBe(
+      'Comments stay on this device and do not change the document.'
+    )
+    expect(chinese.annotamd.comments.documentStorageDescription).not.toMatch(/SQLite|Markdown/)
+    expect(english.annotamd.comments.documentStorageDescription).not.toMatch(/SQLite|Markdown/)
   })
 
   it('keeps anchored cards in the scroll flow instead of hiding and animating their top', () => {
@@ -107,7 +134,6 @@ describe('Feishu-style comment messages', () => {
 
     expect(english.annotamd.comments.selectionScope).toBe('Selection')
     expect(english.annotamd.comments.markResolved).toBe('Resolve')
-    expect(english.annotamd.comments.restore).toBe('Reopen')
     expect(commentPane).toMatch(
       /\.annotamd-comment-scope\s*\{[^}]*white-space:\s*nowrap;/s
     )

@@ -4,11 +4,13 @@ import { gzipSync, gunzipSync } from 'node:zlib'
 import { DatabaseSync, type StatementResultingChanges } from 'node:sqlite'
 import type {
   AnnotaMDCommentDocument,
+  AnnotaMDCommentDetails,
+  AnnotaMDCommentIndex,
   AnnotaMDCommentRecord,
+  AnnotaMDCommentReplyResult,
   AnnotaMDCommentReplaceRequest,
   AnnotaMDLegacyCommentMigration,
   AnnotaMDCommentMigrationResult,
-  AnnotaMDCommentInboxItem,
   AnnotaMDCommentThread,
   AnnotaMDCommentAuthor
 } from '@shared/types/comments'
@@ -85,48 +87,35 @@ export class CommentService {
     return this.toDocument(document)
   }
 
-  listInbox(): AnnotaMDCommentInboxItem[] {
+  listComments(filePath: string): AnnotaMDCommentIndex | null {
     this.refreshMissingDocuments()
-    return this.db.prepare(`
-      SELECT d.id AS document_id, d.path, d.revision, d.updated_at,
-             COUNT(c.id) AS local_ending_count,
-             (
-               SELECT COUNT(*) FROM comments unresolved
-               WHERE unresolved.document_id = d.id AND unresolved.resolved = 0
-             ) AS unresolved_count
-      FROM documents d
-      JOIN comments c ON c.document_id = d.id
-      LEFT JOIN messages last_message ON last_message.rowid = (
-        SELECT message.rowid
-        FROM messages message
-        WHERE message.comment_id = c.id
-        ORDER BY message.created_at DESC, message.rowid DESC
-        LIMIT 1
-      )
-      WHERE d.missing_since IS NULL
-        AND (last_message.rowid IS NULL OR last_message.author = 'user')
-      GROUP BY d.id
-      ORDER BY d.updated_at DESC
-    `).all().map((row) => {
-      const item = row as Record<string, string | number>
+    const row = this.findExistingDocument(filePath)
+    if (!row) return null
+    const comments = this.toDocument(row).comments
+    const items = comments.map((comment) => {
+      const lastReply = comment.replies.at(-1)
+      const lastAuthor = lastReply?.author ?? 'user'
+      const lastMessage = lastReply?.body ?? comment.body
       return {
-        documentId: String(item.document_id),
-        filePath: String(item.path),
-        revision: Number(item.revision),
-        localEndingCount: Number(item.local_ending_count),
-        unresolvedCount: Number(item.unresolved_count),
-        updatedAt: Number(item.updated_at)
+        commentId: comment.id,
+        scope: comment.scope,
+        quotePreview: this.preview(comment.exactQuote ?? comment.quote),
+        anchor: comment.anchor,
+        focus: comment.focus,
+        isCrossBlock: comment.isCrossBlock,
+        messageCount: comment.replies.length + 1,
+        lastAuthor,
+        lastMessageAt: lastReply?.createdAt ?? comment.createdAt,
+        lastMessagePreview: this.preview(lastMessage)
       }
     })
-  }
-
-  loadByDocumentId(documentId: string): AnnotaMDCommentDocument | null {
-    this.refreshMissingDocuments()
-    const row = this.db.prepare(`
-      SELECT id, path, device, inode, revision, snapshot
-      FROM documents WHERE id = ? AND missing_since IS NULL
-    `).get(documentId) as DocumentRow | undefined
-    return row ? this.toDocument(row) : null
+    return {
+      filePath: row.path,
+      revision: row.revision,
+      commentCount: items.length,
+      localEndingCommentCount: items.filter((comment) => comment.lastAuthor === 'user').length,
+      comments: items
+    }
   }
 
   getComment(commentId: string): AnnotaMDCommentThread | null {
@@ -137,9 +126,32 @@ export class CommentService {
       WHERE c.id = ? AND d.missing_since IS NULL
     `).get(commentId) as DocumentRow | undefined
     if (!row) return null
-    const document = this.toDocument(row)
-    const comment = document.comments.find((item) => item.id === commentId)
-    return comment ? { document, comment } : null
+    const comment = this.toDocument(row).comments.find((item) => item.id === commentId)
+    return comment ? {
+      document: { documentId: row.id, filePath: row.path, revision: row.revision },
+      comment
+    } : null
+  }
+
+  getComments(commentIds: string[]): AnnotaMDCommentDetails {
+    const comments: AnnotaMDCommentRecord[] = []
+    const missingCommentIds: string[] = []
+    let filePath: string | undefined
+    let revision: number | undefined
+    for (const commentId of commentIds) {
+      const thread = this.getComment(commentId)
+      if (!thread) {
+        missingCommentIds.push(commentId)
+        continue
+      }
+      if (filePath && thread.document.filePath !== filePath) {
+        throw new Error('All requested comments must belong to the same Markdown file')
+      }
+      filePath = thread.document.filePath
+      revision = thread.document.revision
+      comments.push(thread.comment)
+    }
+    return { filePath, revision, comments, missingCommentIds }
   }
 
   reply(
@@ -147,33 +159,24 @@ export class CommentService {
     body: string,
     author: AnnotaMDCommentAuthor,
     expectedRevision: number
-  ): AnnotaMDCommentThread {
+  ): AnnotaMDCommentReplyResult {
     const thread = this.requireThread(commentId, expectedRevision)
     const now = this.now()
+    const reply = { id: randomUUID(), body: body.trim(), author, createdAt: now }
     this.transaction(() => {
       this.db.prepare(`
         INSERT INTO messages (id, comment_id, body, author, created_at)
         VALUES (?, ?, ?, ?, ?)
-      `).run(randomUUID(), commentId, body.trim(), author, now)
+      `).run(reply.id, commentId, reply.body, reply.author, reply.createdAt)
       this.bumpDocumentRevision(thread.document.documentId, expectedRevision + 1, now)
       this.db.prepare('UPDATE comments SET updated_at = ? WHERE id = ?').run(now, commentId)
     })
-    return this.getComment(commentId)!
-  }
-
-  setResolved(
-    commentId: string,
-    resolved: boolean,
-    expectedRevision: number
-  ): AnnotaMDCommentThread {
-    const thread = this.requireThread(commentId, expectedRevision)
-    const now = this.now()
-    this.transaction(() => {
-      this.db.prepare('UPDATE comments SET resolved = ?, updated_at = ? WHERE id = ?')
-        .run(resolved ? 1 : 0, now, commentId)
-      this.bumpDocumentRevision(thread.document.documentId, expectedRevision + 1, now)
-    })
-    return this.getComment(commentId)!
+    return {
+      filePath: thread.document.filePath,
+      revision: expectedRevision + 1,
+      commentId,
+      reply
+    }
   }
 
   replace(request: AnnotaMDCommentReplaceRequest): AnnotaMDCommentDocument {
@@ -185,8 +188,12 @@ export class CommentService {
     const nextRevision = document.revision + 1
     const now = this.now()
     this.transaction(() => {
+      this.db.prepare('DELETE FROM documents WHERE path = ? AND id <> ?')
+        .run(request.filePath, document.id)
       this.db.prepare('DELETE FROM comments WHERE document_id = ?').run(document.id)
-      for (const comment of request.comments) this.insertComment(document.id, comment)
+      for (const comment of request.comments) {
+        if (!comment.resolved) this.insertComment(document.id, comment)
+      }
       this.db.prepare(`
         UPDATE documents
         SET revision = ?, snapshot = ?, content_hash = ?, missing_since = NULL, updated_at = ?
@@ -308,7 +315,23 @@ export class CommentService {
       );
       CREATE INDEX IF NOT EXISTS messages_comment_idx ON messages(comment_id);
     `)
+    this.purgeResolvedComments()
     this.cleanupMissing()
+  }
+
+  private purgeResolvedComments(): void {
+    const documents = this.db.prepare(`
+      SELECT DISTINCT document_id FROM comments WHERE resolved = 1
+    `).all() as Array<{ document_id: string }>
+    if (!documents.length) return
+    const now = this.now()
+    this.transaction(() => {
+      this.db.prepare('DELETE FROM comments WHERE resolved = 1').run()
+      const update = this.db.prepare(`
+        UPDATE documents SET revision = revision + 1, updated_at = ? WHERE id = ?
+      `)
+      for (const document of documents) update.run(now, document.document_id)
+    })
   }
 
   private requireThread(commentId: string, expectedRevision: number): AnnotaMDCommentThread {
@@ -338,7 +361,7 @@ export class CommentService {
       `).get(identity.device, identity.inode) as DocumentRow | undefined
     }
 
-    if (!row && !identity) {
+    if (!row) {
       row = this.db.prepare(`
         SELECT id, path, device, inode, revision, snapshot
         FROM documents
@@ -348,11 +371,23 @@ export class CommentService {
     }
 
     if (row) {
-      if (row.path !== filePath) {
+      if (row.path !== filePath
+        || row.device !== (identity?.device ?? null)
+        || row.inode !== (identity?.inode ?? null)) {
         this.db.prepare(`
-          UPDATE documents SET path = ?, missing_since = NULL, updated_at = ? WHERE id = ?
-        `).run(filePath, this.now(), row.id)
+          UPDATE documents
+          SET path = ?, device = ?, inode = ?, missing_since = NULL, updated_at = ?
+          WHERE id = ?
+        `).run(
+          filePath,
+          identity?.device ?? null,
+          identity?.inode ?? null,
+          this.now(),
+          row.id
+        )
         row.path = filePath
+        row.device = identity?.device ?? null
+        row.inode = identity?.inode ?? null
       } else {
         this.db.prepare(`
           UPDATE documents SET missing_since = NULL, updated_at = ? WHERE id = ?
@@ -386,6 +421,28 @@ export class CommentService {
       revision: 0,
       snapshot: this.compress(markdown)
     }
+  }
+
+  private findExistingDocument(filePath: string): DocumentRow | null {
+    if (!existsSync(filePath)) return null
+    const identity = this.fileIdentity(filePath)
+    let row = identity
+      ? this.db.prepare(`
+          SELECT id, path, device, inode, revision, snapshot
+          FROM documents
+          WHERE device = ? AND inode = ? AND missing_since IS NULL
+          ORDER BY updated_at DESC LIMIT 1
+        `).get(identity.device, identity.inode) as DocumentRow | undefined
+      : undefined
+    if (!row) {
+      row = this.db.prepare(`
+          SELECT id, path, device, inode, revision, snapshot
+          FROM documents
+          WHERE path = ? AND missing_since IS NULL
+          ORDER BY updated_at DESC LIMIT 1
+        `).get(filePath) as DocumentRow | undefined
+    }
+    return row ?? null
   }
 
   private toDocument(row: DocumentRow): AnnotaMDCommentDocument {
@@ -489,6 +546,11 @@ export class CommentService {
 
   private compress(markdown: string): Buffer {
     return gzipSync(Buffer.from(markdown, 'utf8'))
+  }
+
+  private preview(value: string, limit = 160): string {
+    const normalized = value.replace(/\s+/g, ' ').trim()
+    return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1)}…`
   }
 
   private transaction(work: () => void): void {

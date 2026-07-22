@@ -458,10 +458,10 @@
       "statusDisabled": "评论访问已关闭",
       "capabilitiesTitle": "让 Agent 处理文档评论",
       "capabilitiesSummary": "在 ChatGPT、Claude Code 或其他 Agent 中直接说：“根据文档中的评论，处理这份文档。”Agent 会结合正文和评论，判断应该修改内容、回答问题，还是先向你确认。",
-      "capabilityDocument": "评论提出修改要求时，精确修改对应内容，并保留已解决记录",
+      "capabilityDocument": "评论提出修改要求时，精确修改对应内容；评论是否解决仍由你确认",
       "capabilityComments": "评论提出问题时，直接在线程中回答，方便继续交流",
       "capabilityActions": "评论不明确时，先回复询问，不擅自修改",
-      "permissionBoundary": "你也可以明确说“只回复评论，不要修改正文”“先查看评论”或“处理所有未解决评论”。评论只保存在本机，不会写入 Markdown。",
+      "permissionBoundary": "你也可以明确说“只回复评论，不要修改正文”“先查看评论”或“处理所有 Local 结尾的评论”。评论只保存在本机，不会写入 Markdown。",
       "clientsTitle": "Agent 连接",
       "clientDescription": "支持 AnnotaMD 批注工作流",
       "connected": "已连接",
@@ -1018,7 +1018,7 @@
       "documentSummary": "{count} 条批注 · 仅存本机",
       "documentScope": "全文批注",
       "documentPlaceholder": "记录给智能体的全文修改意见",
-      "documentStorageDescription": "仅保存在本机 SQLite，不写入 Markdown 正文。"
+      "documentStorageDescription": "批注仅保存在本机，不会写入文档内容。"
     }
   },
   "common": {

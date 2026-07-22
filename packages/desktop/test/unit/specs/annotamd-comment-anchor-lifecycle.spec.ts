@@ -138,14 +138,62 @@ describe('AnnotaMD live comment anchors', () => {
     expect(replaceCalls[1][1]).toMatchObject({ markdown: 'latest' })
   })
 
-  it('removes a comment as soon as its selected visible text changes', () => {
+  it('keeps a comment when only part of its selected text is deleted', () => {
     const store = useAnnotaMDCommentsStore()
     store.commentsByFile[filePath] = [commentAtSecondBlock()]
     store.revisionByFile[filePath] = 0
+    const previous = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'same' }
+    ]
+    const next = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'sme' }
+    ]
 
-    store.removeCommentsWithChangedText(filePath, () => 'sXme')
+    store.transformSelectionAnchors(
+      filePath,
+      editOp([1, 'text'], 'text-unicode', [1, { d: 'a' }]),
+      previous,
+      next
+    )
 
-    expect(store.commentsByFile[filePath]).toEqual([])
+    expect(store.commentsByFile[filePath]).toMatchObject([{
+      id: 'comment-1',
+      quote: 'same',
+      exactQuote: 'same',
+      anchor: { offset: 0 },
+      focus: { offset: 3 }
+    }])
+  })
+
+  it('keeps a comment when only part of its selected text is replaced', () => {
+    const store = useAnnotaMDCommentsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
+    store.revisionByFile[filePath] = 0
+    const previous = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'same' }
+    ]
+    const next = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'sXXe' }
+    ]
+
+    store.transformSelectionAnchors(
+      filePath,
+      editOp([1, 'text'], 'text-unicode', [1, { d: 'am' }, 'XX']),
+      previous,
+      next
+    )
+
+    expect(store.commentsByFile[filePath]).toMatchObject([{
+      id: 'comment-1',
+      quote: 'same',
+      exactQuote: 'same',
+      anchor: { offset: 0 },
+      focus: { offset: 4 }
+    }])
   })
 
   it('keeps the comment when only surrounding content changes', () => {
@@ -153,29 +201,111 @@ describe('AnnotaMD live comment anchors', () => {
     store.commentsByFile[filePath] = [commentAtSecondBlock()]
     store.revisionByFile[filePath] = 0
 
-    store.removeCommentsWithChangedText(filePath, () => 'same')
-
     expect(store.commentsByFile[filePath]).toHaveLength(1)
   })
 
-  it('keeps an Agent-completed comment as resolved history after its text changes', async() => {
+  it('includes text inserted at the end of the annotated range', () => {
     const store = useAnnotaMDCommentsStore()
     store.commentsByFile[filePath] = [commentAtSecondBlock()]
-    store.markdownByFile[filePath] = 'same\n\nupdated'
+    store.revisionByFile[filePath] = 0
+    const previous = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'same' }
+    ]
+    const next = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'same!' }
+    ]
+
+    store.transformSelectionAnchors(
+      filePath,
+      editOp([1, 'text'], 'text-unicode', [4, '!']),
+      previous,
+      next
+    )
+    expect(store.commentsByFile[filePath][0].anchor?.offset).toBe(0)
+    expect(store.commentsByFile[filePath][0].focus?.offset).toBe(5)
+    expect(store.commentsByFile[filePath][0].exactQuote).toBe('same')
+  })
+
+  it.each([
+    { name: 'replaced', operation: [{ d: 'same' }, 'whole'], nextText: 'whole' },
+    { name: 'deleted', operation: [{ d: 'same' }], nextText: '' }
+  ])('removes a comment when its whole selected text is $name', ({ operation, nextText }) => {
+    const store = useAnnotaMDCommentsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
+    store.revisionByFile[filePath] = 0
+    const previous = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: 'same' }
+    ]
+    const next = [
+      { name: 'paragraph', text: 'first' },
+      { name: 'paragraph', text: nextText }
+    ]
+
+    store.transformSelectionAnchors(
+      filePath,
+      editOp([1, 'text'], 'text-unicode', operation),
+      previous,
+      next
+    )
+
+    expect(store.commentsByFile[filePath]).toEqual([])
+  })
+
+  it('keeps and expands the comment across an external partial edit', () => {
+    const store = useAnnotaMDCommentsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
     store.revisionByFile[filePath] = 0
 
-    await store.completeAgentEdit(filePath, 'comment-1', '已按评论修改文档。')
-    store.removeCommentsWithChangedText(filePath, () => null)
+    store.remapSelectionAnchorsBetweenDocuments(
+      filePath,
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: 'same' }
+      ],
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: 'sXXe!' }
+      ]
+    )
 
     expect(store.commentsByFile[filePath]).toMatchObject([{
       id: 'comment-1',
-      resolved: true,
-      anchor: undefined,
-      focus: undefined,
-      replies: [{
-        author: 'agent',
-        body: '已按评论修改文档。'
-      }]
+      exactQuote: 'same',
+      anchor: { offset: 0 },
+      focus: { offset: 5 }
     }])
+  })
+
+  it.each([
+    { name: 'replaced', nextText: 'XYZ' },
+    { name: 'deleted', nextText: '' }
+  ])('removes the comment when an external edit has $name the whole selection', ({ nextText }) => {
+    const store = useAnnotaMDCommentsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
+    store.revisionByFile[filePath] = 0
+
+    store.remapSelectionAnchorsBetweenDocuments(
+      filePath,
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: 'same' }
+      ],
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: nextText }
+      ]
+    )
+
+    expect(store.commentsByFile[filePath]).toEqual([])
+  })
+
+  it('does not keep a separate Agent-completed history path', () => {
+    const store = useAnnotaMDCommentsStore()
+
+    expect(store).not.toHaveProperty('completeAgentEdit')
+    expect(store).not.toHaveProperty('toggleResolved')
   })
 })

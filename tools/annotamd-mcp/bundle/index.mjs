@@ -20901,228 +20901,6 @@ var McpZodTypeKind;
   McpZodTypeKind2["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/uriTemplate.js
-var MAX_TEMPLATE_LENGTH = 1e6;
-var MAX_VARIABLE_LENGTH = 1e6;
-var MAX_TEMPLATE_EXPRESSIONS = 1e4;
-var MAX_REGEX_LENGTH = 1e6;
-var UriTemplate = class _UriTemplate {
-  /**
-   * Returns true if the given string contains any URI template expressions.
-   * A template expression is a sequence of characters enclosed in curly braces,
-   * like {foo} or {?bar}.
-   */
-  static isTemplate(str) {
-    return /\{[^}\s]+\}/.test(str);
-  }
-  static validateLength(str, max, context) {
-    if (str.length > max) {
-      throw new Error(`${context} exceeds maximum length of ${max} characters (got ${str.length})`);
-    }
-  }
-  get variableNames() {
-    return this.parts.flatMap((part) => typeof part === "string" ? [] : part.names);
-  }
-  constructor(template) {
-    _UriTemplate.validateLength(template, MAX_TEMPLATE_LENGTH, "Template");
-    this.template = template;
-    this.parts = this.parse(template);
-  }
-  toString() {
-    return this.template;
-  }
-  parse(template) {
-    const parts = [];
-    let currentText = "";
-    let i = 0;
-    let expressionCount = 0;
-    while (i < template.length) {
-      if (template[i] === "{") {
-        if (currentText) {
-          parts.push(currentText);
-          currentText = "";
-        }
-        const end = template.indexOf("}", i);
-        if (end === -1)
-          throw new Error("Unclosed template expression");
-        expressionCount++;
-        if (expressionCount > MAX_TEMPLATE_EXPRESSIONS) {
-          throw new Error(`Template contains too many expressions (max ${MAX_TEMPLATE_EXPRESSIONS})`);
-        }
-        const expr = template.slice(i + 1, end);
-        const operator = this.getOperator(expr);
-        const exploded = expr.includes("*");
-        const names = this.getNames(expr);
-        const name = names[0];
-        for (const name2 of names) {
-          _UriTemplate.validateLength(name2, MAX_VARIABLE_LENGTH, "Variable name");
-        }
-        parts.push({ name, operator, names, exploded });
-        i = end + 1;
-      } else {
-        currentText += template[i];
-        i++;
-      }
-    }
-    if (currentText) {
-      parts.push(currentText);
-    }
-    return parts;
-  }
-  getOperator(expr) {
-    const operators = ["+", "#", ".", "/", "?", "&"];
-    return operators.find((op) => expr.startsWith(op)) || "";
-  }
-  getNames(expr) {
-    const operator = this.getOperator(expr);
-    return expr.slice(operator.length).split(",").map((name) => name.replace("*", "").trim()).filter((name) => name.length > 0);
-  }
-  encodeValue(value, operator) {
-    _UriTemplate.validateLength(value, MAX_VARIABLE_LENGTH, "Variable value");
-    if (operator === "+" || operator === "#") {
-      return encodeURI(value);
-    }
-    return encodeURIComponent(value);
-  }
-  expandPart(part, variables) {
-    if (part.operator === "?" || part.operator === "&") {
-      const pairs = part.names.map((name) => {
-        const value2 = variables[name];
-        if (value2 === void 0)
-          return "";
-        const encoded2 = Array.isArray(value2) ? value2.map((v) => this.encodeValue(v, part.operator)).join(",") : this.encodeValue(value2.toString(), part.operator);
-        return `${name}=${encoded2}`;
-      }).filter((pair) => pair.length > 0);
-      if (pairs.length === 0)
-        return "";
-      const separator = part.operator === "?" ? "?" : "&";
-      return separator + pairs.join("&");
-    }
-    if (part.names.length > 1) {
-      const values2 = part.names.map((name) => variables[name]).filter((v) => v !== void 0);
-      if (values2.length === 0)
-        return "";
-      return values2.map((v) => Array.isArray(v) ? v[0] : v).join(",");
-    }
-    const value = variables[part.name];
-    if (value === void 0)
-      return "";
-    const values = Array.isArray(value) ? value : [value];
-    const encoded = values.map((v) => this.encodeValue(v, part.operator));
-    switch (part.operator) {
-      case "":
-        return encoded.join(",");
-      case "+":
-        return encoded.join(",");
-      case "#":
-        return "#" + encoded.join(",");
-      case ".":
-        return "." + encoded.join(".");
-      case "/":
-        return "/" + encoded.join("/");
-      default:
-        return encoded.join(",");
-    }
-  }
-  expand(variables) {
-    let result2 = "";
-    let hasQueryParam = false;
-    for (const part of this.parts) {
-      if (typeof part === "string") {
-        result2 += part;
-        continue;
-      }
-      const expanded = this.expandPart(part, variables);
-      if (!expanded)
-        continue;
-      if ((part.operator === "?" || part.operator === "&") && hasQueryParam) {
-        result2 += expanded.replace("?", "&");
-      } else {
-        result2 += expanded;
-      }
-      if (part.operator === "?" || part.operator === "&") {
-        hasQueryParam = true;
-      }
-    }
-    return result2;
-  }
-  escapeRegExp(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }
-  partToRegExp(part) {
-    const patterns = [];
-    for (const name2 of part.names) {
-      _UriTemplate.validateLength(name2, MAX_VARIABLE_LENGTH, "Variable name");
-    }
-    if (part.operator === "?" || part.operator === "&") {
-      for (let i = 0; i < part.names.length; i++) {
-        const name2 = part.names[i];
-        const prefix = i === 0 ? "\\" + part.operator : "&";
-        patterns.push({
-          pattern: prefix + this.escapeRegExp(name2) + "=([^&]+)",
-          name: name2
-        });
-      }
-      return patterns;
-    }
-    let pattern;
-    const name = part.name;
-    switch (part.operator) {
-      case "":
-        pattern = part.exploded ? "([^/,]+(?:,[^/,]+)*)" : "([^/,]+)";
-        break;
-      case "+":
-      case "#":
-        pattern = "(.+)";
-        break;
-      case ".":
-        pattern = "\\.([^/,]+)";
-        break;
-      case "/":
-        pattern = "/" + (part.exploded ? "([^/,]+(?:,[^/,]+)*)" : "([^/,]+)");
-        break;
-      default:
-        pattern = "([^/]+)";
-    }
-    patterns.push({ pattern, name });
-    return patterns;
-  }
-  match(uri) {
-    _UriTemplate.validateLength(uri, MAX_TEMPLATE_LENGTH, "URI");
-    let pattern = "^";
-    const names = [];
-    for (const part of this.parts) {
-      if (typeof part === "string") {
-        pattern += this.escapeRegExp(part);
-      } else {
-        const patterns = this.partToRegExp(part);
-        for (const { pattern: partPattern, name } of patterns) {
-          pattern += partPattern;
-          names.push({ name, exploded: part.exploded });
-        }
-      }
-    }
-    pattern += "$";
-    _UriTemplate.validateLength(pattern, MAX_REGEX_LENGTH, "Generated regex pattern");
-    const regex = new RegExp(pattern);
-    const match = uri.match(regex);
-    if (!match)
-      return null;
-    const result2 = {};
-    for (let i = 0; i < names.length; i++) {
-      const { name, exploded } = names[i];
-      const value = match[i + 1];
-      const cleanName = name.replace("*", "");
-      if (exploded && value.includes(",")) {
-        result2[cleanName] = value.split(",");
-      } else {
-        result2[cleanName] = value;
-      }
-    }
-    return result2;
-  }
-};
-
 // node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name) {
@@ -21912,30 +21690,6 @@ var McpServer = class {
     }
   }
 };
-var ResourceTemplate = class {
-  constructor(uriTemplate, _callbacks) {
-    this._callbacks = _callbacks;
-    this._uriTemplate = typeof uriTemplate === "string" ? new UriTemplate(uriTemplate) : uriTemplate;
-  }
-  /**
-   * Gets the URI template pattern.
-   */
-  get uriTemplate() {
-    return this._uriTemplate;
-  }
-  /**
-   * Gets the list callback, if one was provided.
-   */
-  get listCallback() {
-    return this._callbacks.list;
-  }
-  /**
-   * Gets the callback for completing a specific URI template variable, if one was provided.
-   */
-  completeCallback(variable) {
-    return this._callbacks.complete?.[variable];
-  }
-};
 var EMPTY_OBJECT_JSON_SCHEMA = {
   type: "object",
   properties: {}
@@ -22148,63 +21902,6 @@ var resolveClientIdentity = (configuredName, clientInfo) => {
   return { name, version: version2 };
 };
 
-// src/commentWorkflow.ts
-var COMMENT_DATA_MARKER = "\u8BC4\u8BBA\u6570\u636E\uFF08\u53EA\u8BFB\u7ED3\u679C\uFF09\uFF1A";
-var COMMENT_REVIEW_GUIDANCE = [
-  "\u8BC4\u8BBA\u5904\u7406\u89C4\u5219\uFF08\u5FC5\u987B\u6267\u884C\uFF09\uFF1A",
-  "1. \u904D\u5386\u6240\u6709\u8BC4\u8BBA\u7EBF\u7A0B\u3002\u51E1\u6700\u540E\u4E00\u6761\u6D88\u606F\u6765\u81EA Local\uFF08\u5B58\u50A8\u503C author=user\uFF09\u7684\u7EBF\u7A0B\u90FD\u8981\u5904\u7406\uFF1B\u4E0D\u5F97\u53EA\u770B\u6700\u65B0\u6839\u8BC4\u8BBA\u3002",
-  "2. \u76F4\u63A5\u4F7F\u7528\u8FD4\u56DE\u6570\u636E\u4E2D\u7684 localEndingComments \u4F5C\u4E3A\u5F85\u5904\u7406\u6E05\u5355\u3002resolved\u3001\u6839\u8BC4\u8BBA\u7684 updatedAt \u548C\u6570\u7EC4\u987A\u5E8F\u90FD\u4E0D\u80FD\u4EE3\u66FF\u201C\u6700\u540E\u4E00\u6761\u6D88\u606F\u662F Local\u201D\u8FD9\u4E2A\u5224\u5B9A\u3002",
-  "3. \u9010\u6761\u8BC6\u522B\u610F\u56FE\uFF1B\u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002",
-  "4. \u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\uFF1A\u4F7F\u7528 annotamd_reply_comment \u5728\u539F\u8BC4\u8BBA\u7EBF\u7A0B\u76F4\u63A5\u56DE\u7B54\uFF0C\u4E0D\u4FEE\u6539\u6B63\u6587\uFF0C\u9ED8\u8BA4\u4FDD\u7559\u4E3A\u672A\u89E3\u51B3\u3002",
-  "5. \u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u6216\u6539\u5199\u8981\u6C42\uFF1A\u624D\u4F7F\u7528 annotamd_apply_comment_edit \u6309 commentId \u7684\u771F\u5B9E\u951A\u70B9\u4FEE\u6539\u6B63\u6587\u3002",
-  "6. \u610F\u56FE\u4E0D\u6E05\u3001\u4FE1\u606F\u4E0D\u8DB3\u6216\u540C\u65F6\u5305\u542B\u95EE\u9898\u4E0E\u6F5C\u5728\u6539\u52A8\uFF1A\u5148\u4F7F\u7528 annotamd_reply_comment \u8FFD\u95EE\u786E\u8BA4\uFF0C\u4E0D\u5F97\u731C\u6D4B\u540E\u6539\u6B63\u6587\u3002",
-  "7. \u6BCF\u6B21\u5199\u64CD\u4F5C\u540E\u91CD\u65B0\u8BFB\u53D6\u6587\u6863\uFF0C\u518D\u5904\u7406\u4E0B\u4E00\u6761\uFF1B\u5BA3\u79F0\u201C\u5DF2\u5168\u90E8\u56DE\u590D\u201D\u524D\u5FC5\u987B\u91CD\u8BFB\u5E76\u786E\u8BA4 localEndingCommentCount \u4E3A 0\u3002"
-].join("\n");
-var isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var getComments = (value) => {
-  if (Array.isArray(value.comments)) return value.comments;
-  if (isRecord(value.document) && Array.isArray(value.document.comments)) {
-    return value.document.comments;
-  }
-  return null;
-};
-var findLocalEndingComments = (value) => {
-  if (!isRecord(value)) return [];
-  const comments = getComments(value);
-  if (!comments) return [];
-  return comments.flatMap((rawComment) => {
-    if (!isRecord(rawComment) || typeof rawComment.id !== "string") return [];
-    const replies = Array.isArray(rawComment.replies) ? rawComment.replies.filter(isRecord) : [];
-    const lastReply = replies.at(-1);
-    if (lastReply && lastReply.author !== "user") return [];
-    const body = lastReply?.body ?? rawComment.body;
-    const createdAt = lastReply?.createdAt ?? rawComment.createdAt;
-    if (typeof body !== "string" || typeof createdAt !== "number") return [];
-    return [{
-      commentId: rawComment.id,
-      quote: typeof rawComment.quote === "string" ? rawComment.quote : "",
-      latestLocalMessage: body,
-      lastMessageAt: createdAt,
-      resolved: rawComment.resolved === true
-    }];
-  }).sort((left, right) => right.lastMessageAt - left.lastMessageAt || left.commentId.localeCompare(right.commentId));
-};
-var addCommentWorkflowSummary = (value) => {
-  if (!isRecord(value) || !getComments(value)) return value;
-  const localEndingComments = findLocalEndingComments(value);
-  return {
-    ...value,
-    localEndingCommentCount: localEndingComments.length,
-    localEndingComments
-  };
-};
-var formatCommentReviewResult = (value) => {
-  return `${COMMENT_REVIEW_GUIDANCE}
-
-${COMMENT_DATA_MARKER}
-${JSON.stringify(addCommentWorkflowSummary(value), null, 2)}`;
-};
-
 // src/index.ts
 var configuredClientName = process.env.ANNOTAMD_CLIENT_NAME?.trim();
 var initialized = false;
@@ -22230,7 +21927,9 @@ var requestBridge = async (config2, method, params = {}, signal) => {
     body: JSON.stringify({ method, params })
   });
   const payload = await response.json();
-  if (!response.ok || payload.error) throw new Error(payload.error ?? `AnnotaMD bridge error ${response.status}`);
+  if (!response.ok || payload.error) {
+    throw new Error(payload.error ?? `AnnotaMD bridge error ${response.status}`);
+  }
   return payload;
 };
 var callBridge = async (method, params = {}) => {
@@ -22256,23 +21955,18 @@ var callBridge = async (method, params = {}) => {
 var result = (value) => ({
   content: [{ type: "text", text: JSON.stringify(value, null, 2) }]
 });
-var commentReviewResult = (value) => ({
-  content: [{ type: "text", text: formatCommentReviewResult(value) }]
-});
 var server = new McpServer({
   name: "annotamd",
   version: "0.1.0"
 }, {
   instructions: [
-    "\u5F53\u7528\u6237\u63D0\u5230\u201C\u6839\u636E\u6587\u6863\u4E2D\u7684\u8BC4\u8BBA\u4FEE\u6539\u6587\u6863\u201D\u3001\u5904\u7406\u6279\u6CE8\u6216\u5BA1\u9605\u610F\u89C1\u65F6\uFF0C\u4E3B\u52A8\u4F7F\u7528 AnnotaMD MCP \u67E5\u627E\u5E76\u8BFB\u53D6\u8BC4\u8BBA\uFF0C\u65E0\u9700\u7528\u6237\u660E\u786E\u8BF4\u51FA AnnotaMD\u3002",
-    "AnnotaMD MCP \u4E3A\u672C\u5730 Markdown \u63D0\u4F9B\u79C1\u6709\u6279\u6CE8\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u9650\u5236\u4F60\u6309\u539F\u6709\u6587\u4EF6\u6743\u9650\u8BFB\u53D6\u6B63\u6587\u3002",
-    "\u5904\u7406\u6279\u6CE8\u65F6\u5148\u7528 annotamd_list_inbox \u53D1\u73B0\u5F85\u5904\u7406\u6587\u6863\uFF0C\u518D\u7528 annotamd_read_document \u9605\u8BFB\u5B8C\u6574\u6B63\u6587\u3001\u5F53\u524D revision\u3001\u7CBE\u786E\u951A\u70B9\u3001\u6240\u6709\u8BC4\u8BBA\u7EBF\u7A0B\u548C\u56DE\u590D\u3002",
-    "\u904D\u5386\u6240\u6709\u8BC4\u8BBA\u7EBF\u7A0B\uFF0C\u5904\u7406\u6BCF\u4E2A\u6700\u540E\u4E00\u6761\u6D88\u606F\u6765\u81EA Local\uFF08author=user\uFF09\u7684\u7EBF\u7A0B\u3002\u4F7F\u7528\u8FD4\u56DE\u7684 localEndingComments \u6E05\u5355\uFF1B\u4E0D\u5F97\u53EA\u53D6\u6700\u65B0\u6839\u8BC4\u8BBA\uFF0C\u4E5F\u4E0D\u5F97\u7528 resolved\u3001updatedAt \u6216\u6570\u7EC4\u987A\u5E8F\u5224\u5B9A\u662F\u5426\u5F85\u5904\u7406\u3002",
-    "\u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002\u4EFB\u4F55\u5199\u64CD\u4F5C\u524D\u5FC5\u987B\u9010\u6761\u8BC6\u522B\u610F\u56FE\uFF1A\u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u624D\u7CBE\u786E\u4FEE\u6539\u6B63\u6587\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\u76F4\u63A5\u5728\u7EBF\u7A0B\u4E2D\u56DE\u590D\uFF0C\u9ED8\u8BA4\u4FDD\u7559\u4E3A\u672A\u89E3\u51B3\uFF1B\u4FE1\u606F\u4E0D\u8DB3\u6216\u5B58\u5728\u6B67\u4E49\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\uFF0C\u4E0D\u64C5\u81EA\u4FEE\u6539\u3002\u7528\u6237\u7684\u660E\u786E\u8981\u6C42\u4F18\u5148\u3002",
-    "\u91CD\u590D\u6587\u5B57\u5FC5\u987B\u4F9D\u9760 commentId \u533A\u5206\uFF1B\u4FEE\u6539\u6B63\u6587\u65F6\u4F7F\u7528 annotamd_apply_comment_edit\uFF0C\u4E0D\u8981\u641C\u7D22\u540C\u540D\u6587\u672C\u731C\u6D4B\u4F4D\u7F6E\u3002",
-    "annotamd_apply_comment_edit \u6210\u529F\u540E\u4F1A\u81EA\u52A8\u4FDD\u7559 Agent \u5904\u7406\u56DE\u590D\u5E76\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\uFF0C\u65E0\u9700\u518D\u6B21\u8C03\u7528\u89E3\u51B3\u5DE5\u5177\u3002",
-    "\u6BCF\u6B21\u53EA\u5904\u7406\u4E00\u4E2A Local \u7ED3\u5C3E\u7EBF\u7A0B\uFF0C\u5199\u5165\u540E\u91CD\u65B0\u8BFB\u53D6\u5E76\u4F7F\u7528\u6700\u65B0 expectedRevision\u3002\u5BA3\u79F0\u5168\u90E8\u5904\u7406\u5B8C\u6210\u524D\uFF0C\u5FC5\u987B\u518D\u8BFB\u53D6\u5E76\u786E\u8BA4 localEndingCommentCount \u4E3A 0\u3002",
-    "\u6279\u6CE8\u670D\u52A1\u5173\u95ED\u65F6\uFF0C\u4F60\u4ECD\u53EF\u4F7F\u7528\u81EA\u5DF1\u7684\u6587\u4EF6\u80FD\u529B\u8BFB\u53D6 Markdown\uFF0C\u4F46\u65E0\u6CD5\u8BBF\u95EE AnnotaMD SQLite \u4E2D\u7684\u79C1\u6709\u6279\u6CE8\u3002"
+    "\u5904\u7406\u672C\u5730 Markdown \u8BC4\u8BBA\u65F6\uFF0C\u5148\u6309\u7EDD\u5BF9 filePath \u8C03\u7528 annotamd_list_comments \u83B7\u53D6\u5168\u90E8\u8F7B\u91CF\u7D22\u5F15\u3002",
+    "Local \u7ED3\u5C3E\u7EBF\u7A0B\u901A\u5E38\u7B49\u5F85\u5904\u7406\uFF1BAgent \u7ED3\u5C3E\u7EBF\u7A0B\u4ECD\u662F\u6709\u6548\u4E0A\u4E0B\u6587\uFF0C\u7528\u6237\u8981\u6C42\u7EE7\u7EED\u6216\u9700\u8981\u5B9E\u8D28\u6027\u8865\u5145\u3001\u7EA0\u9519\u65F6\u53EF\u4EE5\u7EE7\u7EED\u8BFB\u53D6\u548C\u56DE\u590D\u3002",
+    "\u6839\u636E\u4EFB\u52A1\u548C\u4E0A\u4E0B\u6587\u9884\u7B97\uFF0C\u7528 annotamd_get_comment \u5355\u6761\u6216\u5206\u6279\u8BFB\u53D6\u5B8C\u6574\u7EBF\u7A0B\uFF1B\u7528\u6237\u660E\u786E\u8981\u6C42\u4F9D\u636E\u5168\u90E8\u8BC4\u8BBA\u65F6\u5FC5\u987B\u8986\u76D6\u5168\u90E8 commentId\u3002",
+    "\u662F\u5426\u8BFB\u53D6\u6B63\u6587\u3001\u8BFB\u53D6\u54EA\u4E9B\u8303\u56F4\u4EE5\u53CA\u5982\u4F55\u4FEE\u6539 Markdown\uFF0C\u7531\u5F53\u524D Agent \u4F7F\u7528\u81EA\u8EAB\u53EF\u7528\u7684\u6587\u4EF6\u80FD\u529B\u51B3\u5B9A\u3002AnnotaMD MCP \u4E0D\u8BFB\u53D6\u6216\u7F16\u8F91\u6B63\u6587\u3002",
+    "\u95EE\u9898\u3001\u8BA8\u8BBA\u3001\u5F81\u8BE2\u610F\u89C1\u548C\u6B67\u4E49\u5185\u5BB9\u4F7F\u7528 annotamd_reply_comment\uFF1B\u6B63\u6587\u5C40\u90E8\u4FEE\u6539\u4FDD\u7559\u8BC4\u8BBA\uFF0C\u53EA\u6709\u6574\u6BB5\u6279\u6CE8\u9009\u533A\u88AB\u5B8C\u5168\u66FF\u6362\u6216\u5220\u9664\u65F6\u8BC4\u8BBA\u624D\u968F\u951A\u70B9\u81EA\u52A8\u6D88\u5931\uFF0C\u5176\u4ED6\u60C5\u51B5\u7531\u7528\u6237\u51B3\u5B9A\u4F55\u65F6\u89E3\u51B3\u3002",
+    "\u6BCF\u6B21\u56DE\u590D\u6216\u4FEE\u6539 Markdown \u540E\u91CD\u65B0\u8C03\u7528 annotamd_list_comments\uFF0C\u907F\u514D\u4F7F\u7528\u5DF2\u53D8\u5316\u7684\u8BC4\u8BBA\u7D22\u5F15\u548C revision\u3002",
+    "\u4E0D\u8981\u4F7F\u7528\u6D4F\u89C8\u5668\u731C\u6D4B\u8BC4\u8BBA\u5185\u5BB9\u6216\u5185\u90E8\u6807\u8BC6\uFF1B\u6279\u6CE8\u670D\u52A1\u4E0D\u53EF\u7528\u65F6\u660E\u786E\u8BF4\u660E\u65E0\u6CD5\u8BFB\u53D6 AnnotaMD \u79C1\u6709\u8BC4\u8BBA\u3002"
   ].join("\n")
 });
 var touchBridge = async () => {
@@ -22283,81 +21977,27 @@ server.server.oninitialized = () => {
   void touchBridge().catch(() => {
   });
 };
-server.registerResource(
-  "annotamd-comment-inbox",
-  "annotamd://inbox",
-  {
-    title: "AnnotaMD \u8BC4\u8BBA\u6536\u4EF6\u7BB1",
-    description: "\u6240\u6709\u672A\u89E3\u51B3\u7684\u672C\u5730 Markdown \u6279\u6CE8\u3002\u6279\u6CE8\u662F\u6B63\u6587\u7684\u8865\u5145\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u9650\u5236 Agent \u8BFB\u53D6\u6B63\u6587\u3002",
-    mimeType: "application/json"
-  },
-  async () => ({
-    contents: [{
-      uri: "annotamd://inbox",
-      mimeType: "application/json",
-      text: JSON.stringify(await callBridge("inbox"), null, 2)
-    }]
-  })
-);
-server.registerResource(
-  "annotamd-document",
-  new ResourceTemplate("annotamd://documents/{documentId}", { list: void 0 }),
-  {
-    title: "AnnotaMD \u6587\u6863\u4E0E\u8BC4\u8BBA",
-    description: "\u672C\u5730 Markdown \u6B63\u6587\u3001\u5F53\u524D revision \u548C\u8BC4\u8BBA\u7EBF\u7A0B",
-    mimeType: "application/json"
-  },
-  async (uri, variables) => ({
-    contents: [{
-      uri: uri.href,
-      mimeType: "application/json",
-      text: JSON.stringify(await callBridge("read_document", {
-        documentId: String(variables.documentId)
-      }), null, 2)
-    }]
-  })
-);
-server.registerResource(
-  "annotamd-document-comments",
-  new ResourceTemplate("annotamd://documents/{documentId}/comments", { list: void 0 }),
-  {
-    title: "AnnotaMD \u6587\u6863\u8BC4\u8BBA",
-    description: "\u6307\u5B9A\u672C\u5730 Markdown \u6587\u6863\u7684\u8BC4\u8BBA\u548C\u7EBF\u7A0B\u56DE\u590D",
-    mimeType: "application/json"
-  },
-  async (uri, variables) => ({
-    contents: [{
-      uri: uri.href,
-      mimeType: "application/json",
-      text: JSON.stringify(await callBridge("list_comments", {
-        documentId: String(variables.documentId)
-      }), null, 2)
-    }]
-  })
-);
-server.registerTool("annotamd_read_document", {
-  title: "\u8BFB\u53D6\u5E26\u8BC4\u8BBA\u7684\u672C\u5730 Markdown",
-  description: "\u8BFB\u53D6\u5B8C\u6574 Markdown \u6B63\u6587\u3001revision\u3001\u6240\u6709\u6279\u6CE8\u53CA\u7EBF\u7A0B\u56DE\u590D\u3002\u8FD4\u56DE localEndingComments\uFF0C\u5217\u51FA\u6240\u6709\u6700\u540E\u4E00\u6761\u6D88\u606F\u6765\u81EA Local \u7684\u5F85\u5904\u7406\u7EBF\u7A0B\uFF1B\u4E0D\u5F97\u53EA\u770B\u6700\u65B0\u6839\u8BC4\u8BBA\u3002\u540E\u7EED\u5199\u64CD\u4F5C\u5FC5\u987B\u4F7F\u7528\u8FD4\u56DE\u7684 revision\u3002",
-  inputSchema: { documentId: string2().min(1) }
-}, async ({ documentId }) => commentReviewResult(await callBridge("read_document", { documentId })));
 server.registerTool("annotamd_list_comments", {
-  title: "\u5217\u51FA\u6587\u6863\u8BC4\u8BBA",
-  description: "\u6309 documentId \u5217\u51FA\u6240\u6709\u8BC4\u8BBA\u3001\u7CBE\u786E\u951A\u70B9\u548C\u7EBF\u7A0B\u56DE\u590D\uFF0C\u5E76\u8FD4\u56DE\u5168\u91CF localEndingComments \u5F85\u5904\u7406\u6E05\u5355\u3002\u6BCF\u6761\u987B\u5148\u8BC6\u522B\u610F\u56FE\uFF1A\u95EE\u9898\u7C7B\u56DE\u590D\u8BC4\u8BBA\uFF0C\u660E\u786E\u4FEE\u6539\u5EFA\u8BAE\u624D\u4FEE\u6539\u6B63\u6587\uFF0C\u4E0D\u6E05\u695A\u65F6\u5148\u8FFD\u95EE\u3002",
-  inputSchema: { documentId: string2().min(1) }
-}, async ({ documentId }) => commentReviewResult(await callBridge("list_comments", { documentId })));
-server.registerTool("annotamd_list_inbox", {
-  title: "\u5217\u51FA\u5F85\u5904\u7406\u6279\u6CE8\u6587\u6863",
-  description: "\u5217\u51FA\u5305\u542B Local \u7ED3\u5C3E\u8BC4\u8BBA\u7EBF\u7A0B\u7684\u672C\u5730\u6587\u6863\uFF0C\u5305\u62EC\u5DF2\u89E3\u51B3\u540E\u53C8\u88AB Local \u8FFD\u95EE\u7684\u7EBF\u7A0B\u3002\u6BCF\u9879\u8FD4\u56DE localEndingCount\uFF1B\u518D\u8BFB\u53D6\u6B63\u6587\u4E0E\u5B8C\u6574\u8BC4\u8BBA\u3002",
-  inputSchema: {}
-}, async () => result(await callBridge("inbox")));
+  title: "\u5217\u51FA Markdown \u8BC4\u8BBA\u7D22\u5F15",
+  description: "\u6309\u7EDD\u5BF9\u6587\u4EF6\u8DEF\u5F84\u8FD4\u56DE\u5168\u90E8\u8BC4\u8BBA\u7684\u8F7B\u91CF\u7D22\u5F15\u3001\u7CBE\u786E\u951A\u70B9\u3001\u6700\u540E\u4F5C\u8005\u3001\u6D88\u606F\u6570\u548C\u77ED\u9884\u89C8\uFF0C\u4E0D\u8FD4\u56DE\u5B8C\u6574\u7EBF\u7A0B\u6216 Markdown \u6B63\u6587\u3002Local \u7ED3\u5C3E\u8868\u793A\u901A\u5E38\u7B49\u5F85\u5904\u7406\uFF0C\u4E0D\u4EE3\u8868 Agent \u7ED3\u5C3E\u7EBF\u7A0B\u53EF\u4EE5\u88AB\u5FFD\u7565\u3002",
+  inputSchema: { filePath: string2().min(1) }
+}, async ({ filePath }) => result(await callBridge("list_comments", { filePath })));
 server.registerTool("annotamd_get_comment", {
-  title: "\u8BFB\u53D6\u5355\u6761\u8BC4\u8BBA",
-  description: "\u8BFB\u53D6\u8BC4\u8BBA\u3001\u6240\u5C5E\u6587\u6863\u548C\u5F53\u524D revision\uFF0C\u5E76\u5148\u5224\u65AD\u5B83\u662F\u95EE\u9898\u3001\u660E\u786E\u4FEE\u6539\u5EFA\u8BAE\u8FD8\u662F\u9700\u8981\u8FFD\u95EE\u7684\u6B67\u4E49\u5185\u5BB9\u3002",
-  inputSchema: { commentId: string2().min(1) }
-}, async ({ commentId }) => commentReviewResult(await callBridge("get_comment", { commentId })));
+  title: "\u8BFB\u53D6\u6307\u5B9A\u8BC4\u8BBA\u7EBF\u7A0B",
+  description: "\u6309 commentId \u8BFB\u53D6\u4E00\u6761\uFF0C\u6216\u6309 commentIds \u5206\u6279\u8BFB\u53D6\u591A\u6761\u5B8C\u6574\u8BC4\u8BBA\u7EBF\u7A0B\u3002\u53EA\u8FD4\u56DE\u8BF7\u6C42\u7684\u7EBF\u7A0B\u3001\u6240\u5C5E\u6587\u4EF6\u548C\u5F53\u524D revision\uFF1B\u4E24\u79CD\u53C2\u6570\u5FC5\u987B\u4E8C\u9009\u4E00\u3002",
+  inputSchema: {
+    commentId: string2().min(1).optional(),
+    commentIds: array(string2().min(1)).min(1).optional()
+  }
+}, async ({ commentId, commentIds }) => {
+  if ((commentId ? 1 : 0) + (commentIds ? 1 : 0) !== 1) {
+    throw new Error("Provide exactly one of commentId or commentIds");
+  }
+  return result(await callBridge("get_comment", commentId ? { commentId } : { commentIds }));
+});
 server.registerTool("annotamd_reply_comment", {
   title: "\u56DE\u590D\u8BC4\u8BBA",
-  description: "\u56DE\u7B54\u95EE\u9898\u3001\u53C2\u4E0E\u8BA8\u8BBA\u3001\u56DE\u5E94\u5F81\u8BE2\u610F\u89C1\u6216\u8FFD\u95EE\u6B67\u4E49\u65F6\uFF0C\u4EE5 Agent \u8EAB\u4EFD\u5728\u539F\u7EBF\u7A0B\u4E2D\u56DE\u590D\uFF0C\u4E0D\u4FEE\u6539\u6B63\u6587\u3002revision \u8FC7\u671F\u65F6\u62D2\u7EDD\u5199\u5165\u3002",
+  description: "\u4EE5 Agent \u8EAB\u4EFD\u5728\u539F\u7EBF\u7A0B\u56DE\u7B54\u95EE\u9898\u3001\u53C2\u4E0E\u8BA8\u8BBA\u3001\u7EE7\u7EED\u8865\u5145\u6216\u8FFD\u95EE\u6B67\u4E49\uFF0C\u4E0D\u4FEE\u6539\u6B63\u6587\uFF0C\u4E5F\u4E0D\u6539\u53D8\u89E3\u51B3\u72B6\u6001\u3002revision \u8FC7\u671F\u65F6\u62D2\u7EDD\u5199\u5165\u3002",
   inputSchema: {
     commentId: string2().min(1),
     body: string2().min(1),
@@ -22368,56 +22008,6 @@ server.registerTool("annotamd_reply_comment", {
   body,
   expectedRevision
 })));
-server.registerTool("annotamd_apply_comment_edit", {
-  title: "\u6309\u8BC4\u8BBA\u7CBE\u786E\u4FEE\u6539\u6B63\u6587",
-  description: "\u4EC5\u5728\u521A\u8BFB\u53D6\u7684\u8BC4\u8BBA\u88AB\u660E\u786E\u8BC6\u522B\u4E3A\u4FEE\u6539\u5EFA\u8BAE\u6216\u6539\u5199\u8981\u6C42\u65F6\u8C03\u7528\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u6B67\u4E49\u5185\u5BB9\u4E0D\u5F97\u8C03\u7528\u3002\u7531 AnnotaMD \u6839\u636E commentId \u7684\u771F\u5B9E\u951A\u70B9\u6267\u884C\u7F16\u8F91\uFF0C\u4E0D\u641C\u7D22\u540C\u540D\u6587\u672C\u3002\u6210\u529F\u540E\u81EA\u52A8\u4FDD\u7559\u5904\u7406\u56DE\u590D\u5E76\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\u3002\u6587\u6863\u9700\u8981\u5728 AnnotaMD \u4E2D\u6253\u5F00\u3002",
-  inputSchema: {
-    commentId: string2().min(1),
-    replacement: string2(),
-    summary: string2().min(1).optional().describe("\u9762\u5411\u7528\u6237\u7684\u7B80\u77ED\u5904\u7406\u8BF4\u660E\uFF0C\u663E\u793A\u5728\u8BC4\u8BBA\u7EBF\u7A0B\u4E2D"),
-    expectedRevision: number2().int().nonnegative()
-  }
-}, async ({ commentId, replacement, summary, expectedRevision }) => result(await callBridge("apply_comment_edit", {
-  commentId,
-  replacement,
-  summary,
-  expectedRevision
-})));
-server.registerTool("annotamd_resolve_comment", {
-  title: "\u89E3\u51B3\u6216\u91CD\u65B0\u6253\u5F00\u8BC4\u8BBA",
-  description: "\u66F4\u65B0\u8BC4\u8BBA\u89E3\u51B3\u72B6\u6001\u3002revision \u8FC7\u671F\u65F6\u62D2\u7EDD\u5199\u5165\u3002",
-  inputSchema: {
-    commentId: string2().min(1),
-    resolved: boolean2().default(true),
-    expectedRevision: number2().int().nonnegative()
-  }
-}, async ({ commentId, resolved, expectedRevision }) => result(await callBridge("resolve_comment", {
-  commentId,
-  resolved,
-  expectedRevision
-})));
-server.registerPrompt("annotamd_comment_workflow", {
-  title: "\u5904\u7406 AnnotaMD \u6279\u6CE8",
-  description: "\u6559 Agent \u6B63\u786E\u8BFB\u53D6\u5B8C\u6574 Markdown\u3001\u7406\u89E3\u6279\u6CE8\u5E76\u5B89\u5168\u5730\u56DE\u590D\u6216\u4FEE\u6539\u3002"
-}, async () => ({
-  messages: [{
-    role: "user",
-    content: {
-      type: "text",
-      text: [
-        "\u8BF7\u5904\u7406 AnnotaMD \u4E2D\u7684\u672C\u5730 Markdown \u6279\u6CE8\u3002",
-        "1. \u5148\u8C03\u7528 annotamd_list_inbox \u67E5\u627E\u5305\u542B Local \u7ED3\u5C3E\u8BC4\u8BBA\u7EBF\u7A0B\u7684\u6587\u6863\u3002",
-        "2. \u8C03\u7528 annotamd_read_document\uFF0C\u5B8C\u6574\u9605\u8BFB markdown \u6B63\u6587\u3001\u6240\u6709\u8BC4\u8BBA\u7EBF\u7A0B\u548C\u56DE\u590D\uFF1B\u6279\u6CE8\u53EA\u662F\u8865\u5145\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u4EE3\u8868\u53EA\u80FD\u8BFB\u53D6\u6279\u6CE8\u3002",
-        "3. \u4F7F\u7528 localEndingComments \u5904\u7406\u6240\u6709\u6700\u540E\u4E00\u6761\u6D88\u606F\u6765\u81EA Local \u7684\u7EBF\u7A0B\uFF1B\u4E0D\u53EA\u53D6\u6700\u65B0\u6839\u8BC4\u8BBA\uFF0C\u4E5F\u4E0D\u7528 resolved\u3001updatedAt \u6216\u6570\u7EC4\u987A\u5E8F\u66FF\u4EE3\u8BE5\u5224\u5B9A\u3002",
-        "4. \u7528 commentId \u533A\u5206\u91CD\u590D\u6587\u5B57\u4E0A\u7684\u4E0D\u540C\u6279\u6CE8\uFF0C\u4E0D\u8981\u81EA\u884C\u641C\u7D22\u540C\u540D\u6587\u672C\u6765\u731C\u6D4B\u4F4D\u7F6E\u3002",
-        "5. \u8BFB\u53D6\u5168\u90E8\u8BC4\u8BBA\u4E0D\u7B49\u4E8E\u6388\u6743\u4FEE\u6539\u5168\u90E8\u5173\u8054\u6B63\u6587\u3002\u5728\u4EFB\u4F55\u5199\u64CD\u4F5C\u524D\u9010\u6761\u5224\u65AD\u610F\u56FE\uFF1A\u660E\u786E\u7684\u4FEE\u6539\u5EFA\u8BAE\u624D\u4F7F\u7528 annotamd_apply_comment_edit\uFF1B\u95EE\u9898\u3001\u8BA8\u8BBA\u6216\u5F81\u8BE2\u610F\u89C1\u4F7F\u7528 annotamd_reply_comment \u56DE\u7B54\uFF1B\u4E0D\u660E\u786E\u65F6\u5148\u56DE\u590D\u8BE2\u95EE\u3002",
-        "6. \u6BCF\u6B21\u5199\u64CD\u4F5C\u540E\u91CD\u65B0\u8BFB\u53D6\uFF0C\u518D\u5904\u7406\u4E0B\u4E00\u6761\uFF1B\u58F0\u79F0\u5168\u90E8\u5904\u7406\u5B8C\u6210\u524D\uFF0C\u5FC5\u987B\u518D\u8BFB\u53D6\u5E76\u786E\u8BA4 localEndingCommentCount \u4E3A 0\u3002",
-        "7. annotamd_apply_comment_edit \u4F1A\u81EA\u52A8\u5C06\u8BC4\u8BBA\u6807\u8BB0\u4E3A\u5DF2\u89E3\u51B3\u5E76\u4FDD\u7559\u5904\u7406\u8BB0\u5F55\uFF0C\u4E0D\u8981\u518D\u6B21\u89E3\u51B3\uFF1B\u4EC5\u56DE\u590D\u7684\u95EE\u9898\u8BC4\u8BBA\u5E94\u4FDD\u7559\uFF0C\u65B9\u4FBF\u7528\u6237\u786E\u8BA4\u6216\u8FFD\u95EE\u3002",
-        "\u5982\u679C AnnotaMD MCP \u6279\u6CE8\u670D\u52A1\u5173\u95ED\uFF0C\u4ECD\u53EF\u6309\u4F60\u539F\u6709\u7684\u6587\u4EF6\u6743\u9650\u8BFB\u53D6 Markdown\uFF0C\u4F46\u4E0D\u80FD\u8BFB\u53D6 AnnotaMD \u79C1\u6709\u6279\u6CE8\u3002"
-      ].join("\n")
-    }
-  }]
-}));
 var transport = new StdioServerTransport();
 await server.connect(transport);
 var heartbeat = setInterval(() => {

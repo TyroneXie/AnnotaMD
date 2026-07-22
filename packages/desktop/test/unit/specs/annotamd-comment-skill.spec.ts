@@ -34,13 +34,17 @@ describe('AnnotaMD global comment skill', () => {
 
     await installCommentSkill(sourceDirectory, installDirectory)
     const installedSkill = await readFile(join(installDirectory, 'SKILL.md'), 'utf8')
-    expect(installedSkill).toContain('annotamd_list_inbox')
-    expect(installedSkill).toContain('all comment threads')
+    expect(installedSkill).toContain('annotamd_list_comments')
+    expect(installedSkill).toContain('annotamd_get_comment')
+    expect(installedSkill).toContain('annotamd_reply_comment')
+    expect(installedSkill).toContain('commentIds')
     expect(installedSkill).toContain('final message is from Local')
-    expect(installedSkill).toContain('localEndingComments')
-    expect(installedSkill).toContain('localEndingCommentCount` is `0')
-    expect(installedSkill).toContain('Never answer a completion-status question from memory')
-    expect(installedSkill).toContain('Do not infer pending work from `resolved`')
+    expect(installedSkill).toContain('read or modify the Markdown')
+    expect(installedSkill).not.toContain('annotamd_read_document')
+    expect(installedSkill).not.toContain('annotamd_list_inbox')
+    expect(installedSkill).not.toContain('annotamd_apply_comment_edit')
+    expect(installedSkill).not.toContain('annotamd_resolve_comment')
+    expect(installedSkill).not.toMatch(/`(?:read|edit|write|apply_patch)`/)
   })
 
   it('does not overwrite an existing skill that AnnotaMD does not manage', async() => {

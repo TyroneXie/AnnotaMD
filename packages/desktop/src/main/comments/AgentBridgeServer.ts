@@ -1,9 +1,8 @@
-import { randomBytes, randomUUID } from 'node:crypto'
-import { chmodSync, readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
+import { chmodSync, writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain } from 'electron'
-import type { AnnotaMDAgentEditResult } from '@shared/types/comments'
+import { app, BrowserWindow } from 'electron'
 import type { AnnotaMDMcpStatus } from '@shared/types/comments'
 import {
   broadcastCommentsChanged,
@@ -15,11 +14,6 @@ interface BridgeRequest {
   params?: Record<string, unknown>
 }
 
-interface PendingEdit {
-  resolve: (result: AnnotaMDAgentEditResult) => void
-  timer: NodeJS.Timeout
-}
-
 interface ConnectedClient {
   lastSeenAt: number
   version?: string
@@ -29,10 +23,8 @@ interface ConnectedClient {
 let server: Server | null = null
 let connectionPath = ''
 let enabled = false
-let handlersRegistered = false
 let clientCleanupTimer: NodeJS.Timeout | null = null
 let bridgeTransition: Promise<void> = Promise.resolve()
-const pendingEdits = new Map<string, PendingEdit>()
 const clients = new Map<string, ConnectedClient>()
 const CLIENT_TTL_MS = 30_000
 
@@ -97,40 +89,17 @@ const numberParam = (params: Record<string, unknown>, key: string): number => {
   return value
 }
 
-const requestRendererEdit = async(
-  commentId: string,
-  replacement: string,
-  summary: string | undefined,
-  expectedRevision: number
-): Promise<AnnotaMDAgentEditResult> => {
-  const thread = getCommentService().getComment(commentId)
-  if (!thread) throw new Error(`Comment not found: ${commentId}`)
-  if (thread.document.revision !== expectedRevision) {
-    throw new Error(`Stale document revision: ${thread.document.revision}`)
+const commentIdsParam = (params: Record<string, unknown>): string[] => {
+  const commentId = params.commentId
+  const commentIds = params.commentIds
+  const hasCommentId = typeof commentId === 'string' && commentId.length > 0
+  const hasCommentIds = Array.isArray(commentIds)
+    && commentIds.length > 0
+    && commentIds.every((value) => typeof value === 'string' && value.length > 0)
+  if (hasCommentId === hasCommentIds) {
+    throw new Error('Provide exactly one of commentId or commentIds')
   }
-  const requestId = randomUUID()
-  const result = new Promise<AnnotaMDAgentEditResult>((resolve) => {
-    const timer = setTimeout(() => {
-      pendingEdits.delete(requestId)
-      resolve({
-        requestId,
-        success: false,
-        error: 'Open the commented document in AnnotaMD before applying an edit'
-      })
-    }, 10_000)
-    pendingEdits.set(requestId, { resolve, timer })
-  })
-  for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send('mt::comments::apply-edit', {
-      requestId,
-      commentId,
-      filePath: thread.document.filePath,
-      replacement,
-      summary,
-      expectedRevision
-    })
-  }
-  return result
+  return hasCommentId ? [commentId] : [...commentIds as string[]]
 }
 
 const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown> => {
@@ -147,51 +116,23 @@ const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown>
       broadcastMcpStatus()
       return getAgentBridgeStatus()
     }
-    case 'inbox':
-      return service.listInbox()
-    case 'read_document': {
-      const document = service.loadByDocumentId(stringParam(params, 'documentId'))
-      if (!document) throw new Error('Document not found')
-      return { ...document, markdown: readFileSync(document.filePath, 'utf8') }
-    }
     case 'list_comments': {
-      const document = service.loadByDocumentId(stringParam(params, 'documentId'))
-      if (!document) throw new Error('Document not found')
-      return document
+      const comments = service.listComments(stringParam(params, 'filePath'))
+      if (!comments) throw new Error('Commented Markdown file not found')
+      return comments
     }
-    case 'get_comment': {
-      const thread = service.getComment(stringParam(params, 'commentId'))
-      if (!thread) throw new Error('Comment not found')
-      return thread
-    }
+    case 'get_comment':
+      return service.getComments(commentIdsParam(params))
     case 'reply_comment': {
-      const thread = service.reply(
+      const result = service.reply(
         stringParam(params, 'commentId'),
         stringParam(params, 'body'),
         'agent',
         numberParam(params, 'expectedRevision')
       )
-      broadcastCommentsChanged(thread.document.filePath)
-      return thread
+      broadcastCommentsChanged(result.filePath)
+      return result
     }
-    case 'resolve_comment': {
-      const thread = service.setResolved(
-        stringParam(params, 'commentId'),
-        params.resolved !== false,
-        numberParam(params, 'expectedRevision')
-      )
-      broadcastCommentsChanged(thread.document.filePath)
-      return thread
-    }
-    case 'apply_comment_edit':
-      return requestRendererEdit(
-        stringParam(params, 'commentId'),
-        stringParam(params, 'replacement'),
-        typeof params.summary === 'string' && params.summary.trim()
-          ? params.summary.trim()
-          : undefined,
-        numberParam(params, 'expectedRevision')
-      )
     default:
       throw new Error(`Unknown bridge method: ${method}`)
   }
@@ -241,16 +182,6 @@ export const startAgentBridgeServer = async(): Promise<void> => {
     throw error
   }
 
-  if (!handlersRegistered) {
-    handlersRegistered = true
-    ipcMain.handle('mt::comments::apply-edit-result', (_event, result: AnnotaMDAgentEditResult) => {
-      const pending = pendingEdits.get(result.requestId)
-      if (!pending) return
-      clearTimeout(pending.timer)
-      pendingEdits.delete(result.requestId)
-      pending.resolve(result)
-    })
-  }
   clientCleanupTimer = setInterval(() => {
     if (markStaleClientsDisconnected()) broadcastMcpStatus()
   }, 5_000)
@@ -260,11 +191,6 @@ export const startAgentBridgeServer = async(): Promise<void> => {
 
 export const stopAgentBridgeServer = async(): Promise<void> => {
   enabled = false
-  for (const pending of pendingEdits.values()) {
-    clearTimeout(pending.timer)
-    pending.resolve({ requestId: '', success: false, error: 'AnnotaMD is closing' })
-  }
-  pendingEdits.clear()
   if (clientCleanupTimer) clearInterval(clientCleanupTimer)
   clientCleanupTimer = null
   const activeServer = server
