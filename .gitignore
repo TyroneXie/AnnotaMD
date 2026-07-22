@@ -24,3 +24,13 @@ playwright-report/
 # Local design/research and agent state
 .local-research/
 .codex/
+.workbuddy/
+
+# Local product design and QA artifacts
+/design-qa.md
+/docs/design-qa/
+/docs/design/
+/docs/feishu-heading-numbering.md
+/docs/performance-optimization-plan-electron-43.md
+/docs/v2-marktext-migration-plan.md
+/web/v2/README.md

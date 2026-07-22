@@ -116,16 +116,14 @@ AnnotaMD/
 │   ├── desktop/          # Electron 桌面应用
 │   ├── muyajs/           # Muya 编辑器引擎
 │   └── ...
-├── docs/                 # 产品与架构资料
+├── docs/                 # 开发与发布资料
 ├── scripts/              # 验证与构建脚本
 └── web/                  # 视觉原型
 ```
 
 ## 📖 项目资料
 
-- 产品与架构资料：[`docs/`](docs/)
-- V2 视觉原型：[`web/v2/`](web/v2/)
-- V2 迁移方案：[`docs/v2-marktext-migration-plan.md`](docs/v2-marktext-migration-plan.md)
+- 开发与发布资料：[`docs/`](docs/)
 
 ## 🙏 致谢与许可
 
