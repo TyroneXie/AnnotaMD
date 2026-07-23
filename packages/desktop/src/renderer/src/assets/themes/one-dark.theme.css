@@ -262,12 +262,6 @@
   fill: #4d78cc;
 }
 
-/* --- Editor ---------------------------------------------------- */
-
-blockquote::before {
-  background: var(--highlightThemeColor);
-}
-
 :not(pre) > code[class*='language-'],
 pre:not(.CodeMirror-line),
 pre[class*='language-'],

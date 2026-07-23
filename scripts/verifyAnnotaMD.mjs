@@ -76,6 +76,7 @@ const testPacks = {
     command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
     files: [
       'test/unit/specs/annotamd-code-block-controls.spec.ts',
+      'test/unit/specs/annotamd-blockquote-style.spec.ts',
       'test/unit/specs/appearance-preferences.spec.ts',
       'test/unit/specs/app-updater.spec.ts',
       'test/unit/specs/annotamd-preference-style.spec.ts',

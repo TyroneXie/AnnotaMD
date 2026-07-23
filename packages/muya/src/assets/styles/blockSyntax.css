@@ -269,11 +269,16 @@
 .mu-container blockquote {
     position: relative;
 
+    --annotamd-blockquote-text-color: #646a73;
+    --annotamd-blockquote-border-color: #bbbfc4;
+    --strong-color: var(--annotamd-blockquote-text-color);
+    --em-color: var(--annotamd-blockquote-text-color);
+
     margin-right: 0;
     margin-left: 0;
     padding: 0 30px;
 
-    color: var(--blockquote-text-color, var(--editor-color-50));
+    color: var(--annotamd-blockquote-text-color);
 
     font-size: 1em;
 }
@@ -287,9 +292,19 @@
     width: 2px;
     height: 100%;
 
-    background: var(--blockquote-border-color, var(--editor-color-30));
+    background: var(--annotamd-blockquote-border-color);
 
     content: '';
+}
+
+.mu-container blockquote p.mu-paragraph,
+.mu-container blockquote li.mu-list-item {
+    color: var(--annotamd-blockquote-text-color);
+}
+
+body.dark .mu-container blockquote {
+    --annotamd-blockquote-text-color: #8f959e;
+    --annotamd-blockquote-border-color: #646a73;
 }
 
 .mu-container blockquote blockquote {
