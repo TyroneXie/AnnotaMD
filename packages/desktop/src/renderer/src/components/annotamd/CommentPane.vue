@@ -47,8 +47,22 @@
           </summary>
           <div class="annotamd-agent-status-popover">
             <strong>{{ agentStatusTitle }}</strong>
-            <p v-for="description in agentStatusDescriptions" :key="description">
-              {{ description }}
+            <p
+              v-for="(description, index) in agentStatusDescriptions"
+              :key="description"
+              class="annotamd-agent-status-row"
+              :class="{ 'direct-channel': !agentReadiness.loading && index === 0 }"
+            >
+              <span
+                class="annotamd-agent-channel-dot"
+                :class="{
+                  active: index === 0
+                    ? agentReadiness.directSendReady
+                    : agentReadiness.appAccessReady
+                }"
+                aria-hidden="true"
+              />
+              <span>{{ description }}</span>
             </p>
             <button type="button" @click="openAgentSettings">
               {{ t('annotamd.comments.agentStatusSettings') }}
@@ -549,9 +563,6 @@ const agentStatusTitle = computed(() => {
 const agentStatusDescriptions = computed(() => {
   if (agentReadiness.loading) {
     return [t('annotamd.comments.agentStatusCheckingDescription')]
-  }
-  if (!agentReadiness.directSendReady && !agentReadiness.appAccessReady) {
-    return [t('annotamd.comments.agentStatusUnavailableDescription')]
   }
   const descriptions: string[] = []
   if (agentReadiness.directSendReady) {
@@ -1526,7 +1537,7 @@ onBeforeUnmount(() => {
   z-index: 4;
   top: 31px;
   right: -32px;
-  width: 240px;
+  width: 300px;
   box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--annotamd-border);
@@ -1543,11 +1554,35 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-agent-status-popover p {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
   margin: 5px 0 0;
   padding: 0;
   color: var(--annotamd-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.annotamd-agent-status-row.direct-channel > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotamd-agent-channel-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #aeb4bf;
+}
+
+.annotamd-agent-channel-dot.active {
+  background: var(--annotamd-green);
+  box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
 }
 
 .annotamd-agent-status-popover p:last-of-type {

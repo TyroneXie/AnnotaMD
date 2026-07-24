@@ -56,10 +56,11 @@ describe('AnnotaMD CLI Agent profiles', () => {
     expect(() => parseAgentCommand('claude "unfinished')).toThrow('unfinished quote')
   })
 
-  it('treats app-only access as ready and an incomplete configured direct Agent as partial', () => {
+  it('treats any currently usable Agent channel as ready', () => {
     expect(classifyAgentReadiness(true, true, false, false)).toBe('ready')
     expect(classifyAgentReadiness(true, true, true, true)).toBe('ready')
     expect(classifyAgentReadiness(true, true, true, false)).toBe('ready')
+    expect(classifyAgentReadiness(true, false, true, true)).toBe('ready')
     expect(classifyAgentReadiness(false, true, false, false)).toBe('unavailable')
     expect(classifyAgentReadiness(true, false, false, false)).toBe('unavailable')
     expect(classifyAgentReadiness(true, false, true, false)).toBe('partial')
@@ -99,6 +100,8 @@ describe('AnnotaMD CLI Agent profiles', () => {
     expect(agentSettingsSource).toContain('<advanced')
     expect(commentPaneSource).not.toContain('annotamd-agent-picker')
     expect(commentPaneSource).not.toContain('annotamd-mcp-status')
+    expect(commentPaneSource).toContain('annotamd-agent-channel-dot')
+    expect(commentPaneSource).toContain("'direct-channel': !agentReadiness.loading && index === 0")
     expect(readinessSource).not.toContain("invoke('annotamd::mcp-clients::inspect')")
     expect(readinessSource).toContain('.filter((client) => client.connected)')
     expect(readinessSource).toContain('connectedAgentNames.length > 0')
