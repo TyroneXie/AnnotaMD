@@ -5,7 +5,7 @@
         v-for="client in visibleInspectedClients"
         :key="client.id"
         class="mcp-client-row"
-        :class="{ configured: clientMcpReady(client) }"
+        :class="{ configured: connectedClient(client.id) != null }"
       >
         <div class="mcp-client-identity">
           <span
@@ -43,7 +43,7 @@
         </div>
         <div class="mcp-client-actions">
           <button
-            v-if="addedClientIds.includes(client.id) && !clientMcpReady(client)"
+            v-if="addedClientIds.includes(client.id) && !clientMcpPresent(client)"
             type="button"
             class="mcp-client-button"
             @click="removeAddedClient(client.id)"
@@ -109,7 +109,12 @@
         </div>
       </div>
 
-      <div v-for="client in otherClients" :key="client.name" class="mcp-client-row configured">
+      <div
+        v-for="client in otherClients"
+        :key="client.name"
+        class="mcp-client-row"
+        :class="{ configured: client.connected }"
+      >
         <div class="mcp-client-identity">
           <span class="mcp-client-mark">
             <img
@@ -241,6 +246,10 @@
       </section>
     </div>
 
+    <p class="mcp-skill-recommendation">
+      {{ t('preferences.agent.skillRecommendation') }}
+    </p>
+
     <el-button
       v-if="!showAddClientCard"
       class="mcp-add-client"
@@ -357,7 +366,7 @@ const visibleInspectedClients = computed(() => inspectedClients.value.filter((cl
   busyClient.value === client.id ||
   configureErrors.value[client.id] != null
 )))
-const clientMcpReady = (client: AnnotaMDMcpClientState): boolean => (
+const clientMcpPresent = (client: AnnotaMDMcpClientState): boolean => (
   client.mcpConfigured || connectedClient(client.id) != null
 )
 const availableClientIds = computed(() => clientIds.filter((id) => (
@@ -411,14 +420,11 @@ const stateText = (client: AnnotaMDMcpClientState): string => {
   if (configureErrors.value[client.id]) return t('preferences.agent.clientConfigureFailed')
   if (client.error) return t('preferences.agent.clientDetectionFailed')
   if (!client.installed) return t('preferences.agent.clientInstallFirst')
-  if (client.mcpConfigured && !client.skillConfigured) {
-    return t('preferences.agent.clientSkillMissing')
-  }
   const liveClient = connectedClient(client.id)
   if (liveClient) return connectionText(liveClient)
   const previousClient = knownClientHistory(client.id)
   if (previousClient) return connectionText(previousClient)
-  if (client.configured) return t('preferences.agent.clientConfiguredWaiting')
+  if (client.mcpConfigured) return t('preferences.agent.clientConfiguredWaiting')
   return t('preferences.agent.clientAvailable')
 }
 
@@ -589,8 +595,15 @@ onBeforeUnmount(() => {
 .mcp-add-client {
   width: 100%;
   height: 34px;
-  margin-top: 10px;
+  margin-top: 7px;
   font-size: var(--agent-body-font-size, 13px);
+}
+
+.mcp-skill-recommendation {
+  margin: 8px 2px 0;
+  color: var(--editorColor80);
+  font-size: var(--agent-meta-font-size, 12px);
+  line-height: var(--agent-text-line-height, 1.4);
 }
 
 .mcp-add-client-card {

@@ -1,8 +1,5 @@
 import { defineStore } from 'pinia'
 import type { AnnotaMDMcpStatus } from '@shared/types/comments'
-import type {
-  AnnotaMDMcpClientState
-} from '@shared/types/mcpClients'
 import {
   classifyAgentReadiness,
   defaultAgentProfile,
@@ -22,6 +19,7 @@ interface AgentReadinessState {
   selectedDirectSupported: boolean
   directSendReady: boolean
   appAccessReady: boolean
+  connectedAgentNames: string[]
 }
 
 let listening = false
@@ -49,7 +47,8 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
     selectedCliAvailable: false,
     selectedDirectSupported: false,
     directSendReady: false,
-    appAccessReady: false
+    appAccessReady: false,
+    connectedAgentNames: []
   }),
 
   actions: {
@@ -63,24 +62,22 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
       this.loading = true
 
       try {
-        const [status, clients, cliAvailable] = await Promise.all([
+        const [status, cliAvailable] = await Promise.all([
           window.electron.ipcRenderer.invoke('annotamd::comments::mcp-status')
             .catch((): AnnotaMDMcpStatus => ({
               enabled: preferences.commentMcpEnabled,
               running: false,
               clients: []
             })),
-          window.electron.ipcRenderer.invoke('annotamd::mcp-clients::inspect')
-            .catch((): AnnotaMDMcpClientState[] => []),
           selectedProfile ? executableAvailable(selectedProfile) : Promise.resolve(false)
         ])
         if (sequence !== refreshSequence) return
 
         const commentAccessEnabled = preferences.commentMcpEnabled
         const mcpServiceReady = commentAccessEnabled && status.running
-        const anyMcpConfigured = clients.some((client: AnnotaMDMcpClientState) => (
-          client.mcpConfigured
-        )) || status.clients.length > 0
+        const connectedAgentNames = [...new Set(status.clients
+          .filter((client) => client.connected)
+          .map((client) => client.name))]
         const supportedDirectAgent = selectedProfile?.kind === 'claude-code'
         const directSendReady = Boolean(
           commentAccessEnabled &&
@@ -88,7 +85,7 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
           cliAvailable &&
           supportedDirectAgent
         )
-        const appAccessReady = mcpServiceReady && anyMcpConfigured
+        const appAccessReady = mcpServiceReady && connectedAgentNames.length > 0
 
         this.selectedAgentName = selectedProfile ? displayAgentProfileName(selectedProfile) : ''
         this.selectedAgentKind = selectedProfile?.kind ?? ''
@@ -96,6 +93,7 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
         this.selectedDirectSupported = supportedDirectAgent
         this.directSendReady = directSendReady
         this.appAccessReady = appAccessReady
+        this.connectedAgentNames = appAccessReady ? connectedAgentNames : []
         this.level = classifyAgentReadiness(
           commentAccessEnabled,
           appAccessReady,
@@ -111,6 +109,7 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
         this.selectedDirectSupported = selectedProfile?.kind === 'claude-code'
         this.directSendReady = false
         this.appAccessReady = false
+        this.connectedAgentNames = []
       } finally {
         if (sequence === refreshSequence) this.loading = false
       }

@@ -72,6 +72,14 @@ describe('MCP client initial rendering', () => {
     expect(bridgeSource).not.toContain('clients.delete(name)')
   })
 
+  it('keeps Skill installation out of the MCP connection state', () => {
+    expect(source).not.toContain("t('preferences.agent.clientSkillMissing')")
+    expect(source).toContain("if (client.mcpConfigured) return t('preferences.agent.clientConfiguredWaiting')")
+    expect(source).toContain("t('preferences.agent.skillRecommendation')")
+    expect(source).toContain(':class="{ configured: connectedClient(client.id) != null }"')
+    expect(source).toContain(':class="{ configured: client.connected }"')
+  })
+
   it('installs the portable comment skill when copying setup for other Agents', () => {
     expect(source).toContain("invoke('annotamd::mcp-clients::install-portable-skill')")
     expect(source).toContain("t('preferences.agent.customClientStepSkill')")

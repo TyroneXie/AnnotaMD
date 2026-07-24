@@ -59,9 +59,10 @@ describe('AnnotaMD CLI Agent profiles', () => {
   it('treats app-only access as ready and an incomplete configured direct Agent as partial', () => {
     expect(classifyAgentReadiness(true, true, false, false)).toBe('ready')
     expect(classifyAgentReadiness(true, true, true, true)).toBe('ready')
-    expect(classifyAgentReadiness(true, true, true, false)).toBe('partial')
+    expect(classifyAgentReadiness(true, true, true, false)).toBe('ready')
     expect(classifyAgentReadiness(false, true, false, false)).toBe('unavailable')
     expect(classifyAgentReadiness(true, false, false, false)).toBe('unavailable')
+    expect(classifyAgentReadiness(true, false, true, false)).toBe('partial')
   })
 
   it('keeps configuration in settings and removes technical controls from the comment header', () => {
@@ -82,6 +83,10 @@ describe('AnnotaMD CLI Agent profiles', () => {
       repoRoot,
       'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
     ), 'utf8')
+    const readinessSource = readFileSync(resolve(
+      repoRoot,
+      'packages/desktop/src/renderer/src/store/agentReadiness.ts'
+    ), 'utf8')
 
     expect(settingsSource).toContain("t('preferences.agent.cliAdd')")
     expect(settingsSource).toContain("t('preferences.agent.cliTest')")
@@ -94,5 +99,8 @@ describe('AnnotaMD CLI Agent profiles', () => {
     expect(agentSettingsSource).toContain('<advanced')
     expect(commentPaneSource).not.toContain('annotamd-agent-picker')
     expect(commentPaneSource).not.toContain('annotamd-mcp-status')
+    expect(readinessSource).not.toContain("invoke('annotamd::mcp-clients::inspect')")
+    expect(readinessSource).toContain('.filter((client) => client.connected)')
+    expect(readinessSource).toContain('connectedAgentNames.length > 0')
   })
 })

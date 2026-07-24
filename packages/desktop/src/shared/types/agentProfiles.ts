@@ -37,8 +37,8 @@ export const classifyAgentReadiness = (
   directAgentReady: boolean
 ): AgentReadinessLevel => {
   if (!commentAccessReady) return 'unavailable'
-  if (directAgentConfigured && !directAgentReady) return 'partial'
-  return appAccessReady || directAgentReady ? 'ready' : 'unavailable'
+  if (appAccessReady || directAgentReady) return 'ready'
+  return directAgentConfigured ? 'partial' : 'unavailable'
 }
 
 export const ANNOTAMD_AGENT_PROFILE_PRESETS: readonly AnnotaMDAgentProfilePreset[] = [

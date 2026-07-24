@@ -47,7 +47,9 @@
           </summary>
           <div class="annotamd-agent-status-popover">
             <strong>{{ agentStatusTitle }}</strong>
-            <p>{{ agentStatusDescription }}</p>
+            <p v-for="description in agentStatusDescriptions" :key="description">
+              {{ description }}
+            </p>
             <button type="button" @click="openAgentSettings">
               {{ t('annotamd.comments.agentStatusSettings') }}
             </button>
@@ -532,40 +534,46 @@ const selectedAgentProfile = computed(() => defaultAgentProfile(
   agentProfiles.value,
   defaultAgentProfileId.value
 ))
+const connectedAgentLabel = computed(() => agentReadiness.connectedAgentNames.join(
+  locale.value.startsWith('zh') ? '、' : ', '
+))
 const agentStatusTitle = computed(() => {
   if (agentReadiness.loading) return t('annotamd.comments.agentStatusChecking')
-  if (agentReadiness.level === 'ready') {
-    return agentReadiness.directSendReady
-      ? t('annotamd.comments.agentStatusReadyTitle', {
-        agent: agentReadiness.selectedAgentName
-      })
-      : t('annotamd.comments.agentStatusAppReadyTitle')
+  if (agentReadiness.directSendReady && agentReadiness.appAccessReady) {
+    return t('annotamd.comments.agentStatusReadyTitle')
   }
-  if (agentReadiness.level === 'partial') return t('annotamd.comments.agentStatusPartialTitle')
+  if (agentReadiness.directSendReady) return t('annotamd.comments.agentStatusDirectReadyTitle')
+  if (agentReadiness.appAccessReady) return t('annotamd.comments.agentStatusAppReadyTitle')
   return t('annotamd.comments.agentStatusUnavailableTitle')
 })
-const agentStatusDescription = computed(() => {
-  if (agentReadiness.loading) return t('annotamd.comments.agentStatusCheckingDescription')
-  if (agentReadiness.level === 'ready') {
-    return agentReadiness.directSendReady
-      ? t(agentReadiness.appAccessReady
-        ? 'annotamd.comments.agentStatusReadyDescription'
-        : 'annotamd.comments.agentStatusDirectReadyDescription', {
-        agent: agentReadiness.selectedAgentName
-      })
-      : t('annotamd.comments.agentStatusAppReadyDescription')
+const agentStatusDescriptions = computed(() => {
+  if (agentReadiness.loading) {
+    return [t('annotamd.comments.agentStatusCheckingDescription')]
   }
-  if (agentReadiness.level === 'partial') {
-    return t('annotamd.comments.agentStatusPartialDescription', {
-      agent: agentReadiness.selectedAgentName || t('annotamd.comments.agentStatusNoSelection')
-    })
+  if (!agentReadiness.directSendReady && !agentReadiness.appAccessReady) {
+    return [t('annotamd.comments.agentStatusUnavailableDescription')]
   }
-  return t('annotamd.comments.agentStatusUnavailableDescription')
+  const descriptions: string[] = []
+  if (agentReadiness.directSendReady) {
+    descriptions.push(t('annotamd.comments.agentStatusDirectReadyDescription', {
+      agent: agentReadiness.selectedAgentName
+    }))
+  } else {
+    descriptions.push(t('annotamd.comments.agentStatusDirectUnavailable'))
+  }
+  if (agentReadiness.appAccessReady) {
+    descriptions.push(t('annotamd.comments.agentStatusAppReadyDescription', {
+      agents: connectedAgentLabel.value
+    }))
+  } else {
+    descriptions.push(t('annotamd.comments.agentStatusNoConnectedApps'))
+  }
+  return descriptions
 })
 const agentSendTitle = computed(() => (
   agentReadiness.directSendReady
     ? t('annotamd.comments.sendAgentTo', { agent: agentReadiness.selectedAgentName })
-    : agentStatusDescription.value
+    : agentStatusDescriptions.value.join(' ')
 ))
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
 const selectionComments = computed(() => comments.value.filter((comment) => comment.scope === 'selection'))
@@ -1497,7 +1505,7 @@ onBeforeUnmount(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #d64b4b;
+  background: #aeb4bf;
 }
 
 .annotamd-agent-status.ready summary {
@@ -1507,15 +1515,6 @@ onBeforeUnmount(() => {
 .annotamd-agent-status.ready .annotamd-agent-status-dot {
   background: var(--annotamd-green);
   box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
-}
-
-.annotamd-agent-status.partial summary {
-  color: #9a6a00;
-}
-
-.annotamd-agent-status.partial .annotamd-agent-status-dot {
-  background: #e5a11a;
-  box-shadow: 0 0 0 3px rgba(229, 161, 26, 0.12);
 }
 
 .annotamd-agent-status.checking .annotamd-agent-status-dot {
@@ -1544,11 +1543,15 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-agent-status-popover p {
-  margin: 5px 0 10px;
+  margin: 5px 0 0;
   padding: 0;
   color: var(--annotamd-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.annotamd-agent-status-popover p:last-of-type {
+  margin-bottom: 10px;
 }
 
 .annotamd-agent-status-popover button {
