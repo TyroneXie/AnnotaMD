@@ -9,6 +9,7 @@ vi.mock('electron', () => ({
 }))
 
 import {
+  commandErrorMessage,
   createCliConfigureArgs,
   createCustomAgentManualConfig,
   createStandardMcpManualConfig,
@@ -65,6 +66,28 @@ describe('AnnotaMD MCP client setup', () => {
   it('does not treat a missing named server error as configured', () => {
     expect(hasNamedMcpServer('No MCP server named "annotamd".')).toBe(false)
     expect(hasNamedMcpServer('{"name":"annotamd","enabled":true}')).toBe(true)
+  })
+
+  it('shows command stderr instead of the full failed command', () => {
+    const error = Object.assign(new Error('Command failed: codex mcp add annotamd -- /very/long/path'), {
+      stderr: [
+        'WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted',
+        'Error: failed to load configuration',
+        'Caused by: incompatible model catalog'
+      ].join('\n')
+    })
+
+    expect(commandErrorMessage(error)).toBe([
+      'Error: failed to load configuration',
+      'Caused by: incompatible model catalog'
+    ].join('\n'))
+  })
+
+  it('reports command timeouts without exposing the command line', () => {
+    const error = Object.assign(new Error('Command failed: codex mcp add annotamd'), {
+      killed: true
+    })
+    expect(commandErrorMessage(error)).toBe('Configuration command timed out')
   })
 
   it('requires the discovery-based adapter instead of a pinned bridge file', () => {

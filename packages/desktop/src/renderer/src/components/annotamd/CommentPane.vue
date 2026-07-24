@@ -5,17 +5,54 @@
         {{ t('annotamd.comments.titleWithCount', { count: selectionComments.length }) }}
       </div>
       <div class="annotamd-comment-header-actions">
-        <button
-          class="annotamd-mcp-status"
-          :class="mcpStatusClass"
-          type="button"
-          :title="mcpStatusTitle"
-          :aria-label="mcpStatusTitle"
-          @click="openAgentSettings"
+        <details
+          v-if="comments.length"
+          ref="resolveAllMenu"
+          class="annotamd-resolve-all"
+          @toggle="handleResolveAllMenuToggle"
         >
-          <span class="annotamd-mcp-status-dot" />
-          <span>MCP</span>
-        </button>
+          <summary
+            :title="t('annotamd.comments.bulkResolve')"
+            :aria-label="t('annotamd.comments.bulkResolve')"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m3.5 6.5 1.7 1.7 3-3" />
+              <path d="M11 7h9" />
+              <path d="m3.5 12 1.7 1.7 3-3" />
+              <path d="M11 12.5h9" />
+              <path d="m3.5 17.5 1.7 1.7 3-3" />
+              <path d="M11 18h9" />
+            </svg>
+          </summary>
+          <div class="annotamd-resolve-all-popover">
+            <button
+              class="resolve-all"
+              type="button"
+              :disabled="hasRunningAgentTurn"
+              @click.stop="resolveAllComments"
+            >
+              {{ resolveAllArmed
+                ? t('annotamd.comments.resolveAllConfirm')
+                : t('annotamd.comments.resolveAll') }}
+            </button>
+          </div>
+        </details>
+        <details
+          class="annotamd-agent-status"
+          :class="agentReadiness.loading ? 'checking' : agentReadiness.level"
+        >
+          <summary :title="agentStatusTitle">
+            <span class="annotamd-agent-status-dot" aria-hidden="true" />
+            <span>Agent</span>
+          </summary>
+          <div class="annotamd-agent-status-popover">
+            <strong>{{ agentStatusTitle }}</strong>
+            <p>{{ agentStatusDescription }}</p>
+            <button type="button" @click="openAgentSettings">
+              {{ t('annotamd.comments.agentStatusSettings') }}
+            </button>
+          </div>
+        </details>
         <button
           class="annotamd-pane-close"
           type="button"
@@ -80,6 +117,16 @@
           >
             {{ t('annotamd.comments.send') }}
           </button>
+          <button
+            class="annotamd-send-agent"
+            type="button"
+            :disabled="!draftBody.trim() || !activeSelection ||
+              !selectedAgentProfile || !agentReadiness.directSendReady"
+            :title="agentSendTitle"
+            @click="submitCommentToAgent"
+          >
+            {{ t('annotamd.comments.sendAgent') }}
+          </button>
         </div>
       </article>
 
@@ -92,18 +139,25 @@
           emphasized: activeCommentId === comment.id || selectedCommentId === comment.id,
           selected: selectedCommentId === comment.id,
           compact: !isCommentExpanded(comment),
-          'local-scroll': localScrollCommentId === comment.id
+          'temporary-detached': comment.temporaryDetached,
+          'detached-tray-card': comment.temporaryDetached,
+          'local-scroll': localScrollCommentId === comment.id,
+          'focus-reading': focusReadingCommentId === comment.id
         }"
-        :style="commentCardStyle(comment.id)"
+        :style="commentCardStyle(comment)"
         @mouseenter="commentStore.setActiveComment(comment.id)"
         @mouseleave="clearActiveComment(comment.id)"
-        @click="selectComment(comment.id)"
+        @click="handleCommentCardClick(comment.id, $event)"
       >
         <div class="annotamd-comment-row">
-          <span class="annotamd-comment-scope">{{ t('annotamd.comments.selectionScope') }}</span>
+          <span class="annotamd-comment-scope">
+            {{ t(comment.temporaryDetached
+              ? 'annotamd.comments.detachedTitle'
+              : 'annotamd.comments.selectionScope') }}
+          </span>
           <div class="annotamd-comment-card-actions">
             <div
-              v-if="selectedCommentId === comment.id"
+              v-if="selectedCommentId === comment.id && !comment.temporaryDetached"
               class="annotamd-comment-navigation"
             >
               <button
@@ -129,6 +183,7 @@
             </div>
             <button
               type="button"
+              :disabled="agentTurns.isRunning(comment.id)"
               @click="commentStore.deleteComment(filePath, comment.id)"
             >
               {{ t('annotamd.comments.markResolved') }}
@@ -137,6 +192,9 @@
         </div>
 
         <blockquote>{{ comment.quote }}</blockquote>
+        <p v-if="comment.temporaryDetached" class="annotamd-detached-note">
+          {{ t('annotamd.comments.detachedDescription') }}
+        </p>
 
         <div
           v-show="isCommentExpanded(comment) || !comment.replies.length"
@@ -171,7 +229,11 @@
               <button type="button" @click="startCommentEdit(comment.id, comment.body)">
                 {{ t('annotamd.comments.edit') }}
               </button>
-              <button type="button" @click="commentStore.deleteComment(filePath, comment.id)">
+              <button
+                type="button"
+                :disabled="agentTurns.isRunning(comment.id)"
+                @click="commentStore.deleteComment(filePath, comment.id)"
+              >
                 {{ t('annotamd.comments.delete') }}
               </button>
             </template>
@@ -291,14 +353,35 @@
             <button
               class="annotamd-reply-submit"
               type="button"
-              :disabled="!(replyBodies[comment.id] ?? '').trim()"
+              :disabled="!(replyBodies[comment.id] ?? '').trim() || agentTurns.isRunning(comment.id)"
               @mousedown.prevent
               @click.stop="saveReply(comment.id, $event)"
             >
               {{ t('annotamd.comments.reply') }}
             </button>
+            <button
+              class="annotamd-send-agent"
+              type="button"
+              :disabled="!(replyBodies[comment.id] ?? '').trim() ||
+                !selectedAgentProfile || !agentReadiness.directSendReady ||
+                agentTurns.isRunning(comment.id)"
+              :title="agentSendTitle"
+              @mousedown.prevent
+              @click.stop="saveReplyToAgent(comment.id, $event)"
+            >
+              {{ agentTurns.isRunning(comment.id)
+                ? t('annotamd.comments.agentRunning')
+                : t('annotamd.comments.sendAgent') }}
+            </button>
           </div>
         </div>
+
+        <p v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-status">
+          {{ t('annotamd.comments.agentRunning') }}
+        </p>
+        <p v-else-if="agentTurns.errorFor(comment.id)" class="annotamd-agent-turn-error">
+          {{ agentTurns.errorFor(comment.id) }}
+        </p>
       </article>
 
       <div
@@ -310,6 +393,48 @@
         <p>{{ t('annotamd.comments.emptyDescription') }}</p>
       </div>
     </section>
+
+    <section
+      v-if="modifiedComments.length && !focusReadingCommentId"
+      class="annotamd-detached-tray"
+      :class="{ open: detachedTrayOpen }"
+      @click.stop
+    >
+      <div class="annotamd-detached-tray-header">
+        <button
+          class="annotamd-detached-tray-toggle"
+          type="button"
+          :aria-expanded="detachedTrayOpen"
+          @click="detachedTrayOpen = !detachedTrayOpen"
+        >
+          <span>{{ t('annotamd.comments.detachedTrayTitle', {
+            count: modifiedComments.length
+          }) }}</span>
+          <ArrowDown v-if="detachedTrayOpen" aria-hidden="true" />
+          <ArrowUp v-else aria-hidden="true" />
+        </button>
+        <button
+          class="annotamd-detached-tray-resolve"
+          type="button"
+          :disabled="hasRunningModifiedComment"
+          @click="resolveModifiedComments"
+        >
+          {{ t('annotamd.comments.resolveModifiedShort') }}
+        </button>
+      </div>
+      <div v-if="detachedTrayOpen" class="annotamd-detached-tray-list">
+        <button
+          v-for="comment in modifiedComments"
+          :key="comment.id"
+          class="annotamd-detached-tray-item"
+          type="button"
+          @click="openDetachedComment(comment.id)"
+        >
+          <strong>{{ comment.quote }}</strong>
+          <span>{{ latestCommentMessage(comment) }}</span>
+        </button>
+      </div>
+    </section>
   </aside>
 </template>
 
@@ -317,6 +442,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
+import { usePreferencesStore } from '@/store/preferences'
+import { useAgentTurnsStore } from '@/store/agentTurns'
+import { useAgentReadinessStore } from '@/store/agentReadiness'
 import {
   useAnnotaMDCommentsStore,
   type AnnotaMDComment
@@ -332,23 +460,29 @@ import {
   type CommentAnchorRect
 } from '@/util/annotamdCommentHighlights'
 import { useI18n } from 'vue-i18n'
-import type { AnnotaMDMcpStatus } from '@shared/types/comments'
 import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
 import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import { formatCommentTimestamp } from '@/util/annotamdCommentTime'
+import { defaultAgentProfile } from '@shared/types/agentProfiles'
 
 const COMMENT_ANCHOR_VIEWPORT_RATIO = 0.28
 const LOCAL_SCROLL_BOTTOM_GAP = 12
 const LOCAL_SCROLL_MIN_HEIGHT = 180
+const DETACHED_TRAY_RESERVED_HEIGHT = 48
+const FOCUS_READING_MAX_HEIGHT_RATIO = 2 / 3
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
+const preferences = usePreferencesStore()
+const agentTurns = useAgentTurnsStore()
+const agentReadiness = useAgentReadinessStore()
 const { t, locale } = useI18n()
 
 const formatMessageTime = (createdAt: number): string =>
   formatCommentTimestamp(createdAt, locale.value)
 
 const { currentFile } = storeToRefs(editorStore)
+const { agentProfiles, defaultAgentProfileId } = storeToRefs(preferences)
 const {
   activeSelection,
   activeCommentId,
@@ -366,10 +500,16 @@ const replyingId = ref<string | null>(null)
 const replyBodies = ref<Record<string, string>>({})
 const selectedCommentId = ref<string | null>(null)
 const collapsedCommentId = ref<string | null>(null)
+const focusReadingCommentId = ref<string | null>(null)
+const focusReadingMaxHeight = ref(0)
+const focusReadingOriginalHeight = ref(0)
+const detachedTrayOpen = ref(false)
 const localScrollCommentId = ref<string | null>(null)
 const localScrollMaxHeight = ref(0)
 const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
+const resolveAllMenu = ref<HTMLDetailsElement | null>(null)
+const resolveAllArmed = ref(false)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
 const hiddenCommentCardIds = ref<Set<string>>(new Set())
@@ -381,8 +521,6 @@ let sharedEditorScroller: HTMLElement | null = null
 let syncingFromEditor = false
 const commentCardHeights = new Map<string, number>()
 const observedCommentCards = new Map<string, HTMLElement>()
-let stopMcpStatusListener: (() => void) | null = null
-const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clients: [] })
 const {
   scrollbarVisible,
   revealScrollbar,
@@ -390,24 +528,65 @@ const {
 } = useAutoHideScrollbar()
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
+const selectedAgentProfile = computed(() => defaultAgentProfile(
+  agentProfiles.value,
+  defaultAgentProfileId.value
+))
+const agentStatusTitle = computed(() => {
+  if (agentReadiness.loading) return t('annotamd.comments.agentStatusChecking')
+  if (agentReadiness.level === 'ready') {
+    return agentReadiness.directSendReady
+      ? t('annotamd.comments.agentStatusReadyTitle', {
+        agent: agentReadiness.selectedAgentName
+      })
+      : t('annotamd.comments.agentStatusAppReadyTitle')
+  }
+  if (agentReadiness.level === 'partial') return t('annotamd.comments.agentStatusPartialTitle')
+  return t('annotamd.comments.agentStatusUnavailableTitle')
+})
+const agentStatusDescription = computed(() => {
+  if (agentReadiness.loading) return t('annotamd.comments.agentStatusCheckingDescription')
+  if (agentReadiness.level === 'ready') {
+    return agentReadiness.directSendReady
+      ? t(agentReadiness.appAccessReady
+        ? 'annotamd.comments.agentStatusReadyDescription'
+        : 'annotamd.comments.agentStatusDirectReadyDescription', {
+        agent: agentReadiness.selectedAgentName
+      })
+      : t('annotamd.comments.agentStatusAppReadyDescription')
+  }
+  if (agentReadiness.level === 'partial') {
+    return t('annotamd.comments.agentStatusPartialDescription', {
+      agent: agentReadiness.selectedAgentName || t('annotamd.comments.agentStatusNoSelection')
+    })
+  }
+  return t('annotamd.comments.agentStatusUnavailableDescription')
+})
+const agentSendTitle = computed(() => (
+  agentReadiness.directSendReady
+    ? t('annotamd.comments.sendAgentTo', { agent: agentReadiness.selectedAgentName })
+    : agentStatusDescription.value
+))
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
 const selectionComments = computed(() => comments.value.filter((comment) => comment.scope === 'selection'))
+const anchoredSelectionComments = computed(() => selectionComments.value.filter(
+  (comment) => !comment.temporaryDetached
+))
+const modifiedComments = computed(() => selectionComments.value.filter(
+  (comment) => comment.temporaryDetached
+))
+const hasRunningAgentTurn = computed(() => comments.value.some((comment) => (
+  agentTurns.isRunning(comment.id)
+)))
+const hasRunningModifiedComment = computed(() => modifiedComments.value.some((comment) => (
+  agentTurns.isRunning(comment.id)
+)))
 const orderedAnchoredCommentIds = computed(() => {
-  const selectionIds = new Set(selectionComments.value.map((comment) => comment.id))
+  const selectionIds = new Set(anchoredSelectionComments.value.map((comment) => comment.id))
   return commentAnchors.value
     .filter((anchor) => selectionIds.has(anchor.id))
     .sort((first, second) => first.top - second.top)
     .map((anchor) => anchor.id)
-})
-const mcpStatusClass = computed(() => ({
-  disabled: !mcpStatus.value.enabled,
-  error: mcpStatus.value.enabled && !mcpStatus.value.running,
-  enabled: mcpStatus.value.enabled && mcpStatus.value.running
-}))
-const mcpStatusTitle = computed(() => {
-  if (!mcpStatus.value.enabled) return t('annotamd.comments.mcpDisabled')
-  if (!mcpStatus.value.running) return t('annotamd.comments.mcpError')
-  return t('annotamd.comments.mcpEnabled')
 })
 const anchoredLayoutEnabled = computed(() =>
   Object.keys(commentLayout.value.positions).length > 0 || hiddenCommentCardIds.value.size > 0
@@ -416,7 +595,10 @@ const commentStageHeight = computed(() => (
   Math.max(sharedScrollHeight.value, commentLayout.value.height)
 ))
 
-const commentCardStyle = (commentId: string): Record<string, string> => {
+const commentCardStyle = (comment: AnnotaMDComment | string): Record<string, string> => {
+  const commentId = typeof comment === 'string' ? comment : comment.id
+  if (typeof comment !== 'string' && comment.temporaryDetached &&
+    focusReadingCommentId.value !== commentId) return {}
   if (hiddenCommentCardIds.value.has(commentId)) {
     return { visibility: 'hidden', pointerEvents: 'none' }
   }
@@ -428,6 +610,9 @@ const commentCardStyle = (commentId: string): Record<string, string> => {
   if (localScrollCommentId.value === commentId && localScrollMaxHeight.value > 0) {
     style.maxHeight = `${localScrollMaxHeight.value}px`
   }
+  if (focusReadingCommentId.value === commentId && focusReadingMaxHeight.value > 0) {
+    style.maxHeight = `${focusReadingMaxHeight.value}px`
+  }
   return style
 }
 
@@ -437,6 +622,10 @@ const latestReplyId = (comment: AnnotaMDComment): string | null => (
   comment.replies.at(-1)?.id ?? null
 )
 
+const latestCommentMessage = (comment: AnnotaMDComment): string => (
+  comment.replies.at(-1)?.body ?? comment.body
+)
+
 const commentHasActiveInteraction = (comment: AnnotaMDComment): boolean => (
   editingId.value === comment.id ||
   replyingId.value === comment.id ||
@@ -444,6 +633,7 @@ const commentHasActiveInteraction = (comment: AnnotaMDComment): boolean => (
 )
 
 const isCommentExpanded = (comment: AnnotaMDComment): boolean => (
+  focusReadingCommentId.value === comment.id ||
   commentHasActiveInteraction(comment) ||
   (selectedCommentId.value === comment.id && collapsedCommentId.value !== comment.id)
 )
@@ -486,16 +676,23 @@ const recalculateCommentBubbleLayout = (): void => {
   const list = commentList.value
   if (!list) return
 
+  if (focusReadingCommentId.value) {
+    focusReadingMaxHeight.value = Math.floor(
+      list.clientHeight * FOCUS_READING_MAX_HEIGHT_RATIO
+    )
+  }
+
   syncObservedCommentCards(list)
   const listRect = list.getBoundingClientRect()
   const anchorById = new Map(commentAnchors.value.map((anchor) => [anchor.id, anchor]))
   const hiddenIds = new Set<string>()
-  const savedBubbles = selectionComments.value.flatMap((comment) => {
+  const savedBubbles = anchoredSelectionComments.value.flatMap((comment) => {
     const anchor = anchorById.get(comment.id)
+    const height = commentCardHeight(comment.id, 120)
     return [{
       id: comment.id,
       anchorTop: anchor ? list.scrollTop + anchor.top - listRect.top : null,
-      height: commentCardHeight(comment.id, 120)
+      height
     }]
   })
   const bubbles = [...savedBubbles]
@@ -532,10 +729,11 @@ const resetLocalCommentScroll = (): void => {
 const ensureSelectedCommentViewport = (): void => {
   const commentId = selectedCommentId.value
   if (!commentId) return
+  if (focusReadingCommentId.value === commentId) return
   if (localScrollCommentId.value === commentId) return
   if (localScrollCommentId.value) resetLocalCommentScroll()
 
-  const comment = selectionComments.value.find((item) => item.id === commentId)
+  const comment = anchoredSelectionComments.value.find((item) => item.id === commentId)
   const list = commentList.value
   if (!comment || !list || !isCommentExpanded(comment)) return
 
@@ -546,7 +744,8 @@ const ensureSelectedCommentViewport = (): void => {
   const cardRect = card.getBoundingClientRect()
   const visibleCardTop = Math.max(cardRect.top, listRect.top)
   const availableHeight = Math.floor(
-    listRect.bottom - visibleCardTop - LOCAL_SCROLL_BOTTOM_GAP
+    listRect.bottom - visibleCardTop - LOCAL_SCROLL_BOTTOM_GAP -
+    (modifiedComments.value.length ? DETACHED_TRAY_RESERVED_HEIGHT : 0)
   )
   if (availableHeight < LOCAL_SCROLL_MIN_HEIGHT || card.scrollHeight <= availableHeight + 1) return
 
@@ -604,8 +803,12 @@ const scrollCommentAnchorIntoView = (
 
 const selectComment = async(
   commentId: string,
-  forceAnchorPosition = false
+  forceAnchorPosition = false,
+  scrollAnchor = true
 ): Promise<void> => {
+  if (focusReadingCommentId.value && focusReadingCommentId.value !== commentId) {
+    await exitFocusReading()
+  }
   if (localScrollCommentId.value !== commentId) resetLocalCommentScroll()
   selectedCommentId.value = commentId
   collapsedCommentId.value = null
@@ -613,13 +816,44 @@ const selectComment = async(
   await nextTick()
   recalculateCommentBubbleLayout()
   await nextTick()
-  scrollCommentAnchorIntoView(commentId, forceAnchorPosition)
+  if (focusReadingCommentId.value === commentId) return
+  if (scrollAnchor) scrollCommentAnchorIntoView(commentId, forceAnchorPosition)
+}
+
+const autoFitCommentForReading = async(commentId: string): Promise<void> => {
+  ensureSelectedCommentViewport()
+  await nextTick()
+  if (selectedCommentId.value !== commentId || focusReadingCommentId.value === commentId) return
+
+  const list = commentList.value
+  const card = commentCardElement(commentId)
+  if (!list || !card) return
+  const maxHeight = Math.floor(list.clientHeight * FOCUS_READING_MAX_HEIGHT_RATIO)
+  const contentIsClipped = card.scrollHeight > card.clientHeight + 1
+  const cardHeight = card.getBoundingClientRect().height
+  if (!contentIsClipped || cardHeight >= maxHeight - 1) return
+
+  await enterFocusReading(commentId)
+}
+
+const handleCommentCardClick = (commentId: string, event: MouseEvent): void => {
+  const target = event.target
+  if (target instanceof Element && target.closest(
+    'button, a, input, textarea, select, [contenteditable="true"]'
+  )) return
+
+  void selectComment(commentId, false, false).then(() => autoFitCommentForReading(commentId))
 }
 
 const toggleCommentExpanded = (comment: AnnotaMDComment): void => {
   if (commentHasActiveInteraction(comment)) return
   resetLocalCommentScroll()
   const preservedScrollTop = sharedEditorScroller?.scrollTop
+  if (focusReadingCommentId.value === comment.id) {
+    focusReadingCommentId.value = null
+    focusReadingMaxHeight.value = 0
+    focusReadingOriginalHeight.value = 0
+  }
   if (isCommentExpanded(comment)) {
     collapsedCommentId.value = comment.id
   } else {
@@ -633,6 +867,95 @@ const toggleCommentExpanded = (comment: AnnotaMDComment): void => {
       if (commentList.value) commentList.value.scrollTop = preservedScrollTop
     })
   }
+}
+
+const commentCardElement = (commentId: string): HTMLElement | null => (
+  observedCommentCards.get(commentId) ??
+  [...(commentList.value?.querySelectorAll<HTMLElement>('[data-comment-id]') ?? [])]
+    .find((card) => card.dataset.commentId === commentId) ?? null
+)
+
+const restoreSharedScrollTop = (scrollTop: number | undefined): void => {
+  if (scrollTop == null) return
+  if (sharedEditorScroller) sharedEditorScroller.scrollTop = scrollTop
+  if (commentList.value) commentList.value.scrollTop = scrollTop
+}
+
+const alignFocusedCommentBottom = (commentId: string): void => {
+  const list = commentList.value
+  const card = commentCardElement(commentId)
+  const comment = selectionComments.value.find((item) => item.id === commentId)
+  if (!list || !card || !sharedEditorScroller || comment?.temporaryDetached) return
+
+  const overflow = card.getBoundingClientRect().bottom -
+    (list.getBoundingClientRect().bottom - LOCAL_SCROLL_BOTTOM_GAP)
+  if (overflow <= 1) return
+
+  restoreSharedScrollTop(Math.min(
+    sharedEditorScroller.scrollTop + overflow,
+    Math.max(0, sharedEditorScroller.scrollHeight - sharedEditorScroller.clientHeight)
+  ))
+}
+
+const enterFocusReading = async(commentId: string): Promise<void> => {
+  if (focusReadingCommentId.value === commentId) return
+  if (focusReadingCommentId.value) await exitFocusReading()
+  const sourceCard = commentCardElement(commentId)
+  const readingScrollTop = sourceCard?.scrollTop ?? 0
+  focusReadingOriginalHeight.value = sourceCard?.getBoundingClientRect().height ?? 0
+  resetLocalCommentScroll()
+  selectedCommentId.value = commentId
+  collapsedCommentId.value = null
+  commentStore.setActiveComment(commentId)
+  focusReadingCommentId.value = commentId
+  detachedTrayOpen.value = false
+  const list = commentList.value
+  focusReadingMaxHeight.value = list
+    ? Math.floor(list.clientHeight * FOCUS_READING_MAX_HEIGHT_RATIO)
+    : 0
+  await nextTick()
+  recalculateCommentBubbleLayout()
+  await nextTick()
+  const card = commentCardElement(commentId)
+  if (card) card.scrollTop = readingScrollTop
+  alignFocusedCommentBottom(commentId)
+}
+
+const exitFocusReading = async(): Promise<void> => {
+  const commentId = focusReadingCommentId.value
+  if (!commentId) return
+  const documentScrollTop = sharedEditorScroller?.scrollTop
+  const readingScrollTop = commentCardElement(commentId)?.scrollTop ?? 0
+  const comment = selectionComments.value.find((item) => item.id === commentId)
+  const originalHeight = focusReadingOriginalHeight.value
+  focusReadingCommentId.value = null
+  focusReadingMaxHeight.value = 0
+  focusReadingOriginalHeight.value = 0
+  if (comment?.temporaryDetached) detachedTrayOpen.value = true
+  await nextTick()
+  recalculateCommentBubbleLayout()
+  await nextTick()
+  if (!comment?.temporaryDetached && originalHeight > 0) {
+    localScrollCommentId.value = commentId
+    localScrollMaxHeight.value = originalHeight
+  } else {
+    ensureSelectedCommentViewport()
+  }
+  await nextTick()
+  recalculateCommentBubbleLayout()
+  await nextTick()
+  const card = commentCardElement(commentId)
+  if (card && localScrollCommentId.value === commentId) card.scrollTop = readingScrollTop
+  restoreSharedScrollTop(documentScrollTop)
+}
+
+const openDetachedComment = (commentId: string): void => {
+  void enterFocusReading(commentId)
+}
+
+const handleFocusReadingKeydown = (event: KeyboardEvent): void => {
+  if (event.key !== 'Escape' || !focusReadingCommentId.value) return
+  void exitFocusReading()
 }
 
 const canNavigateComment = (commentId: string, offset: -1 | 1): boolean => {
@@ -697,6 +1020,52 @@ const openAgentSettings = (): void => {
   window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
 }
 
+const handleResolveAllMenuToggle = (): void => {
+  if (!resolveAllMenu.value?.open) resolveAllArmed.value = false
+}
+
+const handleResolveAllOutsidePointerDown = (event: PointerEvent): void => {
+  const menu = resolveAllMenu.value
+  const target = event.target
+  if (!menu?.open || !(target instanceof Node) || menu.contains(target)) return
+  menu.open = false
+}
+
+const resolveAllComments = async(): Promise<void> => {
+  if (hasRunningAgentTurn.value) return
+  if (!resolveAllArmed.value) {
+    resolveAllArmed.value = true
+    return
+  }
+  if (!filePath.value) return
+  const removedIds = comments.value.map((comment) => comment.id)
+  await commentStore.deleteAllComments(filePath.value)
+  resolveAllArmed.value = false
+  if (resolveAllMenu.value) resolveAllMenu.value.open = false
+  if (selectedCommentId.value && removedIds.includes(selectedCommentId.value)) {
+    selectedCommentId.value = null
+    collapsedCommentId.value = null
+    commentStore.setActiveComment(null)
+  }
+}
+
+const resolveModifiedComments = async(): Promise<void> => {
+  if (!filePath.value || !modifiedComments.value.length || hasRunningModifiedComment.value) return
+  const removedIds = modifiedComments.value.map((comment) => comment.id)
+  await commentStore.deleteComments(filePath.value, removedIds)
+  detachedTrayOpen.value = false
+  if (focusReadingCommentId.value && removedIds.includes(focusReadingCommentId.value)) {
+    focusReadingCommentId.value = null
+    focusReadingMaxHeight.value = 0
+    focusReadingOriginalHeight.value = 0
+  }
+  if (selectedCommentId.value && removedIds.includes(selectedCommentId.value)) {
+    selectedCommentId.value = null
+    collapsedCommentId.value = null
+    commentStore.setActiveComment(null)
+  }
+}
+
 const openComposer = (): void => {
   composerOpen.value = true
   nextTick(() => {
@@ -708,24 +1077,37 @@ const openComposer = (): void => {
 const closeComposer = (): void => {
   composerOpen.value = false
   draftBody.value = ''
+  commentStore.closeSelectionComposer()
   commentStore.clearComposerRequest()
 }
 
-const submitComment = (): void => {
-  if (!filePath.value || !draftBody.value.trim()) return
-
-  if (activeSelection.value) {
-    const previousIds = new Set(selectionComments.value.map((comment) => comment.id))
-    commentStore.addSelectionComment(filePath.value, draftBody.value)
-    const addedComment = selectionComments.value.find((comment) => !previousIds.has(comment.id))
-    if (addedComment) {
-      resetLocalCommentScroll()
-      selectedCommentId.value = addedComment.id
-      collapsedCommentId.value = null
-      commentStore.setActiveComment(addedComment.id)
-    }
+const createSelectionComment = (): AnnotaMDComment | null => {
+  if (!filePath.value || !draftBody.value.trim()) return null
+  const addedComment = commentStore.addSelectionComment(filePath.value, draftBody.value)
+  if (addedComment) {
+    resetLocalCommentScroll()
+    selectedCommentId.value = addedComment.id
+    collapsedCommentId.value = null
+    commentStore.setActiveComment(addedComment.id)
   }
+  return addedComment
+}
+
+const submitComment = (): void => {
+  if (!createSelectionComment()) return
   closeComposer()
+}
+
+const submitCommentToAgent = async(): Promise<void> => {
+  const profile = selectedAgentProfile.value
+  const latestMessage = draftBody.value.trim()
+  if (!profile || !agentReadiness.directSendReady) return
+  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  const addedComment = createSelectionComment()
+  if (!addedComment) return
+  closeComposer()
+  await commentStore.persistFile(filePath.value)
+  await agentTurns.send(filePath.value, addedComment.id, latestMessage, profile)
 }
 
 const saveEdit = (id: string): void => {
@@ -808,6 +1190,19 @@ const saveReply = (id: string, event: MouseEvent): void => {
   resetReplyEditor(event)
 }
 
+const saveReplyToAgent = async(id: string, event: MouseEvent): Promise<void> => {
+  const profile = selectedAgentProfile.value
+  const latestMessage = (replyBodies.value[id] ?? '').trim()
+  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
+  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  commentStore.addReply(filePath.value, id, latestMessage)
+  replyBodies.value[id] = ''
+  replyingId.value = null
+  resetReplyEditor(event)
+  await commentStore.persistFile(filePath.value)
+  await agentTurns.send(filePath.value, id, latestMessage, profile)
+}
+
 const focusCommentCard = async (commentId: string): Promise<void> => {
   composerOpen.value = false
   draftBody.value = ''
@@ -834,13 +1229,21 @@ watch(
     replyingId,
     composerOpen,
     selectedCommentId,
-    collapsedCommentId
+    collapsedCommentId,
+    focusReadingCommentId
   ],
   updateCommentBubbleLayout,
   { deep: true }
 )
 
 watch(selectionComments, (nextComments) => {
+  if (focusReadingCommentId.value && !nextComments.some(
+    (comment) => comment.id === focusReadingCommentId.value
+  )) {
+    focusReadingCommentId.value = null
+    focusReadingMaxHeight.value = 0
+    focusReadingOriginalHeight.value = 0
+  }
   if (selectedCommentId.value && !nextComments.some(
     (comment) => comment.id === selectedCommentId.value
   )) {
@@ -849,12 +1252,32 @@ watch(selectionComments, (nextComments) => {
     resetLocalCommentScroll()
     commentStore.setActiveComment(null)
   }
+  if (!nextComments.some((comment) => comment.temporaryDetached)) {
+    detachedTrayOpen.value = false
+  }
 })
 
+watch(
+  () => modifiedComments.value.map((comment) => comment.id),
+  (nextIds, previousIds = []) => {
+    const addedId = nextIds.find((id) => !previousIds.includes(id))
+    if (addedId && selectedCommentId.value === addedId) {
+      void enterFocusReading(addedId)
+    }
+  }
+)
+
 watch(filePath, () => {
+  composerOpen.value = false
+  draftBody.value = ''
+  commentStore.closeSelectionComposer()
   commentStore.setActiveComment(null)
   selectedCommentId.value = null
   collapsedCommentId.value = null
+  focusReadingCommentId.value = null
+  focusReadingMaxHeight.value = 0
+  focusReadingOriginalHeight.value = 0
+  detachedTrayOpen.value = false
   resetLocalCommentScroll()
   replyingId.value = null
   replyBodies.value = {}
@@ -864,17 +1287,17 @@ watch(filePath, () => {
   void nextTick(bindSharedEditorScroller)
 })
 
+watch(
+  [agentProfiles, defaultAgentProfileId, () => preferences.commentMcpEnabled],
+  () => void agentReadiness.refresh(),
+  { deep: true }
+)
+
 onMounted(() => {
   bindSharedEditorScroller()
-  void window.electron.ipcRenderer.invoke('annotamd::comments::mcp-status').then((status) => {
-    mcpStatus.value = status
-  })
-  stopMcpStatusListener = window.electron.ipcRenderer.on(
-    'annotamd::comments::mcp-status-changed',
-    (_event, status) => {
-      mcpStatus.value = status
-    }
-  )
+  agentReadiness.start()
+  document.addEventListener('keydown', handleFocusReadingKeydown)
+  document.addEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)
   bus.on('annotamd-comment-anchors', handleCommentAnchors)
   if (commentList.value) {
     commentResizeObserver = new ResizeObserver((entries) => {
@@ -894,8 +1317,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   commentLayoutDisposed = true
-  stopMcpStatusListener?.()
-  stopMcpStatusListener = null
+  document.removeEventListener('keydown', handleFocusReadingKeydown)
+  document.removeEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)
   sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
   sharedEditorScroller = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
@@ -905,6 +1328,7 @@ onBeforeUnmount(() => {
   commentResizeObserver = null
   observedCommentCards.clear()
   commentCardHeights.clear()
+  commentStore.closeSelectionComposer()
   commentStore.setActiveComment(null)
 })
 </script>
@@ -965,43 +1389,175 @@ onBeforeUnmount(() => {
   gap: 4px;
 }
 
-.annotamd-mcp-status {
+.annotamd-resolve-all {
+  position: relative;
+}
+
+.annotamd-resolve-all summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--annotamd-muted);
+  list-style: none;
+  cursor: pointer;
+}
+
+.annotamd-resolve-all summary::-webkit-details-marker {
+  display: none;
+}
+
+.annotamd-resolve-all summary:hover,
+.annotamd-resolve-all[open] summary {
+  background: #eef1f5;
+}
+
+.annotamd-resolve-all summary svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.annotamd-resolve-all-popover {
+  position: absolute;
+  z-index: 5;
+  top: 31px;
+  right: 0;
+  width: 156px;
+  padding: 5px;
+  border: 1px solid var(--annotamd-border);
+  border-radius: 8px;
+  background: var(--annotamd-surface);
+  box-shadow: 0 8px 24px rgb(31 35 41 / 14%);
+}
+
+.annotamd-resolve-all-popover button {
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--annotamd-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.annotamd-resolve-all-popover button:hover {
+  background: var(--annotamd-surface-soft);
+}
+
+.annotamd-resolve-all-popover .resolve-all {
+  color: #c43d3d;
+}
+
+.annotamd-resolve-all-popover .resolve-all:hover {
+  background: #fff0ed;
+}
+
+.annotamd-resolve-all-popover button:disabled {
+  background: transparent;
+  color: #b5bac3;
+  cursor: default;
+}
+
+.annotamd-agent-status {
+  position: relative;
+}
+
+.annotamd-agent-status summary {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 26px;
-  padding: 0 8px;
-  border: 0;
+  padding: 0 7px;
   border-radius: 7px;
-  background: transparent;
   color: var(--annotamd-muted);
   font-size: 11px;
   font-weight: 650;
+  list-style: none;
   cursor: pointer;
 }
 
-.annotamd-mcp-status:hover {
+.annotamd-agent-status summary::-webkit-details-marker {
+  display: none;
+}
+
+.annotamd-agent-status summary:hover,
+.annotamd-agent-status[open] summary {
   background: #eef1f5;
 }
 
-.annotamd-mcp-status-dot {
+.annotamd-agent-status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #b5bac3;
+  background: #d64b4b;
 }
 
-.annotamd-mcp-status.error .annotamd-mcp-status-dot {
-  background: #d64545;
-}
-
-.annotamd-mcp-status.enabled {
+.annotamd-agent-status.ready summary {
   color: #16794c;
 }
 
-.annotamd-mcp-status.enabled .annotamd-mcp-status-dot {
+.annotamd-agent-status.ready .annotamd-agent-status-dot {
   background: var(--annotamd-green);
   box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
+}
+
+.annotamd-agent-status.partial summary {
+  color: #9a6a00;
+}
+
+.annotamd-agent-status.partial .annotamd-agent-status-dot {
+  background: #e5a11a;
+  box-shadow: 0 0 0 3px rgba(229, 161, 26, 0.12);
+}
+
+.annotamd-agent-status.checking .annotamd-agent-status-dot {
+  background: #aeb4bf;
+}
+
+.annotamd-agent-status-popover {
+  position: absolute;
+  z-index: 4;
+  top: 31px;
+  right: -32px;
+  width: 240px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--annotamd-border);
+  border-radius: 9px;
+  background: var(--annotamd-surface);
+  box-shadow: 0 8px 24px rgb(31 35 41 / 14%);
+}
+
+.annotamd-agent-status-popover strong {
+  display: block;
+  color: var(--annotamd-ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.annotamd-agent-status-popover p {
+  margin: 5px 0 10px;
+  padding: 0;
+  color: var(--annotamd-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.annotamd-agent-status-popover button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--annotamd-blue);
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .annotamd-pane-close {
@@ -1072,11 +1628,38 @@ onBeforeUnmount(() => {
   background: #f7f9ff;
 }
 
+.annotamd-comment-card.temporary-detached {
+  border-color: #e5a64b;
+  background: #fff7e8;
+}
+
+.annotamd-comment-card.temporary-detached.emphasized,
+.annotamd-comment-card.temporary-detached.selected {
+  border-color: #d88b20;
+  box-shadow: 0 0 0 3px rgb(229 166 75 / 18%);
+}
+
+.annotamd-comment-card.temporary-detached .annotamd-comment-scope {
+  color: #a86500;
+}
+
+.annotamd-comment-card.detached-tray-card:not(.focus-reading) {
+  display: none;
+}
+
+.annotamd-detached-note {
+  margin: 0 10px 8px;
+  color: #9a6a20;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .annotamd-comment-card.selected {
   border-color: var(--annotamd-blue);
 }
 
-.annotamd-comment-card.local-scroll {
+.annotamd-comment-card.local-scroll,
+.annotamd-comment-card.focus-reading {
   box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1085,34 +1668,52 @@ onBeforeUnmount(() => {
   scrollbar-color: rgba(68, 76, 91, 0.38) transparent;
 }
 
-.annotamd-comment-card.local-scroll::-webkit-scrollbar {
+.annotamd-comment-card.local-scroll::-webkit-scrollbar,
+.annotamd-comment-card.focus-reading::-webkit-scrollbar {
   width: 6px;
   background: transparent;
 }
 
-.annotamd-comment-card.local-scroll::-webkit-scrollbar-track {
+.annotamd-comment-card.local-scroll::-webkit-scrollbar-track,
+.annotamd-comment-card.focus-reading::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.annotamd-comment-card.local-scroll::-webkit-scrollbar-thumb {
+.annotamd-comment-card.local-scroll::-webkit-scrollbar-thumb,
+.annotamd-comment-card.focus-reading::-webkit-scrollbar-thumb {
   border: 1px solid transparent;
   border-radius: 999px;
   background: rgba(68, 76, 91, 0.38);
   background-clip: padding-box;
 }
 
-.annotamd-comment-card.local-scroll::-webkit-scrollbar-thumb:hover {
+.annotamd-comment-card.local-scroll::-webkit-scrollbar-thumb:hover,
+.annotamd-comment-card.focus-reading::-webkit-scrollbar-thumb:hover {
   background: rgba(68, 76, 91, 0.56);
   background-clip: padding-box;
 }
 
-.annotamd-comment-card.local-scroll .annotamd-comment-row {
+.annotamd-comment-card.local-scroll .annotamd-comment-row,
+.annotamd-comment-card.focus-reading .annotamd-comment-row {
   position: sticky;
   z-index: 2;
   top: 0;
   padding-bottom: 8px;
   border-radius: 9px 9px 0 0;
   background: inherit;
+}
+
+.annotamd-comment-card.focus-reading.temporary-detached {
+  position: fixed !important;
+  z-index: 12;
+  top: calc(var(--titleBarHeight) + var(--annotamd-editor-tab-height, 28px) + 8px) !important;
+  right: 8px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: calc(var(--annotamd-comment-pane-width, 310px) - 16px);
+  height: auto;
+  margin: 0;
+  box-shadow: 0 12px 32px rgb(31 35 41 / 18%);
 }
 
 .annotamd-comment-row {
@@ -1161,6 +1762,29 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.annotamd-comment-action-row .annotamd-send-agent {
+  background: var(--annotamd-blue);
+  color: #fff;
+}
+
+.annotamd-comment-action-row .annotamd-send-agent:hover:not(:disabled) {
+  background: #245ee8;
+}
+
+.annotamd-agent-turn-error {
+  margin: 0 10px 10px;
+  color: #c43d3d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.annotamd-agent-turn-status {
+  margin: 0 10px 10px;
+  color: var(--annotamd-blue);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .annotamd-comment-card-actions button:hover,
 .annotamd-comment-action-row button:hover,
 .annotamd-message-actions button:hover {
@@ -1185,6 +1809,132 @@ onBeforeUnmount(() => {
 .annotamd-comment-navigation svg {
   width: 15px;
   height: 15px;
+}
+
+.annotamd-detached-tray {
+  display: flex;
+  position: absolute;
+  z-index: 9;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  flex-direction: column;
+  max-height: calc(100% - var(--annotamd-editor-tab-height, 28px) - 16px);
+  overflow: hidden;
+  border: 1px solid #e5a64b;
+  border-radius: 10px;
+  background: #fffaf1;
+  box-shadow: 0 8px 24px rgb(90 62 16 / 18%);
+}
+
+.annotamd-detached-tray.open {
+  max-height: min(52vh, calc(100% - var(--annotamd-editor-tab-height, 28px) - 16px));
+}
+
+.annotamd-detached-tray-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 38px;
+  background: #fff7e8;
+}
+
+.annotamd-detached-tray.open .annotamd-detached-tray-header {
+  border-bottom: 1px solid rgb(229 166 75 / 45%);
+}
+
+.annotamd-detached-tray-toggle {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  padding: 0 8px 0 11px;
+  border: 0;
+  background: transparent;
+  color: #a86500;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.annotamd-detached-tray-toggle:hover {
+  background: #fff1d6;
+}
+
+.annotamd-detached-tray-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+.annotamd-detached-tray-resolve {
+  flex: 0 0 auto;
+  height: 26px;
+  margin-right: 6px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #b96800;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.annotamd-detached-tray-resolve:hover:not(:disabled) {
+  background: #ffe8bd;
+}
+
+.annotamd-detached-tray-resolve:disabled {
+  color: #c7aa78;
+  cursor: default;
+}
+
+.annotamd-detached-tray-list {
+  display: flex;
+  min-height: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.annotamd-detached-tray-item {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 9px;
+  overflow: hidden;
+  border: 1px solid rgb(229 166 75 / 42%);
+  border-radius: 7px;
+  background: var(--annotamd-surface);
+  color: var(--annotamd-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.annotamd-detached-tray-item:hover {
+  border-color: #d88b20;
+  background: #fff7e8;
+}
+
+.annotamd-detached-tray-item strong,
+.annotamd-detached-tray-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annotamd-detached-tray-item strong {
+  color: #8d5900;
+  font-size: 12px;
+}
+
+.annotamd-detached-tray-item span {
+  color: var(--annotamd-muted);
+  font-size: 12px;
 }
 
 .annotamd-composer-card textarea,

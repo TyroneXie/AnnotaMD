@@ -67,10 +67,12 @@ describe('AnnotaMD comment toggle placement', () => {
 
     store.requestComposer('selection')
     expect(store.composerRequest?.mode).toBe('selection')
+    expect(store.selectionComposerOpen).toBe(true)
 
     store.setPaneVisible(true)
     expect(store.paneVisible).toBe(true)
     expect(store.composerRequest).toBeNull()
+    expect(store.selectionComposerOpen).toBe(false)
   })
 
   it('does not render an agent-readable status footer on comment cards', () => {

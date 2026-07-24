@@ -112,22 +112,37 @@ describe('AnnotaMD selection comment highlights', () => {
     expect(querySelectorAll).toHaveBeenCalledTimes(1)
   })
 
-  it('positions the composer from its selection without adding a second highlight', () => {
+  it('keeps the composer selection highlighted after its textarea receives focus', () => {
     const root = document.createElement('div')
     root.append(contentBlock([0, 0], 'first and second'))
-
-    const layout = buildAnnotaMDCommentRangeLayout(root, [], [{
+    const HighlightClass = class {
+      constructor(..._ranges: Range[]) {}
+    }
+    const registry = { delete: vi.fn(), set: vi.fn() }
+    vi.stubGlobal('Highlight', HighlightClass)
+    vi.stubGlobal('CSS', { highlights: registry })
+    const composer = {
       id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
-      scope: 'selection',
+      scope: 'selection' as const,
       resolved: false,
       anchor: { key: '0/0', offset: 10 },
       focus: { key: '0/0', offset: 16 }
-    }])
+    }
+    const layout = buildAnnotaMDCommentRangeLayout(root, [composer])
 
-    expect(layout.ranges).toHaveLength(0)
+    syncAnnotaMDCommentHighlights(
+      root,
+      [composer],
+      ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
+      layout
+    )
+
+    expect(layout.ranges).toHaveLength(1)
+    expect(layout.ranges[0]?.toString()).toBe('second')
     expect(layout.anchorRects.map(({ id }) => id)).toEqual([
       ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID
     ])
+    expect(registry.set).toHaveBeenCalledTimes(2)
   })
 
   it('bridges comment underlines across inline-code padding', () => {

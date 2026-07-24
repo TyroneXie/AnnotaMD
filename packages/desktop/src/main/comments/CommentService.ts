@@ -40,6 +40,7 @@ interface CommentRow {
   exact_quote: string | null
   body: string
   resolved: number
+  temporary_detached: number
   agent_readable: number
   anchor_path: string | null
   anchor_offset: number | null
@@ -296,6 +297,7 @@ export class CommentService {
         exact_quote TEXT,
         body TEXT NOT NULL,
         resolved INTEGER NOT NULL,
+        temporary_detached INTEGER NOT NULL DEFAULT 0,
         agent_readable INTEGER NOT NULL,
         anchor_path TEXT,
         anchor_offset INTEGER,
@@ -315,6 +317,8 @@ export class CommentService {
       );
       CREATE INDEX IF NOT EXISTS messages_comment_idx ON messages(comment_id);
     `)
+    this.ensureTemporaryDetachedColumn()
+    this.purgeTemporaryDetachedComments()
     this.purgeResolvedComments()
     this.cleanupMissing()
   }
@@ -327,6 +331,83 @@ export class CommentService {
     const now = this.now()
     this.transaction(() => {
       this.db.prepare('DELETE FROM comments WHERE resolved = 1').run()
+      const update = this.db.prepare(`
+        UPDATE documents SET revision = revision + 1, updated_at = ? WHERE id = ?
+      `)
+      for (const document of documents) update.run(now, document.document_id)
+    })
+  }
+
+  deleteTemporaryDetached(filePath: string): number {
+    const document = this.findExistingDocument(filePath) ?? this.findStoredDocumentByPath(filePath)
+    if (!document) return 0
+    const now = this.now()
+    let changes = 0
+    this.transaction(() => {
+      const result = this.db.prepare(`
+        DELETE FROM comments WHERE document_id = ? AND temporary_detached = 1
+      `).run(document.id)
+      changes = Number((result as StatementResultingChanges).changes)
+      if (changes) this.bumpDocumentRevision(document.id, document.revision + 1, now)
+    })
+    return changes
+  }
+
+  preserveTemporaryDetached(
+    filePath: string,
+    source: AnnotaMDCommentRecord
+  ): AnnotaMDCommentThread {
+    const document = this.findExistingDocument(filePath)
+    if (!document) throw new Error(`Comment document not found: ${filePath}`)
+    const existing = this.getComment(source.id)
+    if (existing?.comment.temporaryDetached) return existing
+    const now = this.now()
+    this.transaction(() => {
+      if (existing) {
+        this.db.prepare(`
+          UPDATE comments
+          SET temporary_detached = 1,
+              anchor_path = NULL,
+              anchor_offset = NULL,
+              focus_path = NULL,
+              focus_offset = NULL,
+              updated_at = ?
+          WHERE id = ?
+        `).run(now, source.id)
+      } else {
+        this.insertComment(document.id, {
+          ...source,
+          filePath,
+          temporaryDetached: true,
+          anchor: undefined,
+          focus: undefined,
+          updatedAt: now
+        })
+      }
+      this.bumpDocumentRevision(document.id, document.revision + 1, now)
+    })
+    const restored = this.getComment(source.id)
+    if (!restored) throw new Error(`Failed to preserve detached comment: ${source.id}`)
+    return restored
+  }
+
+  private ensureTemporaryDetachedColumn(): void {
+    const columns = this.db.prepare('PRAGMA table_info(comments)').all() as Array<{ name: string }>
+    if (columns.some((column) => column.name === 'temporary_detached')) return
+    this.db.exec(`
+      ALTER TABLE comments
+      ADD COLUMN temporary_detached INTEGER NOT NULL DEFAULT 0
+    `)
+  }
+
+  private purgeTemporaryDetachedComments(): void {
+    const documents = this.db.prepare(`
+      SELECT DISTINCT document_id FROM comments WHERE temporary_detached = 1
+    `).all() as Array<{ document_id: string }>
+    if (!documents.length) return
+    const now = this.now()
+    this.transaction(() => {
+      this.db.prepare('DELETE FROM comments WHERE temporary_detached = 1').run()
       const update = this.db.prepare(`
         UPDATE documents SET revision = revision + 1, updated_at = ? WHERE id = ?
       `)
@@ -445,6 +526,15 @@ export class CommentService {
     return row ?? null
   }
 
+  private findStoredDocumentByPath(filePath: string): DocumentRow | null {
+    return (this.db.prepare(`
+      SELECT id, path, device, inode, revision, snapshot
+      FROM documents
+      WHERE path = ? AND missing_since IS NULL
+      ORDER BY updated_at DESC LIMIT 1
+    `).get(filePath) as DocumentRow | undefined) ?? null
+  }
+
   private toDocument(row: DocumentRow): AnnotaMDCommentDocument {
     const comments = this.db.prepare(`
       SELECT * FROM comments WHERE document_id = ? ORDER BY created_at DESC
@@ -467,6 +557,7 @@ export class CommentService {
           exactQuote: comment.exact_quote ?? undefined,
           body: comment.body,
           resolved: Boolean(comment.resolved),
+          temporaryDetached: Boolean(comment.temporary_detached),
           createdAt: comment.created_at,
           updatedAt: comment.updated_at,
           replies: replies.map((reply) => ({
@@ -488,10 +579,10 @@ export class CommentService {
   private insertComment(documentId: string, comment: AnnotaMDCommentRecord): void {
     this.db.prepare(`
       INSERT INTO comments (
-        id, document_id, scope, quote, exact_quote, body, resolved,
+        id, document_id, scope, quote, exact_quote, body, resolved, temporary_detached,
         agent_readable, anchor_path, anchor_offset, focus_path, focus_offset,
         is_cross_block, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       comment.id,
       documentId,
@@ -500,6 +591,7 @@ export class CommentService {
       comment.exactQuote ?? null,
       comment.body,
       comment.resolved ? 1 : 0,
+      comment.temporaryDetached ? 1 : 0,
       comment.agentReadable !== false ? 1 : 0,
       this.writeAnchor(comment.anchor),
       comment.anchor?.offset ?? null,

@@ -71,14 +71,36 @@ const findExecutable = async(id: AnnotaMDMcpClientId): Promise<string | undefine
   return undefined
 }
 
+export const commandErrorMessage = (error: unknown): string => {
+  if (!(error instanceof Error)) return String(error)
+  const processError = error as Error & {
+    stderr?: string
+    stdout?: string
+    killed?: boolean
+  }
+  if (processError.killed) return 'Configuration command timed out'
+  const output = [processError.stderr, processError.stdout]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join('\n')
+    .split('\n')
+    .filter((line) => !line.startsWith('WARNING: proceeding, even though we could not create PATH aliases'))
+    .join('\n')
+    .trim()
+  return output || error.message
+}
+
 const run = async(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
-  const result = await execFileAsync(command, args, {
-    encoding: 'utf8',
-    timeout: COMMAND_TIMEOUT_MS,
-    maxBuffer: 1024 * 1024,
-    env: process.env
-  })
-  return { stdout: result.stdout, stderr: result.stderr }
+  try {
+    const result = await execFileAsync(command, args, {
+      encoding: 'utf8',
+      timeout: COMMAND_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024,
+      env: process.env
+    })
+    return { stdout: result.stdout, stderr: result.stderr }
+  } catch (error) {
+    throw new Error(commandErrorMessage(error))
+  }
 }
 
 const getLaunchSpec = (clientName?: AnnotaMDMcpClientId): McpLaunchSpec => {

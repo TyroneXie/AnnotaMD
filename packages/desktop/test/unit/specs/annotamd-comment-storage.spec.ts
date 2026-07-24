@@ -2,6 +2,7 @@ import { copyFileSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it } from 'vitest'
+import { DatabaseSync } from 'node:sqlite'
 import { CommentService, StaleCommentDocumentError } from 'main_renderer/comments/CommentService'
 import type { AnnotaMDCommentRecord } from '@shared/types/comments'
 
@@ -230,5 +231,106 @@ describe('AnnotaMD SQLite comment storage', () => {
       missingCommentIds: ['comment-1']
     })
     reopened.close()
+  })
+
+  it('deletes temporary detached comments on document close and on the next startup', () => {
+    const directory = createTempDirectory()
+    const filePath = join(directory, 'document.md')
+    const databasePath = join(directory, 'comments.sqlite')
+    writeFileSync(filePath, 'same')
+    const service = new CommentService({ databasePath })
+    const loaded = service.load(filePath, 'same')
+    const saved = service.replace({
+      filePath,
+      markdown: 'same',
+      expectedRevision: loaded.revision,
+      comments: [{ ...selectionComment(filePath), temporaryDetached: true }]
+    })
+    expect(saved.comments).toMatchObject([{ temporaryDetached: true }])
+    expect(service.deleteTemporaryDetached(filePath)).toBe(1)
+    expect(service.load(filePath, 'same').comments).toEqual([])
+
+    const reinserted = service.replace({
+      filePath,
+      markdown: 'same',
+      expectedRevision: service.load(filePath, 'same').revision,
+      comments: [{
+        ...selectionComment(filePath),
+        id: 'comment-2',
+        temporaryDetached: true
+      }]
+    })
+    expect(reinserted.comments).toHaveLength(1)
+    service.close()
+
+    const reopened = new CommentService({ databasePath })
+    expect(reopened.load(filePath, 'same').comments).toEqual([])
+    reopened.close()
+  })
+
+  it('restores an Agent comment as temporary and unanchored when its text was replaced', () => {
+    const directory = createTempDirectory()
+    const filePath = join(directory, 'document.md')
+    const databasePath = join(directory, 'comments.sqlite')
+    writeFileSync(filePath, 'changed')
+    const service = new CommentService({ databasePath })
+    const loaded = service.load(filePath, 'same')
+    const source = selectionComment(filePath)
+    service.replace({
+      filePath,
+      markdown: 'changed',
+      expectedRevision: loaded.revision,
+      comments: []
+    })
+
+    const restored = service.preserveTemporaryDetached(filePath, source)
+
+    expect(restored.comment).toMatchObject({
+      id: source.id,
+      temporaryDetached: true,
+      anchor: undefined,
+      focus: undefined
+    })
+    service.close()
+  })
+
+  it('migrates an existing comments table without the temporary column', () => {
+    const directory = createTempDirectory()
+    const filePath = join(directory, 'document.md')
+    const databasePath = join(directory, 'comments.sqlite')
+    writeFileSync(filePath, 'same')
+    const initial = new CommentService({ databasePath })
+    initial.load(filePath, 'same')
+    initial.close()
+    const database = new DatabaseSync(databasePath)
+    database.exec('ALTER TABLE comments DROP COLUMN temporary_detached')
+    database.close()
+
+    const migrated = new CommentService({ databasePath })
+    const columns = new DatabaseSync(databasePath, { readOnly: true })
+    expect((columns.prepare('PRAGMA table_info(comments)').all() as Array<{ name: string }>)
+      .some((column) => column.name === 'temporary_detached')).toBe(true)
+    columns.close()
+    migrated.close()
+  })
+
+  it('cleans a temporary comment even when the Markdown file no longer exists', () => {
+    const directory = createTempDirectory()
+    const filePath = join(directory, 'document.md')
+    const databasePath = join(directory, 'comments.sqlite')
+    writeFileSync(filePath, 'same')
+    const service = new CommentService({ databasePath })
+    const loaded = service.load(filePath, 'same')
+    service.replace({
+      filePath,
+      markdown: 'same',
+      expectedRevision: loaded.revision,
+      comments: [{ ...selectionComment(filePath), temporaryDetached: true }]
+    })
+    rmSync(filePath)
+
+    expect(service.deleteTemporaryDetached(filePath)).toBe(1)
+    expect(service.getComment('comment-1')).toBeNull()
+    service.close()
   })
 })

@@ -46,6 +46,7 @@ import type {
   AnnotaMDMcpManualConfigResult
 } from './mcpClients'
 import type { AppUpdateState } from './update'
+import type { AnnotaMDAgentTurnRequest, AnnotaMDAgentTurnResult } from './agentTurns'
 
 export interface LinkPreviewMetadata {
   title: string
@@ -57,6 +58,10 @@ export interface LinkPreviewMetadata {
 // =================================================================
 
 export interface IpcInvokeChannels {
+  'annotamd::agent-turns::run': {
+    args: [request: AnnotaMDAgentTurnRequest]
+    ret: AnnotaMDAgentTurnResult
+  }
   'annotamd::update:get-state': { args: []; ret: AppUpdateState }
   'annotamd::update:check': { args: []; ret: AppUpdateState }
   'annotamd::update:download': { args: []; ret: AppUpdateState }

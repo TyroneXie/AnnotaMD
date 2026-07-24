@@ -50,6 +50,66 @@ describe('Feishu-style comment messages', () => {
     expect(commentStore).not.toContain('completeAgentEdit(')
   })
 
+  it('moves modified comments into a bottom tray with its own bulk action', () => {
+    const chinese = JSON.parse(read('packages/desktop/static/locales/zh-CN.json'))
+
+    expect(commentPane).toContain('class="annotamd-detached-tray"')
+    expect(commentPane).toContain('class="annotamd-detached-tray-resolve"')
+    expect(commentPane).toContain('@click="resolveModifiedComments"')
+    expect(commentPane).toContain("(comment) => !comment.temporaryDetached")
+    expect(commentPane).toContain('commentStore.deleteComments(filePath.value, removedIds)')
+    expect(chinese.annotamd.comments.resolveModifiedShort).toBe('全部解决')
+    expect(chinese.annotamd.comments.detachedTrayTitle).toContain('原文已修改')
+    expect(chinese.annotamd.comments.bulkResolve).toBe('批量解决评论')
+  })
+
+  it('closes the bulk resolve menu when the user clicks elsewhere', () => {
+    expect(commentPane).toContain(
+      'const handleResolveAllOutsidePointerDown = (event: PointerEvent)'
+    )
+    expect(commentPane).toContain('menu.contains(target)')
+    expect(commentPane).toContain('menu.open = false')
+    expect(commentPane).toContain(
+      "document.addEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)"
+    )
+    expect(commentPane).toContain(
+      "document.removeEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)"
+    )
+  })
+
+  it('automatically enlarges only clipped small comments up to two thirds of the pane', () => {
+    expect(commentPane).not.toContain('class="annotamd-focus-reading-toggle"')
+    expect(commentPane).toContain('const enterFocusReading = async(commentId: string)')
+    expect(commentPane).toContain('const autoFitCommentForReading = async(commentId: string)')
+    expect(commentPane).toContain('const FOCUS_READING_MAX_HEIGHT_RATIO = 2 / 3')
+    expect(commentPane).toContain('card.scrollHeight > card.clientHeight + 1')
+    expect(commentPane).toContain('cardHeight >= maxHeight - 1')
+    expect(commentPane).toContain('selectComment(commentId, false, false)')
+    expect(commentPane).toContain('alignFocusedCommentBottom(commentId)')
+    expect(commentPane).toMatch(
+      /alignFocusedCommentBottom[\s\S]*?restoreSharedScrollTop\(Math\.min\(/
+    )
+    expect(commentPane).toContain('if (focusReadingCommentId.value === commentId) return')
+    expect(commentPane).toContain('target.closest(')
+    expect(commentPane).toContain('button, a, input, textarea, select')
+    expect(commentPane).not.toContain("'annotamd.comments.restoreReadingSize'")
+    expect(commentPane).not.toContain('<ScaleToOriginal')
+    expect(commentPane).toContain('focusReadingOriginalHeight.value =')
+    expect(commentPane).toContain('localScrollMaxHeight.value = originalHeight')
+    expect(commentPane).not.toContain('handleFocusReadingOutsidePointerDown')
+    expect(commentPane).not.toContain('annotamd.comments.locateSource')
+    expect(commentPane).not.toContain('<Close')
+    expect(commentPane).toContain('if (focusReadingCommentId.value === comment.id)')
+    expect(commentPane).toContain('focusReadingMaxHeight.value = 0')
+    expect(commentPane).toContain("event.key !== 'Escape'")
+    expect(commentPane).toMatch(
+      /\.annotamd-comment-card\.focus-reading\.temporary-detached\s*\{[^}]*position:\s*fixed\s*!important;[^}]*height:\s*auto;/s
+    )
+    expect(commentPane).toMatch(
+      /\.annotamd-comment-card\.local-scroll,[\s\S]*?\.annotamd-comment-card\.focus-reading\s*\{[^}]*overflow-y:\s*auto;/s
+    )
+  })
+
   it('uses a compact one-line quote and removes reply connector lines', () => {
     expect(commentPane).toMatch(
       /\.annotamd-comment-card blockquote\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s
@@ -68,8 +128,8 @@ describe('Feishu-style comment messages', () => {
     expect(documentFooter).not.toContain("t('annotamd.comments.documentSummary'")
     expect(commentPane).not.toContain("t('annotamd.comments.excludeFromRenderedMarkdown')")
     expect(documentFooter).not.toContain("t('annotamd.comments.documentStorageDescription')")
-    expect(chinese.preferences.agent.permissionBoundary).toContain('评论只保存在本机')
-    expect(english.preferences.agent.permissionBoundary).toContain('Comments stay on this device')
+    expect(chinese.preferences.agent.enableCommentsDescription).toContain('保存在本机')
+    expect(english.preferences.agent.enableCommentsDescription).toContain('stored on this device')
   })
 
   it('keeps anchored cards in the scroll flow instead of hiding and animating their top', () => {
@@ -118,10 +178,10 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toMatch(/toggleCommentExpanded[\s\S]*?resetLocalCommentScroll\(\)/)
     expect(commentPane).not.toContain('@mouseleave="handleCommentCardLeave(comment.id)"')
     expect(commentPane).toMatch(
-      /\.annotamd-comment-card\.local-scroll\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s
+      /\.annotamd-comment-card\.local-scroll,[\s\S]*?\.annotamd-comment-card\.focus-reading\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s
     )
     expect(commentPane).toMatch(
-      /\.annotamd-comment-card\.local-scroll \.annotamd-comment-row\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s
+      /\.annotamd-comment-card\.local-scroll \.annotamd-comment-row,[\s\S]*?\.annotamd-comment-card\.focus-reading \.annotamd-comment-row\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s
     )
   })
 

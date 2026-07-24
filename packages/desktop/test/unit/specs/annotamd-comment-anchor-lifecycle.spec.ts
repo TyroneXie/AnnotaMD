@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { editOp } from 'ot-json1'
 import { useAnnotaMDCommentsStore, type AnnotaMDComment } from '@/store/annotamdComments'
+import { useAgentTurnsStore } from '@/store/agentTurns'
 
 const filePath = '/tmp/repeated.md'
 
@@ -252,6 +253,61 @@ describe('AnnotaMD live comment anchors', () => {
     )
 
     expect(store.commentsByFile[filePath]).toEqual([])
+  })
+
+  it('temporarily detaches a whole-selection edit while the Agent turn is running', () => {
+    const store = useAnnotaMDCommentsStore()
+    const agentTurns = useAgentTurnsStore()
+    store.commentsByFile[filePath] = [commentAtSecondBlock()]
+    store.revisionByFile[filePath] = 0
+    agentTurns.runningByComment = { 'comment-1': true }
+
+    store.transformSelectionAnchors(
+      filePath,
+      editOp([1, 'text'], 'text-unicode', [{ d: 'same' }, 'whole']),
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: 'same' }
+      ],
+      [
+        { name: 'paragraph', text: 'first' },
+        { name: 'paragraph', text: 'whole' }
+      ]
+    )
+
+    expect(store.commentsByFile[filePath]).toMatchObject([{
+      id: 'comment-1',
+      temporaryDetached: true,
+      anchor: undefined,
+      focus: undefined
+    }])
+  })
+
+  it('resolves only the selected modified comments in one persistence update', async() => {
+    const store = useAnnotaMDCommentsStore()
+    const modifiedComment = {
+      ...commentAtSecondBlock(),
+      temporaryDetached: true,
+      anchor: undefined,
+      focus: undefined
+    }
+    const locatedComment = {
+      ...commentAtSecondBlock(),
+      id: 'comment-2',
+      body: '保留这条'
+    }
+    store.commentsByFile[filePath] = [modifiedComment, locatedComment]
+    store.revisionByFile[filePath] = 0
+
+    await store.deleteComments(filePath, [modifiedComment.id])
+
+    expect(store.commentsByFile[filePath]).toEqual([locatedComment])
+    expect(window.electron.ipcRenderer.invoke).toHaveBeenCalledWith(
+      'annotamd::comments::replace',
+      expect.objectContaining({
+        comments: [expect.objectContaining({ id: 'comment-2' })]
+      })
+    )
   })
 
   it('keeps and expands the comment across an external partial edit', () => {

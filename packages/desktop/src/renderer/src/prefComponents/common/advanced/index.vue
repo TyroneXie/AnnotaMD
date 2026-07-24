@@ -2,7 +2,10 @@
   <section class="pref-advanced">
     <details>
       <summary>
-        <span>{{ title }}</span>
+        <span class="pref-advanced-copy">
+          <span>{{ title }}</span>
+          <small v-if="description">{{ description }}</small>
+        </span>
         <ArrowRight class="pref-advanced-chevron" />
       </summary>
       <div class="pref-advanced-body">
@@ -17,6 +20,7 @@ import { ArrowRight } from '@element-plus/icons-vue'
 
 defineProps<{
   title: string
+  description?: string
 }>()
 </script>
 
@@ -42,6 +46,19 @@ defineProps<{
 
 .pref-advanced summary::-webkit-details-marker {
   display: none;
+}
+
+.pref-advanced-copy > span,
+.pref-advanced-copy > small {
+  display: block;
+}
+
+.pref-advanced-copy > small {
+  margin-top: 2px;
+  color: var(--editorColor60);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .pref-advanced-chevron {

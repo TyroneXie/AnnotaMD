@@ -22,6 +22,8 @@ export interface AnnotaMDCommentRecord {
   exactQuote?: string
   body: string
   resolved: boolean
+  /** Kept only until the last open tab for this document is closed. */
+  temporaryDetached?: boolean
   /** @deprecated All comments are available when the global AnnotaMD MCP service is enabled. */
   agentReadable?: boolean
   createdAt: number

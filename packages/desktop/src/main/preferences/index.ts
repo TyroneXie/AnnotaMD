@@ -8,6 +8,7 @@ import { hasSameKeys } from '../utils'
 import { onInternalChannel } from '../utils/internalIpc'
 import { getSupportedLanguages, isLanguageSupported } from 'common/i18n'
 import { TypedEmitter } from '@shared/types/typedEmitter'
+import { migrateAgentPromptTemplate } from '@shared/types/agentTurns'
 import type { IUserPreferences } from '@shared/types/preferences'
 import schema from './schema.json'
 
@@ -96,6 +97,13 @@ class Preference extends TypedEmitter<PreferenceEvents> {
       // Because `this.getAll()` will return a plainObject, so we can not use `hasOwnProperty` method
       // const plainObject = () => Object.create(null)
       const userSetting = this.getAll() as Record<string, unknown>
+      if (typeof userSetting.agentPromptTemplate === 'string') {
+        const promptTemplate = migrateAgentPromptTemplate(userSetting.agentPromptTemplate)
+        if (promptTemplate !== userSetting.agentPromptTemplate) {
+          userSetting.agentPromptTemplate = promptTemplate
+          this.store.set('agentPromptTemplate', promptTemplate)
+        }
+      }
       // Update outdated settings
       const requiresUpdate = !hasSameKeys(defaultSettings, userSetting)
       const userSettingKeys = Object.keys(userSetting)

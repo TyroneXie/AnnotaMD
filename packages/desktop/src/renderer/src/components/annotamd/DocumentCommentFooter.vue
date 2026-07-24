@@ -15,6 +15,7 @@
         <span>{{ t('annotamd.comments.documentScope') }}</span>
         <button
           type="button"
+          :disabled="agentTurns.isRunning(comment.id)"
           @click="commentStore.deleteComment(filePath, comment.id)"
         >
           {{ t('annotamd.comments.markResolved') }}
@@ -51,7 +52,11 @@
             <button type="button" @click="startCommentEdit(comment.id, comment.body)">
               {{ t('annotamd.comments.edit') }}
             </button>
-            <button type="button" @click="commentStore.deleteComment(filePath, comment.id)">
+            <button
+              type="button"
+              :disabled="agentTurns.isRunning(comment.id)"
+              @click="commentStore.deleteComment(filePath, comment.id)"
+            >
               {{ t('annotamd.comments.delete') }}
             </button>
           </template>
@@ -124,12 +129,30 @@
         />
         <button
           type="button"
-          :disabled="!replyBody.trim()"
+          :disabled="!replyBody.trim() || agentTurns.isRunning(comment.id)"
           @click="saveReply(comment.id)"
         >
           {{ t('annotamd.comments.reply') }}
         </button>
+        <button
+          class="annotamd-send-agent"
+          type="button"
+          :disabled="!replyBody.trim() || !selectedAgentProfile ||
+            !agentReadiness.directSendReady || agentTurns.isRunning(comment.id)"
+          @click="saveReplyToAgent(comment.id)"
+        >
+          {{ agentTurns.isRunning(comment.id)
+            ? t('annotamd.comments.agentRunning')
+            : t('annotamd.comments.sendAgent') }}
+        </button>
       </div>
+
+      <p v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-status">
+        {{ t('annotamd.comments.agentRunning') }}
+      </p>
+      <p v-else-if="agentTurns.errorFor(comment.id)" class="annotamd-agent-turn-error">
+        {{ agentTurns.errorFor(comment.id) }}
+      </p>
 
       <div class="annotamd-document-actions">
         <button
@@ -157,26 +180,42 @@
         >
           {{ t('annotamd.comments.send') }}
         </button>
+        <button
+          class="annotamd-send-agent"
+          type="button"
+          :disabled="!draftBody.trim() || !selectedAgentProfile || !agentReadiness.directSendReady"
+          @click="submitCommentToAgent"
+        >
+          {{ t('annotamd.comments.sendAgent') }}
+        </button>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import { usePreferencesStore } from '@/store/preferences'
+import { useAgentTurnsStore } from '@/store/agentTurns'
+import { useAgentReadinessStore } from '@/store/agentReadiness'
 import { useI18n } from 'vue-i18n'
 import { formatCommentTimestamp } from '@/util/annotamdCommentTime'
+import { defaultAgentProfile } from '@shared/types/agentProfiles'
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
+const preferences = usePreferencesStore()
+const agentTurns = useAgentTurnsStore()
+const agentReadiness = useAgentReadinessStore()
 const { t, locale } = useI18n()
 
 const formatMessageTime = (createdAt: number): string =>
   formatCommentTimestamp(createdAt, locale.value)
 const { currentFile } = storeToRefs(editorStore)
+const { agentProfiles, defaultAgentProfileId } = storeToRefs(preferences)
 
 const draftBody = ref('')
 const editingId = ref<string | null>(null)
@@ -187,6 +226,10 @@ const replyingId = ref<string | null>(null)
 const replyBody = ref('')
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
+const selectedAgentProfile = computed(() => defaultAgentProfile(
+  agentProfiles.value,
+  defaultAgentProfileId.value
+))
 const documentComments = computed(() =>
   commentStore.commentsForFile(filePath.value).filter((comment) => comment.scope === 'document')
 )
@@ -195,6 +238,18 @@ const submitComment = (): void => {
   if (!filePath.value || !draftBody.value.trim()) return
   commentStore.addDocumentComment(filePath.value, draftBody.value)
   draftBody.value = ''
+}
+
+const submitCommentToAgent = async(): Promise<void> => {
+  const profile = selectedAgentProfile.value
+  const latestMessage = draftBody.value.trim()
+  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
+  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  const comment = commentStore.addDocumentComment(filePath.value, latestMessage)
+  if (!comment) return
+  draftBody.value = ''
+  await commentStore.persistFile(filePath.value)
+  await agentTurns.send(filePath.value, comment.id, latestMessage, profile)
 }
 
 const saveEdit = (id: string): void => {
@@ -250,6 +305,26 @@ const saveReply = (id: string): void => {
   replyingId.value = null
   replyBody.value = ''
 }
+
+const saveReplyToAgent = async(id: string): Promise<void> => {
+  const profile = selectedAgentProfile.value
+  const latestMessage = replyBody.value.trim()
+  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
+  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  commentStore.addReply(filePath.value, id, latestMessage)
+  replyingId.value = null
+  replyBody.value = ''
+  await commentStore.persistFile(filePath.value)
+  await agentTurns.send(filePath.value, id, latestMessage, profile)
+}
+
+watch(
+  [agentProfiles, defaultAgentProfileId, () => preferences.commentMcpEnabled],
+  () => void agentReadiness.refresh(),
+  { deep: true }
+)
+
+onMounted(() => agentReadiness.start())
 </script>
 
 <style scoped>
@@ -386,6 +461,26 @@ const saveReply = (id: string): void => {
   background: transparent;
   color: #3370ff;
   font-size: 12px;
+}
+
+.annotamd-document-reply-editor .annotamd-send-agent,
+.annotamd-document-composer .annotamd-send-agent {
+  background: var(--themeColor);
+  color: #fff;
+}
+
+.annotamd-agent-turn-error {
+  margin: 8px 10px 0;
+  color: #c43d3d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.annotamd-agent-turn-status {
+  margin: 8px 10px 0;
+  color: var(--themeColor);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .annotamd-document-comment-top button:hover,

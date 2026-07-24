@@ -12,6 +12,9 @@ import type Preference from '../preferences'
 import { WindowType } from '../windows/base'
 import type { WindowTypeValue } from '../windows/base'
 import type EditorWindow from '../windows/editor'
+import { broadcastCommentsChanged, getCommentService } from '../comments'
+import { stopAgentTurnForDocument } from '../agentTurns/ClaudeAgentTurnService'
+import { normalizeAndResolvePath } from '../filesystem'
 
 class WindowActivityList {
   // Oldest             Newest
@@ -334,6 +337,10 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
 
     // Application clearup and remove listeners
     _appMenu.removeWindowMenu(windowId)
+    const closingWindow = this.get(windowId)
+    const closedFilePaths = closingWindow?.type === WindowType.EDITOR
+      ? (closingWindow as EditorWindow).openedFiles
+      : []
     const window = this.remove(windowId)
 
     // Destroy window wrapper and browser window
@@ -343,6 +350,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       log.error('Something went wrong: Cannot find associated application window!')
       browserWindow.destroy()
     }
+    this.cleanupTemporaryCommentsForClosedFiles(closedFilePaths)
 
     // Quit application on macOS if not windows are opened.
     if (_windows.size === 0) {
@@ -405,6 +413,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
       const editor = this.get(win.id) as EditorWindow | undefined
       if (editor) {
         editor.removeFromOpenedFiles(pathname)
+        this.cleanupTemporaryCommentsForClosedFiles([pathname])
       }
     })
 
@@ -499,6 +508,19 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         browserWindow?.webContents.send('annotamd::user-preference', userData)
       }
     })
+  }
+
+  private cleanupTemporaryCommentsForClosedFiles(filePaths: string[]): void {
+    const openFiles = new Set(this.getWindowsByType('editor').flatMap(({ win }) => (
+      (win as EditorWindow).openedFiles.map((filePath) => normalizeAndResolvePath(filePath))
+    )))
+    for (const filePath of new Set(filePaths)) {
+      if (openFiles.has(normalizeAndResolvePath(filePath))) continue
+      stopAgentTurnForDocument(filePath)
+      if (getCommentService().deleteTemporaryDetached(filePath) > 0) {
+        broadcastCommentsChanged(filePath)
+      }
+    }
   }
 }
 

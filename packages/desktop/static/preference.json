@@ -17,6 +17,10 @@
   "treePathExcludePatterns": [],
   "language": "en",
   "commentMcpEnabled": true,
+  "agentProfiles": [],
+  "defaultAgentProfileId": "",
+  "agentSessionByDocument": {},
+  "agentPromptTemplate": "你正在 AnnotaMD 中处理一条 Markdown 文档批注。\n\n文档路径：\n{{当前文档路径}}\n\n评论 ID：\n{{当前评论ID}}\n\n被批注原文：\n{{被批注原文}}\n\n被批注前后上下文：\n{{被批注前后上下文100字}}\n\n当前评论线程：\n{{当前评论线程}}\n\n用户最新消息：\n{{当前评论}}\n\n请以“用户最新消息”为本轮唯一直接任务，并结合被批注原文和评论线程判断如何处理。\n\n处理规则：\n1. 用户明确要求修改正文时，直接编辑文档中准确对应的内容，不要扩大修改范围。\n2. 用户提出问题、要求解释或征求建议时，只在评论中回复，不要修改正文。\n3. 意图不明确、存在多种合理改法或无法准确定位时，先提出一个简短问题，不要猜测修改。\n4. 除非用户明确要求，否则不要处理文档中的其他评论。",
 
   "editorFontFamily": "Open Sans",
   "fontSize": 15,

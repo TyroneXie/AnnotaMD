@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { isCommentAnchorVisible, layoutCommentBubbles } from '@/util/commentBubbleLayout'
+import {
+  isCommentAnchorVisible,
+  layoutCommentBubbles
+} from '@/util/commentBubbleLayout'
 
 describe('comment bubble layout', () => {
   it('keeps bubbles near their text anchors when they do not collide', () => {

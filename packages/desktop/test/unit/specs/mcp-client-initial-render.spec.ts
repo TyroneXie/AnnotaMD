@@ -29,9 +29,15 @@ const mcpServerSource = readFileSync(
 )
 
 describe('MCP client initial rendering', () => {
-  it('renders both supported Agents before asynchronous detection completes', () => {
+  it('keeps supported Agents available while only rendering configured or added Agents', () => {
     expect(source).toContain("const clientIds: ClientId[] = ['codex', 'claude-code']")
     expect(source).toContain('clientIds.map(emptyClientState)')
+    expect(source).toContain('v-for="client in visibleInspectedClients"')
+    expect(source).toContain('v-if="showAddClientCard"')
+    expect(source).toContain('v-for="clientId in availableClientIds"')
+    expect(source).toContain('@change="confirmClientSelection"')
+    expect(source).toContain("t('preferences.agent.clientCancel')")
+    expect(source).toContain("t('preferences.agent.clientAdd')")
     expect(source).toContain('v-else-if="initialInspectionPending"')
     expect(source).toContain('detectingText()')
     expect(source).toContain("te(key) ? t(key) : t('preferences.agent.clientConfiguring')")
@@ -56,7 +62,6 @@ describe('MCP client initial rendering', () => {
     expect(source).toContain('v-for="client in otherClients"')
     expect(source).toContain("if (normalized.includes('workbuddy')) return 'WorkBuddy'")
     expect(source).toContain("if (normalized.includes('qoderwork') || normalized === 'qoder') return 'QoderWork'")
-    expect(source).toContain("t('preferences.agent.clientConnectionDescription')")
   })
 
   it('uses MCP handshake identity and retains disconnected clients for connection history', () => {
@@ -70,11 +75,13 @@ describe('MCP client initial rendering', () => {
   it('installs the portable comment skill when copying setup for other Agents', () => {
     expect(source).toContain("invoke('annotamd::mcp-clients::install-portable-skill')")
     expect(source).toContain("t('preferences.agent.customClientStepSkill')")
-    expect(source).toContain('v-if="connectedClient(client.id) && client.configured"')
+    expect(source).toContain('v-if="connectedClient(client.id) && client.mcpConfigured"')
   })
 
   it('shows actionable manual steps when automatic MCP or skill setup fails', () => {
     expect(source).toContain('configureErrors')
+    expect(source).toContain('mcp-client-error-toggle')
+    expect(source).toContain('expandedErrorClientId === client.id')
     expect(source).toContain("t('preferences.agent.clientManualFallback'")
     expect(source).toContain('customConfigError')
     expect(source).toContain("t('preferences.agent.customClientManualFallback')")

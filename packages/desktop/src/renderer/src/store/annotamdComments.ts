@@ -11,6 +11,7 @@ import type {
   AnnotaMDCommentAnchor,
   AnnotaMDLegacyCommentMigration
 } from '@shared/types/comments'
+import { useAgentTurnsStore } from './agentTurns'
 
 export type AnnotaMDSelectionAnchor = AnnotaMDCommentAnchor
 
@@ -43,6 +44,7 @@ interface AnnotaMDCommentsState {
   revisionByFile: Record<string, number>
   markdownByFile: Record<string, string>
   activeSelection: AnnotaMDSelection | null
+  selectionComposerOpen: boolean
   paneVisible: boolean
   activeCommentId: string | null
   composerRequest: AnnotaMDComposerRequest | null
@@ -53,6 +55,7 @@ const STORAGE_KEY = 'annotamd.comments.v2'
 const persistQueue = new Map<string, Promise<void>>()
 const persistRequested = new Set<string>()
 const synchronizingFiles = new Set<string>()
+const pendingMainReloads = new Set<string>()
 let stopMainCommentSync: (() => void) | null = null
 
 const readStoredComments = (): Record<string, AnnotaMDComment[]> => {
@@ -226,12 +229,24 @@ const cloneCommentForIpc = (comment: AnnotaMDComment): AnnotaMDComment => ({
     : undefined
 })
 
+const detachCommentDuringAgentTurn = (comment: AnnotaMDComment): AnnotaMDComment[] => {
+  if (!useAgentTurnsStore().isRunning(comment.id)) return []
+  return [{
+    ...comment,
+    temporaryDetached: true,
+    anchor: undefined,
+    focus: undefined,
+    updatedAt: Date.now()
+  }]
+}
+
 export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
   state: (): AnnotaMDCommentsState => ({
     commentsByFile: {},
     revisionByFile: {},
     markdownByFile: {},
     activeSelection: null,
+    selectionComposerOpen: false,
     paneVisible: false,
     activeCommentId: null,
     composerRequest: null,
@@ -259,7 +274,10 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       stopMainCommentSync = window.electron.ipcRenderer.on(
         'annotamd::comments::changed',
         (_event, filePath) => {
-          if (synchronizingFiles.has(filePath)) return
+          if (synchronizingFiles.has(filePath)) {
+            pendingMainReloads.add(filePath)
+            return
+          }
           void this.loadForFile(filePath, this.markdownByFile[filePath] ?? '')
         }
       )
@@ -337,6 +355,9 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           synchronizingFiles.delete(filePath)
           persistQueue.delete(filePath)
           persistRequested.delete(filePath)
+          if (pendingMainReloads.delete(filePath)) {
+            await this.loadForFile(filePath, this.markdownByFile[filePath] ?? '')
+          }
         }
       })()
       persistQueue.set(filePath, next)
@@ -362,7 +383,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           comment.focus
         )) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
         const anchorPath = comment.anchor.path ?? parseAnchorKey(comment.anchor.key)
         const focusPath = comment.focus.path ?? parseAnchorKey(comment.focus.key)
@@ -382,11 +403,11 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         )
         if (!anchor || !focus) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
         if (comparePaths(anchor.path, focus.path) === 0 && anchor.offset === focus.offset) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
         const anchorChanged = comparePaths(anchor.path, anchorPath) !== 0
           || anchor.offset !== comment.anchor.offset
@@ -434,7 +455,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         )
         if (!anchor || !focus) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
         if (documentChangeDeletesWholeSelection(
           previousDocument,
@@ -445,11 +466,11 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           focus
         )) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
         if (comparePaths(anchor.path, focus.path) === 0 && anchor.offset === focus.offset) {
           changed = true
-          return []
+          return detachCommentDuringAgentTurn(comment)
         }
 
         changed = true
@@ -473,11 +494,11 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       }
     },
 
-    addSelectionComment(filePath: string, body: string): void {
+    addSelectionComment(filePath: string, body: string): AnnotaMDComment | null {
       const selection = this.activeSelection
-      if (!selection || !filePath || !body.trim()) return
+      if (!selection || !filePath || !body.trim()) return null
 
-      this.addComment(filePath, {
+      return this.addComment(filePath, {
         scope: 'selection',
         quote: selection.quote,
         exactQuote: selection.exactQuote,
@@ -491,6 +512,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     requestComposer(mode: AnnotaMDComposerMode): void {
       this.paneVisible = true
       this.commentFocusRequest = null
+      this.selectionComposerOpen = mode === 'selection'
       this.composerRequest = {
         id: Date.now(),
         mode
@@ -501,8 +523,14 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       this.composerRequest = null
     },
 
+    closeSelectionComposer(): void {
+      this.selectionComposerOpen = false
+      this.activeSelection = null
+    },
+
     requestCommentFocus(commentId: string): void {
       this.paneVisible = true
+      this.closeSelectionComposer()
       this.activeCommentId = commentId
       this.composerRequest = null
       this.commentFocusRequest = {
@@ -518,6 +546,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     setPaneVisible(visible: boolean): void {
       this.paneVisible = visible
       if (!visible) this.activeCommentId = null
+      this.closeSelectionComposer()
       this.clearComposerRequest()
       this.clearCommentFocusRequest()
     },
@@ -527,10 +556,10 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       this.activeCommentId = commentId
     },
 
-    addDocumentComment(filePath: string, body: string): void {
-      if (!filePath || !body.trim()) return
+    addDocumentComment(filePath: string, body: string): AnnotaMDComment | null {
+      if (!filePath || !body.trim()) return null
 
-      this.addComment(filePath, {
+      return this.addComment(filePath, {
         scope: 'document',
         quote: '全文级 Agent 批注',
         body
@@ -548,7 +577,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
         focus?: AnnotaMDSelectionAnchor
         isCrossBlock?: boolean
       }
-    ): void {
+    ): AnnotaMDComment {
       const now = Date.now()
       const nextComment: AnnotaMDComment = {
         id: createId(),
@@ -569,6 +598,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
 
       this.commentsByFile[filePath] = [nextComment, ...(this.commentsByFile[filePath] ?? [])]
       void this.persistFile(filePath)
+      return nextComment
     },
 
     updateComment(filePath: string, id: string, body: string): void {
@@ -614,6 +644,22 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       const comments = this.commentsByFile[filePath]
       if (!comments) return Promise.resolve()
       this.commentsByFile[filePath] = comments.filter((item) => item.id !== id)
+      return this.persistFile(filePath)
+    },
+
+    deleteComments(filePath: string, ids: string[]): Promise<void> {
+      const comments = this.commentsByFile[filePath]
+      if (!comments?.length || !ids.length) return Promise.resolve()
+      const idSet = new Set(ids)
+      const remainingComments = comments.filter((item) => !idSet.has(item.id))
+      if (remainingComments.length === comments.length) return Promise.resolve()
+      this.commentsByFile[filePath] = remainingComments
+      return this.persistFile(filePath)
+    },
+
+    deleteAllComments(filePath: string): Promise<void> {
+      if (!this.commentsByFile[filePath]?.length) return Promise.resolve()
+      this.commentsByFile[filePath] = []
       return this.persistFile(filePath)
     }
   }

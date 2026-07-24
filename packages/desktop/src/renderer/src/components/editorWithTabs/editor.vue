@@ -1354,7 +1354,7 @@ const refreshAnnotaMDCommentHighlights = (): void => {
   const root = getScrollContainer()
   if (!root) return
   const activeSelection = annotaMDCommentsStore.activeSelection
-  const composerAnchorSources = activeSelection
+  const composerHighlightSources = activeSelection && annotaMDCommentsStore.selectionComposerOpen
     ? [{
         id: ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
         scope: 'selection' as const,
@@ -1363,15 +1363,20 @@ const refreshAnnotaMDCommentHighlights = (): void => {
         focus: activeSelection.focus
       }]
     : []
+  const highlightSources = [
+    ...currentFileComments.value,
+    ...composerHighlightSources
+  ]
   commentRangeLayout = buildAnnotaMDCommentRangeLayout(
     root,
-    currentFileComments.value,
-    composerAnchorSources
+    highlightSources
   )
   syncAnnotaMDCommentHighlights(
     root,
-    currentFileComments.value,
-    annotaMDCommentsStore.activeCommentId,
+    highlightSources,
+    composerHighlightSources.length
+      ? ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID
+      : annotaMDCommentsStore.activeCommentId,
     commentRangeLayout
   )
   bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)
@@ -1415,6 +1420,7 @@ const handleCommentHighlightClick = (event: MouseEvent): void => {
   // the CSS Highlight ranges after that DOM update so inactive annotations do
   // not lose their persistent underline.
   requestAnimationFrame(queueAnnotaMDCommentHighlights)
+  if (comment?.id === ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID) return
   if (comment?.id) {
     annotaMDCommentsStore.setActiveComment(comment.id)
     annotaMDCommentsStore.requestCommentFocus(comment.id)
@@ -1438,7 +1444,9 @@ const handleCommentHighlightHover = (event: MouseEvent): void => {
       position.offset,
       commentRangeLayout
     )
-    annotaMDCommentsStore.setActiveComment(comment?.id ?? null)
+    annotaMDCommentsStore.setActiveComment(
+      comment?.id === ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID ? null : comment?.id ?? null
+    )
   })
 }
 

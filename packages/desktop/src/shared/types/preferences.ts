@@ -6,6 +6,8 @@
 // Kept intentionally open with `[key: string]: unknown` until the schema
 // is mechanically derived from schema.json in a follow-up.
 
+import type { AnnotaMDAgentProfile } from './agentProfiles'
+
 export interface IUserPreferences {
   autoSave?: boolean
   autoSaveDelay?: number
@@ -21,6 +23,10 @@ export interface IUserPreferences {
   defaultDirectoryToOpen?: string
   language?: string
   commentMcpEnabled?: boolean
+  agentProfiles?: AnnotaMDAgentProfile[]
+  defaultAgentProfileId?: string
+  agentSessionByDocument?: Record<string, Record<string, Record<string, string>>>
+  agentPromptTemplate?: string
   editorFontFamily?: string
   fontSize?: number
   lineHeight?: number

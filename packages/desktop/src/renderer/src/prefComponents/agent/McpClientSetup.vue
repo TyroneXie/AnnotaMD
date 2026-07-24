@@ -1,15 +1,12 @@
 <template>
   <div class="mcp-client-setup">
-    <div class="mcp-client-summary">
-      <span>{{ t('preferences.agent.clientConnectionDescription') }}</span>
-      <span class="mcp-listener-state" :class="listenerStateClass">
-        <i aria-hidden="true" />
-        {{ listenerStateText }}
-      </span>
-    </div>
-
-    <div class="mcp-client-list">
-      <div v-for="client in inspectedClients" :key="client.id" class="mcp-client-row">
+    <div v-if="hasVisibleClients" class="mcp-client-list">
+      <div
+        v-for="client in visibleInspectedClients"
+        :key="client.id"
+        class="mcp-client-row"
+        :class="{ configured: clientMcpReady(client) }"
+      >
         <div class="mcp-client-identity">
           <span
             class="mcp-client-mark"
@@ -26,72 +23,93 @@
             </span>
           </span>
           <span class="mcp-client-copy">
-            <strong>{{ clientNames[client.id] }}</strong>
+            <span class="mcp-client-name-row">
+              <strong>{{ clientNames[client.id] }}</strong>
+            </span>
             <small>
               <i class="mcp-client-state-dot" :class="clientStateClass(client.id)" />
-              {{ stateText(client) }}
-            </small>
-            <small
-              v-if="configureErrors[client.id]"
-              class="mcp-client-config-error"
-              role="alert"
-            >
-              {{ t('preferences.agent.clientConfigureFailureReason', {
-                reason: conciseError(configureErrors[client.id])
-              }) }}
-              {{ t('preferences.agent.clientManualFallback', {
-                client: clientNames[client.id],
-                path: clientSkillPaths[client.id]
-              }) }}
+              <span>{{ stateText(client) }}</span>
+              <button
+                v-if="configureErrors[client.id]"
+                type="button"
+                class="mcp-client-error-toggle"
+                :aria-expanded="expandedErrorClientId === client.id"
+                @click="toggleConfigureError(client.id)"
+              >
+                {{ t('preferences.agent.clientErrorReason') }}
+              </button>
             </small>
           </span>
         </div>
-        <button
-          v-if="connectedClient(client.id) && client.configured"
-          type="button"
-          class="mcp-client-button connected"
-          disabled
+        <div class="mcp-client-actions">
+          <button
+            v-if="addedClientIds.includes(client.id) && !clientMcpReady(client)"
+            type="button"
+            class="mcp-client-button"
+            @click="removeAddedClient(client.id)"
+          >
+            {{ t('preferences.agent.clientCancel') }}
+          </button>
+          <button
+            v-if="connectedClient(client.id) && client.mcpConfigured"
+            type="button"
+            class="mcp-client-button connected"
+            disabled
+          >
+            {{ t('preferences.agent.connected') }}
+          </button>
+          <button
+            v-else-if="initialInspectionPending"
+            type="button"
+            class="mcp-client-button"
+            disabled
+          >
+            {{ detectingText() }}
+          </button>
+          <button
+            v-else-if="client.mcpConfigured"
+            type="button"
+            class="mcp-client-button configured"
+            disabled
+          >
+            {{ t('preferences.agent.clientConfigured') }}
+          </button>
+          <button
+            v-else-if="!client.installed"
+            type="button"
+            class="mcp-client-button"
+            disabled
+          >
+            {{ t('preferences.agent.clientNotInstalled') }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="mcp-client-button primary"
+            :disabled="busyClient === client.id"
+            @click="configure(client.id)"
+          >
+            {{ busyClient === client.id
+              ? t('preferences.agent.clientConfiguring')
+              : t('preferences.agent.clientConfigure') }}
+          </button>
+        </div>
+        <div
+          v-if="configureErrors[client.id] && expandedErrorClientId === client.id"
+          class="mcp-client-config-error"
+          role="alert"
         >
-          {{ t('preferences.agent.connected') }}
-        </button>
-        <button
-          v-else-if="initialInspectionPending"
-          type="button"
-          class="mcp-client-button"
-          disabled
-        >
-          {{ detectingText() }}
-        </button>
-        <button
-          v-else-if="client.configured"
-          type="button"
-          class="mcp-client-button configured"
-          disabled
-        >
-          {{ t('preferences.agent.clientConfigured') }}
-        </button>
-        <button
-          v-else-if="!client.installed"
-          type="button"
-          class="mcp-client-button"
-          disabled
-        >
-          {{ t('preferences.agent.clientNotInstalled') }}
-        </button>
-        <button
-          v-else
-          type="button"
-          class="mcp-client-button primary"
-          :disabled="busyClient === client.id"
-          @click="configure(client.id)"
-        >
-          {{ busyClient === client.id
-            ? t('preferences.agent.clientConfiguring')
-            : t('preferences.agent.clientConfigure') }}
-        </button>
+          <p>{{ t('preferences.agent.clientConfigureFailureReason', {
+            reason: conciseError(configureErrors[client.id])
+          }) }}</p>
+          <p>{{ t('preferences.agent.clientManualFallback', {
+            client: clientNames[client.id],
+            path: clientSkillPaths[client.id]
+          }) }}</p>
+        </div>
       </div>
 
-      <div v-for="client in otherClients" :key="client.name" class="mcp-client-row">
+      <div v-for="client in otherClients" :key="client.name" class="mcp-client-row configured">
         <div class="mcp-client-identity">
           <span class="mcp-client-mark">
             <img
@@ -127,7 +145,35 @@
         </button>
       </div>
 
-      <section class="mcp-custom-client">
+      <div v-if="showAddClientCard" class="mcp-client-row mcp-add-client-card">
+        <el-select
+          v-model="pendingClientId"
+          class="mcp-add-client-select"
+          :placeholder="t('preferences.agent.clientSelectPlaceholder')"
+          @change="confirmClientSelection"
+        >
+          <el-option
+            v-for="clientId in availableClientIds"
+            :key="clientId"
+            :label="clientNames[clientId]"
+            :value="clientId"
+          />
+          <el-option
+            v-if="!showCustomSetup"
+            :label="t('preferences.agent.customClientTitle')"
+            value="custom"
+          />
+        </el-select>
+        <button
+          type="button"
+          class="mcp-client-button"
+          @click="cancelPendingClient"
+        >
+          {{ t('preferences.agent.clientCancel') }}
+        </button>
+      </div>
+
+      <section v-if="showCustomSetup" class="mcp-custom-client">
         <div class="mcp-custom-client-heading">
           <button
             type="button"
@@ -151,18 +197,27 @@
               <small>{{ t('preferences.agent.customClientDescription') }}</small>
             </span>
           </button>
-          <button
-            type="button"
-            class="mcp-client-button primary"
-            :disabled="customConfigBusy"
-            @click="copyCustomConfig"
-          >
-            {{ customConfigBusy
-              ? t('preferences.agent.clientConfiguring')
-              : customConfigCopied
-              ? t('preferences.agent.clientCopied')
-              : t('preferences.agent.customClientCopy') }}
-          </button>
+          <div class="mcp-client-actions">
+            <button
+              type="button"
+              class="mcp-client-button"
+              @click="cancelCustomSetup"
+            >
+              {{ t('preferences.agent.clientCancel') }}
+            </button>
+            <button
+              type="button"
+              class="mcp-client-button primary"
+              :disabled="customConfigBusy"
+              @click="copyCustomConfig"
+            >
+              {{ customConfigBusy
+                ? t('preferences.agent.clientConfiguring')
+                : customConfigCopied
+                ? t('preferences.agent.clientCopied')
+                : t('preferences.agent.customClientCopy') }}
+            </button>
+          </div>
         </div>
         <p
           v-if="customConfigError"
@@ -185,6 +240,15 @@
         </div>
       </section>
     </div>
+
+    <el-button
+      v-if="!showAddClientCard"
+      class="mcp-add-client"
+      size="small"
+      @click="openAddClientCard"
+    >
+      {{ t('preferences.agent.clientAdd') }}
+    </el-button>
   </div>
 </template>
 
@@ -223,10 +287,15 @@ const mcpStatus = ref<AnnotaMDMcpStatus>({ enabled: false, running: false, clien
 const initialInspectionPending = ref(true)
 const busyClient = ref<ClientId | null>(null)
 const configureErrors = ref<Partial<Record<ClientId, string>>>({})
+const expandedErrorClientId = ref<ClientId | null>(null)
 const customConfigCopied = ref(false)
 const customConfigBusy = ref(false)
 const customConfigError = ref<string | null>(null)
 const customDetailsExpanded = ref(false)
+const showCustomSetup = ref(false)
+const showAddClientCard = ref(false)
+const pendingClientId = ref<ClientId | 'custom' | ''>('')
+const addedClientIds = ref<ClientId[]>([])
 const missingIcons = ref<Record<string, boolean>>({})
 let stopMcpStatusListener: null | (() => void) = null
 
@@ -239,7 +308,6 @@ const clientIcons: Record<ClientId, string> = {
   codex: chatGptIcon,
   'claude-code': claudeCodeIcon
 }
-
 const clientSkillPaths: Record<ClientId, string> = {
   codex: '~/.agents/skills/annotamd-comment-review',
   'claude-code': '~/.claude/skills/annotamd-comment-review'
@@ -257,6 +325,11 @@ const setConfigureError = (id: ClientId, error?: string): void => {
   if (error) next[id] = error
   else delete next[id]
   configureErrors.value = next
+  if (!error && expandedErrorClientId.value === id) expandedErrorClientId.value = null
+}
+
+const toggleConfigureError = (id: ClientId): void => {
+  expandedErrorClientId.value = expandedErrorClientId.value === id ? null : id
 }
 
 const normalizedClientName = (name: string): string => name.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -277,6 +350,25 @@ const knownClientHistory = (id: ClientId): AnnotaMDMcpClientStatus | undefined =
 const otherClients = computed(() =>
   mcpStatus.value.clients.filter((client) => knownClientId(client.name) === null)
 )
+const visibleInspectedClients = computed(() => inspectedClients.value.filter((client) => (
+  client.mcpConfigured ||
+  connectedClient(client.id) != null ||
+  addedClientIds.value.includes(client.id) ||
+  busyClient.value === client.id ||
+  configureErrors.value[client.id] != null
+)))
+const clientMcpReady = (client: AnnotaMDMcpClientState): boolean => (
+  client.mcpConfigured || connectedClient(client.id) != null
+)
+const availableClientIds = computed(() => clientIds.filter((id) => (
+  !visibleInspectedClients.value.some((client) => client.id === id)
+)))
+const hasVisibleClients = computed(() => (
+  visibleInspectedClients.value.length > 0 ||
+  otherClients.value.length > 0 ||
+  showCustomSetup.value ||
+  showAddClientCard.value
+))
 
 const displayClientName = (name: string): string => {
   const normalized = normalizedClientName(name)
@@ -331,21 +423,11 @@ const stateText = (client: AnnotaMDMcpClientState): string => {
 }
 
 const clientStateClass = (id: ClientId): string => {
+  if (configureErrors.value[id]) return 'error'
   if (connectedClient(id)) return 'online'
   if (knownClientHistory(id)) return 'offline'
   return 'idle'
 }
-
-const listenerStateText = computed(() => {
-  if (!mcpStatus.value.enabled) return t('preferences.agent.clientListeningOff')
-  if (!mcpStatus.value.running) return t('preferences.agent.clientListeningError')
-  return t('preferences.agent.clientListening')
-})
-
-const listenerStateClass = computed(() => {
-  if (!mcpStatus.value.enabled) return 'off'
-  return mcpStatus.value.running ? 'listening' : 'error'
-})
 
 const detectingText = (): string => {
   const key = 'preferences.agent.clientDetecting'
@@ -382,6 +464,9 @@ const configure = async(id: ClientId): Promise<void> => {
     const result = await window.electron.ipcRenderer.invoke('annotamd::mcp-clients::configure', id)
     const index = inspectedClients.value.findIndex((client) => client.id === id)
     if (index >= 0) inspectedClients.value[index] = result.client
+    if (result.client.mcpConfigured) {
+      addedClientIds.value = addedClientIds.value.filter((clientId) => clientId !== id)
+    }
     if (!result.success) {
       setConfigureError(id, result.message || t('preferences.agent.clientUnknownError'))
       customDetailsExpanded.value = true
@@ -392,6 +477,40 @@ const configure = async(id: ClientId): Promise<void> => {
   } finally {
     busyClient.value = null
   }
+}
+
+const openAddClientCard = (): void => {
+  pendingClientId.value = ''
+  showAddClientCard.value = true
+}
+
+const cancelPendingClient = (): void => {
+  pendingClientId.value = ''
+  showAddClientCard.value = false
+}
+
+const confirmClientSelection = (client: ClientId | 'custom'): void => {
+  if (client === 'custom') {
+    showCustomSetup.value = true
+    customDetailsExpanded.value = true
+    cancelPendingClient()
+    return
+  }
+  if (!addedClientIds.value.includes(client)) {
+    addedClientIds.value = [...addedClientIds.value, client]
+  }
+  cancelPendingClient()
+}
+
+const removeAddedClient = (client: ClientId): void => {
+  addedClientIds.value = addedClientIds.value.filter((clientId) => clientId !== client)
+  setConfigureError(client)
+}
+
+const cancelCustomSetup = (): void => {
+  showCustomSetup.value = false
+  customDetailsExpanded.value = false
+  customConfigError.value = null
 }
 
 const copyCustomConfig = async(): Promise<void> => {
@@ -421,6 +540,7 @@ const copyCustomConfig = async(): Promise<void> => {
 
 onMounted(() => {
   void refresh()
+  window.addEventListener('annotamd-agent-configuration-changed', refresh)
   void window.electron.ipcRenderer.invoke('annotamd::comments::mcp-status').then((status) => {
     mcpStatus.value = status
   })
@@ -432,30 +552,13 @@ onMounted(() => {
   )
 })
 
-onBeforeUnmount(() => stopMcpStatusListener?.())
+onBeforeUnmount(() => {
+  stopMcpStatusListener?.()
+  window.removeEventListener('annotamd-agent-configuration-changed', refresh)
+})
 </script>
 
 <style scoped>
-.mcp-client-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0 0 9px;
-  color: var(--editorColor80);
-  font-size: 12px;
-}
-
-.mcp-listener-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  color: var(--editorColor80);
-  white-space: nowrap;
-}
-
-.mcp-listener-state i,
 .mcp-client-state-dot {
   width: 6px;
   height: 6px;
@@ -464,27 +567,17 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   background: var(--editorColor30);
 }
 
-.mcp-listener-state.listening {
-  color: #168f52;
-}
-
-.mcp-listener-state.listening i,
 .mcp-client-state-dot.online {
   background: #20a162;
   box-shadow: 0 0 0 3px color-mix(in srgb, #20a162 12%, transparent);
 }
 
-.mcp-listener-state.error,
-.mcp-listener-state.error i {
-  color: #d46b08;
-}
-
-.mcp-listener-state.error i {
-  background: #d46b08;
-}
-
 .mcp-client-state-dot.offline {
   background: var(--editorColor30);
+}
+
+.mcp-client-state-dot.error {
+  background: #cf3f3f;
 }
 
 .mcp-client-list {
@@ -493,13 +586,45 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   border-radius: 8px;
 }
 
+.mcp-add-client {
+  width: 100%;
+  height: 34px;
+  margin-top: 10px;
+  font-size: var(--agent-body-font-size, 13px);
+}
+
+.mcp-add-client-card {
+  gap: 10px;
+}
+
+.mcp-add-client-select {
+  flex: 1 1 auto;
+}
+
 .mcp-client-row {
+  box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  min-height: 58px;
-  padding: 8px 13px;
+  min-height: 76px;
+  padding: 12px 13px;
   border-bottom: 1px solid var(--floatBorderColor);
+}
+
+.mcp-client-row:last-child {
+  border-bottom: 0;
+}
+
+.mcp-client-row.configured {
+  background: color-mix(in srgb, #20a162 4%, var(--editorBgColor));
+}
+
+.mcp-client-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
 }
 
 .mcp-client-identity {
@@ -543,9 +668,16 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   display: block;
 }
 
+.mcp-client-name-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .mcp-client-copy strong {
   color: var(--editorColor);
-  font-size: 13px;
+  font-size: var(--agent-card-title-font-size, 14px);
+  line-height: var(--agent-text-line-height, 1.4);
 }
 
 .mcp-client-copy small {
@@ -554,15 +686,41 @@ onBeforeUnmount(() => stopMcpStatusListener?.())
   gap: 6px;
   margin-top: 2px;
   color: var(--editorColor80);
-  font-size: 11px;
+  font-size: var(--agent-meta-font-size, 12px);
+  line-height: var(--agent-text-line-height, 1.4);
 }
 
-.mcp-client-copy .mcp-client-config-error {
-  display: block;
-  max-width: 460px;
-  margin-top: 5px;
-  color: #d46b08;
-  line-height: 1.45;
+.mcp-client-error-toggle {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, #cf3f3f 38%, var(--floatBorderColor));
+  border-radius: 5px;
+  background: color-mix(in srgb, #cf3f3f 7%, var(--editorBgColor));
+  color: #c43535;
+  cursor: pointer;
+  font: inherit;
+  line-height: 20px;
+}
+
+.mcp-client-config-error {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 11px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #cf3f3f 5%, var(--editorBgColor));
+  color: var(--editorColor80);
+  font-size: var(--agent-meta-font-size, 12px);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.mcp-client-config-error p {
+  margin: 0;
+}
+
+.mcp-client-config-error p + p {
+  margin-top: 6px;
 }
 
 .mcp-client-button {

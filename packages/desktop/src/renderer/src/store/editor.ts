@@ -549,6 +549,39 @@ export const useEditorStore = defineStore('editor', {
       }
     },
 
+    SAVE_CURRENT_FOR_AGENT(): Promise<boolean> {
+      this.flushActiveEditor()
+      const file = this.currentFile
+      if (!file?.id || !file.pathname || file.isMissingOnDisk) return Promise.resolve(false)
+      if (file.isSaved) return Promise.resolve(true)
+
+      return new Promise((resolve) => {
+        let settled = false
+        const finish = (saved: boolean): void => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer)
+          stopSaved()
+          stopFailed()
+          resolve(saved)
+        }
+        const stopSaved = window.electron.ipcRenderer.on(
+          'annotamd::tab-saved',
+          (_event, tabId) => {
+            if (tabId === file.id) finish(true)
+          }
+        )
+        const stopFailed = window.electron.ipcRenderer.on(
+          'annotamd::tab-save-failure',
+          (_event, tabId) => {
+            if (tabId === file.id) finish(false)
+          }
+        )
+        const timer = setTimeout(() => finish(false), 15000)
+        this.FILE_SAVE()
+      })
+    },
+
     // need pass some data to main process when `save` menu item clicked
     LISTEN_FOR_SAVE(): void {
       window.electron.ipcRenderer.on('annotamd::editor-ask-file-save', () => {

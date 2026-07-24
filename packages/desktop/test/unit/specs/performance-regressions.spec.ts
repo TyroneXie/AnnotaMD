@@ -150,7 +150,8 @@ describe('performance regression guards', () => {
     )
 
     expect(editor).toContain('commentRangeLayout = buildAnnotaMDCommentRangeLayout(')
-    expect(editor).toContain('composerAnchorSources')
+    expect(editor).toContain('composerHighlightSources')
+    expect(editor).toContain('...composerHighlightSources')
     expect(editor).toContain("bus.emit('annotamd-comment-anchors', commentRangeLayout.anchorRects)")
     expect(editor).not.toContain('createAnnotaMDCommentTextReader')
   })
@@ -165,7 +166,7 @@ describe('performance regression guards', () => {
     expect(commentPane).toContain('commentResizeObserver?.observe(card)')
     expect(commentPane).toContain('const commentCardHeight = (commentId: string, fallback: number)')
     expect(commentPane).toContain('const measuredHeight = commentCardHeights.get(commentId) ?? fallback')
-    expect(commentPane).toContain('height: commentCardHeight(comment.id, 120)')
+    expect(commentPane).toContain('const height = commentCardHeight(comment.id, 120)')
     expect(commentPane).not.toMatch(
       /selectionComments\.value\.map[\s\S]*?height:\s*card\?\.offsetHeight/
     )

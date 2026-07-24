@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import bus from '../bus'
 import { setLanguage } from '../i18n'
+import type { AnnotaMDAgentProfile } from '@shared/types/agentProfiles'
+import { DEFAULT_AGENT_PROMPT_TEMPLATE } from '@shared/types/agentTurns'
 
 // Finite-value unions where the runtime currently constrains the field.
 // We keep these as plain strings everywhere else to avoid forcing prematurely
@@ -39,6 +41,10 @@ export interface PreferencesState {
   treePathExcludePatterns: string[]
   language: string
   commentMcpEnabled: boolean
+  agentProfiles: AnnotaMDAgentProfile[]
+  defaultAgentProfileId: string
+  agentSessionByDocument: Record<string, Record<string, Record<string, string>>>
+  agentPromptTemplate: string
 
   // ----- Editor / typography -----
   editorFontFamily: string
@@ -162,6 +168,10 @@ export const usePreferencesStore = defineStore('preferences', {
     treePathExcludePatterns: [],
     language: 'en',
     commentMcpEnabled: true,
+    agentProfiles: [],
+    defaultAgentProfileId: '',
+    agentSessionByDocument: {},
+    agentPromptTemplate: DEFAULT_AGENT_PROMPT_TEMPLATE,
 
     editorFontFamily: 'Open Sans',
     fontSize: 15,

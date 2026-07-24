@@ -88,6 +88,42 @@ const addComment = async(
   await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(expectedCount)
 }
 
+test('keeps the selected text highlighted while the comment composer has focus', async() => {
+  const selectedText = '批注输入框聚焦后仍应高亮'
+  const { app, page } = await launchWithMarkdown(selectedText)
+  try {
+    await selectParagraphText(page, 0)
+    await page.locator('.mu-format-picker li.annotamd_comment').click()
+
+    const composer = page.locator('.annotamd-composer-card')
+    await expect(composer).toBeVisible()
+    await expect(composer.locator('textarea')).toBeFocused()
+    await expect.poll(async() => page.evaluate(() => {
+      const registry = (CSS as unknown as {
+        highlights: Map<string, Iterable<Range>>
+      }).highlights
+      const text = (name: string): string => [...(registry.get(name) ?? [])]
+        .map((range) => range.toString())
+        .join('')
+      return {
+        normal: text('annotamd-selection-comment'),
+        active: text('annotamd-active-selection-comment')
+      }
+    })).toEqual({ normal: selectedText, active: selectedText })
+
+    await composer.locator('.annotamd-comment-card-actions button').click()
+    await expect(composer).toHaveCount(0)
+    await expect.poll(async() => page.evaluate(() => {
+      const registry = (CSS as unknown as {
+        highlights: Map<string, Iterable<Range>>
+      }).highlights
+      return registry.has('annotamd-active-selection-comment')
+    })).toBe(false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps partial edits, removes whole replacements, and permanently resolves comments', async() => {
   const original = 'ANCHOR_TARGET_ABCDE'
   const { app, page, filePath } = await launchWithMarkdown(original)
