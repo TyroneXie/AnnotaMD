@@ -100,8 +100,16 @@ describe('AnnotaMD CLI Agent profiles', () => {
     expect(agentSettingsSource).toContain('<advanced')
     expect(commentPaneSource).not.toContain('annotamd-agent-picker')
     expect(commentPaneSource).not.toContain('annotamd-mcp-status')
+    expect(commentPaneSource).toContain('ref="agentStatusMenu"')
     expect(commentPaneSource).toContain('annotamd-agent-channel-dot')
     expect(commentPaneSource).toContain("'direct-channel': !agentReadiness.loading && index === 0")
+    expect(commentPaneSource).toContain(
+      "document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)"
+    )
+    expect(commentPaneSource).toContain(
+      "document.removeEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)"
+    )
+    expect(commentPaneSource).toContain('closeMenuOnOutsidePointerDown(agentStatusMenu.value, target)')
     expect(readinessSource).not.toContain("invoke('annotamd::mcp-clients::inspect')")
     expect(readinessSource).toContain('.filter((client) => client.connected)')
     expect(readinessSource).toContain('connectedAgentNames.length > 0')

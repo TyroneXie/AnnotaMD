@@ -63,17 +63,19 @@ describe('Feishu-style comment messages', () => {
     expect(chinese.annotamd.comments.bulkResolve).toBe('批量解决评论')
   })
 
-  it('closes the bulk resolve menu when the user clicks elsewhere', () => {
+  it('closes header popovers when the user clicks elsewhere', () => {
     expect(commentPane).toContain(
-      'const handleResolveAllOutsidePointerDown = (event: PointerEvent)'
+      'const handleHeaderMenusOutsidePointerDown = (event: PointerEvent)'
     )
     expect(commentPane).toContain('menu.contains(target)')
     expect(commentPane).toContain('menu.open = false')
+    expect(commentPane).toContain('closeMenuOnOutsidePointerDown(resolveAllMenu.value, target)')
+    expect(commentPane).toContain('closeMenuOnOutsidePointerDown(agentStatusMenu.value, target)')
     expect(commentPane).toContain(
-      "document.addEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)"
+      "document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)"
     )
     expect(commentPane).toContain(
-      "document.removeEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)"
+      "document.removeEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)"
     )
   })
 

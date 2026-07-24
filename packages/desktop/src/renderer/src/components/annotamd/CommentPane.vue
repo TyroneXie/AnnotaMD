@@ -38,6 +38,7 @@
           </div>
         </details>
         <details
+          ref="agentStatusMenu"
           class="annotamd-agent-status"
           :class="agentReadiness.loading ? 'checking' : agentReadiness.level"
         >
@@ -525,6 +526,7 @@ const localScrollMaxHeight = ref(0)
 const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
 const resolveAllMenu = ref<HTMLDetailsElement | null>(null)
+const agentStatusMenu = ref<HTMLDetailsElement | null>(null)
 const resolveAllArmed = ref(false)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
@@ -1036,6 +1038,7 @@ const handleCommentListScroll = (): void => {
 }
 
 const openAgentSettings = (): void => {
+  if (agentStatusMenu.value) agentStatusMenu.value.open = false
   window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
 }
 
@@ -1043,11 +1046,18 @@ const handleResolveAllMenuToggle = (): void => {
   if (!resolveAllMenu.value?.open) resolveAllArmed.value = false
 }
 
-const handleResolveAllOutsidePointerDown = (event: PointerEvent): void => {
-  const menu = resolveAllMenu.value
-  const target = event.target
+const closeMenuOnOutsidePointerDown = (
+  menu: HTMLDetailsElement | null,
+  target: EventTarget | null
+): void => {
   if (!menu?.open || !(target instanceof Node) || menu.contains(target)) return
   menu.open = false
+}
+
+const handleHeaderMenusOutsidePointerDown = (event: PointerEvent): void => {
+  const target = event.target
+  closeMenuOnOutsidePointerDown(resolveAllMenu.value, target)
+  closeMenuOnOutsidePointerDown(agentStatusMenu.value, target)
 }
 
 const resolveAllComments = async(): Promise<void> => {
@@ -1316,7 +1326,7 @@ onMounted(() => {
   bindSharedEditorScroller()
   agentReadiness.start()
   document.addEventListener('keydown', handleFocusReadingKeydown)
-  document.addEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)
+  document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)
   bus.on('annotamd-comment-anchors', handleCommentAnchors)
   if (commentList.value) {
     commentResizeObserver = new ResizeObserver((entries) => {
@@ -1337,7 +1347,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   commentLayoutDisposed = true
   document.removeEventListener('keydown', handleFocusReadingKeydown)
-  document.removeEventListener('pointerdown', handleResolveAllOutsidePointerDown, true)
+  document.removeEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)
   sharedEditorScroller?.removeEventListener('scroll', syncSharedScrollFromEditor)
   sharedEditorScroller = null
   bus.off('annotamd-comment-anchors', handleCommentAnchors)
