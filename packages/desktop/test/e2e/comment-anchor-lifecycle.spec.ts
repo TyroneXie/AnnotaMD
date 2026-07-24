@@ -124,6 +124,43 @@ test('keeps the selected text highlighted while the comment composer has focus',
   }
 })
 
+test('aligns comment header controls and keeps the Agent popover visible', async() => {
+  const { app, page } = await launchWithMarkdown('标题栏图标对齐。\n')
+  try {
+    await addComment(page, 0, '图标对齐 QA', 1, '标题栏图标对齐。')
+
+    const resolveIcon = page.locator('.annotamd-resolve-all summary svg')
+    await expect(resolveIcon).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 2)')
+    const metrics = await resolveIcon.evaluate((element) => {
+      const iconRect = element.getBoundingClientRect()
+      const agentSummary = document.querySelector('.annotamd-agent-status summary')
+      if (!agentSummary) throw new Error('Agent status control is unavailable')
+      const agentRect = agentSummary.getBoundingClientRect()
+      return {
+        iconCenterY: iconRect.top + iconRect.height / 2,
+        agentCenterY: agentRect.top + agentRect.height / 2
+      }
+    })
+    expect(Math.abs(metrics.iconCenterY - metrics.agentCenterY)).toBeLessThan(0.5)
+
+    await page.locator('.annotamd-agent-status summary').click()
+    const popoverBounds = await page.locator('.annotamd-agent-status-popover').evaluate((element) => {
+      const pane = element.closest('.annotamd-comment-pane')
+      if (!pane) throw new Error('comment pane is unavailable')
+      const paneRect = pane.getBoundingClientRect()
+      const popoverRect = element.getBoundingClientRect()
+      return {
+        leftInset: popoverRect.left - paneRect.left,
+        rightInset: paneRect.right - popoverRect.right
+      }
+    })
+    expect(popoverBounds.leftInset).toBeGreaterThanOrEqual(10)
+    expect(popoverBounds.rightInset).toBeGreaterThanOrEqual(10)
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps partial edits, removes whole replacements, and permanently resolves comments', async() => {
   const original = 'ANCHOR_TARGET_ABCDE'
   const { app, page, filePath } = await launchWithMarkdown(original)

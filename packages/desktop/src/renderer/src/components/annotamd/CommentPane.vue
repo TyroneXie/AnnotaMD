@@ -1446,6 +1446,7 @@ onBeforeUnmount(() => {
 .annotamd-resolve-all summary svg {
   width: 17px;
   height: 17px;
+  transform: translateY(2px);
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -1547,7 +1548,7 @@ onBeforeUnmount(() => {
   z-index: 4;
   top: 31px;
   right: -32px;
-  width: 300px;
+  width: min(300px, calc(var(--annotamd-comment-pane-width, 310px) - 24px));
   box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--annotamd-border);
