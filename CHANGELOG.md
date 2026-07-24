@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.14.0 - 2026-07-24
+
+### Added
+
+- Added direct Agent sending from new comments and thread replies, with configurable local CLI profiles and live progress and results inside the comment thread.
+
+### Changed
+
+- Separated direct comment sending readiness from live MCP application access, with two clear channel indicators in the comment header.
+- Automatically enlarged only clipped, undersized comment cards for easier reading, while long threads keep their internal scrolling and a visible collapse action.
+- Unified blockquote appearance across editor themes.
+
+### Fixed
+
+- Fixed Agent readiness states treating saved MCP configuration or recent connection history as a currently connected Agent application.
+- Fixed Agent status popovers staying open after outside clicks, being clipped by narrow comment panes, and showing misaligned header controls.
+- Fixed manual update checks providing no feedback and prevented unsupported ad-hoc macOS builds from attempting automatic installation.
+
 ## 2.13.0 - 2026-07-22
 
 ### Added
