@@ -185,6 +185,9 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toMatch(
       /\.annotamd-comment-card\.local-scroll \.annotamd-comment-row,[\s\S]*?\.annotamd-comment-card\.focus-reading \.annotamd-comment-row\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;/s
     )
+    expect(commentPane).toMatch(
+      /\.annotamd-comment-card\.local-scroll > \.annotamd-comment-action-row,[\s\S]*?\.annotamd-comment-card\.focus-reading > \.annotamd-comment-action-row\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;/s
+    )
   })
 
   it('keeps the compact card header on one line in English', () => {

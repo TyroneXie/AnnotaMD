@@ -84,7 +84,7 @@ const addComment = async(
     await expect(composer).toBeVisible()
     await expect(composer.locator('blockquote')).toContainText(expectedQuote)
     await composer.locator('textarea').fill(body)
-    await composer.locator('.annotamd-composer-actions button').click()
+    await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
   await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(expectedCount)
 }
 
@@ -212,7 +212,7 @@ test('opens a new comment composer after dragging across an existing comment hig
     expect(composerBox!.y).toBeLessThan(savedBox!.y)
 
     await composer.locator('textarea').fill('覆盖范围的新批注')
-    await composer.locator('.annotamd-composer-actions button').click()
+    await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
     await expect(savedCard).toHaveCount(2)
   } finally {
     await app.close()
@@ -339,6 +339,15 @@ test('scrolls only the selected long thread when the pointer is inside its card'
     await expect(card).toHaveClass(/local-scroll/)
     await expect(card).toHaveCSS('overflow-y', 'auto')
     await expect(header).toHaveCSS('position', 'sticky')
+    const actionRow = card.locator('.annotamd-comment-action-row')
+    await expect(actionRow).toHaveCSS('position', 'sticky')
+    await expect(actionRow).toBeInViewport()
+    const actionRowBottomBeforeScroll = await actionRow.evaluate((element) => {
+      const card = element.closest<HTMLElement>('.annotamd-comment-card')
+      if (!card) throw new Error('comment card is unavailable')
+      return card.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom
+    })
+    expect(Math.abs(actionRowBottomBeforeScroll)).toBeLessThan(3)
     const cardHeightBeforeFirstWheel = await card.evaluate(
       (element) => element.getBoundingClientRect().height
     )
@@ -366,6 +375,13 @@ test('scrolls only the selected long thread when the pointer is inside its card'
     await page.mouse.wheel(0, 240)
     await expect.poll(() => card.evaluate((element) => element.scrollTop))
       .toBeGreaterThan(firstLocalScrollTop)
+    await expect(actionRow).toBeInViewport()
+    const actionRowBottomAfterScroll = await actionRow.evaluate((element) => {
+      const card = element.closest<HTMLElement>('.annotamd-comment-card')
+      if (!card) throw new Error('comment card is unavailable')
+      return card.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom
+    })
+    expect(Math.abs(actionRowBottomAfterScroll)).toBeLessThan(3)
     const editorScrollTopAfter = await editor.evaluate((element) => element.scrollTop)
     expect(Math.abs(editorScrollTopAfter - editorScrollTopBefore)).toBeLessThan(2)
 
@@ -579,7 +595,7 @@ test('orders comments by their anchors and keeps positions stable while cards le
     }).toBe(true)
 
     await composer.locator('textarea').fill('下方评论')
-    await composer.locator('.annotamd-composer-actions button').click()
+    await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
     const cards = page.locator('.annotamd-comment-card[data-comment-id]')
     await expect(cards).toHaveCount(2)
 
@@ -684,7 +700,7 @@ test('creates one comment across paragraphs and list items', async() => {
       '跨块评论起点。 列表项一。 列表项二。 跨块评论终点。'
     )
     await composer.locator('textarea').fill('跨块评论')
-    await composer.locator('.annotamd-composer-actions button').click()
+    await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
 
     const card = page.locator('.annotamd-comment-card[data-comment-id]')
     await expect(card).toHaveCount(1)

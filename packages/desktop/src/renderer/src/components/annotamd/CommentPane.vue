@@ -1751,6 +1751,17 @@ onBeforeUnmount(() => {
   background: inherit;
 }
 
+.annotamd-comment-card.local-scroll > .annotamd-comment-action-row,
+.annotamd-comment-card.focus-reading > .annotamd-comment-action-row {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--annotamd-border);
+  border-radius: 0 0 9px 9px;
+  background: inherit;
+}
+
 .annotamd-comment-card.focus-reading.temporary-detached {
   position: fixed !important;
   z-index: 12;
