@@ -6,6 +6,7 @@ import type { IBaseOptions } from '../types';
 
 import type { ColorFormatType, FormatToolIcon, TextStyleType } from './config';
 import Format, { isInlineStyleFormatToken } from '../../block/base/format';
+import { getCursorCoords } from '../../selection/cursorCoords';
 import { SelectionDirection } from '../../selection/types';
 import { isAtxHeadingState } from '../../state/types';
 import { isKeyboardEvent } from '../../utils';
@@ -85,6 +86,9 @@ export class InlineFormatToolbar extends BaseFloat {
     // Passive float: must not capture nav keys, or Enter over a selection is
     // swallowed while it's shown (#3196).
     public override capturesContentKeydown = false;
+    public override hideOnScroll = false;
+    public override allowVerticalOverflow = true;
+    public override clipToScrollContainer = true;
 
     /** Previous virtual node for patching */
     private _oldVNode: VNode | null = null;
@@ -134,6 +138,26 @@ export class InlineFormatToolbar extends BaseFloat {
         this.listen();
     }
 
+    override show(reference: ReferenceElement) {
+        for (const tool of this.muya.ui.shownFloat) {
+            if (tool.name === 'mu-image-toolbar' && tool.status)
+                return this.hide();
+        }
+        super.show(reference);
+    }
+
+    private _liveSelectionReference(
+        fallback: ReferenceElement,
+        contextElement: Element | null,
+        preferEnd = false,
+    ): ReferenceElement {
+        const fallbackRect = fallback.getBoundingClientRect();
+        return {
+            contextElement: contextElement ?? undefined,
+            getBoundingClientRect: () => getCursorCoords(preferEnd) ?? fallbackRect,
+        };
+    }
+
     /**
      * Listen to format picker events and keyboard shortcuts
      */
@@ -143,7 +167,8 @@ export class InlineFormatToolbar extends BaseFloat {
 
         eventCenter.subscribe('muya-format-picker', ({ reference, block }) => {
             if (reference) {
-                this._reference = reference;
+                const liveReference = this._liveSelectionReference(reference, block.domNode);
+                this._reference = liveReference;
                 this._block = block;
                 this._crossBlockSelection = false;
                 this._formats = block.getFormatsInRange().formats;
@@ -152,7 +177,7 @@ export class InlineFormatToolbar extends BaseFloat {
                 this._linkSelection = null;
                 this.options.placement = 'top';
                 requestAnimationFrame(() => {
-                    this.show(reference);
+                    this.show(liveReference);
                     this._render();
                 });
             }
@@ -179,6 +204,7 @@ export class InlineFormatToolbar extends BaseFloat {
             isSelectionInSameBlock,
             anchorBlock,
             cursorCoords,
+            direction,
         }) => {
             if (this._linkCreateOpen)
                 return;
@@ -195,10 +221,11 @@ export class InlineFormatToolbar extends BaseFloat {
                 if (!(anchorBlock instanceof Format) || !cursorCoords)
                     return;
 
-                const reference: ReferenceElement = {
-                    getBoundingClientRect: () => cursorCoords,
-                    contextElement: anchorBlock.domNode ?? undefined,
-                };
+                const reference = this._liveSelectionReference(
+                    { getBoundingClientRect: () => cursorCoords },
+                    anchorBlock.domNode,
+                    direction === SelectionDirection.FORWARD,
+                );
                 this._reference = reference;
                 this._block = anchorBlock;
                 this._formats = [];

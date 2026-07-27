@@ -23,11 +23,72 @@
       </div>
 
       <div class="annotamd-document-thread-message annotamd-document-root-message">
-        <span class="annotamd-document-message-author">{{ t('annotamd.comments.userAuthor') }}</span>
-        <time
-          class="annotamd-document-message-time"
-          :datetime="new Date(comment.createdAt).toISOString()"
-        >{{ formatMessageTime(comment.createdAt) }}</time>
+        <div class="annotamd-document-message-header">
+          <div class="annotamd-document-message-meta">
+            <span class="annotamd-document-message-author">
+              {{ t('annotamd.comments.userAuthor') }}
+            </span>
+            <time
+              class="annotamd-document-message-time"
+              :datetime="new Date(comment.createdAt).toISOString()"
+            >{{ formatMessageTime(comment.createdAt) }}</time>
+          </div>
+          <div class="annotamd-document-message-actions">
+            <template v-if="editingId === comment.id">
+              <button
+                type="button"
+                :disabled="!editBody.trim()"
+                @click="saveEdit(comment.id)"
+              >
+                {{ t('annotamd.comments.save') }}
+              </button>
+              <button type="button" @click="cancelEdit">
+                {{ t('annotamd.comments.cancel') }}
+              </button>
+            </template>
+            <template v-else>
+              <details class="annotamd-document-message-overflow">
+                <summary
+                  role="button"
+                  :title="t('annotamd.comments.moreActions')"
+                  :aria-label="t('annotamd.comments.moreActions')"
+                  @click.stop
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="5" cy="12" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="19" cy="12" r="1.6" />
+                  </svg>
+                </summary>
+                <div class="annotamd-document-message-menu">
+                  <button
+                    type="button"
+                    @click.stop="startCommentEdit(comment.id, comment.body)"
+                  >
+                    {{ t('annotamd.comments.edit') }}
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="agentTurns.isRunning(comment.id)"
+                    @click.stop="deleteComment(comment.id)"
+                  >
+                    {{ t('annotamd.comments.delete') }}
+                  </button>
+                  <button
+                    v-if="isLatestLocalMessage(comment, comment.id)"
+                    type="button"
+                    :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
+                      agentTurns.isRunning(comment.id)"
+                    :title="agentSendTitle"
+                    @click.stop="sendExistingMessageToAgent(comment, comment.id, comment.body)"
+                  >
+                    {{ t('annotamd.comments.sendAgent') }}
+                  </button>
+                </div>
+              </details>
+            </template>
+          </div>
+        </div>
         <textarea
           v-if="editingId === comment.id"
           v-model="editBody"
@@ -35,32 +96,6 @@
           rows="3"
         />
         <p v-else>{{ comment.body }}</p>
-        <div class="annotamd-document-message-actions">
-          <template v-if="editingId === comment.id">
-            <button
-              type="button"
-              :disabled="!editBody.trim()"
-              @click="saveEdit(comment.id)"
-            >
-              {{ t('annotamd.comments.save') }}
-            </button>
-            <button type="button" @click="cancelEdit">
-              {{ t('annotamd.comments.cancel') }}
-            </button>
-          </template>
-          <template v-else>
-            <button type="button" @click="startCommentEdit(comment.id, comment.body)">
-              {{ t('annotamd.comments.edit') }}
-            </button>
-            <button
-              type="button"
-              :disabled="agentTurns.isRunning(comment.id)"
-              @click="commentStore.deleteComment(filePath, comment.id)"
-            >
-              {{ t('annotamd.comments.delete') }}
-            </button>
-          </template>
-        </div>
       </div>
 
       <div
@@ -74,15 +109,70 @@
           class="annotamd-document-thread-message annotamd-document-reply-message"
           :class="`author-${reply.author}`"
         >
-          <span class="annotamd-document-message-author">
-            {{ t(reply.author === 'agent'
-              ? 'annotamd.comments.agentAuthor'
-              : 'annotamd.comments.userAuthor') }}
-          </span>
-          <time
-            class="annotamd-document-message-time"
-            :datetime="new Date(reply.createdAt).toISOString()"
-          >{{ formatMessageTime(reply.createdAt) }}</time>
+          <div class="annotamd-document-message-header">
+            <div class="annotamd-document-message-meta">
+              <span class="annotamd-document-message-author">
+                {{ t(reply.author === 'agent'
+                  ? 'annotamd.comments.agentAuthor'
+                  : 'annotamd.comments.userAuthor') }}
+              </span>
+              <time
+                class="annotamd-document-message-time"
+                :datetime="new Date(reply.createdAt).toISOString()"
+              >{{ formatMessageTime(reply.createdAt) }}</time>
+            </div>
+            <div
+              v-if="reply.author === 'user'"
+              class="annotamd-document-message-actions"
+            >
+              <template v-if="editingReplyId === reply.id">
+                <button
+                  type="button"
+                  :disabled="!editReplyBody.trim()"
+                  @click="saveReplyEdit(comment.id, reply.id)"
+                >
+                  {{ t('annotamd.comments.save') }}
+                </button>
+                <button type="button" @click="cancelReplyEdit">
+                  {{ t('annotamd.comments.cancel') }}
+                </button>
+              </template>
+              <template v-else>
+                <details class="annotamd-document-message-overflow">
+                  <summary
+                    role="button"
+                    :title="t('annotamd.comments.moreActions')"
+                    :aria-label="t('annotamd.comments.moreActions')"
+                    @click.stop
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="5" cy="12" r="1.6" />
+                      <circle cx="12" cy="12" r="1.6" />
+                      <circle cx="19" cy="12" r="1.6" />
+                    </svg>
+                  </summary>
+                  <div class="annotamd-document-message-menu">
+                    <button type="button" @click.stop="startReplyEdit(reply.id, reply.body)">
+                      {{ t('annotamd.comments.edit') }}
+                    </button>
+                    <button type="button" @click.stop="deleteReply(comment.id, reply.id)">
+                      {{ t('annotamd.comments.delete') }}
+                    </button>
+                    <button
+                      v-if="isLatestLocalMessage(comment, reply.id)"
+                      type="button"
+                      :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
+                        agentTurns.isRunning(comment.id)"
+                      :title="agentSendTitle"
+                      @click.stop="sendExistingMessageToAgent(comment, reply.id, reply.body)"
+                    >
+                      {{ t('annotamd.comments.sendAgent') }}
+                    </button>
+                  </div>
+                </details>
+              </template>
+            </div>
+          </div>
           <textarea
             v-if="editingReplyId === reply.id"
             v-model="editReplyBody"
@@ -90,31 +180,6 @@
             rows="3"
           />
           <p v-else>{{ reply.body }}</p>
-          <div
-            v-if="reply.author === 'user'"
-            class="annotamd-document-message-actions"
-          >
-            <template v-if="editingReplyId === reply.id">
-              <button
-                type="button"
-                :disabled="!editReplyBody.trim()"
-                @click="saveReplyEdit(comment.id, reply.id)"
-              >
-                {{ t('annotamd.comments.save') }}
-              </button>
-              <button type="button" @click="cancelReplyEdit">
-                {{ t('annotamd.comments.cancel') }}
-              </button>
-            </template>
-            <template v-else>
-              <button type="button" @click="startReplyEdit(reply.id, reply.body)">
-                {{ t('annotamd.comments.edit') }}
-              </button>
-              <button type="button" @click="deleteReply(comment.id, reply.id)">
-                {{ t('annotamd.comments.delete') }}
-              </button>
-            </template>
-          </div>
         </article>
       </div>
 
@@ -194,10 +259,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
-import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import {
+  useAnnotaMDCommentsStore,
+  type AnnotaMDComment
+} from '@/store/annotamdComments'
 import { usePreferencesStore } from '@/store/preferences'
 import { useAgentTurnsStore } from '@/store/agentTurns'
 import { useAgentReadinessStore } from '@/store/agentReadiness'
@@ -230,9 +298,20 @@ const selectedAgentProfile = computed(() => defaultAgentProfile(
   agentProfiles.value,
   defaultAgentProfileId.value
 ))
+const agentSendTitle = computed(() => (
+  agentReadiness.directSendReady
+    ? t('annotamd.comments.sendAgentTo', { agent: agentReadiness.selectedAgentName })
+    : t('annotamd.comments.agentStatusDirectUnavailable')
+))
 const documentComments = computed(() =>
   commentStore.commentsForFile(filePath.value).filter((comment) => comment.scope === 'document')
 )
+const isLatestLocalMessage = (comment: AnnotaMDComment, messageId: string): boolean => {
+  const latestReply = comment.replies.at(-1)
+  return latestReply
+    ? latestReply.author === 'user' && latestReply.id === messageId
+    : comment.id === messageId
+}
 
 const submitComment = (): void => {
   if (!filePath.value || !draftBody.value.trim()) return
@@ -263,7 +342,30 @@ const cancelEdit = (): void => {
   editBody.value = ''
 }
 
+const closeMessageMenus = (): void => {
+  document
+    .querySelectorAll<HTMLDetailsElement>(
+      '.annotamd-document-comments .annotamd-document-message-overflow[open]'
+    )
+    .forEach((menu) => {
+      menu.open = false
+    })
+}
+
+const handleMessageMenuOutsidePointerDown = (event: PointerEvent): void => {
+  const target = event.target
+  const targetElement = target instanceof Element
+    ? target
+    : target instanceof Node
+      ? target.parentElement
+      : null
+  if (!targetElement?.closest('.annotamd-document-message-overflow')) {
+    closeMessageMenus()
+  }
+}
+
 const startCommentEdit = (commentId: string, body: string): void => {
+  closeMessageMenus()
   cancelEdit()
   cancelReplyEdit()
   editingId.value = commentId
@@ -271,6 +373,7 @@ const startCommentEdit = (commentId: string, body: string): void => {
 }
 
 const startReplyEdit = (replyId: string, body: string): void => {
+  closeMessageMenus()
   cancelEdit()
   cancelReplyEdit()
   editingReplyId.value = replyId
@@ -289,9 +392,16 @@ const cancelReplyEdit = (): void => {
 }
 
 const deleteReply = (commentId: string, replyId: string): void => {
+  closeMessageMenus()
   if (!filePath.value) return
   if (editingReplyId.value === replyId) cancelReplyEdit()
   commentStore.deleteReply(filePath.value, commentId, replyId)
+}
+
+const deleteComment = (commentId: string): void => {
+  closeMessageMenus()
+  if (!filePath.value) return
+  commentStore.deleteComment(filePath.value, commentId)
 }
 
 const startReply = (id: string): void => {
@@ -318,13 +428,36 @@ const saveReplyToAgent = async(id: string): Promise<void> => {
   await agentTurns.send(filePath.value, id, latestMessage, profile)
 }
 
+const sendExistingMessageToAgent = async(
+  comment: AnnotaMDComment,
+  messageId: string,
+  latestMessage: string
+): Promise<void> => {
+  closeMessageMenus()
+  const profile = selectedAgentProfile.value
+  if (!filePath.value || !profile || !agentReadiness.directSendReady ||
+    !isLatestLocalMessage(comment, messageId)) return
+  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  await commentStore.persistFile(filePath.value)
+  await agentTurns.send(filePath.value, comment.id, latestMessage, profile)
+}
+
 watch(
   [agentProfiles, defaultAgentProfileId, () => preferences.commentMcpEnabled],
   () => void agentReadiness.refresh(),
   { deep: true }
 )
 
-onMounted(() => agentReadiness.start())
+onMounted(() => {
+  agentReadiness.start()
+  document.addEventListener('pointerdown', handleMessageMenuOutsidePointerDown, true)
+  document.addEventListener('click', handleMessageMenuOutsidePointerDown, true)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleMessageMenuOutsidePointerDown, true)
+  document.removeEventListener('click', handleMessageMenuOutsidePointerDown, true)
+})
 </script>
 
 <style scoped>
@@ -402,10 +535,81 @@ onMounted(() => agentReadiness.start())
 }
 
 .annotamd-document-message-actions {
+  position: relative;
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 4px;
+  margin-left: auto;
+}
+
+.annotamd-document-message-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-height: 26px;
+}
+
+.annotamd-document-message-meta {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+}
+
+.annotamd-document-message-overflow summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  padding: 0;
+  color: #8f959e;
+  cursor: pointer;
+  list-style: none;
+}
+
+.annotamd-document-message-overflow summary::-webkit-details-marker {
+  display: none;
+}
+
+.annotamd-document-message-overflow summary svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.annotamd-document-message-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  min-width: 124px;
+  padding: 4px;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid #dee0e3;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgb(31 35 41 / 16%);
+}
+
+.annotamd-document-message-actions .annotamd-document-message-menu button {
+  display: block;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  color: #2f3437;
+  text-align: left;
+}
+
+.annotamd-document-message-actions .annotamd-document-message-menu button:hover:not(:disabled) {
+  background: #e8f1ff;
+  color: #3370ff;
+}
+
+.annotamd-document-message-actions .annotamd-document-message-menu button:disabled {
+  color: #b5bac3;
 }
 
 .annotamd-document-message-author {

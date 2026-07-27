@@ -66,6 +66,10 @@
     margin-left: 9px;
 }
 
+.mu-image-toolbar li.item.delete:hover .icon-wrapper {
+    color: var(--delete-color);
+}
+
 .mu-image-toolbar li.item:last-of-type::before {
     position: absolute;
     top: 6px;
@@ -80,8 +84,10 @@
 }
 
 .mu-image-toolbar li.item .icon-wrapper {
+    display: flex;
     width: 18px;
     height: 18px;
+    color: var(--icon-color);
 }
 
 .mu-image-toolbar li.item .icon-wrapper i.icon {
@@ -108,6 +114,6 @@
     filter: drop-shadow(16px 0 currentcolor);
 }
 
-.mu-image-toolbar li.item.active .icon-wrapper i.icon {
+.mu-image-toolbar li.item.active .icon-wrapper {
     color: var(--theme-color);
 }

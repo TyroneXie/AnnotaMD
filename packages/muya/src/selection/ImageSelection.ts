@@ -167,15 +167,6 @@ class ImageSelection {
                 }
             }
 
-            const rect = imageWrapper
-                .querySelector(`.${CLASS_NAMES.MU_IMAGE_CONTAINER}`)
-                ?.getBoundingClientRect();
-            const reference = {
-                getBoundingClientRect: () => rect,
-                width: imageWrapper.offsetWidth,
-                height: imageWrapper.offsetHeight,
-            };
-
             // Resolve the image container from the clicked wrapper directly.
             // Images that share the same src (and paragraph offset) render with
             // duplicate DOM ids, so a `document.querySelector('#id ...')` lookup
@@ -184,6 +175,19 @@ class ImageSelection {
             const imageContainer = imageWrapper.querySelector(
                 `.${CLASS_NAMES.MU_IMAGE_CONTAINER}`,
             );
+            // Selecting the image can rebuild its DOM before the toolbar's
+            // deferred render runs. Snapshot the visible image box now instead
+            // of anchoring to the full-width centered container or a stale node.
+            const imageRect = target.getBoundingClientRect();
+            const toolbarReference = {
+                getBoundingClientRect: () => imageRect,
+            };
+
+            eventCenter.emit('muya-image-toolbar', {
+                block: contentBlock,
+                reference: toolbarReference,
+                imageInfo,
+            });
 
             eventCenter.emit('muya-transformer', {
                 block: contentBlock,

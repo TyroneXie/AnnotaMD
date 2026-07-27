@@ -75,13 +75,16 @@ describe('duplicate same-src images: resize bar targets the clicked image', () =
         muya.eventCenter.on('muya-image-toolbar', toolbarHandler);
 
         // Click the SECOND image.
-        containers[1]!
-            .querySelector('img')!
-            .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        const clickedImage = containers[1]!.querySelector('img')!;
+        const clickedRect = { x: 240, y: 120, width: 80, height: 40 } as DOMRect;
+        vi.spyOn(clickedImage, 'getBoundingClientRect').mockReturnValue(clickedRect);
+        clickedImage.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
         // The resize bar must reference the second image's own container.
         expect(handler).toHaveBeenCalledTimes(1);
         expect(handler).toHaveBeenCalledWith(containers[1]);
-        expect(toolbarHandler).not.toHaveBeenCalled();
+        expect(toolbarHandler).toHaveBeenCalledTimes(1);
+        const toolbarReference = toolbarHandler.mock.calls[0]![0].reference;
+        expect(toolbarReference.getBoundingClientRect()).toBe(clickedRect);
     });
 });

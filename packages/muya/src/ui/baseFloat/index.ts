@@ -27,6 +27,9 @@ abstract class BaseFloat {
     protected options: IBaseOptions;
     public status: boolean = false;
     public capturesContentKeydown = false;
+    public hideOnScroll = true;
+    public allowVerticalOverflow = false;
+    public clipToScrollContainer = false;
     public floatBox: HTMLElement | null = null;
     public container: HTMLElement | null = null;
     private _lastScrollTop: number | null = null;
@@ -103,7 +106,8 @@ abstract class BaseFloat {
 
             // only when scroll distance great than 50px, then hide the float box.
             if (
-                this.status
+                this.hideOnScroll
+                && this.status
                 && Math.abs(event.target.scrollTop - this._lastScrollTop) > 50
             ) {
                 this.hide();
@@ -172,7 +176,12 @@ abstract class BaseFloat {
         const cleanup = autoUpdate(reference, floatBox, () => {
             computePosition(reference, floatBox, {
                 placement,
-                middleware: [offset(offsetOptions), flip(), shift({ padding: 8 })],
+                middleware: this.allowVerticalOverflow
+                    ? [
+                            offset(offsetOptions),
+                            shift({ mainAxis: true, crossAxis: false, padding: 8 }),
+                        ]
+                    : [offset(offsetOptions), flip(), shift({ padding: 8 })],
             }).then(({ x, y }) => {
                 // `computePosition` is async: a `hide()` (or a newer `show()`)
                 // can land before this resolves. Applying it then would set
@@ -186,10 +195,22 @@ abstract class BaseFloat {
                 // document's clipping rect. This is especially noticeable on
                 // the richer heading menu near the middle of a short window.
                 const safeX = Math.max(8, Math.min(x, window.innerWidth - floatBox.offsetWidth - 8));
-                const safeY = Math.max(8, Math.min(y, window.innerHeight - floatBox.offsetHeight - 8));
+                const safeY = this.allowVerticalOverflow
+                    ? y
+                    : Math.max(8, Math.min(y, window.innerHeight - floatBox.offsetHeight - 8));
+                let clipPath = '';
+                if (this.clipToScrollContainer) {
+                    const boundary = findScrollContainer(this.muya.domNode).getBoundingClientRect();
+                    const top = Math.max(0, boundary.top - safeY);
+                    const right = Math.max(0, safeX + floatBox.offsetWidth - boundary.right);
+                    const bottom = Math.max(0, safeY + floatBox.offsetHeight - boundary.bottom);
+                    const left = Math.max(0, boundary.left - safeX);
+                    clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px)`;
+                }
                 Object.assign(floatBox.style, {
                     left: `${safeX}px`,
                     top: `${safeY}px`,
+                    clipPath,
                     opacity: 1,
                 });
                 this.onPositioned();

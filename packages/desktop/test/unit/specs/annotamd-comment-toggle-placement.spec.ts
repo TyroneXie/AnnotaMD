@@ -75,6 +75,40 @@ describe('AnnotaMD comment toggle placement', () => {
     expect(store.selectionComposerOpen).toBe(false)
   })
 
+  it('locks a non-empty selection draft to its original anchor', () => {
+    setActivePinia(createPinia())
+    const store = useAnnotaMDCommentsStore()
+    const originalSelection = {
+      quote: '最初选中的整段代码',
+      exactQuote: '最初选中的整段代码',
+      anchor: { path: [0], offset: 0 },
+      focus: { path: [0], offset: 9 },
+      isCrossBlock: false,
+      capturedAt: 1
+    }
+    const laterSelection = {
+      quote: '后来选中的小段',
+      exactQuote: '后来选中的小段',
+      anchor: { path: [1], offset: 0 },
+      focus: { path: [1], offset: 7 },
+      isCrossBlock: false,
+      capturedAt: 2
+    }
+
+    store.setActiveSelection(originalSelection)
+    store.requestComposer('selection')
+    store.setSelectionComposerHasDraft(true)
+    store.setActiveSelection(laterSelection)
+
+    expect(store.activeSelection?.quote).toBe(originalSelection.quote)
+
+    store.setSelectionComposerHasDraft(false)
+    expect(store.activeSelection?.quote).toBe(laterSelection.quote)
+
+    store.closeSelectionComposer()
+    expect(store.selectionComposerHasDraft).toBe(false)
+  })
+
   it('does not render an agent-readable status footer on comment cards', () => {
     const commentPane = read(
       'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
@@ -82,5 +116,21 @@ describe('AnnotaMD comment toggle placement', () => {
 
     expect(commentPane).not.toContain('commentStatus(comment)')
     expect(commentPane).not.toContain('class="annotamd-comment-meta"')
+  })
+
+  it('keeps the running Agent status in the same row as the thread toggle', () => {
+    const commentPane = read(
+      'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
+    )
+
+    expect(commentPane).toMatch(
+      /agentTurns\.isRunning\(comment\.id\)\)"\s+class="annotamd-comment-action-row"/
+    )
+    expect(commentPane).toContain(
+      'class="annotamd-agent-turn-status"'
+    )
+    expect(commentPane).not.toContain(
+      '<p v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-status">'
+    )
   })
 })

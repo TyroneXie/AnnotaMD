@@ -33,13 +33,15 @@ export const ANNOTAMD_COMMENT_HIGHLIGHT = 'annotamd-selection-comment'
 export const ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT = 'annotamd-active-selection-comment'
 export const ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID = 'annotamd-comment-composer'
 
-const COMMENT_INLINE_CODE_BRIDGE_CLASSES = [
-  'annotamd-comment-code-bridge-start',
-  'annotamd-comment-code-bridge-end',
-  'annotamd-active-comment-code-bridge-start',
-  'annotamd-active-comment-code-bridge-end'
-] as const
-const inlineCodeBridgesByRoot = new WeakMap<HTMLElement, Set<HTMLElement>>()
+const COMMENT_LINE_LAYER_CLASS = 'annotamd-comment-line-layer'
+
+interface CommentLineRect {
+  top: number
+  bottom: number
+  left: number
+  right: number
+  height: number
+}
 
 export interface CommentAnchorRect {
   id: string
@@ -186,50 +188,70 @@ export const buildAnnotaMDCommentRangeLayout = (
   }
 }
 
-const syncInlineCodeBridgeClasses = (
+export const mergeAnnotaMDCommentLineRects = (
+  rects: ReadonlyArray<CommentLineRect>
+): CommentLineRect[] => {
+  const sortedRects = [...rects]
+    .filter((rect) => rect.right > rect.left && rect.bottom > rect.top)
+    .sort((a, b) => a.top - b.top || a.left - b.left)
+  const lines: CommentLineRect[] = []
+
+  sortedRects.forEach((rect) => {
+    const line = lines.find((candidate) => {
+      const overlap = Math.min(candidate.bottom, rect.bottom) - Math.max(candidate.top, rect.top)
+      return overlap > Math.min(candidate.height, rect.height) / 2
+    })
+    if (line) {
+      line.top = Math.min(line.top, rect.top)
+      line.bottom = Math.max(line.bottom, rect.bottom)
+      line.left = Math.min(line.left, rect.left)
+      line.right = Math.max(line.right, rect.right)
+      line.height = line.bottom - line.top
+    } else {
+      lines.push({ ...rect })
+    }
+  })
+
+  return lines.sort((a, b) => a.top - b.top || a.left - b.left)
+}
+
+const syncCommentLineOverlays = (
   root: HTMLElement,
   layout: CommentRangeLayout,
   activeCommentId: string | null
 ): void => {
-  inlineCodeBridgesByRoot.get(root)?.forEach((code) => {
-    code.classList.remove(...COMMENT_INLINE_CODE_BRIDGE_CLASSES)
-  })
-  const markedInlineCodes = new Set<HTMLElement>()
+  const documentRoot = root.querySelector<HTMLElement>(':scope > .mu-container')
+  if (!documentRoot) return
+  documentRoot.querySelector(`:scope > .${COMMENT_LINE_LAYER_CLASS}`)?.remove()
 
+  const documentRect = documentRoot.getBoundingClientRect()
+  const layer = document.createElement('div')
+  layer.className = COMMENT_LINE_LAYER_CLASS
   layout.entries.forEach(({ comment, range }) => {
-    const commonAncestor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-      ? range.commonAncestorContainer as HTMLElement
-      : range.commonAncestorContainer.parentElement
-    if (!commonAncestor) return
-    const inlineCodes = commonAncestor.matches('code.mu-inline-rule')
-      ? [commonAncestor]
-      : [...commonAncestor.querySelectorAll<HTMLElement>('code.mu-inline-rule')]
-    inlineCodes.forEach((code) => {
-      try {
-        if (!range.intersectsNode(code)) return
-        markedInlineCodes.add(code)
-        const active = comment.id === activeCommentId
-        if (range.comparePoint(code, 0) === 0) {
-          code.classList.add(
-            active
-              ? 'annotamd-active-comment-code-bridge-start'
-              : 'annotamd-comment-code-bridge-start'
-          )
-        }
-        if (range.comparePoint(code, code.childNodes.length) === 0) {
-          code.classList.add(
-            active
-              ? 'annotamd-active-comment-code-bridge-end'
-              : 'annotamd-comment-code-bridge-end'
-          )
-        }
-      } catch {
-        // Ignore stale nodes replaced by Muya between layout and paint.
-      }
+    const lines = mergeAnnotaMDCommentLineRects(
+      Array.from(range.getClientRects()).map((rect) => ({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        height: rect.height
+      }))
+    )
+    lines.forEach((rect) => {
+      const line = document.createElement('span')
+      line.className = comment.id === activeCommentId
+        ? 'annotamd-comment-line active'
+        : 'annotamd-comment-line'
+      Object.assign(line.style, {
+        left: `${rect.left - documentRect.left}px`,
+        top: `${rect.bottom - documentRect.top - 2}px`,
+        width: `${rect.right - rect.left}px`
+      })
+      layer.appendChild(line)
     })
   })
 
-  inlineCodeBridgesByRoot.set(root, markedInlineCodes)
+  if (layer.childElementCount) documentRoot.appendChild(layer)
 }
 
 export const buildAnnotaMDCommentRanges = (
@@ -286,13 +308,13 @@ export const syncAnnotaMDCommentHighlights = (
   activeCommentId: string | null = null,
   layout?: CommentRangeLayout
 ): void => {
+  const resolvedLayout = layout ?? buildAnnotaMDCommentRangeLayout(root, comments)
+  syncCommentLineOverlays(root, resolvedLayout, activeCommentId)
   const api = highlightApi()
   if (!api) return
 
   api.registry.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
   api.registry.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
-  const resolvedLayout = layout ?? buildAnnotaMDCommentRangeLayout(root, comments)
-  syncInlineCodeBridgeClasses(root, resolvedLayout, activeCommentId)
   const { ranges } = resolvedLayout
   if (ranges.length) {
     api.registry.set(ANNOTAMD_COMMENT_HIGHLIGHT, new api.HighlightClass(...ranges))
@@ -312,4 +334,5 @@ export const clearAnnotaMDCommentHighlights = (): void => {
   const registry = highlightApi()?.registry
   registry?.delete(ANNOTAMD_COMMENT_HIGHLIGHT)
   registry?.delete(ANNOTAMD_ACTIVE_COMMENT_HIGHLIGHT)
+  document.querySelectorAll(`.${COMMENT_LINE_LAYER_CLASS}`).forEach((layer) => layer.remove())
 }

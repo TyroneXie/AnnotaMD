@@ -29,3 +29,44 @@ export const resolveTocHeadingElement = (
   const headings = container.querySelectorAll(TOP_LEVEL_HEADINGS_SELECTOR)
   return headings[index] ?? null
 }
+
+export const resolveTocSlugForHeading = (
+  container: Element,
+  listToc: ReadonlyArray<{ slug?: unknown }>,
+  heading: Element
+): string | null => {
+  const headings = Array.from(container.querySelectorAll(TOP_LEVEL_HEADINGS_SELECTOR))
+  const index = headings.indexOf(heading)
+  const slug = index >= 0 ? listToc[index]?.slug : null
+  return typeof slug === 'string' && slug.length > 0 ? slug : null
+}
+
+export const resolveTocSlugForDocumentTarget = (
+  container: Element,
+  listToc: ReadonlyArray<{ slug?: unknown }>,
+  target: Element
+): string | null => {
+  const documentRoot = target.closest('.mu-container')
+  if (!documentRoot || !container.contains(documentRoot)) return null
+
+  const topLevelBlock = Array.from(documentRoot.children).find(
+    (child) => child === target || child.contains(target)
+  )
+  if (!topLevelBlock) return null
+
+  const headings = Array.from(documentRoot.querySelectorAll(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6'))
+  let nearestHeading: Element | null = null
+  for (const heading of headings) {
+    if (
+      heading === topLevelBlock ||
+      !!(heading.compareDocumentPosition(topLevelBlock) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ) {
+      nearestHeading = heading
+    } else {
+      break
+    }
+  }
+  return nearestHeading
+    ? resolveTocSlugForHeading(container, listToc, nearestHeading)
+    : null
+}

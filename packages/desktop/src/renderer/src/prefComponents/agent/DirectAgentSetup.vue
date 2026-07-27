@@ -16,7 +16,18 @@
             @change="selectedProfile && setDefaultProfile(selectedProfile.id)"
           >
           <div class="direct-agent-summary-copy">
-            <strong>{{ selectedProfileName || t('preferences.agent.directNoAgent') }}</strong>
+            <div class="direct-agent-name-line">
+              <strong>{{ selectedProfileName || t('preferences.agent.directNoAgent') }}</strong>
+              <span
+                v-if="selectedProfile?.kind === 'claude-code'"
+                class="direct-agent-permission-badge"
+                :class="{ bypass: selectedClaudePermissionMode === 'bypass' }"
+              >
+                {{ selectedClaudePermissionMode === 'bypass'
+                  ? t('preferences.agent.cliPermissionBypass')
+                  : t('preferences.agent.cliPermissionStandard') }}
+              </span>
+            </div>
             <small>{{ directStatusText }}</small>
           </div>
         </div>
@@ -76,7 +87,11 @@ import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
 import { useAgentReadinessStore } from '@/store/agentReadiness'
-import { defaultAgentProfile, displayAgentProfileName } from '@shared/types/agentProfiles'
+import {
+  claudeCodePermissionMode,
+  defaultAgentProfile,
+  displayAgentProfileName
+} from '@shared/types/agentProfiles'
 import CliAgentProfiles from './CliAgentProfiles.vue'
 
 const { t } = useI18n()
@@ -97,6 +112,11 @@ const selectedProfile = computed(() => defaultAgentProfile(
 ))
 const selectedProfileName = computed(() => (
   selectedProfile.value ? displayAgentProfileName(selectedProfile.value) : ''
+))
+const selectedClaudePermissionMode = computed(() => (
+  selectedProfile.value?.kind === 'claude-code'
+    ? claudeCodePermissionMode(selectedProfile.value.command)
+    : 'standard'
 ))
 const otherProfiles = computed(() => agentProfiles.value.filter((profile) => (
   profile.id !== selectedProfile.value?.id
@@ -189,6 +209,27 @@ onMounted(() => agentReadiness.start())
 .direct-agent-summary-copy strong,
 .direct-agent-summary-copy small {
   display: block;
+}
+
+.direct-agent-name-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.direct-agent-permission-badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--editorColor) 8%, transparent);
+  color: var(--editorColor60);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.direct-agent-permission-badge.bypass {
+  background: color-mix(in srgb, #d97706 12%, transparent);
+  color: #a95c00;
 }
 
 .direct-agent-summary-copy strong {

@@ -74,6 +74,48 @@
           @input="resetDraftTest"
         />
       </label>
+      <fieldset
+        v-if="draft.kind === 'claude-code'"
+        class="cli-agent-permission"
+      >
+        <legend>{{ t('preferences.agent.cliPermissionMode') }}</legend>
+        <div class="cli-agent-permission-options">
+          <label
+            class="cli-agent-permission-option"
+            :class="{ selected: draftClaudePermissionMode === 'bypass' }"
+          >
+            <input
+              v-model="draftClaudePermissionMode"
+              type="radio"
+              value="bypass"
+            >
+            <span>
+              <strong>
+                {{ t('preferences.agent.cliPermissionBypass') }}
+                <em>{{ t('preferences.agent.cliRecommended') }}</em>
+              </strong>
+              <small>{{ t('preferences.agent.cliPermissionBypassDescription') }}</small>
+            </span>
+          </label>
+          <label
+            class="cli-agent-permission-option"
+            :class="{ selected: draftClaudePermissionMode === 'standard' }"
+          >
+            <input
+              v-model="draftClaudePermissionMode"
+              type="radio"
+              value="standard"
+            >
+            <span>
+              <strong>{{ t('preferences.agent.cliPermissionStandard') }}</strong>
+              <small>{{ t('preferences.agent.cliPermissionStandardDescription') }}</small>
+            </span>
+          </label>
+        </div>
+        <p v-if="draftClaudePermissionMode === 'bypass'">
+          {{ t('preferences.agent.cliPermissionBypassWarning') }}
+        </p>
+      </fieldset>
       <p class="cli-agent-test-note">{{ t('preferences.agent.cliTestNote') }}</p>
       <div class="cli-agent-form-actions">
         <span
@@ -115,11 +157,14 @@ import { useI18n } from 'vue-i18n'
 import { usePreferencesStore } from '@/store/preferences'
 import {
   ANNOTAMD_AGENT_PROFILE_PRESETS,
+  claudeCodePermissionMode,
   defaultAgentProfile,
   displayAgentProfileName,
   parseAgentCommand,
+  withClaudeCodePermissionMode,
   type AnnotaMDAgentProfile,
-  type AnnotaMDAgentProfileKind
+  type AnnotaMDAgentProfileKind,
+  type ClaudeCodePermissionMode
 } from '@shared/types/agentProfiles'
 
 const preferences = usePreferencesStore()
@@ -168,6 +213,13 @@ const canSave = computed(() => (
   draftAvailable.value &&
   testedDraftCommand.value === draft.command.trim()
 ))
+const draftClaudePermissionMode = computed<ClaudeCodePermissionMode>({
+  get: () => claudeCodePermissionMode(draft.command),
+  set: (mode) => {
+    draft.command = withClaudeCodePermissionMode(draft.command, mode)
+    resetDraftTest()
+  }
+})
 
 const profileKindLabel = (kind: AnnotaMDAgentProfileKind): string => (
   t(`preferences.agent.cliKinds.${kind}`)
@@ -388,6 +440,77 @@ defineExpose({ startAdd })
   gap: 12px;
   color: var(--editorColor);
   font-size: 13px;
+}
+
+.cli-agent-permission {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cli-agent-permission legend {
+  margin-bottom: 7px;
+  color: var(--editorColor);
+  font-size: 13px;
+}
+
+.cli-agent-permission-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cli-agent-permission-option {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  padding: 9px 10px;
+  border: 1px solid var(--floatBorderColor);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.cli-agent-permission-option.selected {
+  border-color: color-mix(in srgb, var(--themeColor) 55%, var(--floatBorderColor));
+  background: color-mix(in srgb, var(--themeColor) 5%, var(--editorBgColor));
+}
+
+.cli-agent-permission-option input {
+  margin: 3px 0 0;
+  accent-color: var(--themeColor);
+}
+
+.cli-agent-permission-option strong,
+.cli-agent-permission-option small {
+  display: block;
+}
+
+.cli-agent-permission-option strong {
+  font-size: 13px;
+}
+
+.cli-agent-permission-option strong em {
+  margin-left: 5px;
+  color: var(--themeColor);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.cli-agent-permission-option small {
+  margin-top: 3px;
+  color: var(--editorColor60);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.cli-agent-permission > p {
+  margin: 7px 0 0;
+  color: #b26a00;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .cli-agent-form-actions {

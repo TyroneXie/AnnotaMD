@@ -464,6 +464,10 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     overflow: visible;
 }
 
+.mu-inline-image.center .mu-image-container {
+    display: block;
+}
+
 .mu-image-marked-text ~ img {
     display: inline-block;
     max-width: 100%;

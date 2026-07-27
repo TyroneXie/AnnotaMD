@@ -63,6 +63,11 @@ const isHeadingInViewport = (page: Page, index: number): Promise<boolean> =>
 const tocLabel = (page: Page, text: string) =>
   page.locator('.side-bar-toc').getByText(text, { exact: true })
 
+const headingByText = (page: Page, text: string) =>
+  page.locator('.mu-container > h1, .mu-container > h2, .mu-container > h3, .mu-container > h4, .mu-container > h5, .mu-container > h6').filter({
+    hasText: text
+  }).first()
+
 const showSidebar = async(app: ElectronApplication, page: Page): Promise<void> => {
   const visible = await page.evaluate(() => {
     const el = document.querySelector('.side-bar') as HTMLElement | null
@@ -174,5 +179,45 @@ test.describe('TOC sidebar click scrolls the live editor', () => {
       .toBe(true)
     const secondScroll = await getScrollTop(page)
     expect(Math.abs(secondScroll - firstScroll)).toBeLessThanOrEqual(5)
+  })
+
+  test('clicking a document heading highlights the matching TOC entry', async() => {
+    const firstText = 'Heading Number 8'
+    const firstHeading = headingByText(page, firstText)
+    await firstHeading.scrollIntoViewIfNeeded()
+    await firstHeading.click()
+
+    const currentLabel = page.locator(
+      '.side-bar-toc .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label'
+    )
+    await expect(currentLabel).toHaveText(firstText)
+
+    const secondText = 'Heading Number 9'
+    const secondHeading = headingByText(page, secondText)
+    await secondHeading.scrollIntoViewIfNeeded()
+    await secondHeading.click()
+
+    await expect(currentLabel).toHaveCount(1)
+    await expect(currentLabel).toHaveText(secondText)
+    await expect(tocLabel(page, secondText).locator('..')).toHaveCSS(
+      'background-color',
+      'rgb(232, 239, 255)'
+    )
+  })
+
+  test('clicking document content highlights its nearest preceding heading', async() => {
+    const sectionText = 'Heading Number 10'
+    const paragraph = page
+      .locator('.mu-container > p')
+      .filter({ hasText: 'Filler paragraph 2 under heading 10.' })
+      .first()
+    await paragraph.scrollIntoViewIfNeeded()
+    await paragraph.click()
+
+    const currentLabel = page.locator(
+      '.side-bar-toc .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label'
+    )
+    await expect(currentLabel).toHaveCount(1)
+    await expect(currentLabel).toHaveText(sectionText)
   })
 })

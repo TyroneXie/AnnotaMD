@@ -124,6 +124,92 @@ test('keeps the selected text highlighted while the comment composer has focus',
   }
 })
 
+test('locks a non-empty comment draft to its original selection', async() => {
+  const originalText = '最初选中的整段代码内容'
+  const laterText = '后来选中的另一段文字'
+  const draft = '这条未发送的评论应继续属于最初选区'
+  const { app, page } = await launchWithMarkdown(`${originalText}\n\n${laterText}\n`)
+  try {
+    await selectParagraphText(page, 0)
+    await page.locator('.mu-format-picker li.annotamd_comment').click()
+
+    const composer = page.locator('.annotamd-composer-card')
+    const textarea = composer.locator('textarea')
+    await textarea.fill(draft)
+    await selectParagraphText(page, 1)
+
+    await expect(composer.locator('blockquote')).toContainText(originalText)
+    await expect(textarea).toHaveValue(draft)
+    await expect.poll(async() => page.evaluate(() => {
+      const registry = (CSS as unknown as {
+        highlights: Map<string, Iterable<Range>>
+      }).highlights
+      return [...(registry.get('annotamd-active-selection-comment') ?? [])]
+        .map((range) => range.toString())
+        .join('')
+    })).toBe(originalText)
+
+    await textarea.fill('')
+    await expect(composer.locator('blockquote')).toContainText(laterText)
+  } finally {
+    await app.close()
+  }
+})
+
+test('places the running Agent status beside the thread collapse action', async() => {
+  const { app, page } = await launchWithMarkdown('Agent 状态行位置验证。\n')
+  try {
+    await addComment(page, 0, '第一条评论', 1, 'Agent 状态行位置验证。')
+    const card = page.locator('.annotamd-comment-card[data-comment-id]')
+    const replyEditor = card.locator('.annotamd-reply-editor textarea')
+    await replyEditor.fill('补充回复')
+    await card.locator('.annotamd-reply-submit').click()
+    await expect(card.locator('.annotamd-thread-toggle')).toContainText(/Collapse|收起/)
+
+    await card.evaluate((element) => {
+      const commentId = element.getAttribute('data-comment-id')
+      const root = document.querySelector('#app') as (HTMLElement & {
+        __vue_app__?: {
+          _context?: { provides?: Record<PropertyKey, unknown> }
+        }
+      }) | null
+      const provides = root?.__vue_app__?._context?.provides
+      const pinia = provides && Reflect.ownKeys(provides)
+        .map((key) => provides[key])
+        .find((value) => value && typeof value === 'object' && '_s' in value) as {
+          _s?: Map<string, unknown>
+        } | undefined
+      const agentTurns = pinia?._s?.get('agentTurns') as {
+        runningByComment: Record<string, boolean>
+      } | undefined
+      if (!commentId || !agentTurns) throw new Error('Agent turn store is unavailable')
+      agentTurns.runningByComment = {
+        ...agentTurns.runningByComment,
+        [commentId]: true
+      }
+    })
+
+    const status = card.locator('.annotamd-agent-turn-status')
+    const actionRow = card.locator('.annotamd-comment-action-row')
+    await expect(status).toBeVisible()
+    await expect(status).toContainText(/Agent (?:is working|处理中)/)
+    await expect.poll(async() => {
+      const [toggleBox, statusBox, rowBox] = await Promise.all([
+        card.locator('.annotamd-thread-toggle').boundingBox(),
+        status.boundingBox(),
+        actionRow.boundingBox()
+      ])
+      if (!toggleBox || !statusBox || !rowBox) return false
+      const toggleCenter = toggleBox.y + toggleBox.height / 2
+      const statusCenter = statusBox.y + statusBox.height / 2
+      return Math.abs(toggleCenter - statusCenter) < 1 &&
+        statusBox.x + statusBox.width <= rowBox.x + rowBox.width + 1
+    }).toBe(true)
+  } finally {
+    await app.close()
+  }
+})
+
 test('aligns comment header controls and keeps the Agent popover visible', async() => {
   const { app, page } = await launchWithMarkdown('标题栏图标对齐。\n')
   try {
@@ -422,6 +508,25 @@ test('scrolls only the selected long thread when the pointer is inside its card'
     const editorScrollTopAfter = await editor.evaluate((element) => element.scrollTop)
     expect(Math.abs(editorScrollTopAfter - editorScrollTopBefore)).toBeLessThan(2)
 
+    const initialReplyHeight = await replyEditor.evaluate(
+      (element) => element.getBoundingClientRect().height
+    )
+    await replyEditor.fill(
+      '这是一段会自动换到第二行的回复草稿，用于确认输入框底部始终显示在操作栏上方。'
+    )
+    await expect.poll(
+      () => replyEditor.evaluate((element) => element.getBoundingClientRect().height)
+    ).toBeGreaterThan(initialReplyHeight)
+    await expect.poll(async() => {
+      const [replyBox, actionBox] = await Promise.all([
+        replyEditor.boundingBox(),
+        actionRow.boundingBox()
+      ])
+      if (!replyBox || !actionBox) throw new Error('reply controls are unavailable')
+      return replyBox.y + replyBox.height - (actionBox.y - 8)
+    }).toBeLessThanOrEqual(1)
+    await card.locator('.annotamd-reply-cancel').click()
+
     await editor.hover({ position: { x: 40, y: 80 } })
     await expect(card).toHaveClass(/local-scroll/)
     const externalScrollTopBefore = await editor.evaluate((element) => element.scrollTop)
@@ -674,22 +779,49 @@ test('orders comments by their anchors and keeps positions stable while cards le
   }
 })
 
-test('connects a comment underline across inline-code padding', async() => {
+test('draws one geometrically aligned underline across inline-code padding', async() => {
   const { app, page } = await launchWithMarkdown('必须使用 `dify-app-preflight`，并传入。\n')
   try {
     await addComment(page, 0, '跨行内代码评论', 1, '必须使用 `dify-app-preflight`，并传入。')
     const code = page.locator('code.mu-inline-rule')
 
-    await expect(code).toHaveClass(/annotamd-(?:active-)?comment-code-bridge-start/)
-    await expect(code).toHaveClass(/annotamd-(?:active-)?comment-code-bridge-end/)
-    await expect.poll(async() => code.evaluate((element) => {
-      const before = getComputedStyle(element, '::before')
-      const after = getComputedStyle(element, '::after')
-      return before.content !== 'none' &&
-        after.content !== 'none' &&
-        before.bottom === '0px' &&
-        after.bottom === '0px'
-    })).toBe(true)
+    await expect(code).not.toHaveClass(/annotamd-(?:active-)?comment-code-bridge/)
+    const lines = page.locator('.annotamd-comment-line-layer .annotamd-comment-line')
+    await expect(lines).toHaveCount(1)
+    await expect(lines).toHaveCSS('height', '2px')
+    await expect.poll(async() => {
+      const [lineBox, codeBox] = await Promise.all([
+        lines.boundingBox(),
+        code.boundingBox()
+      ])
+      return !!lineBox && !!codeBox &&
+        lineBox.x <= codeBox.x &&
+        lineBox.x + lineBox.width >= codeBox.x + codeBox.width
+    }).toBe(true)
+  } finally {
+    await app.close()
+  }
+})
+
+test('draws exactly one underline for every wrapped visual line', async() => {
+  const text = 'context — 对话上下文快照。注意是副本（`agent.ts:414-420` 的 `createContextSnapshot()` 创建），Loop 运行期间对 context 的修改不会影响 Agent 类的原始状态。'
+  const { app, page } = await launchWithMarkdown(`${text}\n`)
+  try {
+    await page.locator('.mu-container').evaluate((container: HTMLElement) => {
+      container.style.width = '560px'
+    })
+    await addComment(page, 0, '换行几何下划线', 1, text)
+
+    const metrics = await page.locator('.annotamd-comment-line').evaluateAll((lines) =>
+      lines.map((line) => {
+        const rect = line.getBoundingClientRect()
+        return { top: rect.top, width: rect.width, height: rect.height }
+      })
+    )
+    expect(metrics.length).toBeGreaterThan(1)
+    expect(metrics.every(({ width, height }) => width > 0 && height === 2)).toBe(true)
+    expect(new Set(metrics.map(({ top }) => Math.round(top))).size).toBe(metrics.length)
+    await expect(page.locator('[class*="annotamd-comment-code-bridge"]')).toHaveCount(0)
   } finally {
     await app.close()
   }

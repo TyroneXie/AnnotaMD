@@ -42,14 +42,21 @@ export const buildClaudeTurnArgs = (
     arg === '--output-format' || arg.startsWith('--output-format=')
   ))
   if (outputFormatIndex < 0) {
-    args.push('--output-format', 'stream-json')
-  } else if (args[outputFormatIndex] === '--output-format') {
-    args[outputFormatIndex + 1] = 'stream-json'
-  } else {
-    args[outputFormatIndex] = '--output-format=stream-json'
+    args.push('--output-format', 'json')
   }
-  if (!args.includes('--verbose')) args.push('--verbose')
-  if (!args.includes('--permission-mode')) args.push('--permission-mode', 'auto')
+  const permissionModeIndex = args.findIndex((arg) => (
+    arg === '--permission-mode' || arg.startsWith('--permission-mode=')
+  ))
+  if (permissionModeIndex < 0) {
+    args.push('--permission-mode', 'default')
+  } else if (
+    args[permissionModeIndex] === '--permission-mode' &&
+    args[permissionModeIndex + 1] === 'auto'
+  ) {
+    args[permissionModeIndex + 1] = 'default'
+  } else if (args[permissionModeIndex] === '--permission-mode=auto') {
+    args[permissionModeIndex] = '--permission-mode=default'
+  }
   args.push(...(resume ? ['--resume', sessionId] : ['--session-id', sessionId]))
   return args
 }

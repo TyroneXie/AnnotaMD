@@ -89,26 +89,18 @@ const META_ACTIONS = new Set([
     'comment',
     'delete',
     'delete-section',
-    'image-edit',
-    'image-inline',
-    'image-left',
-    'image-center',
-    'image-right',
     'image-delete',
 ]);
 
-const IMAGE_MENU = [
-    { label: 'image-edit', text: 'Edit Image', icon: 'edit' },
-    { label: 'image-inline', text: 'Inline Image', icon: 'inline-image' },
-    { label: 'image-left', text: 'Align Left', icon: 'align-left' },
-    { label: 'image-center', text: 'Align Center', icon: 'align-center' },
-    { label: 'image-right', text: 'Align Right', icon: 'align-right' },
-    { label: 'image-delete', text: 'Remove Image', icon: 'delete' },
-] as const satisfies ReadonlyArray<{
+const IMAGE_DELETE_MENU = {
+    label: 'image-delete',
+    text: 'Remove Image',
+    icon: 'delete',
+} as const satisfies {
     label: string;
     text: string;
     icon: ActionIconName;
-}>;
+};
 
 const defaultOptions = {
     placement: 'bottom' as const,
@@ -347,14 +339,9 @@ export class ParagraphFrontMenu extends BaseFloat {
         if (!wrapper || !format)
             return null;
 
-        const state = typeof block.getState === 'function'
-            ? block.getState() as { text?: string }
-            : null;
         return {
-            wrapper,
             format,
             imageInfo: getImageInfo(wrapper),
-            standalone: state?.text?.trim() === wrapper.dataset.raw?.trim(),
         };
     }
 
@@ -363,48 +350,36 @@ export class ParagraphFrontMenu extends BaseFloat {
         const { i18n } = this.muya;
         let previousGroup: number | null = null;
         const children: VNode[] = [];
-        const imageTarget = this._kind === 'image' ? this._imageTarget() : null;
-        const imageAlign = imageTarget
-            ? imageTarget.imageInfo.token.attrs['data-align']
-                ?? (imageTarget.standalone ? 'center' : 'inline')
-            : null;
-        const pushImageAction = (item: typeof IMAGE_MENU[number], group: number) => {
+        const pushImageDelete = (group: number) => {
             if (previousGroup !== null && previousGroup !== group)
                 children.push(h('li.divider'));
             previousGroup = group;
 
-            const action = item.label.replace('image-', '');
-            const isDelete = item.label === 'image-delete';
-            const isActive = action === imageAlign;
-            const itemSelector = `li.item.${item.label}${isDelete ? '.delete' : ''}${isActive ? '.active' : ''}`;
+            const itemSelector = `li.item.${IMAGE_DELETE_MENU.label}.delete`;
             children.push(h(
                 itemSelector,
                 {
                     attrs: {
                         role: 'button',
                         tabindex: '0',
-                        'aria-label': i18n.t(item.text),
+                        'aria-label': i18n.t(IMAGE_DELETE_MENU.text),
                     },
                     on: {
-                        click: event => this.selectItem(event, { label: item.label }),
+                        click: event => this.selectItem(event, { label: IMAGE_DELETE_MENU.label }),
                         keydown: (event: KeyboardEvent) => {
                             if (event.key === 'Enter' || event.key === ' ') {
                                 event.preventDefault();
-                                this.selectItem(event, { label: item.label });
+                                this.selectItem(event, { label: IMAGE_DELETE_MENU.label });
                             }
                         },
                     },
                 },
                 [
-                    h('div.icon-wrapper', renderActionIcon(item.icon)),
-                    h('span.text', i18n.t(item.text)),
+                    h('div.icon-wrapper', renderActionIcon(IMAGE_DELETE_MENU.icon)),
+                    h('span.text', i18n.t(IMAGE_DELETE_MENU.text)),
                 ],
             ));
         };
-
-        if (this._kind === 'image') {
-            IMAGE_MENU.slice(0, -1).forEach(item => pushImageAction(item, 0));
-        }
 
         FRONT_MENU.forEach((menuItem) => {
             const { label, text, shortCut, group, disabled, visible } = menuItem;
@@ -461,7 +436,7 @@ export class ParagraphFrontMenu extends BaseFloat {
         });
 
         if (this._kind === 'image')
-            pushImageAction(IMAGE_MENU.at(-1)!, 5);
+            pushImageDelete(5);
 
         const subMenu = this._kind === 'image' ? [] : canTurnIntoMenu(block!);
         if (subMenu.length) {
@@ -572,13 +547,8 @@ export class ParagraphFrontMenu extends BaseFloat {
     private _applyMetaAction(label: string, block: Parent, oldState: TState): Content | null {
         const { muya } = this;
         switch (label) {
-            case 'image-edit':
-            case 'image-inline':
-            case 'image-left':
-            case 'image-center':
-            case 'image-right':
             case 'image-delete': {
-                this._applyImageAction(label, block);
+                this._deleteImage(block);
                 return null;
             }
 
@@ -726,42 +696,12 @@ export class ParagraphFrontMenu extends BaseFloat {
         }
     }
 
-    private _applyImageAction(label: string, block: Parent): void {
+    private _deleteImage(block: Parent): void {
         const target = this._imageTarget(block);
         if (!target)
             return;
 
-        const { format, imageInfo, wrapper } = target;
-        if (label === 'image-delete') {
-            format.deleteImage(imageInfo);
-            return;
-        }
-
-        if (label === 'image-edit') {
-            const imageContainer = wrapper.querySelector<HTMLElement>(
-                `.${CLASS_NAMES.MU_IMAGE_CONTAINER}`,
-            );
-            if (!imageContainer)
-                return;
-            const rect = imageContainer.getBoundingClientRect();
-            this.muya.eventCenter.emit('muya-transformer', { reference: null });
-            this.muya.eventCenter.emit('muya-image-selector', {
-                block: format,
-                reference: {
-                    getBoundingClientRect: () => new DOMRect(rect.x, rect.y, rect.width, 0),
-                },
-                imageInfo,
-            });
-            return;
-        }
-
-        const action = label.replace('image-', '');
-        const currentAlign = imageInfo.token.attrs['data-align']
-            ?? (target.standalone ? 'center' : 'inline');
-        const nextAlign = action === 'inline' && currentAlign === 'inline'
-            ? 'center'
-            : action;
-        format.updateImage(imageInfo, 'data-align', nextAlign);
+        target.format.deleteImage(target.imageInfo);
     }
 
     private _markdown(state: TState): string {

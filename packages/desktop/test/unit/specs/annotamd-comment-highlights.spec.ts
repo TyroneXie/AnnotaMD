@@ -6,6 +6,7 @@ import {
   buildAnnotaMDCommentRangeLayout,
   buildAnnotaMDCommentRanges,
   createAnnotaMDCommentTextReader,
+  mergeAnnotaMDCommentLineRects,
   syncAnnotaMDCommentHighlights
 } from '@/util/annotamdCommentHighlights'
 
@@ -145,34 +146,16 @@ describe('AnnotaMD selection comment highlights', () => {
     expect(registry.set).toHaveBeenCalledTimes(2)
   })
 
-  it('bridges comment underlines across inline-code padding', () => {
-    const root = document.createElement('div')
-    const content = contentBlock([0, 0], '')
-    content.append('before ')
-    const code = document.createElement('code')
-    code.className = 'mu-inline-rule'
-    code.textContent = 'inline'
-    content.append(code, ' after')
-    root.append(content)
-    const HighlightClass = class {
-      constructor(..._ranges: Range[]) {}
-    }
-    const registry = { delete: vi.fn(), set: vi.fn() }
-    vi.stubGlobal('Highlight', HighlightClass)
-    vi.stubGlobal('CSS', { highlights: registry })
-    const comment = {
-      id: 'comment-1',
-      scope: 'selection' as const,
-      resolved: false,
-      anchor: { key: '0/0', offset: 0 },
-      focus: { key: '0/0', offset: 19 }
-    }
-    const layout = buildAnnotaMDCommentRangeLayout(root, [comment])
-
-    syncAnnotaMDCommentHighlights(root, [comment], null, layout)
-
-    expect(code.classList.contains('annotamd-comment-code-bridge-start')).toBe(true)
-    expect(code.classList.contains('annotamd-comment-code-bridge-end')).toBe(true)
+  it('merges styled fragments into one underline per visual line', () => {
+    expect(mergeAnnotaMDCommentLineRects([
+      { top: 10, bottom: 28, left: 20, right: 80, height: 18 },
+      { top: 8, bottom: 30, left: 86, right: 140, height: 22 },
+      { top: 10, bottom: 28, left: 146, right: 220, height: 18 },
+      { top: 34, bottom: 52, left: 20, right: 160, height: 18 }
+    ])).toEqual([
+      { top: 8, bottom: 30, left: 20, right: 220, height: 22 },
+      { top: 34, bottom: 52, left: 20, right: 160, height: 18 }
+    ])
   })
 
   it('keeps the browser highlight registry synced without writing markup', () => {
@@ -190,10 +173,12 @@ describe('AnnotaMD selection comment highlights', () => {
       /const refreshAnnotaMDCommentHighlights = \(\): void => \{\s*const root = getScrollContainer\(\)/s
     )
     expect(editor).toMatch(
-      /::highlight\(annotamd-selection-comment\)\s*\{[^}]*background:\s*transparent;[^}]*text-decoration:\s*underline rgb\(51 112 255 \/ 85%\);/s
+      /::highlight\(annotamd-selection-comment\)\s*\{[^}]*background:\s*transparent;/s
     )
     expect(editor).toMatch(
       /::highlight\(annotamd-active-selection-comment\)\s*\{[^}]*background:\s*rgb\(51 112 255 \/ 14%\);/s
     )
+    expect(editor).toContain('.annotamd-comment-line-layer')
+    expect(editor).not.toContain('annotamd-comment-code-bridge')
   })
 })

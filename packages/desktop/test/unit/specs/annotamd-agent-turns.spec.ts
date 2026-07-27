@@ -36,20 +36,33 @@ describe('AnnotaMD Claude Code comment turns', () => {
       '--permission-mode', 'auto'
     ], 'session-1', false)).toEqual([
       '-p',
-      '--output-format', 'stream-json',
-      '--permission-mode', 'auto',
-      '--verbose',
+      '--output-format', 'json',
+      '--permission-mode', 'default',
       '--session-id', 'session-1'
     ])
     expect(buildClaudeTurnArgs([], 'session-1', true)).toEqual([
       '-p',
-      '--output-format', 'stream-json',
-      '--verbose',
-      '--permission-mode', 'auto',
+      '--output-format', 'json',
+      '--permission-mode', 'default',
       '--resume', 'session-1'
     ])
     expect(buildClaudeTurnArgs(['--output-format=json'], 'session-1', true))
-      .toContain('--output-format=stream-json')
+      .toContain('--output-format=json')
+    expect(buildClaudeTurnArgs([
+      '--output-format', 'stream-json', '--verbose'
+    ], 'session-1', true)).toEqual([
+      '--output-format', 'stream-json',
+      '--verbose',
+      '-p',
+      '--permission-mode', 'default',
+      '--resume', 'session-1'
+    ])
+    expect(buildClaudeTurnArgs([
+      '--permission-mode=bypassPermissions'
+    ], 'session-1', false)).toContain('--permission-mode=bypassPermissions')
+    expect(buildClaudeTurnArgs([
+      '--permission-mode=auto'
+    ], 'session-1', false)).toContain('--permission-mode=default')
   })
 
   it('renders editable context variables and appends fixed plain-text output rules', () => {
@@ -138,13 +151,14 @@ describe('AnnotaMD Claude Code comment turns', () => {
     expect(prompt).not.toContain('FIRST same')
   })
 
-  it('keeps normal Claude tools available without bypassing all permissions', () => {
+  it('keeps the selected Claude permission mode without adding conflicting flags', () => {
     const repoRoot = resolve(__dirname, '../../../../..')
     const source = readFileSync(resolve(
       repoRoot,
       'packages/desktop/src/main/agentTurns/ClaudeAgentTurnService.ts'
     ), 'utf8')
-    expect(source).toContain("args.push('--permission-mode', 'auto')")
+    expect(source).toContain("args.push('--permission-mode', 'default')")
+    expect(source).toContain("args[permissionModeIndex] === '--permission-mode=auto'")
     expect(source).not.toContain('--dangerously-skip-permissions')
     expect(source).not.toContain('--disallowedTools')
     expect(source).not.toContain("'--tools', ''")

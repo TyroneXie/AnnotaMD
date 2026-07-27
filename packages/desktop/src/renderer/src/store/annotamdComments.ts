@@ -44,7 +44,9 @@ interface AnnotaMDCommentsState {
   revisionByFile: Record<string, number>
   markdownByFile: Record<string, string>
   activeSelection: AnnotaMDSelection | null
+  pendingSelection: AnnotaMDSelection | null
   selectionComposerOpen: boolean
+  selectionComposerHasDraft: boolean
   paneVisible: boolean
   activeCommentId: string | null
   composerRequest: AnnotaMDComposerRequest | null
@@ -246,7 +248,9 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
     revisionByFile: {},
     markdownByFile: {},
     activeSelection: null,
+    pendingSelection: null,
     selectionComposerOpen: false,
+    selectionComposerHasDraft: false,
     paneVisible: false,
     activeCommentId: null,
     composerRequest: null,
@@ -487,11 +491,20 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
 
     setActiveSelection(selection: AnnotaMDSelection | null): void {
       if (!selection?.quote.trim()) return
-      this.activeSelection = {
+      const normalizedSelection = {
         ...selection,
         quote: selection.quote.trim(),
         exactQuote: selection.exactQuote ?? selection.quote
       }
+      if (
+        this.selectionComposerHasDraft &&
+        this.activeSelection
+      ) {
+        this.pendingSelection = normalizedSelection
+        return
+      }
+      this.activeSelection = normalizedSelection
+      this.pendingSelection = null
     },
 
     addSelectionComment(filePath: string, body: string): AnnotaMDComment | null {
@@ -513,6 +526,7 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       this.paneVisible = true
       this.commentFocusRequest = null
       this.selectionComposerOpen = mode === 'selection'
+      if (mode === 'selection') this.pendingSelection = null
       this.composerRequest = {
         id: Date.now(),
         mode
@@ -523,9 +537,19 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       this.composerRequest = null
     },
 
+    setSelectionComposerHasDraft(hasDraft: boolean): void {
+      this.selectionComposerHasDraft = hasDraft
+      if (!hasDraft && this.pendingSelection) {
+        this.activeSelection = this.pendingSelection
+        this.pendingSelection = null
+      }
+    },
+
     closeSelectionComposer(): void {
       this.selectionComposerOpen = false
+      this.selectionComposerHasDraft = false
       this.activeSelection = null
+      this.pendingSelection = null
     },
 
     requestCommentFocus(commentId: string): void {

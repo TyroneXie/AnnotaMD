@@ -38,6 +38,7 @@ const defaultOptions = {
 
 export class ImageToolBar extends BaseFloat {
     static pluginName = 'imageToolbar';
+    public override capturesContentKeydown = true;
     private _oldVNode: VNode | null = null;
     private _imageInfo: {
         token: ImageToken;
@@ -61,6 +62,14 @@ export class ImageToolBar extends BaseFloat {
         this.listen();
     }
 
+    override show(reference: ReferenceElement) {
+        for (const tool of this.muya.ui.shownFloat) {
+            if (tool.name === 'mu-format-picker' && tool.status)
+                tool.hide();
+        }
+        super.show(reference);
+    }
+
     override listen() {
         const { eventCenter } = this.muya;
         super.listen();
@@ -70,14 +79,33 @@ export class ImageToolBar extends BaseFloat {
                 this._block = block;
                 this._imageInfo = imageInfo;
                 setTimeout(() => {
-                    this.show(reference);
                     this._render();
+                    if (this.floatBox && this.container) {
+                        Object.assign(this.floatBox.style, {
+                            width: `${this.container.offsetWidth}px`,
+                            height: `${this.container.offsetHeight}px`,
+                        });
+                    }
+                    this.show(reference);
                 }, 0);
             }
             else {
                 this.hide();
             }
         });
+        eventCenter.attachDOMEvent(this.floatBox!, 'keydown', (event) => {
+            if (event instanceof KeyboardEvent && event.key === 'Escape')
+                this.hide();
+        });
+        eventCenter.attachDOMEvent(document, 'pointerdown', (event) => {
+            if (
+                this.status
+                && event.target instanceof Node
+                && !this.floatBox?.contains(event.target)
+            ) {
+                this.hide();
+            }
+        }, true);
     }
 
     private _render() {
@@ -100,12 +128,23 @@ export class ImageToolBar extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
+                        role: 'button',
+                        tabindex: '0',
                         'aria-label': i18n.t(i.tooltip),
                         'data-tooltip': i18n.t(i.tooltip),
+                        ...(i.type === 'inline' || i.type === 'left' || i.type === 'center' || i.type === 'right'
+                            ? { 'aria-pressed': String(i.type === dataAlign || (!dataAlign && i.type === defaultAlign)) }
+                            : {}),
                     },
                     on: {
                         click: (event) => {
                             this._selectItem(event, i);
+                        },
+                        keydown: (event: KeyboardEvent) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                this._selectItem(event, i);
+                            }
                         },
                     },
                 },
@@ -171,7 +210,14 @@ export class ImageToolBar extends BaseFloat {
             case 'center':
                 // fall through
             case 'right': {
-                this._block!.updateImage(this._imageInfo!, 'data-align', item.type);
+                const currentAlign = this._imageInfo!.token.attrs['data-align']
+                    ?? (this._block!.text.trim() === this._imageInfo!.token.raw.trim()
+                        ? 'center'
+                        : 'inline');
+                const nextAlign = item.type === 'inline' && currentAlign === 'inline'
+                    ? 'center'
+                    : item.type;
+                this._block!.updateImage(this._imageInfo!, 'data-align', nextAlign);
 
                 return this.hide();
             }

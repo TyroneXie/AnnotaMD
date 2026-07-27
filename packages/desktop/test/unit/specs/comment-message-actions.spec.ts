@@ -40,6 +40,47 @@ describe('Feishu-style comment messages', () => {
     )
   })
 
+  it('keeps Local message actions in a right-aligned overflow menu', () => {
+    for (const component of [commentPane, documentFooter]) {
+      expect(component).toContain("t('annotamd.comments.moreActions')")
+      expect(component).toContain('<summary')
+      expect(component).toContain('@click.stop')
+      expect(component).toContain('<circle cx="5" cy="12" r="1.6" />')
+      expect(component).toContain('<circle cx="12" cy="12" r="1.6" />')
+      expect(component).toContain('<circle cx="19" cy="12" r="1.6" />')
+      expect(component).toContain("document.addEventListener('pointerdown'")
+      expect(component).toContain("document.removeEventListener('pointerdown'")
+      expect(component).toContain('closeMessageMenus()')
+      expect(component).toContain('menu.open = false')
+    }
+    expect(commentPane).toMatch(
+      /\.annotamd-message-menu\s*\{[^}]*position:\s*absolute;[^}]*right:\s*0;[^}]*flex-direction:\s*column;/s
+    )
+    expect(documentFooter).toMatch(
+      /\.annotamd-document-message-menu\s*\{[^}]*position:\s*absolute;[^}]*right:\s*0;[^}]*flex-direction:\s*column;/s
+    )
+  })
+
+  it('lets the latest unsent Local message be sent to Agent without duplicating it', () => {
+    for (const component of [commentPane, documentFooter]) {
+      expect(component).toContain('isLatestLocalMessage(comment, comment.id)')
+      expect(component).toContain('isLatestLocalMessage(comment, reply.id)')
+      expect(component).toContain(
+        'sendExistingMessageToAgent(comment, comment.id, comment.body)'
+      )
+      expect(component).toContain(
+        'sendExistingMessageToAgent(comment, reply.id, reply.body)'
+      )
+      expect(component).toMatch(
+        /const sendExistingMessageToAgent[\s\S]*?isLatestLocalMessage\(comment, messageId\)[\s\S]*?commentStore\.persistFile\(filePath\.value\)[\s\S]*?agentTurns\.send\(filePath\.value, comment\.id, latestMessage, profile\)/
+      )
+      const sendExistingMessage = component.match(
+        /const sendExistingMessageToAgent[\s\S]*?\n}\n/
+      )?.[0] ?? ''
+      expect(sendExistingMessage).not.toContain('commentStore.addReply')
+    }
+  })
+
   it('permanently deletes a comment when the user marks it resolved', () => {
     for (const component of [commentPane, documentFooter]) {
       expect(component).toContain("commentStore.deleteComment(filePath, comment.id)")
@@ -156,8 +197,15 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('class="annotamd-reply-cancel"')
     expect(commentPane).toContain('class="annotamd-reply-submit"')
     expect(commentPane).toContain('@blur="stopReply(comment.id)"')
-    expect(commentPane).toContain('@input="resizeReplyEditor"')
+    expect(commentPane).toContain('@input="resizeReplyEditor(comment.id, $event)"')
     expect(commentPane).toContain("Math.min(textarea.scrollHeight, 96)")
+    expect(commentPane).toContain("':scope > .annotamd-comment-action-row'")
+    expect(commentPane).toContain('textarea.getBoundingClientRect().bottom')
+    expect(commentPane).toContain('actionRow.getBoundingClientRect().top - 8')
+    expect(commentPane).toContain('card.scrollTop += Math.ceil(obscuredHeight)')
+    expect(commentPane).toMatch(
+      /resizeReplyEditor[\s\S]*?updateCommentBubbleLayout\(\)[\s\S]*?keepReplyEditorVisible\(commentId, textarea\)/
+    )
     expect(commentPane).toContain("replyingId.value = null")
     expect(commentPane).not.toMatch(/\.annotamd-comment-card\s*\{[^}]*overflow-y:\s*(auto|scroll)/s)
   })

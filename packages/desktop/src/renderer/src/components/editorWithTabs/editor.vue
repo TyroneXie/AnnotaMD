@@ -84,6 +84,7 @@ import {
   ImageEditTool,
   ImagePathPicker,
   ImageResizeBar,
+  ImageToolBar,
   InlineFormatToolbar,
   LinkTools,
   ParagraphFrontButton,
@@ -120,7 +121,10 @@ import { isOsx, animatedScrollTo } from '@/util'
 import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
-import { resolveTocHeadingElement } from '@/util/tocNavigation'
+import {
+  resolveTocHeadingElement,
+  resolveTocSlugForDocumentTarget
+} from '@/util/tocNavigation'
 import {
   ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
   buildAnnotaMDCommentRangeLayout,
@@ -326,6 +330,7 @@ let scrollHandler: ((e: Event) => void) | null = null
 let editorScrollbarPointerDownHandler: ((event: PointerEvent) => void) | null = null
 let stopEditorScrollbarModeWatch: (() => void) | null = null
 let commentClickHandler: ((event: MouseEvent) => void) | null = null
+let headingClickHandler: ((event: MouseEvent) => void) | null = null
 let commentHoverHandler: ((event: MouseEvent) => void) | null = null
 let commentLeaveHandler: (() => void) | null = null
 let commentHoverFrame: number | null = null
@@ -1542,6 +1547,15 @@ const scrollToHeader = (slug: unknown) => {
   scrollElementIntoView(resolveTocHeadingElement(container, editorStore.listToc, slug))
 }
 
+const handleDocumentClickForToc = (event: MouseEvent) => {
+  const container = getScrollContainer()
+  const target = event.target
+  if (!container || !(target instanceof Element)) return
+
+  const slug = resolveTocSlugForDocumentTarget(container, editorStore.listToc, target)
+  if (slug) bus.emit('toc-heading-activated', slug)
+}
+
 // Scrolls to a non-heading in-document anchor target (e.g. a custom
 // `<a id="...">`) resolved by `FORMAT_LINK_CLICK` via `getElementById`.
 const scrollToAnchorElement = (element: unknown) => {
@@ -2036,6 +2050,7 @@ onMounted(() => {
       imagePathAutoComplete
     })
     Muya.use(ImageResizeBar)
+    Muya.use(ImageToolBar)
     Muya.use(InlineFormatToolbar)
     Muya.use(ParagraphFrontButton)
     Muya.use(ParagraphFrontMenu)
@@ -2260,6 +2275,8 @@ onMounted(() => {
   container.addEventListener('pointerdown', editorScrollbarPointerDownHandler)
   commentClickHandler = handleCommentHighlightClick
   container.addEventListener('click', commentClickHandler)
+  headingClickHandler = handleDocumentClickForToc
+  container.addEventListener('click', headingClickHandler)
   commentHoverHandler = handleCommentHighlightHover
   container.addEventListener('mousemove', commentHoverHandler, { passive: true })
   commentLeaveHandler = () => annotaMDCommentsStore.setActiveComment(null)
@@ -2454,6 +2471,11 @@ onBeforeUnmount(() => {
     container?.removeEventListener('click', commentClickHandler)
   }
   commentClickHandler = null
+  if (headingClickHandler && editor.value) {
+    const container = getScrollContainer()
+    container?.removeEventListener('click', headingClickHandler)
+  }
+  headingClickHandler = null
   if (commentHoverHandler && editor.value) {
     const container = getScrollContainer()
     container?.removeEventListener('mousemove', commentHoverHandler)
@@ -2749,55 +2771,33 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
 ::highlight(annotamd-selection-comment) {
   background: transparent;
   color: inherit;
-  text-decoration: underline rgb(51 112 255 / 85%);
-  text-decoration-skip-ink: none;
-  text-decoration-skip-spaces: none;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
 }
 
 ::highlight(annotamd-active-selection-comment) {
   background: rgb(51 112 255 / 14%);
   color: inherit;
-  text-decoration: underline rgb(51 112 255 / 100%);
-  text-decoration-skip-ink: none;
-  text-decoration-skip-spaces: none;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
 }
 
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start,
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end {
+.editor-component .mu-container {
   position: relative;
 }
 
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start::before,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before,
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end::after,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
+.editor-component .annotamd-comment-line-layer {
   position: absolute;
-  bottom: 0;
-  width: 0.35em;
-  height: 2px;
-  background: rgb(51 112 255 / 85%);
-  content: '';
+  z-index: 2;
+  inset: 0;
   pointer-events: none;
 }
 
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-start::before,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before {
-  left: 0;
+.editor-component .annotamd-comment-line {
+  position: absolute;
+  height: 2px;
+  background: rgb(51 112 255 / 85%);
+  border-radius: 1px;
+  pointer-events: none;
 }
 
-.editor-component .mu-container code.mu-inline-rule.annotamd-comment-code-bridge-end::after,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
-  right: 0;
-}
-
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-start::before,
-.editor-component .mu-container code.mu-inline-rule.annotamd-active-comment-code-bridge-end::after {
+.editor-component .annotamd-comment-line.active {
   background: rgb(51 112 255 / 100%);
 }
 

@@ -20,6 +20,8 @@
       v-if="keyedToc.length"
       :data="keyedToc"
       node-key="key"
+      highlight-current
+      :current-node-key="activeNodeKey"
       :default-expanded-keys="expandedKeys"
       :props="defaultProps"
       :expand-on-click-node="false"
@@ -33,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useEditorStore } from '@/store/editor'
 import { usePreferencesStore } from '@/store/preferences'
 import { deriveKeyedToc, type KeyedTocNode } from '@/util/tocKeys'
@@ -64,6 +66,34 @@ const {
 // Stable per-node key so el-tree preserves the user's expand/collapse state
 // across content edits (#3028) and tab switches (#3791). See deriveKeyedToc.
 const keyedToc = computed<KeyedTocNode[]>(() => deriveKeyedToc(toc.value))
+const activeSlug = ref<string | null>(null)
+
+const activeNodeKey = computed<string | undefined>(() => {
+  const find = (nodes: KeyedTocNode[]): string | undefined => {
+    for (const node of nodes) {
+      if (node.slug === activeSlug.value) return node.key
+      const childKey = find(node.children)
+      if (childKey) return childKey
+    }
+  }
+  return find(keyedToc.value)
+})
+
+const handleHeadingActivated = (slug: unknown): void => {
+  if (typeof slug === 'string' && slug.length > 0) activeSlug.value = slug
+}
+
+watch(toc, () => {
+  activeSlug.value = null
+})
+
+onMounted(() => {
+  bus.on('toc-heading-activated', handleHeadingActivated)
+})
+
+onBeforeUnmount(() => {
+  bus.off('toc-heading-activated', handleHeadingActivated)
+})
 
 // Track which headings the user collapsed, by stable key (#3028). Headings are
 // expanded by default; a collapse is remembered here.
@@ -139,6 +169,11 @@ const handleClick = (data: { slug?: unknown }): void => {
 
 .side-bar-toc .el-tree-node:focus > .el-tree-node__content {
   background-color: #eef3ff;
+}
+
+.side-bar-toc .el-tree-node.is-current > .el-tree-node__content {
+  background-color: #e8efff;
+  color: #3370ff;
 }
 
 .side-bar-toc .el-tree-node__content:hover {

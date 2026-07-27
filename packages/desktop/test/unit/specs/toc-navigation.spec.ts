@@ -27,7 +27,11 @@ vi.mock('@/services/notification', () => ({
 }))
 
 import { useEditorStore } from '@/store/editor'
-import { resolveTocHeadingElement } from '@/util/tocNavigation'
+import {
+  resolveTocHeadingElement,
+  resolveTocSlugForDocumentTarget,
+  resolveTocSlugForHeading
+} from '@/util/tocNavigation'
 
 describe('useEditorStore UPDATE_TOC', () => {
   beforeEach(() => {
@@ -125,5 +129,33 @@ describe('resolveTocHeadingElement', () => {
     container.innerHTML = '<div class="mu-container"><h1>Only one</h1></div>'
     // listToc claims two headings but the DOM has one — guard against overrun.
     expect(resolveTocHeadingElement(container, listToc, 'uid-2')).toBeNull()
+  })
+
+  it('maps a clicked top-level heading back to its TOC slug', () => {
+    const container = buildContainer()
+    const headings = container.querySelectorAll('.mu-container > h1, .mu-container > h2')
+    expect(resolveTocSlugForHeading(container, listToc, headings[1]!)).toBe('uid-2')
+  })
+
+  it('does not map a nested heading that is absent from the TOC', () => {
+    const container = buildContainer()
+    const nested = container.querySelector('blockquote h2')!
+    expect(resolveTocSlugForHeading(container, listToc, nested)).toBeNull()
+  })
+
+  it('maps document content to its nearest preceding top-level heading', () => {
+    const container = buildContainer()
+    const root = container.querySelector('.mu-container')!
+    root.insertAdjacentHTML('beforeend', '<p><span>Body under top two</span></p>')
+    const bodyText = container.querySelector('p span')!
+    expect(resolveTocSlugForDocumentTarget(container, listToc, bodyText)).toBe('uid-2')
+  })
+
+  it('returns null for content before the first top-level heading', () => {
+    const container = buildContainer()
+    const root = container.querySelector('.mu-container')!
+    root.insertAdjacentHTML('afterbegin', '<p><span>Preface</span></p>')
+    const preface = container.querySelector('p span')!
+    expect(resolveTocSlugForDocumentTarget(container, listToc, preface)).toBeNull()
   })
 })

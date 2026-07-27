@@ -13,6 +13,7 @@ import { usePreferencesStore } from './preferences'
 interface AgentReadinessState {
   level: AgentReadinessLevel
   loading: boolean
+  checkRevision: number
   selectedAgentName: string
   selectedAgentKind: AnnotaMDAgentProfile['kind'] | ''
   selectedCliAvailable: boolean
@@ -42,6 +43,7 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
   state: (): AgentReadinessState => ({
     level: 'unavailable',
     loading: true,
+    checkRevision: 0,
     selectedAgentName: '',
     selectedAgentKind: '',
     selectedCliAvailable: false,
@@ -59,7 +61,7 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
         preferences.agentProfiles,
         preferences.defaultAgentProfileId
       )
-      this.loading = true
+      if (this.checkRevision === 0) this.loading = true
 
       try {
         const [status, cliAvailable] = await Promise.all([
@@ -111,7 +113,10 @@ export const useAgentReadinessStore = defineStore('agentReadiness', {
         this.appAccessReady = false
         this.connectedAgentNames = []
       } finally {
-        if (sequence === refreshSequence) this.loading = false
+        if (sequence === refreshSequence) {
+          this.loading = false
+          this.checkRevision += 1
+        }
       }
     },
 

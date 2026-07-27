@@ -124,7 +124,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         );
     });
 
-    it('replaces text conversions with image actions for a standalone image block', () => {
+    it('keeps image properties out of the block menu and leaves delete last', () => {
         const muya = bootMuya('![alt](https://example.com/image.png)\n');
         const menu = new ParagraphFrontMenu(muya, {});
         openOn(menu, blocks(muya)[0], 'image');
@@ -134,31 +134,14 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         expect(Array.from(menu.container!.querySelectorAll('li.item[class*="image-"]'))
             .map(item => Array.from(item.classList).find(name => name.startsWith('image-'))))
             .toEqual([
-                'image-edit',
-                'image-inline',
-                'image-left',
-                'image-center',
-                'image-right',
                 'image-delete',
             ]);
         expect(menu.container!.querySelector('.turn-into-item.atx-heading')).toBeNull();
         expect(menu.container!.querySelectorAll('li.item.delete')).toHaveLength(1);
-        expect(menu.container!.querySelector('.image-center.active')).not.toBeNull();
         expect(menu.container!.querySelector('li.item:last-child')?.classList)
             .toContain('image-delete');
-    });
-
-    it('toggles an active inline image back to a centered block image', async () => {
-        const muya = bootMuya('<img src="https://example.com/image.png" data-align="inline" />\n');
-        const menu = new ParagraphFrontMenu(muya, {});
-        openOn(menu, blocks(muya)[0], 'image');
-
-        menu.selectItem(new Event('click'), { label: 'image-inline' });
-
-        await vi.waitFor(() => {
-            expect(muya.getMarkdown()).toContain('data-align="center"');
-        });
-        expect(muya.getMarkdown()).not.toContain('data-align="inline"');
+        expect(menu.container!.querySelector('.copy-markdown')).not.toBeNull();
+        expect(menu.container!.querySelector('.move-up')).not.toBeNull();
     });
 
     it('keeps the plain-text T at the same visual scale as the other action icons', () => {
