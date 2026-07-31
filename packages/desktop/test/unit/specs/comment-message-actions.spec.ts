@@ -238,6 +238,22 @@ describe('Feishu-style comment messages', () => {
     )
   })
 
+  it('scrolls a comment thread to its newest message whenever a reply is added', () => {
+    expect(commentPane).toContain('threads: selectionComments.value.map')
+    expect(commentPane).toContain('thread.replyIds.length > previousReplyIds.length')
+    expect(commentPane).toContain(
+      "thread.replyIds.at(-1) !== previousReplyIds.at(-1)"
+    )
+    expect(commentPane).toContain('void scrollCommentToLatestMessage(thread.id)')
+    expect(commentPane).toContain("{ flush: 'post' }")
+    expect(commentPane).toMatch(
+      /scrollCommentToLatestMessage[\s\S]*?await nextTick\(\)[\s\S]*?ensureSelectedCommentViewport\(\)[\s\S]*?card\.scrollTop = card\.scrollHeight/
+    )
+    expect(commentPane).toContain(
+      'if (selectedCommentId.value === commentId) alignFocusedCommentBottom(commentId)'
+    )
+  })
+
   it('keeps the compact card header on one line in English', () => {
     const english = JSON.parse(read('packages/desktop/static/locales/en.json'))
 

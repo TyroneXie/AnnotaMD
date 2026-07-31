@@ -1001,6 +1001,21 @@ const alignFocusedCommentBottom = (commentId: string): void => {
   ))
 }
 
+const scrollCommentToLatestMessage = async(commentId: string): Promise<void> => {
+  await nextTick()
+  if (selectedCommentId.value === commentId) {
+    ensureSelectedCommentViewport()
+    await nextTick()
+  }
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (commentLayoutDisposed) return
+    const card = commentCardElement(commentId)
+    if (!card) return
+    card.scrollTop = card.scrollHeight
+    if (selectedCommentId.value === commentId) alignFocusedCommentBottom(commentId)
+  }))
+}
+
 const enterFocusReading = async(commentId: string): Promise<void> => {
   if (focusReadingCommentId.value === commentId) return
   if (focusReadingCommentId.value) await exitFocusReading()
@@ -1443,6 +1458,30 @@ watch(selectionComments, (nextComments) => {
     detachedTrayOpen.value = false
   }
 })
+
+watch(
+  () => ({
+    filePath: filePath.value,
+    threads: selectionComments.value.map((comment) => ({
+      id: comment.id,
+      replyIds: comment.replies.map((reply) => reply.id)
+    }))
+  }),
+  (nextSnapshot, previousSnapshot) => {
+    if (nextSnapshot.filePath !== previousSnapshot.filePath) return
+    const previousById = new Map(
+      previousSnapshot.threads.map((thread) => [thread.id, thread.replyIds])
+    )
+    for (const thread of nextSnapshot.threads) {
+      const previousReplyIds = previousById.get(thread.id)
+      if (previousReplyIds && thread.replyIds.length > previousReplyIds.length &&
+        thread.replyIds.at(-1) !== previousReplyIds.at(-1)) {
+        void scrollCommentToLatestMessage(thread.id)
+      }
+    }
+  },
+  { flush: 'post' }
+)
 
 watch(
   () => modifiedComments.value.map((comment) => comment.id),

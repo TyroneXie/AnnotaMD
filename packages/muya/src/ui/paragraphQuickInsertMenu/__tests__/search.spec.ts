@@ -61,6 +61,7 @@ function bootMuya(markdown: string): Muya {
 interface IMenuView {
     _block: ParagraphContent | null;
     _search: (text: string) => void;
+    hide: () => void;
     renderData: ParagraphQuickInsertMenu['renderData'];
     renderArray: ParagraphQuickInsertMenu['renderArray'];
     scrollElement: ParagraphQuickInsertMenu['scrollElement'];
@@ -196,9 +197,31 @@ describe('paragraphQuickInsertMenu emoji action', () => {
         await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
 
         expect(payloads).toHaveLength(1);
-        expect(payloads[0].showAll).toBe(true);
-        expect(payloads[0].block?.text).toBe('');
+        expect(payloads[0]?.showAll).toBe(true);
+        expect(payloads[0]?.block?.text).toBe('');
         expect(muya.editor.scrollPage!.firstChild.blockName).toBe('paragraph');
+    });
+});
+
+describe('paragraphQuickInsertMenu document replacement safety', () => {
+    it('clears the captured paragraph before setContent rebuilds the tree', () => {
+        const { muya, menu } = bootMenu();
+        const captured = menu._block;
+        captured!.text = '/mermaid';
+        muya.eventCenter.emit('content-change', { block: captured });
+
+        muya.setContent('replacement');
+
+        expect(menu._block).toBeNull();
+        expect(() => {
+            menu.selectItem({
+                title: 'Mermaid',
+                subTitle: 'Mermaid diagram',
+                label: 'diagram mermaid',
+                icon: 'mermaid',
+            });
+        }).not.toThrow();
+        expect(muya.getMarkdown()).toContain('replacement');
     });
 });
 

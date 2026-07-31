@@ -22,4 +22,16 @@ describe('strikethrough alignment', () => {
             /del\.mu-inline-rule code\.mu-inline-rule\s*\{[^}]*background-position:\s*0 46%;[^}]*background-size:\s*100% 1px;/s,
         );
     });
+
+    it('replaces the fallback gradients with one geometric overlay in the editor', () => {
+        expect(inlineSyntaxCss).toMatch(
+            /\.mu-geometric-strikethrough del\.mu-inline-rule,[\s\S]*?background-image:\s*none;/,
+        );
+        expect(inlineSyntaxCss).toMatch(
+            /\.mu-strikethrough-line-layer\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/s,
+        );
+        expect(inlineSyntaxCss).toMatch(
+            /\.mu-strikethrough-line\s*\{[^}]*position:\s*absolute;[^}]*height:\s*1px;/s,
+        );
+    });
 });

@@ -62,6 +62,7 @@ function newBlockStateForLang(typedLang: string, matchedLang: string, isGitlabMa
             name: 'diagram',
             meta: { type: typedLang, lang: typedLang === 'vega-lite' ? 'json' : 'yaml' },
             text: '',
+            initialView: 'both',
         };
     }
 

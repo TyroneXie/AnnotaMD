@@ -290,6 +290,7 @@ class ParagraphContent extends Format {
                     const state = {
                         name: 'diagram',
                         text: '',
+                        initialView: 'both' as const,
                         meta: {
                             type,
                             lang: type === 'vega-lite' ? 'json' : 'yaml',

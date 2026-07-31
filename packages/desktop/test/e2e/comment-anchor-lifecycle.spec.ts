@@ -622,12 +622,18 @@ test('keeps every reply separate and lets every Local message edit or delete', a
     }).toBeLessThan(2)
 
     const rootMessage = card.locator('.annotamd-root-message')
-    await rootMessage.locator('.annotamd-message-actions button').nth(0).click()
+    await card.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await rootMessage.locator('.annotamd-message-overflow summary').click()
+    await rootMessage.locator('.annotamd-message-menu button').nth(0).click()
     await rootMessage.locator('textarea').fill('最开始的评论已编辑')
     await rootMessage.locator('.annotamd-message-actions button').nth(0).click()
     await expect(rootMessage.locator('p')).toHaveText('最开始的评论已编辑')
 
-    await replies.nth(0).locator('.annotamd-message-actions button').nth(0).click()
+    await replies.nth(0).scrollIntoViewIfNeeded()
+    await replies.nth(0).locator('.annotamd-message-overflow summary').click()
+    await replies.nth(0).locator('.annotamd-message-menu button').nth(0).click()
     await replies.nth(0).locator('textarea').fill('Local 第一轮已编辑')
     await replies.nth(0).locator('.annotamd-message-actions button').nth(0).click()
     await expect(replies.nth(0).locator('p')).toHaveText('Local 第一轮已编辑')
@@ -644,7 +650,7 @@ test('keeps every reply separate and lets every Local message edit or delete', a
       const comment = document.comments[0]
       comment.replies.push({
         id: replyId,
-        body: 'Agent 第三轮回复',
+        body: `Agent 第三轮回复。${'自动滚动到最新消息。'.repeat(40)}`,
         author: 'agent',
         createdAt: Date.now()
       })
@@ -659,20 +665,36 @@ test('keeps every reply separate and lets every Local message edit or delete', a
 
     await expect(replies).toHaveCount(3)
     await expect(replies.nth(2).locator('.annotamd-message-author')).toHaveText('Agent')
-    await expect(replies.nth(2).locator('p')).toHaveText('Agent 第三轮回复')
+    await expect(replies.nth(2).locator('p')).toContainText('Agent 第三轮回复')
     await expect(replies.nth(2).locator('.annotamd-message-actions')).toHaveCount(0)
-    await expect(rootMessage.locator('.annotamd-message-actions button').nth(0)).toBeVisible()
-    await expect(replies.nth(0).locator('.annotamd-message-actions button').nth(0)).toBeVisible()
+    await expect(card).toHaveClass(/local-scroll/)
+    await expect.poll(() => card.evaluate((element) => (
+      element.scrollHeight - element.clientHeight
+    ))).toBeGreaterThan(0)
+    await expect.poll(() => card.evaluate((element) => (
+      Math.abs(element.scrollTop - (element.scrollHeight - element.clientHeight))
+    ))).toBeLessThanOrEqual(1)
+    await card.evaluate((element) => {
+      element.scrollTop = 0
+    })
+    await expect(rootMessage.locator('.annotamd-message-overflow summary')).toBeVisible()
+    await replies.nth(0).scrollIntoViewIfNeeded()
+    await expect(replies.nth(0).locator('.annotamd-message-overflow summary')).toBeVisible()
 
-    await replyEditor.fill('Local 第四轮回复')
+    await replyEditor.scrollIntoViewIfNeeded()
+    await replyEditor.fill(`Local 第四轮回复。${'手动回复也自动滚动。'.repeat(40)}`)
     await replySubmit.click()
     await expect(replies).toHaveCount(4)
     await expect(replies.nth(3).locator('.annotamd-message-author')).toHaveText('Local')
+    await expect.poll(() => card.evaluate((element) => (
+      Math.abs(element.scrollTop - (element.scrollHeight - element.clientHeight))
+    ))).toBeLessThanOrEqual(1)
 
-    await replies.nth(0).locator('.annotamd-message-actions button').nth(1).click()
+    await replies.nth(0).locator('.annotamd-message-overflow summary').click()
+    await replies.nth(0).locator('.annotamd-message-menu button').nth(1).click()
     await expect(replies).toHaveCount(3)
     await expect(replies.nth(0).locator('p')).toHaveText('Local 第二轮回复')
-    await expect(replies.nth(1).locator('p')).toHaveText('Agent 第三轮回复')
+    await expect(replies.nth(1).locator('p')).toContainText('Agent 第三轮回复')
   } finally {
     await app.close()
   }

@@ -47,6 +47,15 @@ describe('AnnotaMD UI localization', () => {
     }
   })
 
+  it('uses the same reply and consult labels in comment composers and threads', () => {
+    expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.send')).toBe('回复')
+    expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.reply')).toBe('回复')
+    expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.sendAgent')).toBe('咨询')
+    expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.send')).toBe('Reply')
+    expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.reply')).toBe('Reply')
+    expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.sendAgent')).toBe('Consult')
+  })
+
   it('does not hard-code Chinese copy in the added Vue templates', () => {
     const componentPaths = [
       resolve(renderer, 'components/annotamd/CommentPane.vue'),

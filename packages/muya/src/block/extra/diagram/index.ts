@@ -126,6 +126,7 @@ export function diagramPreviewDataUrl(preview: HTMLElement, background: string):
 
 class DiagramBlock extends Parent {
     public meta: IDiagramMeta;
+    private _view: DiagramView;
     static override blockName = 'diagram';
 
     static create(muya: Muya, state: IDiagramState) {
@@ -171,11 +172,12 @@ class DiagramBlock extends Parent {
         return [...pPath, offset];
     }
 
-    constructor(muya: Muya, { meta }: IDiagramState) {
+    constructor(muya: Muya, { meta, initialView = 'chart' }: IDiagramState) {
         super(muya);
         this.tagName = 'figure';
         this.meta = meta;
-        this.classList = ['mu-diagram-block', 'mu-diagram-view-chart'];
+        this._view = initialView;
+        this.classList = ['mu-diagram-block', `mu-diagram-view-${initialView}`];
         this.createDomNode();
         this._createToolbar();
         this._listenToolbar();
@@ -207,7 +209,7 @@ class DiagramBlock extends Parent {
                 createSpan('mu-diagram-menu-check', '✓'),
             ]);
             option.dataset.diagramView = view;
-            if (view === 'chart')
+            if (view === this._view)
                 option.classList.add('active');
             viewMenu.appendChild(option);
         });
@@ -299,6 +301,7 @@ class DiagramBlock extends Parent {
         root.querySelectorAll<HTMLElement>('[data-diagram-view]').forEach((option) => {
             eventCenter.attachDOMEvent(option, 'click', () => {
                 const view = option.dataset.diagramView as DiagramView;
+                this._view = view;
                 root.classList.remove(...DIAGRAM_VIEW_CLASSES);
                 root.classList.add(`mu-diagram-view-${view}`);
                 root.querySelectorAll('[data-diagram-view]').forEach(item => item.classList.remove('active'));

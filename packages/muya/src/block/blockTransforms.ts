@@ -194,6 +194,7 @@ function buildListBlock(label: 'bullet-list' | 'task-list', muya: Muya, text: st
 
 function buildDiagramBlock(label: string, muya: Muya) {
     const diagramState = deepClone(emptyStates.diagram);
+    diagramState.initialView = 'both';
 
     const [name, type] = label.split(' ');
     if (
@@ -289,10 +290,31 @@ export function replaceBlockByLabel({ block, muya, label, text = '' }: {
     }
 
     const newBlock = buildReplacementBlock(label, muya, text);
+    if (!newBlock)
+        return null;
 
-    block.replaceWith(newBlock);
-    finishInsertedBlock(newBlock, muya, label);
-    return newBlock;
+    // Float menus can outlive the block instance that opened them when the
+    // host replaces the whole document (for example during a tab switch).
+    // Keep the live path when one exists, but let replaceWith be the authority
+    // on whether a replacement was actually inserted.
+    const targetPath = block.parent && block.outMostBlock ? [...block.path] : null;
+    const insertedBlock = block.replaceWith(newBlock);
+    if (!insertedBlock)
+        return null;
+
+    // A host callback may rebuild the live tree while the replacement is
+    // being committed. Re-resolve the block at the replacement path before
+    // placing the caret instead of reading paths from a detached instance.
+    const liveBlock = insertedBlock.parent
+        ? insertedBlock
+        : targetPath
+            ? muya.editor.scrollPage?.queryBlock([...targetPath])
+            : null;
+    if (!liveBlock?.isParent())
+        return null;
+
+    finishInsertedBlock(liveBlock, muya, label);
+    return liveBlock;
 }
 
 // Position the caret after a block was inserted or replaced. A thematic-break

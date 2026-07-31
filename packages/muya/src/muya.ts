@@ -33,6 +33,7 @@ import { isAnyListState, isAtxHeadingState, isCodeBlockState } from './state/typ
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
 import { encodeImageSrc } from './utils/image';
+import StrikethroughLineOverlay from './utils/strikethroughLines';
 import './assets/styles/blockSyntax.css';
 import './assets/styles/index.css';
 import './assets/styles/inlineSyntax.css';
@@ -146,6 +147,7 @@ export class Muya {
     public i18n: I18n;
 
     private _uiPlugins: Record<string, unknown> = {};
+    private _strikethroughLineOverlay: StrikethroughLineOverlay | null = null;
 
     constructor(element: HTMLElement, options?: Partial<IMuyaOptions>) {
         this.options = Object.assign({}, MUYA_DEFAULT_OPTIONS, options ?? {});
@@ -170,6 +172,7 @@ export class Muya {
 
     init() {
         this.editor.init();
+        this._strikethroughLineOverlay = new StrikethroughLineOverlay(this.editor.scrollPage!.domNode!);
 
         // UI plugins
         if (Muya.plugins.length) {
@@ -275,6 +278,10 @@ export class Muya {
     }
 
     setContent(content: TState[] | string, autoFocus = false) {
+        // Whole-document replacement invalidates every block reference held by
+        // floating tools. Hide them first so a menu from the previous tab or
+        // document cannot dispatch against a detached block tree.
+        this.ui.hideAllFloatTools();
         this.editor.setContent(content, autoFocus);
     }
 
@@ -1794,6 +1801,8 @@ export class Muya {
     }
 
     destroy() {
+        this._strikethroughLineOverlay?.destroy();
+        this._strikethroughLineOverlay = null;
         this.eventCenter.detachAllDomEvents();
         this.eventCenter.unsubscribeAll();
         // this.domNode[BLOCK_DOM_PROPERTY] = null;

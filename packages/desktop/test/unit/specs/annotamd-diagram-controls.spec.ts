@@ -34,13 +34,25 @@ describe('AnnotaMD diagram controls', () => {
     expect(diagramStyles).toMatch(/figure\.mu-diagram-block:hover > \.mu-diagram-toolbar[\s\S]*opacity: 1/)
   })
 
-  it('clips the diagram surface to a sealed rounded border', () => {
+  it('keeps the rounded surface while allowing toolbar menus to escape its bounds', () => {
     expect(editorSource).toMatch(
-      /figure\.mu-diagram-block\s*\{[^}]*border:\s*1px solid #dee0e3;[^}]*border-radius:\s*8px;[^}]*overflow:\s*hidden !important;/s
+      /figure\.mu-diagram-block\s*\{[^}]*border:\s*1px solid #dee0e3;[^}]*border-radius:\s*8px;[^}]*overflow:\s*visible !important;/s
     )
   })
 
-  it('renders diagram hints in a body-level tooltip above clipped chart surfaces', () => {
+  it('reserves a usable empty workspace in chart, code, and split views', () => {
+    expect(diagramStyles).toMatch(
+      /figure\.mu-diagram-block > \.mu-diagram-preview\s*\{[^}]*min-height:\s*176px;/s
+    )
+    expect(diagramStyles).toMatch(
+      /mu-diagram-view-code > \.mu-diagram-container,[^{]+mu-diagram-view-both > \.mu-diagram-container\s*\{[^}]*min-height:\s*160px;/s
+    )
+    expect(diagramStyles).toMatch(
+      /mu-diagram-view-both > \.mu-diagram-preview\s*\{[^}]*min-height:\s*140px;/s
+    )
+  })
+
+  it('renders diagram hints in a body-level tooltip above chart surfaces', () => {
     expect(diagramSource).toContain("tooltip.className = 'mu-diagram-tooltip'")
     expect(diagramSource).toContain('document.body.appendChild(tooltip)')
     expect(diagramSource).toContain('window.innerWidth')

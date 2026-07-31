@@ -19,7 +19,12 @@ const testPacks = {
       'src/ui/paragraphFrontButton/__tests__/positioning.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
+      'src/ui/paragraphQuickInsertMenu/__tests__/replaceBlockByLabel.spec.ts',
+      'src/ui/paragraphQuickInsertMenu/__tests__/search.spec.ts',
+      'src/block/content/paragraphContent/__tests__/enterConvert.spec.ts',
+      'src/block/extra/diagram/__tests__/diagramControls.spec.ts',
       'src/ui/inlineFormatToolbar/__tests__/strikethroughStyle.spec.ts',
+      'src/utils/__tests__/strikethroughLines.spec.ts',
       'src/ui/headingNumberMenu/__tests__/headingNumberMenu.spec.ts',
       'src/ui/__tests__/sharedActionIcons.spec.ts',
       'src/inlineRenderer/__tests__/wysiwygBlockMarkers.spec.ts',
@@ -149,7 +154,12 @@ if (selectedPacks.includes('menu')) {
   checks.push({
     label: 'desktop product link branding test',
     command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
-    args: ['run', 'test/unit/specs/annotamd-branding.spec.ts'],
+    args: [
+      'run',
+      'test/unit/specs/annotamd-branding.spec.ts',
+      'test/unit/specs/annotamd-diagram-controls.spec.ts',
+      'test/unit/specs/annotamd-diagram-toolbar-style.spec.ts'
+    ],
     cwd: path.join(root, 'packages/desktop'),
     env: { ...process.env, CI: '1' }
   })

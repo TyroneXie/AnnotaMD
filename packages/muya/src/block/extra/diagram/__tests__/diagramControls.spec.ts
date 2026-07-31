@@ -42,10 +42,11 @@ function bootDiagram(options: Partial<IMuyaOptions> = {}) {
 }
 
 describe('diagram block controls', () => {
-    it('renders a Feishu-style toolbar and defaults to chart-only view', () => {
+    it('renders an opened Markdown diagram in chart-only view', () => {
         const { figure } = bootDiagram();
 
         expect(figure.classList.contains('mu-diagram-view-chart')).toBe(true);
+        expect(figure.querySelector('[data-diagram-view="chart"]')?.classList.contains('active')).toBe(true);
         expect(figure.querySelector('.mu-diagram-toolbar')).not.toBeNull();
         expect(figure.querySelector('.mu-diagram-view-toggle')).not.toBeNull();
         expect(figure.querySelector('.mu-diagram-fullscreen')).not.toBeNull();

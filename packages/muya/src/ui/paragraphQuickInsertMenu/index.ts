@@ -215,16 +215,29 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
         this.render();
     }
 
+    override hide() {
+        // setContent() rebuilds every block instance. Clearing the captured
+        // paragraph prevents a previously shown menu from acting on the old
+        // tree after a tab or document switch.
+        this._block = null;
+        super.hide();
+    }
+
     override selectItem({ label }: IQuickInsertMenuItem['children'][number]) {
         const { _block: block, muya } = this;
+        if (!block?.parent || !block.outMostBlock) {
+            this.hide();
+            return;
+        }
+
         if (label === 'emoji-picker') {
-            block!.text = '';
-            block!.update();
-            block!.setCursor(0, 0, true);
+            block.text = '';
+            block.update();
+            block.setCursor(0, 0, true);
             this.hide();
             requestAnimationFrame(() => {
                 muya.eventCenter.emit('muya-emoji-picker', {
-                    reference: block!.domNode!,
+                    reference: block.domNode!,
                     emojiText: '',
                     block,
                     showAll: true,
@@ -234,7 +247,7 @@ export class ParagraphQuickInsertMenu extends BaseScrollFloat {
         }
         replaceBlockByLabel({
             label,
-            block: block!.parent!,
+            block: block.parent,
             muya,
         });
         // delay hide to avoid dispatch enter handler

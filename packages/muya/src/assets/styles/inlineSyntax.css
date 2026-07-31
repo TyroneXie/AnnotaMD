@@ -135,9 +135,8 @@ code.mu-inline-rule {
 }
 
 /* Chromium positions a native line-through independently for every nested
-   font. Inline code is 0.8em, so a `<del>` spanning prose and code otherwise
-   produces visibly stepped lines. Paint one consistent rule across the
-   deletion fragments, then compensate for the padded code box. */
+   font. Keep these gradients as a no-script fallback; a live editor replaces
+   them with one geometric overlay per visual line below. */
 del.mu-inline-rule {
     text-decoration: none;
 
@@ -152,6 +151,28 @@ del.mu-inline-rule code.mu-inline-rule {
     background-repeat: repeat-x;
     background-position: 0 46%;
     background-size: 100% 1px;
+}
+
+.mu-geometric-strikethrough {
+    position: relative;
+}
+
+.mu-geometric-strikethrough del.mu-inline-rule,
+.mu-geometric-strikethrough del.mu-inline-rule code.mu-inline-rule {
+    background-image: none;
+}
+
+.mu-strikethrough-line-layer {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mu-strikethrough-line {
+    position: absolute;
+    height: 1px;
+    pointer-events: none;
 }
 
 /* emoji */

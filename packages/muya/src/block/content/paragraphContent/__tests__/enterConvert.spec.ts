@@ -179,6 +179,7 @@ describe('enter on ```` ```mermaid ```` — converts to a diagram block', () => 
         const state = muya.getState();
         expect(state.length).toBe(1);
         expect(state[0].name).toBe('diagram');
+        expect(muya.domNode.querySelector('figure.mu-diagram-view-both')).not.toBeNull();
     });
 
     it('records meta.type === "mermaid" and meta.lang === "yaml"', async () => {

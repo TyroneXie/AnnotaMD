@@ -1337,8 +1337,11 @@ figure.mu-diagram-block {
 }
 
 figure.mu-diagram-block > .mu-diagram-preview {
+    display: flex;
     box-sizing: border-box;
-    min-height: 88px;
+    align-items: center;
+    justify-content: center;
+    min-height: 176px;
 
     background: var(--mu-diagram-background, #fff);
 }
@@ -1368,6 +1371,7 @@ figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-container {
     box-sizing: border-box;
     width: 100%;
     height: auto;
+    min-height: 160px;
     margin: 0;
     overflow: auto;
 
@@ -1375,7 +1379,12 @@ figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-container {
 }
 
 figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-container {
+    min-height: 120px;
     margin-top: 14px;
+}
+
+figure.mu-diagram-block.mu-diagram-view-both > .mu-diagram-preview {
+    min-height: 140px;
 }
 
 .mu-diagram-toolbar {
@@ -1491,7 +1500,7 @@ figure.mu-diagram-block:hover > .mu-diagram-toolbar,
     position: absolute;
     top: 32px;
     right: 0;
-    z-index: 7;
+    z-index: 20;
 
     display: none;
     box-sizing: border-box;
@@ -1508,7 +1517,7 @@ figure.mu-diagram-block:hover > .mu-diagram-toolbar,
 }
 
 .mu-diagram-view-menu {
-    width: 142px;
+    width: 168px;
 }
 
 .mu-diagram-toolbar .mu-diagram-menu-item {

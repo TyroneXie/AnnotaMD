@@ -164,6 +164,7 @@ export interface IDiagramState {
     name: 'diagram';
     meta: IDiagramMeta;
     text: string;
+    initialView?: 'chart' | 'code' | 'both';
 }
 
 export interface IFootnoteBlockMeta {

@@ -2843,7 +2843,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   box-sizing: border-box;
   border: 1px solid #dee0e3;
   border-radius: 8px;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 .editor-component .mu-container figure.mu-diagram-block .mu-diagram-preview {

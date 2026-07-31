@@ -29,6 +29,8 @@ describe('AnnotaMD diagram toolbar styling', () => {
     )
     expect(css).not.toMatch(/\.mu-diagram-toolbar \[data-tooltip\]::after/)
     expect(css).not.toMatch(/\.mu-diagram-toolbar > button,[^{]+\{[^}]*border-left:/s)
+    expect(css).toMatch(/\.mu-diagram-popover\s*\{[^}]*z-index:\s*20;/s)
+    expect(css).toMatch(/\.mu-diagram-view-menu\s*\{[^}]*width:\s*168px;/s)
   })
 
   it('only adds tooltips to icon-only controls', () => {

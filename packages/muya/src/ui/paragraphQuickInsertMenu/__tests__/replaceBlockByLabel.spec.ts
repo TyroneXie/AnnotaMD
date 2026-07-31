@@ -484,3 +484,51 @@ describe('replaceBlockByLabel — quick-insert frontmatter serializes the right 
         });
     });
 });
+
+describe('replaceBlockByLabel — quick-insert diagram attaches before placing the caret', () => {
+    const diagramCases = [
+        { label: 'diagram mermaid', type: 'mermaid', lang: 'yaml' },
+        { label: 'diagram plantuml', type: 'plantuml', lang: 'yaml' },
+        { label: 'diagram vega-lite', type: 'vega-lite', lang: 'json' },
+        { label: 'diagram flowchart', type: 'flowchart', lang: 'yaml' },
+        { label: 'diagram sequence', type: 'sequence', lang: 'yaml' },
+    ];
+
+    for (const diagramCase of diagramCases) {
+        it(`inserts ${diagramCase.type} in code-and-chart view`, async () => {
+            const muya = bootMuya('-');
+            const block = muya.editor.scrollPage!.firstContentInDescendant()!.outMostBlock! as unknown as Parent;
+
+            expect(() => {
+                replaceBlockByLabel({ block, muya, label: diagramCase.label });
+            }).not.toThrow();
+
+            await vi.waitFor(() => {
+                const diagram = muya.getState()[0] as {
+                    name: string;
+                    meta: { type: string; lang: string };
+                    initialView?: string;
+                };
+                expect(diagram.name).toBe('diagram');
+                expect(diagram.meta).toMatchObject({
+                    type: diagramCase.type,
+                    lang: diagramCase.lang,
+                });
+                expect(diagram.initialView).toBeUndefined();
+                const figure = muya.domNode.querySelector<HTMLElement>('figure.mu-diagram-block')!;
+                expect(figure.classList.contains('mu-diagram-view-both')).toBe(true);
+                expect(figure.querySelector('[data-diagram-view="both"]')?.classList.contains('active')).toBe(true);
+            });
+        });
+    }
+
+    it('ignores a quick-insert target detached by a document rebuild', () => {
+        const muya = bootMuya('-');
+        const block = muya.editor.scrollPage!.firstChild as Parent;
+        block.remove('api');
+
+        expect(() => {
+            expect(replaceBlockByLabel({ block, muya, label: 'diagram mermaid' })).toBeNull();
+        }).not.toThrow();
+    });
+});
