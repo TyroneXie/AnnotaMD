@@ -556,15 +556,15 @@ onBeforeUnmount(() => {
 
 .opened-files > .title,
 .project-tree > .title {
-  height: 30px;
-  line-height: 30px;
+  height: 24px;
+  line-height: 24px;
   color: #1f2329;
   font-size: 13px;
   font-weight: 700;
 }
 
 .opened-files .title {
-  margin: 4px 10px 2px;
+  margin: 2px 10px 0;
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -608,7 +608,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .opened-files .opened-files-list {
-  max-height: 112px;
+  max-height: 88px;
   overflow: auto;
   flex: 1;
   padding: 0 8px;
@@ -638,7 +638,7 @@ onBeforeUnmount(() => {
 }
 
 .project-tree > .title {
-  margin: 4px 10px 2px;
+  margin: 2px 10px 0;
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -675,7 +675,7 @@ onBeforeUnmount(() => {
 
 .project-tree > .tree-wrapper {
   overflow: visible;
-  padding: 0 8px 12px;
+  padding: 0 8px 6px;
 }
 
 .project-tree > .tree-wrapper::-webkit-scrollbar:vertical {
@@ -690,8 +690,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  margin: 4px 12px;
+  height: 24px;
+  margin: 2px 12px;
   padding: 0 8px;
   border: 0;
   border-radius: 7px;

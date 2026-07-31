@@ -69,9 +69,9 @@ const handleContextMenu = (event: MouseEvent): void => {
 .opened-file {
   display: flex;
   user-select: none;
-  height: 28px;
-  line-height: 28px;
-  margin: 1px 0;
+  height: 22px;
+  line-height: 22px;
+  margin: 0;
   padding-left: 32px;
   padding-right: 8px;
   position: relative;
@@ -81,7 +81,7 @@ const handleContextMenu = (event: MouseEvent): void => {
   & > .close-icon {
     display: none;
     position: absolute;
-    top: 9px;
+    top: 6px;
     left: 9px;
     cursor: pointer;
   }
@@ -110,7 +110,7 @@ const handleContextMenu = (event: MouseEvent): void => {
   border-radius: 50%;
   background: #3370ff;
   position: absolute;
-  top: 11px;
+  top: 8px;
   left: 12px;
 }
 .unsaved.opened-file:hover::before {

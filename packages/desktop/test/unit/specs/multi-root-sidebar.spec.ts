@@ -50,6 +50,27 @@ describe('multi-root sidebar integration', () => {
     expect(openedTab).toContain('{ immediate: true }')
   })
 
+  it('uses compact VS Code-like spacing for the project tree', () => {
+    const tree = read('packages/desktop/src/renderer/src/components/sideBar/tree.vue')
+    const folder = read(
+      'packages/desktop/src/renderer/src/components/sideBar/treeFolder.vue'
+    )
+    const file = read('packages/desktop/src/renderer/src/components/sideBar/treeFile.vue')
+    const openedTab = read(
+      'packages/desktop/src/renderer/src/components/sideBar/treeOpenedTab.vue'
+    )
+
+    expect(tree).toMatch(
+      /\.opened-files > \.title,[^{]*\.project-tree > \.title\s*\{[^}]*height:\s*24px;[^}]*line-height:\s*24px;/s
+    )
+    expect(tree).toMatch(/\.opened-files \.opened-files-list\s*\{[^}]*max-height:\s*88px;/s)
+    expect(folder).toMatch(/& > \.folder-name\s*\{[^}]*height:\s*22px;[^}]*margin:\s*0;/s)
+    expect(file).toMatch(/\.side-bar-file\s*\{[^}]*height:\s*22px;[^}]*margin:\s*0;/s)
+    expect(openedTab).toMatch(
+      /\.opened-file\s*\{[^}]*height:\s*22px;[^}]*line-height:\s*22px;[^}]*margin:\s*0;/s
+    )
+  })
+
   it('moves file sorting from preferences into the project sidebar toolbar', () => {
     const tree = read('packages/desktop/src/renderer/src/components/sideBar/tree.vue')
     const preferences = read('packages/desktop/src/renderer/src/prefComponents/general/index.vue')

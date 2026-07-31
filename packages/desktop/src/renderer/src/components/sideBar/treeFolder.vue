@@ -157,8 +157,8 @@ onBeforeUnmount(() => {
     user-select: none;
     display: flex;
     align-items: center;
-    height: 28px;
-    margin: 1px 0;
+    height: 22px;
+    margin: 0;
     padding-right: 8px;
     border-radius: 7px;
     color: #646a73;
@@ -182,8 +182,8 @@ onBeforeUnmount(() => {
 .new-input,
 input.rename {
   outline: none;
-  height: 24px;
-  margin: 2px 0;
+  height: 22px;
+  margin: 0;
   padding: 0 8px;
   color: #1f2329;
   border: 1px solid #c9d8ff;

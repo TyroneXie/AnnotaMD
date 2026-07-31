@@ -102,9 +102,9 @@ onMounted(() => {
   align-items: center;
   cursor: default;
   user-select: none;
-  height: 28px;
+  height: 22px;
   box-sizing: border-box;
-  margin: 1px 0;
+  margin: 0;
   padding-right: 8px;
   border-radius: 7px;
   color: #646a73;
@@ -132,7 +132,7 @@ onMounted(() => {
   }
 }
 .side-bar-file.current::before {
-  height: 16px;
+  height: 14px;
 }
 .side-bar-file.current {
   background: #e8f1ff;
@@ -145,9 +145,9 @@ onMounted(() => {
   color: #1f2329;
 }
 input.rename {
-  height: 24px;
+  height: 22px;
   outline: none;
-  margin: 2px 0;
+  margin: 0;
   padding: 0 8px;
   color: #1f2329;
   border: 1px solid #c9d8ff;
