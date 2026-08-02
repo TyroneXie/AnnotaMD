@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.15.0 - 2026-08-02
+
+### Added
+
+- Added an image toolbar for alignment and related image actions, with keyboard access and clear active-state feedback.
+- Added explicit Standard and Full Access permission modes for Claude Code CLI profiles.
+- Added the ability to consult the selected Agent from the latest unsent Local message without duplicating that message in its comment thread.
+
+### Changed
+
+- Automatically scrolls an active comment thread to every newly added Local or Agent message, keeps reply editors visible as they grow, and places message actions in a compact overflow menu.
+- Uses “Reply” and “Consult” as the two comment actions, keeps Agent readiness stable during background checks, and shows lightweight activity feedback without flashing the entire status control.
+- Opens newly inserted Mermaid, Vega, and sequence diagrams in code-and-chart view, while existing diagrams continue to open in chart view; empty diagram workspaces are larger and their menus can extend beyond the chart surface.
+- Makes the project file tree denser with VS Code-like row spacing, and keeps the outline selection synchronized with headings activated in the document.
+- Draws comment underlines and strikethroughs as one continuous geometric line per visual row, keeping mixed fonts and inline code aligned.
+
+### Fixed
+
+- Fixed Mermaid and other quick-insert blocks crashing when their original paragraph was replaced or detached during insertion.
+- Fixed image tools appearing at the window corner, overlapping the text format toolbar, or keeping stale alignment state.
+- Fixed comment drafts moving to a later text selection after writing had begun and long threads leaving their newest message below the visible area.
+- Fixed diagram view menus being clipped by short chart surfaces and empty diagrams leaving too little room to edit.
+
 ## 2.14.0 - 2026-07-24
 
 ### Added
