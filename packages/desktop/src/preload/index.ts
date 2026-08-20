@@ -76,7 +76,7 @@ const shellAPI = {
 
 const clipboardAPI = {
   writeText: (text: string) => send('annotamd::clipboard::write-text', text),
-  writeImage: (dataUrl: string) => send('annotamd::clipboard::write-image', dataUrl),
+  writeImage: (source: string) => send('annotamd::clipboard::write-image', source),
   readText: () => invoke('annotamd::clipboard::read-text'),
   guessFilePath: () => invoke('annotamd::clipboard::guess-file-path')
 }

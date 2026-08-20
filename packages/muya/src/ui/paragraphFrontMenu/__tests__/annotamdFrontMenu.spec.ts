@@ -124,7 +124,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         );
     });
 
-    it('keeps image properties out of the block menu and leaves delete last', () => {
+    it('offers copy for images, keeps image properties out, and leaves delete last', () => {
         const muya = bootMuya('![alt](https://example.com/image.png)\n');
         const menu = new ParagraphFrontMenu(muya, {});
         openOn(menu, blocks(muya)[0], 'image');
@@ -134,6 +134,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         expect(Array.from(menu.container!.querySelectorAll('li.item[class*="image-"]'))
             .map(item => Array.from(item.classList).find(name => name.startsWith('image-'))))
             .toEqual([
+                'image-copy',
                 'image-delete',
             ]);
         expect(menu.container!.querySelector('.turn-into-item.atx-heading')).toBeNull();
@@ -141,6 +142,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         expect(menu.container!.querySelector('li.item:last-child')?.classList)
             .toContain('image-delete');
         expect(menu.container!.querySelector('.copy-markdown')).not.toBeNull();
+        expect(menu.container!.querySelector('.image-copy .mu-action-icon-copy')).not.toBeNull();
         expect(menu.container!.querySelector('.move-up')).not.toBeNull();
     });
 
@@ -181,6 +183,21 @@ describe('AnnotaMD paragraph front menu configuration', () => {
 });
 
 describe('AnnotaMD paragraph front menu actions', () => {
+    it('copies an image as a native clipboard image without changing the document', () => {
+        const writeImage = vi.fn();
+        const muya = bootMuya('![alt](https://example.com/image.png)\n', {
+            clipboardWriteImage: writeImage,
+        });
+        const menu = new ParagraphFrontMenu(muya, {});
+
+        openOn(menu, blocks(muya)[0], 'image');
+        menu.selectItem(new Event('click'), { label: 'image-copy' });
+
+        expect(writeImage).toHaveBeenCalledOnce();
+        expect(writeImage).toHaveBeenCalledWith('https://example.com/image.png');
+        expect(muya.getMarkdown()).toBe('![alt](https://example.com/image.png)\n');
+    });
+
     it('copies one block as plain text or Markdown without changing the document', () => {
         const writeText = vi.fn();
         const muya = bootMuya('## **Important** note\n', { clipboardWriteText: writeText });

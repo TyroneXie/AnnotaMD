@@ -143,6 +143,7 @@ export const es = {
         'Delete': 'Eliminar',
         // imageToolbar
         'Edit Image': 'Editar imagen',
+        'Copy Image': 'Copiar imagen',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
         'Inline Image': 'Imagen en línea',

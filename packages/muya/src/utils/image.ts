@@ -128,6 +128,11 @@ export function getImageSrc(src: string) {
     }
 }
 
+export function getImageClipboardSource(token: ImageToken): string {
+    const tokenSrc = token.src || token.attrs.src || '';
+    return getImageSrc(tokenSrc).src;
+}
+
 export async function loadImage(url: string, detectContentType = false): Promise<{
     url: string;
     width: number;

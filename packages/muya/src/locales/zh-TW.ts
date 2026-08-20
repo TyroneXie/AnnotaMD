@@ -143,6 +143,7 @@ export const zhTW = {
         'Delete': '刪除段落',
         // imageToolbar
         'Edit Image': '編輯圖片',
+        'Copy Image': '複製圖片',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
         'Inline Image': '行內圖片',

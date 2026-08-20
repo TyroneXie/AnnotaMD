@@ -143,6 +143,7 @@ export const ko = {
         'Delete': '단락 삭제',
         // imageToolbar
         'Edit Image': '이미지 편집',
+        'Copy Image': '이미지 복사',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
         'Inline Image': '인라인 이미지',

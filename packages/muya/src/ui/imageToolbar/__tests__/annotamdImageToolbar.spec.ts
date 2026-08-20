@@ -2,6 +2,7 @@
 
 import type Format from '../../../block/base/format';
 import type { ImageToken } from '../../../inlineRenderer/types';
+import type { IMuyaOptions } from '../../../types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../muya';
 import { getImageInfo } from '../../../utils/image';
@@ -22,10 +23,10 @@ afterEach(() => {
     delete (window as Partial<Window>).MUYA_VERSION;
 });
 
-function setup(markdown: string) {
+function setup(markdown: string, options: Partial<IMuyaOptions> = {}) {
     const host = document.createElement('div');
     document.body.appendChild(host);
-    const muya = new Muya(host, { markdown } as ConstructorParameters<typeof Muya>[1]);
+    const muya = new Muya(host, { markdown, ...options } as ConstructorParameters<typeof Muya>[1]);
     muya.init();
     muyas.push(muya);
 
@@ -52,11 +53,23 @@ describe('AnnotaMD image toolbar', () => {
         const { toolbar } = setup('![alt](https://example.com/image.png)\n');
         const items = toolbar.container!.querySelectorAll<HTMLElement>('li.item');
 
-        expect(items).toHaveLength(6);
+        expect(items).toHaveLength(7);
         expect(Array.from(items).every(item => item.getAttribute('role') === 'button')).toBe(true);
         expect(Array.from(items).every(item => item.getAttribute('tabindex') === '0')).toBe(true);
         expect(toolbar.container!.querySelector('.center')?.getAttribute('aria-pressed')).toBe('true');
         expect(toolbar.container!.querySelector('.inline')?.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('copies the selected image source as a native clipboard image', () => {
+        const writeImage = vi.fn();
+        const { toolbar } = setup('![alt](https://example.com/image.png)\n', {
+            clipboardWriteImage: writeImage,
+        });
+
+        toolbar.container!.querySelector<HTMLElement>('.copy')!.click();
+
+        expect(writeImage).toHaveBeenCalledOnce();
+        expect(writeImage).toHaveBeenCalledWith('https://example.com/image.png');
     });
 
     it('toggles an active inline image back to a centered block image from the keyboard', async () => {

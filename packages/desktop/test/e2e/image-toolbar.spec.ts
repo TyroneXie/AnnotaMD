@@ -1,10 +1,13 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from 'playwright'
+import { resolve } from 'node:path'
 import { launchWithMarkdown } from './helpers'
 
 const SVG_DATA_URI = `data:image/svg+xml;base64,${Buffer.from(
   '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="240"><rect width="480" height="240" fill="#e8efff"/><circle cx="240" cy="120" r="64" fill="#3370ff"/></svg>'
 ).toString('base64')}`
+
+const LOCAL_IMAGE_PATH = resolve(__dirname, '../../static/logo-96px.png')
 
 const selectParagraphText = async(page: Page, paragraphIndex = 0) => {
   await page.evaluate((index) => {
@@ -47,7 +50,7 @@ test('clicking an image opens its accessible toolbar above the image', async() =
     await expect(formatToolbarWrapper).toHaveCSS('opacity', '0')
     await expect(toolbarWrapper).toHaveCSS('opacity', '1')
     const items = toolbar.locator('li.item')
-    await expect(items).toHaveCount(6)
+    await expect(items).toHaveCount(7)
     expect(await items.evaluateAll((elements) =>
       elements.every((element) =>
         element.getAttribute('role') === 'button' &&
@@ -98,6 +101,39 @@ test('clicking an image opens its accessible toolbar above the image', async() =
     await toolbar.locator('.center').focus()
     await page.keyboard.press('Escape')
     await expect(toolbarWrapper).toHaveCSS('opacity', '0')
+  } finally {
+    await app.close()
+  }
+})
+
+test('copies a local image from both image action menus to the system clipboard', async() => {
+  const { app, page } = await launchWithMarkdown(`![copy image](${LOCAL_IMAGE_PATH})\n`)
+  try {
+    const image = page.locator('.editor-component .mu-inline-image.mu-image-success img')
+    await image.waitFor({ state: 'visible', timeout: 15000 })
+    await app.evaluate(({ clipboard }) => clipboard.clear())
+
+    await image.click()
+    const toolbar = page.locator('.mu-image-toolbar')
+    await expect(toolbar.locator('.copy')).toHaveAttribute('aria-label', /Copy Image|复制图片/)
+    await toolbar.locator('.copy').click()
+    await expect.poll(() => app.evaluate(({ clipboard }) => {
+      const copied = clipboard.readImage()
+      return copied.isEmpty() ? null : copied.getSize()
+    })).toEqual({ width: 96, height: 96 })
+
+    await app.evaluate(({ clipboard }) => clipboard.clear())
+    await image.hover()
+    const frontButton = page.locator('.mu-front-button-wrapper button.image')
+    await expect(frontButton).toBeVisible()
+    await frontButton.click()
+    const frontMenu = page.locator('.mu-front-menu')
+    await expect(frontMenu.locator('.image-copy')).toHaveAttribute('aria-label', /Copy Image|复制图片/)
+    await frontMenu.locator('.image-copy').click()
+    await expect.poll(() => app.evaluate(({ clipboard }) => {
+      const copied = clipboard.readImage()
+      return copied.isEmpty() ? null : copied.getSize()
+    })).toEqual({ width: 96, height: 96 })
   } finally {
     await app.close()
   }

@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, shell, clipboard, nativeImage } from 'electron'
 import type { Session } from 'electron'
 import log from 'electron-log'
 import * as plist from 'plist'
+import { fileURLToPath } from 'node:url'
 import {
   extractPageMetadata,
   getPageMetadataFallbackRequest,
@@ -240,9 +241,20 @@ export const registerShellHandlers = (): void => {
       log.error('clipboard.writeText failed:', err)
     }
   })
-  ipcMain.on('annotamd::clipboard::write-image', (_e, dataUrl: string) => {
+  ipcMain.on('annotamd::clipboard::write-image', async(event, source: string) => {
     try {
-      const image = nativeImage.createFromDataURL(dataUrl)
+      let image
+      if (/^data:image\//i.test(source)) {
+        image = nativeImage.createFromDataURL(source)
+      } else if (/^file:\/\//i.test(source)) {
+        image = nativeImage.createFromPath(fileURLToPath(source))
+      } else if (/^https?:\/\//i.test(source)) {
+        const response = await event.sender.session.fetch(source)
+        if (!response.ok) return
+        image = nativeImage.createFromBuffer(Buffer.from(await response.arrayBuffer()))
+      } else {
+        image = nativeImage.createFromPath(source)
+      }
       if (!image.isEmpty()) clipboard.writeImage(image)
     } catch (err) {
       log.error('clipboard.writeImage failed:', err)

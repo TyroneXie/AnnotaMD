@@ -143,6 +143,7 @@ export const zhCN = {
         'Delete': '删除段落',
         // imageToolbar
         'Edit Image': '编辑图片',
+        'Copy Image': '复制图片',
         'Inline Image': '行内图片',
         'Remove Image': '删除图片',
         // ImageSelector

@@ -64,6 +64,29 @@ describe('AnnotaMD selection comment highlights', () => {
     expect(readText(comment)).toBe('blockmiddle blocklast')
   })
 
+  it('splits cross-block underline geometry into content-local ranges', () => {
+    const root = document.createElement('div')
+    root.append(
+      contentBlock([0, 0], 'first block'),
+      contentBlock([1, 0], 'middle block'),
+      contentBlock([2, 0], 'last block')
+    )
+
+    const layout = buildAnnotaMDCommentRangeLayout(root, [{
+      scope: 'selection',
+      resolved: false,
+      anchor: { key: '0/0', offset: 6 },
+      focus: { key: '2/0', offset: 4 }
+    }])
+
+    expect(layout.entries[0]?.range.toString()).toBe('blockmiddle blocklast')
+    expect(layout.entries[0]?.lineRanges.map((range) => range.toString())).toEqual([
+      'block',
+      'middle block',
+      'last'
+    ])
+  })
+
   it('skips resolved comments and comments whose blocks no longer exist', () => {
     const root = document.createElement('div')
     root.append(contentBlock([0, 0], 'hello commented text'))

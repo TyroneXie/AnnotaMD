@@ -143,6 +143,7 @@ export const ja = {
         'Delete': '段落を削除する',
         // imageToolbar
         'Edit Image': '画像を編集する',
+        'Copy Image': '画像をコピー',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
         'Inline Image': '行内画像',

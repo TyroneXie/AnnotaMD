@@ -1,5 +1,6 @@
 const icons = [
     { type: 'edit', tooltip: 'Edit Image' },
+    { type: 'copy', tooltip: 'Copy Image' },
     { type: 'inline', tooltip: 'Inline Image' },
     { type: 'left', tooltip: 'Align Left' },
     { type: 'center', tooltip: 'Align Center' },

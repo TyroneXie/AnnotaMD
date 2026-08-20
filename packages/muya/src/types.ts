@@ -73,8 +73,8 @@ export interface IMuyaOptions {
     clipboardWriteText?: (text: string) => void | Promise<void>;
     /** Resolve HTTP(S) link-preview metadata through the embedding host. */
     resolveLinkMetadata?: (url: string) => Promise<ILinkPreviewMetadata>;
-    /** Write a rendered image data URL to the host OS clipboard. */
-    clipboardWriteImage?: (dataUrl: string) => void | Promise<void>;
+    /** Write an image data URL, local file URL, or HTTP(S) URL to the host OS clipboard. */
+    clipboardWriteImage?: (source: string) => void | Promise<void>;
     /**
      * Persist an image per the embedder's insert preference (copy into the
      * document's assets folder, upload to an image host, or keep the path) and

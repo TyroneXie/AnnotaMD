@@ -888,7 +888,7 @@ test('creates one comment across paragraphs and list items', async() => {
     const composer = page.locator('.annotamd-composer-card')
     await expect(composer).toBeVisible()
     await expect(composer.locator('blockquote')).toContainText(
-      '跨块评论起点。 列表项一。 列表项二。 跨块评论终点。'
+      '跨块评论起点。列表项一。列表项二。跨块评论终点。'
     )
     await composer.locator('textarea').fill('跨块评论')
     await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
@@ -900,6 +900,26 @@ test('creates one comment across paragraphs and list items', async() => {
     await expect(card.locator('blockquote')).toHaveCSS('white-space', 'nowrap')
     await expect(card.locator('blockquote')).toHaveCSS('text-overflow', 'ellipsis')
     await expect(page.locator('.annotamd-comment-list')).toHaveCSS('padding-left', '8px')
+
+    const lineBounds = await page.locator('.annotamd-comment-line').evaluateAll((lines) =>
+      lines.map((line) => {
+        const rect = line.getBoundingClientRect()
+        return { top: rect.top, left: rect.left, right: rect.right }
+      })
+    )
+    const textBounds = await page.locator('span.mu-paragraph-content').evaluateAll((paragraphs) =>
+      paragraphs.map((paragraph) => {
+        const rect = paragraph.getBoundingClientRect()
+        return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right }
+      })
+    )
+    expect(lineBounds).toHaveLength(textBounds.length)
+    for (const line of lineBounds) {
+      const text = textBounds.find(({ top, bottom }) => line.top >= top - 2 && line.top <= bottom + 2)
+      expect(text).toBeDefined()
+      expect(line.left).toBeGreaterThanOrEqual(text!.left - 1)
+      expect(line.right).toBeLessThanOrEqual(text!.right + 1)
+    }
   } finally {
     await app.close()
   }

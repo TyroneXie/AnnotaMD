@@ -165,7 +165,7 @@ export interface IpcSendChannels {
   'annotamd::ask-for-user-data': []
   'annotamd::ask-for-user-preference': []
   'annotamd::clipboard::write-text': [text: string]
-  'annotamd::clipboard::write-image': [dataUrl: string]
+  'annotamd::clipboard::write-image': [source: string]
   'annotamd::close-window': []
   'annotamd::close-window-confirm': [unsavedFiles: UnsavedFile[]]
   'annotamd::cmd-close-window': []

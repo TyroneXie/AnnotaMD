@@ -17,6 +17,7 @@ const testPacks = {
     command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
     files: [
       'src/ui/paragraphFrontButton/__tests__/positioning.spec.ts',
+      'src/ui/baseFloat/__tests__/horizontalBoundary.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
       'src/ui/paragraphQuickInsertMenu/__tests__/replaceBlockByLabel.spec.ts',

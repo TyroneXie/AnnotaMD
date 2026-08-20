@@ -26,7 +26,7 @@ import { tokenizer, tokensToPlainText } from '../../inlineRenderer/lexer';
 
 import { isAnyListState, isAtxHeadingState } from '../../state/types';
 import { deepClone, isHTMLElement } from '../../utils';
-import { getImageInfo } from '../../utils/image';
+import { getImageClipboardSource, getImageInfo } from '../../utils/image';
 import { h, patch } from '../../utils/snabbdom';
 import { findContentDOM } from '../../selection/dom';
 import { renderActionIcon } from '../actionIcons';
@@ -89,8 +89,19 @@ const META_ACTIONS = new Set([
     'comment',
     'delete',
     'delete-section',
+    'image-copy',
     'image-delete',
 ]);
+
+const IMAGE_COPY_MENU = {
+    label: 'image-copy',
+    text: 'Copy Image',
+    icon: 'copy',
+} as const satisfies {
+    label: string;
+    text: string;
+    icon: ActionIconName;
+};
 
 const IMAGE_DELETE_MENU = {
     label: 'image-delete',
@@ -350,36 +361,39 @@ export class ParagraphFrontMenu extends BaseFloat {
         const { i18n } = this.muya;
         let previousGroup: number | null = null;
         const children: VNode[] = [];
-        const pushImageDelete = (group: number) => {
+        const pushImageAction = (menuItem: typeof IMAGE_COPY_MENU | typeof IMAGE_DELETE_MENU, group: number) => {
             if (previousGroup !== null && previousGroup !== group)
                 children.push(h('li.divider'));
             previousGroup = group;
 
-            const itemSelector = `li.item.${IMAGE_DELETE_MENU.label}.delete`;
+            const itemSelector = `li.item.${menuItem.label}${menuItem.label === 'image-delete' ? '.delete' : ''}`;
             children.push(h(
                 itemSelector,
                 {
                     attrs: {
                         role: 'button',
                         tabindex: '0',
-                        'aria-label': i18n.t(IMAGE_DELETE_MENU.text),
+                        'aria-label': i18n.t(menuItem.text),
                     },
                     on: {
-                        click: event => this.selectItem(event, { label: IMAGE_DELETE_MENU.label }),
+                        click: event => this.selectItem(event, { label: menuItem.label }),
                         keydown: (event: KeyboardEvent) => {
                             if (event.key === 'Enter' || event.key === ' ') {
                                 event.preventDefault();
-                                this.selectItem(event, { label: IMAGE_DELETE_MENU.label });
+                                this.selectItem(event, { label: menuItem.label });
                             }
                         },
                     },
                 },
                 [
-                    h('div.icon-wrapper', renderActionIcon(IMAGE_DELETE_MENU.icon)),
-                    h('span.text', i18n.t(IMAGE_DELETE_MENU.text)),
+                    h('div.icon-wrapper', renderActionIcon(menuItem.icon)),
+                    h('span.text', i18n.t(menuItem.text)),
                 ],
             ));
         };
+
+        if (this._kind === 'image')
+            pushImageAction(IMAGE_COPY_MENU, 1);
 
         FRONT_MENU.forEach((menuItem) => {
             const { label, text, shortCut, group, disabled, visible } = menuItem;
@@ -436,7 +450,7 @@ export class ParagraphFrontMenu extends BaseFloat {
         });
 
         if (this._kind === 'image')
-            pushImageDelete(5);
+            pushImageAction(IMAGE_DELETE_MENU, 5);
 
         const subMenu = this._kind === 'image' ? [] : canTurnIntoMenu(block!);
         if (subMenu.length) {
@@ -547,6 +561,14 @@ export class ParagraphFrontMenu extends BaseFloat {
     private _applyMetaAction(label: string, block: Parent, oldState: TState): Content | null {
         const { muya } = this;
         switch (label) {
+            case 'image-copy': {
+                const target = this._imageTarget(block);
+                const source = target ? getImageClipboardSource(target.imageInfo.token) : '';
+                if (source)
+                    void muya.options.clipboardWriteImage?.(source);
+                return null;
+            }
+
             case 'image-delete': {
                 this._deleteImage(block);
                 return null;

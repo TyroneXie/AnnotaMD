@@ -145,6 +145,7 @@ export const en = {
         'Delete': 'Delete',
         // imageToolbar
         'Edit Image': 'Edit Image',
+        'Copy Image': 'Copy Image',
         'Inline Image': 'Inline Image',
         'Remove Image': 'Remove Image',
         // ImageSelector

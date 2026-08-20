@@ -22,6 +22,19 @@ function defaultOptions() {
 }
 
 const BUTTON_GROUP = ['mu-table-drag-bar', 'mu-front-button'];
+const FLOAT_BOUNDARY_PADDING = 8;
+
+export function clampFloatXToBoundary(
+    x: number,
+    width: number,
+    boundary: Pick<DOMRect, 'left' | 'right'>,
+    padding = FLOAT_BOUNDARY_PADDING,
+) {
+    const minX = boundary.left + padding;
+    const maxX = boundary.right - width - padding;
+
+    return maxX < minX ? minX : Math.max(minX, Math.min(x, maxX));
+}
 
 abstract class BaseFloat {
     protected options: IBaseOptions;
@@ -194,13 +207,30 @@ abstract class BaseFloat {
                 // when their body-level float wrapper temporarily expands the
                 // document's clipping rect. This is especially noticeable on
                 // the richer heading menu near the middle of a short window.
-                const safeX = Math.max(8, Math.min(x, window.innerWidth - floatBox.offsetWidth - 8));
+                let safeX = Math.max(
+                    FLOAT_BOUNDARY_PADDING,
+                    Math.min(
+                        x,
+                        window.innerWidth - floatBox.offsetWidth - FLOAT_BOUNDARY_PADDING,
+                    ),
+                );
                 const safeY = this.allowVerticalOverflow
                     ? y
-                    : Math.max(8, Math.min(y, window.innerHeight - floatBox.offsetHeight - 8));
+                    : Math.max(
+                            FLOAT_BOUNDARY_PADDING,
+                            Math.min(
+                                y,
+                                window.innerHeight - floatBox.offsetHeight - FLOAT_BOUNDARY_PADDING,
+                            ),
+                        );
                 let clipPath = '';
                 if (this.clipToScrollContainer) {
                     const boundary = findScrollContainer(this.muya.domNode).getBoundingClientRect();
+                    safeX = clampFloatXToBoundary(
+                        safeX,
+                        floatBox.offsetWidth,
+                        boundary,
+                    );
                     const top = Math.max(0, boundary.top - safeY);
                     const right = Math.max(0, safeX + floatBox.offsetWidth - boundary.right);
                     const bottom = Math.max(0, safeY + floatBox.offsetHeight - boundary.bottom);

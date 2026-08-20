@@ -52,6 +52,7 @@ export interface CommentAnchorRect {
 interface CommentRangeEntry {
   comment: CommentHighlightSource
   range: Range
+  lineRanges: Range[]
 }
 
 export interface CommentRangeLayout {
@@ -135,6 +136,46 @@ const rangeForComment = (
   return range.collapsed ? null : range
 }
 
+const lineRangesForComment = (
+  blocks: Map<string, HTMLElement>,
+  comment: CommentHighlightSource
+): Range[] => {
+  if (!comment.anchor || !comment.focus) return []
+
+  const anchorElement = blocks.get(comment.anchor.key)
+  const focusElement = blocks.get(comment.focus.key)
+  if (!anchorElement || !focusElement) return []
+
+  const anchorFirst = isBefore(
+    anchorElement,
+    comment.anchor.offset,
+    focusElement,
+    comment.focus.offset
+  )
+  const startElement = anchorFirst ? anchorElement : focusElement
+  const startOffset = anchorFirst ? comment.anchor.offset : comment.focus.offset
+  const endElement = anchorFirst ? focusElement : anchorElement
+  const endOffset = anchorFirst ? comment.focus.offset : comment.anchor.offset
+  const orderedBlocks = Array.from(blocks.values())
+  const startIndex = orderedBlocks.indexOf(startElement)
+  const endIndex = orderedBlocks.indexOf(endElement)
+  if (startIndex < 0 || endIndex < startIndex) return []
+
+  return orderedBlocks.slice(startIndex, endIndex + 1).flatMap((element) => {
+    const start = textBoundaryAt(element, element === startElement ? startOffset : 0)
+    const end = textBoundaryAt(
+      element,
+      element === endElement ? endOffset : element.textContent?.length ?? 0
+    )
+    if (!start || !end) return []
+
+    const range = document.createRange()
+    range.setStart(start.node, start.offset)
+    range.setEnd(end.node, end.offset)
+    return range.collapsed ? [] : [range]
+  })
+}
+
 export const readAnnotaMDCommentText = (
   root: HTMLElement,
   comment: CommentHighlightSource
@@ -161,7 +202,7 @@ export const buildAnnotaMDCommentRangeLayout = (
   comments.forEach((comment) => {
     const range = rangeForComment(blocks, comment)
     if (!range) return
-    entries.push({ comment, range })
+    entries.push({ comment, range, lineRanges: lineRangesForComment(blocks, comment) })
     if (comment.id) {
       // happy-dom/jsdom do not implement Range geometry; production Chromium
       // does. Keep range lookup testable without changing browser behavior.
@@ -227,9 +268,9 @@ const syncCommentLineOverlays = (
   const documentRect = documentRoot.getBoundingClientRect()
   const layer = document.createElement('div')
   layer.className = COMMENT_LINE_LAYER_CLASS
-  layout.entries.forEach(({ comment, range }) => {
+  layout.entries.forEach(({ comment, lineRanges }) => {
     const lines = mergeAnnotaMDCommentLineRects(
-      Array.from(range.getClientRects()).map((rect) => ({
+      lineRanges.flatMap((range) => Array.from(range.getClientRects())).map((rect) => ({
         top: rect.top,
         bottom: rect.bottom,
         left: rect.left,

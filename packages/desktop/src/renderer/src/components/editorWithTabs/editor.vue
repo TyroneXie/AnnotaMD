@@ -2102,7 +2102,7 @@ onMounted(() => {
     // Read the OS clipboard's plain text for "Paste as Plain Text" (execCommand('paste') no longer fires).
     clipboardText: () => window.electron.clipboard.readText(),
     clipboardWriteText: (text: string) => window.electron.clipboard.writeText(text),
-    clipboardWriteImage: (dataUrl: string) => window.electron.clipboard.writeImage(dataUrl),
+    clipboardWriteImage: (source: string) => window.electron.clipboard.writeImage(source),
     resolveLinkMetadata: (url: string) => window.electron.shell.getLinkMetadata(url),
     // Image-persist callbacks read by the engine's clipboard + drag-drop handlers
     // from `muya.options.*` (distinct from the ImageEditTool plugin option above).

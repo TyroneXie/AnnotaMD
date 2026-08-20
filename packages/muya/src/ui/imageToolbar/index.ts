@@ -6,6 +6,7 @@ import type { Muya } from '../../index';
 import type { ImageToken } from '../../inlineRenderer/types';
 import type { ActionIconName } from '../actionIcons';
 import type { Icon } from './config';
+import { getImageClipboardSource } from '../../utils/image';
 import { h, patch } from '../../utils/snabbdom';
 import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
@@ -17,6 +18,7 @@ import './index.css';
 function imageActionIcon(type: Icon['type']): ActionIconName {
     const iconsByType: Record<Icon['type'], ActionIconName> = {
         edit: 'edit',
+        copy: 'copy',
         inline: 'inline-image',
         left: 'align-left',
         center: 'align-center',
@@ -169,6 +171,13 @@ export class ImageToolBar extends BaseFloat {
         const { _imageInfo: imageInfo } = this;
 
         switch (item.type) {
+            case 'copy': {
+                const source = getImageClipboardSource(imageInfo!.token);
+                if (source)
+                    void this.muya.options.clipboardWriteImage?.(source);
+                return this.hide();
+            }
+
             // Delete image.
             case 'delete':
                 this._block!.deleteImage(imageInfo!);

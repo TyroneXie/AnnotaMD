@@ -126,6 +126,7 @@ export const tr = {
         'Delete': 'Sil',
         // imageToolbar
         'Edit Image': 'Görseli Düzenle',
+        'Copy Image': 'Görseli Kopyala',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
         'Inline Image': 'Satır İçi Görsel',
