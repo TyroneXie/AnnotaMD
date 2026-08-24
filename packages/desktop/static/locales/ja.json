@@ -181,6 +181,8 @@
   "contextMenu": {
     "cut": "切り取り",
     "copy": "コピー",
+    "copyImage": "画像をコピー",
+    "downloadImage": "画像をダウンロード",
     "paste": "貼り付け",
     "copyAsRich": "リッチテキストとしてコピー",
     "copyAsHtml": "HTMLとしてコピー",

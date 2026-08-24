@@ -42,6 +42,7 @@ const testPacks = {
       'src/state/__tests__/markdownToState.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeBarStyle.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeSnap.spec.ts',
+      'src/ui/imageResizeBar/__tests__/imageResizeLifecycle.spec.ts',
       'src/selection/__tests__/imageHoverResize.spec.ts',
       'src/block/base/__tests__/imageSelfClose.spec.ts',
       'src/block/extra/highlightBlock/__tests__/highlightBlock.spec.ts'
@@ -159,7 +160,8 @@ if (selectedPacks.includes('menu')) {
       'run',
       'test/unit/specs/annotamd-branding.spec.ts',
       'test/unit/specs/annotamd-diagram-controls.spec.ts',
-      'test/unit/specs/annotamd-diagram-toolbar-style.spec.ts'
+      'test/unit/specs/annotamd-diagram-toolbar-style.spec.ts',
+      'test/unit/specs/image-context-menu.spec.ts'
     ],
     cwd: path.join(root, 'packages/desktop'),
     env: { ...process.env, CI: '1' }

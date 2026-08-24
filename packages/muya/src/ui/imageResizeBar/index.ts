@@ -58,6 +58,7 @@ export class ImageResizeBar {
     } | null = null;
     // Stops the autoUpdate reposition loop set up in `_render`.
     private _cleanup: (() => void) | null = null;
+    private _pendingRender: ReturnType<typeof setTimeout> | null = null;
     // A container for storing drag strips
     private _container: HTMLDivElement;
     private _snapGuide: HTMLDivElement;
@@ -102,8 +103,12 @@ export class ImageResizeBar {
             if (reference) {
                 this._block = block;
                 this._imageInfo = imageInfo;
-                setTimeout(() => {
-                    this._render();
+                if (this._pendingRender)
+                    clearTimeout(this._pendingRender);
+                this._pendingRender = setTimeout(() => {
+                    this._pendingRender = null;
+                    if (this._reference === reference)
+                        this._render();
                 });
             }
             else {
@@ -121,16 +126,26 @@ export class ImageResizeBar {
 
     private _render() {
         const { eventCenter } = this.muya;
+        const reference = this._reference;
+        if (!reference?.isConnected)
+            return;
+
         if (this._status)
             this.hide();
 
         this._status = true;
 
         this._createElements();
-        this._update();
+        if (!this._update()) {
+            this.hide();
+            return;
+        }
         // Reposition the handles whenever the image moves (window/ancestor
         // resize, sidebar toggle, scroll), so they stay attached to it (#2939).
-        this._cleanup = autoUpdate(this._reference!, this._container, () => this._update());
+        this._cleanup = autoUpdate(reference, this._container, () => {
+            if (!this._update())
+                this.hide();
+        });
         eventCenter.emit('muya-float', this, true);
     }
 
@@ -147,21 +162,28 @@ export class ImageResizeBar {
         });
     }
 
-    private _update() {
+    private _update(): boolean {
+        const reference = this._reference;
+        if (!this._status || !reference?.isConnected)
+            return false;
+
         // Anchor the hot zones to the visible bitmap rather than its wrapper.
         // The wrapper can be taller/wider because of inline layout, which made
         // the resize cursor appear noticeably away from the image edge.
-        const image = this._reference!.querySelector('img');
-        const rect = (image ?? this._reference!).getBoundingClientRect();
+        const image = reference.querySelector('img');
+        const rect = (image ?? reference).getBoundingClientRect();
         const outline = this._container.querySelector<HTMLElement>('.mu-image-resize-outline');
-        if (outline) {
-            outline.style.left = `${rect.left}px`;
-            outline.style.top = `${rect.top}px`;
-            outline.style.width = `${rect.width}px`;
-            outline.style.height = `${rect.height}px`;
-        }
-        CORNER_HANDLES.forEach((c) => {
-            const bar: HTMLDivElement = this._container.querySelector(`.${c}`)!;
+        if (!outline)
+            return false;
+
+        outline.style.left = `${rect.left}px`;
+        outline.style.top = `${rect.top}px`;
+        outline.style.width = `${rect.width}px`;
+        outline.style.height = `${rect.height}px`;
+        for (const c of CORNER_HANDLES) {
+            const bar = this._container.querySelector<HTMLDivElement>(`.${c}`);
+            if (!bar)
+                return false;
             const isLeft = c.endsWith('left');
             const isTop = c.startsWith('top');
             // Keep the full invisible hot zone inside the visible outline. This
@@ -169,7 +191,9 @@ export class ImageResizeBar {
             // image and leaves no surprising active area outside the frame.
             bar.style.left = `${isLeft ? rect.left : rect.right - HANDLE_SIZE}px`;
             bar.style.top = `${isTop ? rect.top : rect.bottom - HANDLE_SIZE}px`;
-        });
+        }
+
+        return true;
     }
 
     private _handleContainerMouseOut = (event: Event) => {
@@ -235,7 +259,13 @@ export class ImageResizeBar {
         if (!this._movingAnchor || !this._dragStart)
             return;
 
-        const image = this._reference!.querySelector('img');
+        const reference = this._reference;
+        if (!reference?.isConnected) {
+            this.hide();
+            return;
+        }
+
+        const image = reference.querySelector('img');
         if (!image)
             return;
 
@@ -249,7 +279,7 @@ export class ImageResizeBar {
         const delta = Math.abs(horizontalDelta) >= Math.abs(verticalDelta)
             ? horizontalDelta
             : verticalDelta;
-        const content = this._reference!.closest('.mu-content')
+        const content = reference.closest('.mu-content')
             ?? this.muya.domNode.querySelector('.mu-container')
             ?? this.muya.domNode;
         const contentRect = content.getBoundingClientRect();
@@ -268,13 +298,7 @@ export class ImageResizeBar {
 
     private _mouseUp = (event: Event) => {
         event.preventDefault();
-        const { eventCenter } = this.muya;
-        if (this._eventId.length) {
-            for (const id of this._eventId)
-                eventCenter.detachDOMEvent(id);
-
-            this._eventId = [];
-        }
+        this._detachDragEvents();
 
         if (typeof this._width === 'number' && this._block && this._imageInfo) {
             this._block.updateImage(this._imageInfo, 'width', String(this._width));
@@ -306,8 +330,25 @@ export class ImageResizeBar {
         delete this._snapGuide.dataset.visible;
     }
 
+    private _detachDragEvents() {
+        const { eventCenter } = this.muya;
+        for (const id of this._eventId)
+            eventCenter.detachDOMEvent(id);
+
+        this._eventId = [];
+    }
+
     hide() {
         const { eventCenter } = this.muya;
+        if (this._pendingRender) {
+            clearTimeout(this._pendingRender);
+            this._pendingRender = null;
+        }
+        this._detachDragEvents();
+        this._width = null;
+        this._resizing = false;
+        this._movingAnchor = null;
+        this._dragStart = null;
         this._cleanup?.();
         this._cleanup = null;
         this._container.replaceChildren();
@@ -319,6 +360,9 @@ export class ImageResizeBar {
     // Remove the `.mu-transformer` container appended to document.body in the
     // constructor; invoked by `Muya.destroy()` so it is not leaked (#3315).
     destroy() {
+        if (this._pendingRender)
+            clearTimeout(this._pendingRender);
+        this._detachDragEvents();
         this._cleanup?.();
         this._cleanup = null;
         this._container.remove();

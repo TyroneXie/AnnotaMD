@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CopyType } from '../../../../clipboard/types';
 import { Muya } from '../../../../muya';
 import type { IMuyaOptions } from '../../../../types';
 
@@ -108,15 +109,24 @@ describe('diagram block controls', () => {
         expect(figure.dataset.diagramBackground).toBe('#eef4ff');
     });
 
-    it('copies the rendered diagram through the host image clipboard bridge', async () => {
-        const clipboardWriteImage = vi.fn();
-        const { figure } = bootDiagram({ clipboardWriteImage });
-        await vi.waitFor(() => expect(figure.querySelector('.mu-diagram-preview svg')).not.toBeNull());
+    it.each(['chart', 'code', 'both'])('copies the source code from %s view', (view) => {
+        const clipboardWriteText = vi.fn();
+        const { figure } = bootDiagram({ clipboardWriteText });
+        figure.querySelector<HTMLElement>(`[data-diagram-view="${view}"]`)!.click();
 
         figure.querySelector<HTMLElement>('.mu-diagram-copy')!.click();
 
-        expect(clipboardWriteImage).toHaveBeenCalledOnce();
-        expect(clipboardWriteImage.mock.calls[0][0]).toMatch(/^data:image\/svg\+xml/);
+        expect(clipboardWriteText).toHaveBeenCalledOnce();
+        expect(clipboardWriteText).toHaveBeenCalledWith('graph TD; A-->B');
+    });
+
+    it('falls back to the browser clipboard path when no host writer exists', () => {
+        const { muya, figure } = bootDiagram();
+        const copy = vi.spyOn(muya.editor.clipboard, 'copy').mockImplementation(() => {});
+
+        figure.querySelector<HTMLElement>('.mu-diagram-copy')!.click();
+
+        expect(copy).toHaveBeenCalledWith(CopyType.COPY_CODE_CONTENT, 'graph TD; A-->B');
     });
 
     it('downloads the rendered diagram with a meaningful SVG filename', async () => {

@@ -1,4 +1,4 @@
-import { Menu, MenuItem, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
+import { Menu, MenuItem, nativeImage, type BrowserWindow, type MenuItemConstructorOptions } from 'electron'
 import {
   getCUT,
   getCOPY,
@@ -16,6 +16,8 @@ import { t } from '../../i18n'
 // Electron's ContextMenuParams shape we rely on. Kept narrow — the renderer
 // supplies the full surface so we only annotate the fields we use.
 interface ContextMenuParams {
+  mediaType?: 'none' | 'image' | 'audio' | 'video' | 'canvas' | 'file' | 'plugin'
+  srcURL?: string
   isEditable: boolean
   hasImageContents?: boolean
   selectionText: string
@@ -33,6 +35,17 @@ interface ContextMenuParams {
   x: number
   y: number
 }
+
+const createTemplateIcon = (paths: string[]) => {
+  const body = paths.map((path) => `<path d="${path}"/>`).join('')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
+  const icon = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
+  icon.setTemplateImage(true)
+  return icon
+}
+
+const copyImageIcon = createTemplateIcon(['M9 3h6v4H9z', 'M6 5h12v16H6z'])
+const downloadImageIcon = createTemplateIcon(['M12 3v12', 'm7 10 5 5 5-5', 'M4 21h16'])
 
 // Electron `webContents.on('context-menu', (event, params) => ...)` provides
 // a simple event object with preventDefault — nothing on it is consumed by
@@ -69,6 +82,8 @@ export const showEditorContextMenu = (
   isSpellcheckerEnabled: boolean
 ): void => {
   const {
+    mediaType,
+    srcURL,
     isEditable,
     hasImageContents,
     selectionText,
@@ -76,6 +91,28 @@ export const showEditorContextMenu = (
     misspelledWord,
     dictionarySuggestions
   } = params
+
+  if (mediaType === 'image' && hasImageContents) {
+    event.preventDefault?.()
+    const menu = new Menu()
+    menu.append(new MenuItem({
+      id: 'copyImageMenuItem',
+      label: t('contextMenu.copyImage'),
+      icon: copyImageIcon,
+      click: () => win.webContents.copyImageAt(params.x, params.y)
+    }))
+    menu.append(new MenuItem({
+      id: 'downloadImageMenuItem',
+      label: t('contextMenu.downloadImage'),
+      icon: downloadImageIcon,
+      enabled: !!srcURL,
+      click: () => {
+        if (srcURL) win.webContents.downloadURL(srcURL)
+      }
+    }))
+    menu.popup({ window: win, x: params.x, y: params.y })
+    return
+  }
 
   // NOTE: We have to get the word suggestions from this event because `webFrame.getWordSuggestions` and
   //       `webFrame.isWordMisspelled` doesn't work on Windows (Electron#28684).

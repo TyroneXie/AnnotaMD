@@ -181,6 +181,8 @@
   "contextMenu": {
     "cut": "剪下",
     "copy": "複製",
+    "copyImage": "複製圖片",
+    "downloadImage": "下載圖片",
     "paste": "貼上",
     "copyAsRich": "複製為富文本",
     "copyAsHtml": "複製為 HTML",

@@ -1,6 +1,7 @@
 import type { Muya } from '../../../muya';
 import type { IDiagramMeta, IDiagramState } from '../../../state/types';
 import type { TBlockPath } from '../../types';
+import { CopyType } from '../../../clipboard/types';
 import logger from '../../../utils/logger';
 import { loadLanguage } from '../../../utils/prism';
 import Parent from '../../base/parent';
@@ -244,10 +245,10 @@ class DiagramBlock extends Parent {
         colorMenu.appendChild(colorGrid);
         colorControl.append(colorToggle, colorMenu);
 
-        const copy = createButton('mu-diagram-copy', i18n.t('Copy Diagram'), [
+        const copy = createButton('mu-diagram-copy', i18n.t('Copy content'), [
             createCopyIcon(),
         ]);
-        copy.dataset.tooltip = i18n.t('Copy Diagram');
+        copy.dataset.tooltip = i18n.t('Copy content');
         attachBodyTooltip(copy);
 
         const download = createButton('mu-diagram-download', i18n.t('Download Diagram'), [
@@ -340,18 +341,18 @@ class DiagramBlock extends Parent {
             root.querySelector<HTMLElement>('.mu-diagram-copy')!,
             'click',
             () => {
-                const preview = root.querySelector<HTMLElement>('.mu-diagram-preview');
-                if (!preview)
+                const code = this.firstContentInDescendant()?.text;
+                if (code == null)
                     return;
-                const data = diagramPreviewDataUrl(
-                    preview,
-                    root.dataset.diagramBackground ?? '#ffffff',
-                );
-                if (!data)
-                    return;
-                const result = this.muya.options.clipboardWriteImage?.(data);
-                if (result instanceof Promise)
-                    result.catch(() => {});
+                const writer = this.muya.options.clipboardWriteText;
+                if (writer) {
+                    const result = writer(code);
+                    if (result instanceof Promise)
+                        result.catch(() => {});
+                }
+                else {
+                    this.muya.editor.clipboard.copy(CopyType.COPY_CODE_CONTENT, code);
+                }
             },
         );
 

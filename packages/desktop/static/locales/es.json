@@ -181,6 +181,8 @@
   "contextMenu": {
     "cut": "Cortar",
     "copy": "Copiar",
+    "copyImage": "Copiar imagen",
+    "downloadImage": "Descargar imagen",
     "paste": "Pegar",
     "copyAsRich": "Copiar Como Texto Enriquecido",
     "copyAsHtml": "Copiar Como HTML",

@@ -181,6 +181,8 @@
   "contextMenu": {
     "cut": "Cut",
     "copy": "Copy",
+    "copyImage": "Copy Image",
+    "downloadImage": "Download Image",
     "paste": "Paste",
     "copyAsRich": "Copy As Rich Text",
     "copyAsHtml": "Copy As HTML",

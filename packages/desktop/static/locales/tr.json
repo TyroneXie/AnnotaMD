@@ -181,6 +181,8 @@
   "contextMenu": {
     "cut": "Kes",
     "copy": "Kopyala",
+    "copyImage": "Görseli Kopyala",
+    "downloadImage": "Görseli İndir",
     "paste": "Yapıştır",
     "copyAsRich": "Zengin Metin Olarak Kopyala",
     "copyAsHtml": "HTML Olarak Kopyala",
