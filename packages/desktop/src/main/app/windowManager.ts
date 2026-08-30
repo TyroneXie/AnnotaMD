@@ -13,7 +13,7 @@ import { WindowType } from '../windows/base'
 import type { WindowTypeValue } from '../windows/base'
 import type EditorWindow from '../windows/editor'
 import { broadcastCommentsChanged, getCommentService } from '../comments'
-import { stopAgentTurnForDocument } from '../agentTurns/ClaudeAgentTurnService'
+import { stopAiRunsForDocument } from '../ai'
 import { normalizeAndResolvePath } from '../filesystem'
 
 class WindowActivityList {
@@ -516,7 +516,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
     )))
     for (const filePath of new Set(filePaths)) {
       if (openFiles.has(normalizeAndResolvePath(filePath))) continue
-      stopAgentTurnForDocument(filePath)
+      void stopAiRunsForDocument(filePath)
       if (getCommentService().deleteTemporaryDetached(filePath) > 0) {
         broadcastCommentsChanged(filePath)
       }

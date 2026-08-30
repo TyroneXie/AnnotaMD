@@ -72,12 +72,13 @@ describe('Feishu-style comment messages', () => {
         'sendExistingMessageToAgent(comment, reply.id, reply.body)'
       )
       expect(component).toMatch(
-        /const sendExistingMessageToAgent[\s\S]*?isLatestLocalMessage\(comment, messageId\)[\s\S]*?commentStore\.persistFile\(filePath\.value\)[\s\S]*?agentTurns\.send\(filePath\.value, comment\.id, latestMessage, profile\)/
+        /const sendExistingMessageToAgent[\s\S]*?isLatestLocalMessage\(comment, messageId\)[\s\S]*?commentStore\.persistFile\(filePath\.value\)[\s\S]*?(?:appendAgentReply\(comment\.id, latestMessage\)|agentTurns\.send\(filePath\.value, comment\.id, latestMessage\))/
       )
       const sendExistingMessage = component.match(
         /const sendExistingMessageToAgent[\s\S]*?\n}\n/
       )?.[0] ?? ''
       expect(sendExistingMessage).not.toContain('commentStore.addReply')
+      expect(component).toContain('commentStore.addAgentReply')
     }
   })
 
@@ -141,7 +142,7 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('localScrollMaxHeight.value = originalHeight')
     expect(commentPane).not.toContain('handleFocusReadingOutsidePointerDown')
     expect(commentPane).not.toContain('annotamd.comments.locateSource')
-    expect(commentPane).not.toContain('<Close')
+    expect(commentPane).not.toContain('data-testid="focus-reading-close"')
     expect(commentPane).toContain('if (focusReadingCommentId.value === comment.id)')
     expect(commentPane).toContain('focusReadingMaxHeight.value = 0')
     expect(commentPane).toContain("event.key !== 'Escape'")

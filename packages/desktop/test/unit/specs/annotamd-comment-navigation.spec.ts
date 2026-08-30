@@ -1,9 +1,18 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { findAnnotaMDCommentAtPosition } from '@/util/annotamdCommentHighlights'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+
+// The unified Agent store now reaches `@/store/editor`, which reads
+// `window.path.sep` while modules are loading. Electron normally provides it
+// through preload, so install the minimal equivalent before imports run.
+vi.hoisted(() => {
+  const target = globalThis as unknown as { window?: { path?: { sep: string } } }
+  target.window ??= {}
+  target.window.path ??= { sep: '/' }
+})
 
 const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')

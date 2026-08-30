@@ -40,7 +40,7 @@
         <details
           ref="agentStatusMenu"
           class="annotamd-agent-status"
-          :class="agentReadiness.loading ? 'checking' : agentReadiness.level"
+          :class="agentTurns.readinessLoading ? 'checking' : agentTurns.readinessLevel"
         >
           <summary :title="agentStatusTitle">
             <span
@@ -56,15 +56,11 @@
               v-for="(description, index) in agentStatusDescriptions"
               :key="description"
               class="annotamd-agent-status-row"
-              :class="{ 'direct-channel': !agentReadiness.loading && index === 0 }"
+              :class="{ 'direct-channel': !agentTurns.readinessLoading && index === 0 }"
             >
               <span
                 class="annotamd-agent-channel-dot"
-                :class="{
-                  active: index === 0
-                    ? agentReadiness.directSendReady
-                    : agentReadiness.appAccessReady
-                }"
+                :class="{ active: agentTurns.directSendReady }"
                 aria-hidden="true"
               />
               <span>{{ description }}</span>
@@ -74,18 +70,22 @@
             </button>
           </div>
         </details>
-        <button
-          class="annotamd-pane-close"
-          type="button"
-          :title="t('annotamd.comments.closePane')"
-          :aria-label="t('annotamd.comments.closePane')"
-          @click="commentStore.setPaneVisible(false)"
+        <el-tooltip
+          :content="t('annotamd.comments.closePane')"
+          placement="bottom"
+          :show-after="150"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m5 5 7 7-7 7" />
-            <path d="m12 5 7 7-7 7" />
-          </svg>
-        </button>
+          <span class="annotamd-comment-tooltip-anchor">
+            <button
+              class="annotamd-pane-close"
+              type="button"
+              :aria-label="t('annotamd.comments.closePane')"
+              @click="commentStore.setPaneVisible(false)"
+            >
+              <el-icon><Close /></el-icon>
+            </button>
+          </span>
+        </el-tooltip>
       </div>
     </header>
 
@@ -143,7 +143,7 @@
             class="annotamd-send-agent"
             type="button"
             :disabled="!draftBody.trim() || !activeSelection ||
-              !selectedAgentProfile || !agentReadiness.directSendReady"
+              !agentTurns.directSendReady"
             :title="agentSendTitle"
             @click="submitCommentToAgent"
           >
@@ -276,8 +276,7 @@
                     <button
                       v-if="isLatestLocalMessage(comment, comment.id)"
                       type="button"
-                      :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
-                        agentTurns.isRunning(comment.id)"
+                      :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
                       :title="agentSendTitle"
                       @click.stop="sendExistingMessageToAgent(comment, comment.id, comment.body)"
                     >
@@ -364,8 +363,7 @@
                       <button
                         v-if="isLatestLocalMessage(comment, reply.id)"
                         type="button"
-                        :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
-                          agentTurns.isRunning(comment.id)"
+                        :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
                         :title="agentSendTitle"
                         @click.stop="sendExistingMessageToAgent(comment, reply.id, reply.body)"
                       >
@@ -451,8 +449,7 @@
               class="annotamd-send-agent"
               type="button"
               :disabled="!(replyBodies[comment.id] ?? '').trim() ||
-                !selectedAgentProfile || !agentReadiness.directSendReady ||
-                agentTurns.isRunning(comment.id)"
+                !agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
               :title="agentSendTitle"
               @mousedown.prevent
               @click.stop="saveReplyToAgent(comment.id, $event)"
@@ -468,6 +465,14 @@
           >
             {{ t('annotamd.comments.agentRunning') }}
           </span>
+          <button
+            v-if="agentTurns.isRunning(comment.id)"
+            class="annotamd-agent-turn-stop"
+            type="button"
+            @click.stop="agentTurns.stop(comment.id)"
+          >
+            {{ t('annotamd.comments.agentStop') }}
+          </button>
         </div>
 
         <p v-if="agentTurns.errorFor(comment.id)" class="annotamd-agent-turn-error">
@@ -533,9 +538,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
-import { usePreferencesStore } from '@/store/preferences'
 import { useAgentTurnsStore } from '@/store/agentTurns'
-import { useAgentReadinessStore } from '@/store/agentReadiness'
 import {
   useAnnotaMDCommentsStore,
   type AnnotaMDComment
@@ -552,9 +555,8 @@ import {
 } from '@/util/annotamdCommentHighlights'
 import { useI18n } from 'vue-i18n'
 import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
-import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowUp, Close } from '@element-plus/icons-vue'
 import { formatCommentTimestamp } from '@/util/annotamdCommentTime'
-import { defaultAgentProfile } from '@shared/types/agentProfiles'
 
 const COMMENT_ANCHOR_VIEWPORT_RATIO = 0.28
 const LOCAL_SCROLL_BOTTOM_GAP = 12
@@ -564,16 +566,13 @@ const FOCUS_READING_MAX_HEIGHT_RATIO = 2 / 3
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
-const preferences = usePreferencesStore()
 const agentTurns = useAgentTurnsStore()
-const agentReadiness = useAgentReadinessStore()
 const { t, locale } = useI18n()
 
 const formatMessageTime = (createdAt: number): string =>
   formatCommentTimestamp(createdAt, locale.value)
 
 const { currentFile } = storeToRefs(editorStore)
-const { agentProfiles, defaultAgentProfileId } = storeToRefs(preferences)
 const {
   activeSelection,
   activeCommentId,
@@ -622,46 +621,25 @@ const {
 } = useAutoHideScrollbar()
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
-const selectedAgentProfile = computed(() => defaultAgentProfile(
-  agentProfiles.value,
-  defaultAgentProfileId.value
-))
-const connectedAgentLabel = computed(() => agentReadiness.connectedAgentNames.join(
-  locale.value.startsWith('zh') ? '、' : ', '
-))
 const agentStatusTitle = computed(() => {
-  if (agentReadiness.loading) return t('annotamd.comments.agentStatusChecking')
-  if (agentReadiness.directSendReady && agentReadiness.appAccessReady) {
-    return t('annotamd.comments.agentStatusReadyTitle')
-  }
-  if (agentReadiness.directSendReady) return t('annotamd.comments.agentStatusDirectReadyTitle')
-  if (agentReadiness.appAccessReady) return t('annotamd.comments.agentStatusAppReadyTitle')
+  if (agentTurns.readinessLoading) return t('annotamd.comments.agentStatusChecking')
+  if (agentTurns.directSendReady) return t('annotamd.comments.agentStatusDirectReadyTitle')
   return t('annotamd.comments.agentStatusUnavailableTitle')
 })
 const agentStatusDescriptions = computed(() => {
-  if (agentReadiness.loading) {
+  if (agentTurns.readinessLoading) {
     return [t('annotamd.comments.agentStatusCheckingDescription')]
   }
-  const descriptions: string[] = []
-  if (agentReadiness.directSendReady) {
-    descriptions.push(t('annotamd.comments.agentStatusDirectReadyDescription', {
-      agent: agentReadiness.selectedAgentName
-    }))
-  } else {
-    descriptions.push(t('annotamd.comments.agentStatusDirectUnavailable'))
+  if (agentTurns.directSendReady) {
+    return [t('annotamd.comments.agentStatusDirectReadyDescription', {
+      agent: agentTurns.selectedAgentName
+    })]
   }
-  if (agentReadiness.appAccessReady) {
-    descriptions.push(t('annotamd.comments.agentStatusAppReadyDescription', {
-      agents: connectedAgentLabel.value
-    }))
-  } else {
-    descriptions.push(t('annotamd.comments.agentStatusNoConnectedApps'))
-  }
-  return descriptions
+  return [t('annotamd.comments.agentStatusDirectUnavailable')]
 })
 const agentSendTitle = computed(() => (
-  agentReadiness.directSendReady
-    ? t('annotamd.comments.sendAgentTo', { agent: agentReadiness.selectedAgentName })
+  agentTurns.directSendReady
+    ? t('annotamd.comments.sendAgentTo', { agent: agentTurns.selectedAgentName })
     : agentStatusDescriptions.value.join(' ')
 ))
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
@@ -1246,16 +1224,19 @@ const submitComment = (): void => {
   closeComposer()
 }
 
+const appendAgentReply = async(commentId: string, latestMessage: string): Promise<void> => {
+  const reply = await agentTurns.send(filePath.value, commentId, latestMessage)
+  if (reply) commentStore.addAgentReply(filePath.value, commentId, reply)
+}
+
 const submitCommentToAgent = async(): Promise<void> => {
-  const profile = selectedAgentProfile.value
   const latestMessage = draftBody.value.trim()
-  if (!profile || !agentReadiness.directSendReady) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  if (!agentTurns.directSendReady) return
   const addedComment = createSelectionComment()
   if (!addedComment) return
   closeComposer()
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, addedComment.id, latestMessage, profile)
+  await appendAgentReply(addedComment.id, latestMessage)
 }
 
 const saveEdit = (id: string): void => {
@@ -1379,16 +1360,14 @@ const saveReply = (id: string, event: MouseEvent): void => {
 }
 
 const saveReplyToAgent = async(id: string, event: MouseEvent): Promise<void> => {
-  const profile = selectedAgentProfile.value
   const latestMessage = (replyBodies.value[id] ?? '').trim()
-  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
   commentStore.addReply(filePath.value, id, latestMessage)
   replyBodies.value[id] = ''
   replyingId.value = null
   resetReplyEditor(event)
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, id, latestMessage, profile)
+  await appendAgentReply(id, latestMessage)
 }
 
 const sendExistingMessageToAgent = async(
@@ -1397,12 +1376,10 @@ const sendExistingMessageToAgent = async(
   latestMessage: string
 ): Promise<void> => {
   closeMessageMenus()
-  const profile = selectedAgentProfile.value
-  if (!filePath.value || !profile || !agentReadiness.directSendReady ||
+  if (!filePath.value || !agentTurns.directSendReady ||
     !isLatestLocalMessage(comment, messageId)) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, comment.id, latestMessage, profile)
+  await appendAgentReply(comment.id, latestMessage)
 }
 
 const focusCommentCard = async (commentId: string): Promise<void> => {
@@ -1514,15 +1491,9 @@ watch(filePath, () => {
 })
 
 watch(
-  [agentProfiles, defaultAgentProfileId, () => preferences.commentMcpEnabled],
-  () => void agentReadiness.refresh(),
-  { deep: true }
-)
-
-watch(
-  () => agentReadiness.checkRevision,
+  () => agentTurns.checkRevision,
   (revision) => {
-    if (revision === 0 || agentReadiness.level !== 'ready') return
+    if (revision === 0 || agentTurns.readinessLevel !== 'ready') return
     if (agentHeartbeatTimer) clearTimeout(agentHeartbeatTimer)
     agentHeartbeatVisible.value = false
     void nextTick(() => {
@@ -1538,7 +1509,7 @@ watch(
 
 onMounted(() => {
   bindSharedEditorScroller()
-  agentReadiness.start()
+  agentTurns.startReadiness()
   document.addEventListener('keydown', handleFocusReadingKeydown)
   document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)
   document.addEventListener('click', handleHeaderMenusOutsidePointerDown, true)
@@ -1595,6 +1566,7 @@ onBeforeUnmount(() => {
   display: flex;
   position: fixed;
   z-index: 30;
+  box-sizing: border-box;
   top: var(--titleBarHeight);
   right: 0;
   bottom: 0;
@@ -1863,31 +1835,35 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-pane-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: 5px;
   background: transparent;
-  color: var(--annotamd-blue);
+  color: var(--annotamd-muted);
   cursor: pointer;
 }
 
-.annotamd-pane-close svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.9;
+.annotamd-comment-tooltip-anchor {
+  display: inline-flex;
+}
+
+.annotamd-pane-close :deep(svg) {
+  width: 15px;
+  height: 15px;
 }
 
 .annotamd-pane-close:hover {
-  background: #eef3ff;
-  color: var(--annotamd-blue);
+  background: var(--annotamd-fill-soft);
+  color: var(--annotamd-text);
+}
+
+.annotamd-pane-close:focus-visible {
+  outline: 2px solid var(--annotamd-blue);
+  outline-offset: 1px;
 }
 
 .annotamd-comment-list {
@@ -2097,6 +2073,16 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+.annotamd-agent-turn-stop {
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--annotamd-blue);
+  font-size: 12px;
 }
 
 .annotamd-comment-card-actions button:hover,

@@ -44,31 +44,13 @@
         <Plus />
       </el-icon>
     </div>
-    <button
-      v-if="!commentPaneVisible"
-      type="button"
-      class="tab-comment-toggle"
-      :title="t('annotamd.comments.title')"
-      @click.stop="openCommentPane"
-    >
-      <span class="tab-comment-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M7.5 18.5 4 21v-4.6A7.2 7.2 0 0 1 2.5 12C2.5 7.6 6.8 4 12 4s9.5 3.6 9.5 8-4.3 8-9.5 8c-1.6 0-3.1-.3-4.5-1.5Z" />
-          <path d="M8 11h8M8 14h5" />
-        </svg>
-      </span>
-      <span v-if="selectionCommentCount" class="tab-comment-count">
-        {{ selectionCommentCount }}
-      </span>
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useEditorStore } from '@/store/editor'
 import { useLayoutStore } from '@/store/layout'
-import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
@@ -77,25 +59,13 @@ import { showContextMenu } from '../../contextMenu/tabs'
 import { copyFileName, copyFilePath } from '../../util/copyFileInfo'
 import bus from '../../bus'
 import type { IFileState } from '@shared/types/files'
-import { useI18n } from 'vue-i18n'
 
 defineProps<{ showTabs: boolean }>()
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
-const annotaMDCommentsStore = useAnnotaMDCommentsStore()
-const { t } = useI18n()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
-const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
-
-const selectionCommentCount = computed(() => {
-  const pathname = currentFile.value?.pathname
-  if (!pathname) return 0
-  return annotaMDCommentsStore
-    .commentsForFile(pathname)
-    .filter((comment) => comment.scope === 'selection' && !comment.resolved).length
-})
 
 interface AutoScroller {
   readonly down: boolean
@@ -128,10 +98,6 @@ const removeFileInTab = (file: IFileState) => {
 // Original methods
 const newFile = () => {
   editorStore.NEW_UNTITLED_TAB({})
-}
-
-const openCommentPane = (): void => {
-  annotaMDCommentsStore.setPaneVisible(true)
 }
 
 // Keep the active tab visible when the selection changes by something other
@@ -458,59 +424,6 @@ onBeforeUnmount(() => {
   & > svg {
     fill: var(--focusColor);
   }
-}
-
-.tab-comment-toggle {
-  position: relative;
-  display: inline-flex;
-  flex: 0 0 40px;
-  align-items: center;
-  justify-content: center;
-  margin-left: auto;
-  width: 40px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-left: 1px solid #eceff3;
-  background: #fff;
-  color: #646a73;
-  cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
-}
-
-.tab-comment-toggle:hover {
-  background: #f5f9ff;
-  color: #3370ff;
-}
-
-.tab-comment-icon {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-}
-
-.tab-comment-icon svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.tab-comment-count {
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 3px;
-  border-radius: 999px;
-  background: #3370ff;
-  color: #fff;
-  font-size: 8px;
-  line-height: 12px;
 }
 
 /* dragula effects */

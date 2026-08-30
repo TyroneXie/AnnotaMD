@@ -7,6 +7,7 @@ import zhCN from '../../../static/locales/zh-CN.json'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const renderer = resolve(__dirname, '../../../src/renderer/src')
+const desktop = resolve(__dirname, '../../../src')
 
 const getMessage = (messages: Record<string, unknown>, key: string): string => {
   let value: unknown = messages
@@ -29,6 +30,27 @@ const annotaMDKeys = [
   'annotamd.comments.replyPlaceholder',
   'annotamd.comments.send',
   'annotamd.comments.emptyTitle',
+  'annotamd.agentWorkspace.open',
+  'annotamd.agentWorkspace.newSession',
+  'annotamd.agentWorkspace.emptyTitle',
+  'annotamd.agentWorkspace.emptyDescription',
+  'annotamd.agentWorkspace.placeholder',
+  'annotamd.agentWorkspace.send',
+  'annotamd.agentWorkspace.stop',
+  'annotamd.agentWorkspace.workspace',
+  'annotamd.agentWorkspace.status.initializing',
+  'annotamd.agentWorkspace.status.ready',
+  'annotamd.agentWorkspace.status.missing',
+  'annotamd.agentWorkspace.status.incompatible',
+  'annotamd.agentWorkspace.status.needs-auth',
+  'annotamd.agentWorkspace.status.running',
+  'annotamd.agentWorkspace.status.error',
+  'preferences.agent.aiWorkspace.integrationTitle',
+  'preferences.agent.aiWorkspace.integrationDescription',
+  'preferences.agent.aiWorkspace.manualSetup',
+  'preferences.agent.aiWorkspace.commentAgentLink',
+  'preferences.agent.aiWorkspace.mcpGuideTitle',
+  'preferences.agent.aiWorkspace.skillGuideTitle',
   'editor.blockConversion.title',
   'editor.blockConversion.structuralSelection',
   'sideBar.tree.newMarkdownFilePlaceholder'
@@ -60,6 +82,7 @@ describe('AnnotaMD UI localization', () => {
     const componentPaths = [
       resolve(renderer, 'components/annotamd/CommentPane.vue'),
       resolve(renderer, 'components/annotamd/DocumentCommentFooter.vue'),
+      resolve(renderer, 'components/agent/AgentWorkspacePanel.vue'),
       resolve(renderer, 'components/titleBar/index.vue')
     ]
 
@@ -79,5 +102,11 @@ describe('AnnotaMD UI localization', () => {
     const sidebar = readFileSync(resolve(renderer, 'prefComponents/sideBar/index.vue'), 'utf8')
     expect(sidebar).toContain(':key="locale"')
     expect(sidebar).toContain('const { t, locale } = useI18n()')
+  })
+
+  it('loads source locales before ignored minified artifacts in development', () => {
+    const commonI18n = readFileSync(resolve(desktop, 'common/i18n.ts'), 'utf8')
+    expect(commonI18n).toContain('fs.existsSync(rawPath) ? rawPath : minPath')
+    expect(commonI18n).not.toContain('fs.existsSync(minPath) ? minPath : rawPath')
   })
 })

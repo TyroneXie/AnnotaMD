@@ -33,15 +33,39 @@ describe('AnnotaMD preference styling', () => {
     expect(css).toMatch(/\.pref-switch-item\.has-notes \.el-switch\s*\{[^}]*margin-top:\s*-2px;/s)
   })
 
-  it('uses compact page spacing and typography', () => {
+  it('uses the DBX-style settings shell and typography', () => {
     const css = readRepoFile('packages/desktop/src/renderer/src/pages/preference.vue')
+    const sidebar = readRepoFile(
+      'packages/desktop/src/renderer/src/prefComponents/sideBar/index.vue'
+    )
 
     expect(css).toContain('--prefSideBarWidth: 200px;')
     expect(css).toContain('--prefFontFamily: -apple-system')
     expect(css).toContain('--el-font-family: var(--prefFontFamily);')
     expect(css).toContain('font-family: var(--prefFontFamily);')
     expect(css).toMatch(/& h4\s*\{[^}]*font-size:\s*17px;/s)
-    expect(css).toMatch(/& \.pref-setting\s*\{[^}]*padding:\s*32px;/s)
+    expect(css).toMatch(
+      /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 68px\) 36px 36px;/s
+    )
+    expect(sidebar).toMatch(/\.search-wrapper\s*\{[^}]*position:\s*fixed;[^}]*top:\s*0;[^}]*padding:\s*13px 20px 12px 0;[^}]*background:\s*var\(--editorBgColor\);/s)
+    expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--highlightThemeColor\);/s)
+  })
+
+  it('uses a flat DBX-style AI configuration list', () => {
+    const agent = readRepoFile(
+      'packages/desktop/src/renderer/src/prefComponents/agent/index.vue'
+    )
+    const guide = readRepoFile(
+      'packages/desktop/src/renderer/src/prefComponents/agent/AgentIntegrationGuide.vue'
+    )
+
+    expect(agent).toContain("'is-default': config.isDefault")
+    expect(agent).toMatch(/\.pref-ai-section\s*\{[^}]*gap:\s*18px;[^}]*\}/s)
+    expect(agent).toMatch(/\.pref-ai-config-list\s*\{[^}]*gap:\s*8px;[^}]*\}/s)
+    expect(agent).toContain('grid-template-areas: "icon title actions" "icon summary result";')
+    expect(agent).toMatch(/\.pref-ai-test-result\s*\{[^}]*grid-area:\s*result;[^}]*text-align:\s*right;/s)
+    expect(agent).toMatch(/\.pref-ai-config-card\.is-default\s*\{[^}]*box-shadow:\s*inset 0 0 0 1px var\(--highlightThemeColor\);/s)
+    expect(guide).toMatch(/\.pref-agent-guide\s*\{[^}]*border-top:\s*1px solid var\(--editorColor10\);/s)
   })
 
   it('uses compact shared control spacing', () => {

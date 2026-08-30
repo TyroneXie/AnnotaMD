@@ -3,6 +3,20 @@
 AnnotaMD includes software developed by other projects. The following notices
 are retained in accordance with their license terms.
 
+## DBX AI workspace and CLI host design
+
+Portions of AnnotaMD's AI workspace interaction model and provider-specific
+CLI host behavior are adapted from DBX:
+
+https://github.com/t8y2/dbx
+Source revision: 802019daa3564e5d73fce8822775e3c0feb5d691
+
+DBX is licensed under the Apache License, Version 2.0. The adapted portions
+were modified to remove database, table, SQL, Redis, and DBX MCP behavior and
+to integrate AnnotaMD's document-scoped MCP, Muya buffer transactions, Diff,
+and whole-turn rollback. A copy of the Apache License 2.0 is available at
+https://www.apache.org/licenses/LICENSE-2.0.
+
 ## Upstream desktop editor
 
 MIT License

@@ -4,6 +4,7 @@ import {
   configureMcpClient,
   configurePortableCommentSkill,
   createCustomAgentManualConfig,
+  createExternalAgentGuide,
   inspectMcpClients,
   migrateConfiguredMcpClients
 } from '../mcpClients'
@@ -30,6 +31,10 @@ export const registerMcpClientHandlers = (): void => {
   ipcMain.handle(
     'annotamd::mcp-clients::manual-config',
     () => createCustomAgentManualConfig()
+  )
+  ipcMain.handle(
+    'annotamd::mcp-clients::manual-guide',
+    () => createExternalAgentGuide()
   )
   ipcMain.handle(
     'annotamd::mcp-clients::install-portable-skill',

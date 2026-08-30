@@ -4,6 +4,15 @@ import { editOp } from 'ot-json1'
 import { useAnnotaMDCommentsStore, type AnnotaMDComment } from '@/store/annotamdComments'
 import { useAgentTurnsStore } from '@/store/agentTurns'
 
+// The unified Agent store now reaches `@/store/editor`, which reads
+// `window.path.sep` while modules are loading. Electron normally provides it
+// through preload, so install the minimal equivalent before imports run.
+vi.hoisted(() => {
+  const target = globalThis as unknown as { window?: { path?: { sep: string } } }
+  target.window ??= {}
+  target.window.path ??= { sep: '/' }
+})
+
 const filePath = '/tmp/repeated.md'
 
 const commentAtSecondBlock = (): AnnotaMDComment => ({

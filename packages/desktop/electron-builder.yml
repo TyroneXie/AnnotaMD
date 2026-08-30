@@ -56,6 +56,10 @@ extraResources:
     to: annotamd-skills/annotamd-comment-review
     filter:
       - '**/*'
+  - from: resources/pi-adapter
+    to: pi-adapter
+    filter:
+      - '**/*'
   - from: build/icons
     to: icons # ends up at resources/icons/
     filter:

@@ -1,7 +1,10 @@
 <template>
   <div
     class="editor-container"
-    :class="{ 'comment-pane-open': commentPaneActive }"
+    :class="{
+      'comment-pane-open': rightPaneActive,
+      'agent-pane-maximized': agentPaneActive && agentMaximized
+    }"
     :style="commentPaneStyle"
   >
     <side-bar v-if="init" />
@@ -38,21 +41,41 @@
       <rename />
       <import-modal />
     </div>
+    <button
+      v-if="emptyAgentLauncherVisible"
+      type="button"
+      class="annotamd-empty-agent-toggle"
+      data-testid="empty-agent-toggle"
+      :title="t('annotamd.agentWorkspace.open')"
+      :aria-label="t('annotamd.agentWorkspace.open')"
+      @click="openAgentWorkspace"
+    >
+      <el-icon aria-hidden="true"><Cpu /></el-icon>
+    </button>
     <div
-      v-if="commentPaneActive"
+      v-if="rightPaneActive && !(agentPaneActive && agentMaximized)"
       class="annotamd-comment-pane-resizer"
       role="separator"
-      aria-label="Resize comment pane"
+      :aria-label="commentPaneActive ? 'Resize comment pane' : 'Resize Agent pane'"
       aria-orientation="vertical"
-      :aria-valuenow="commentPaneWidth"
-      :aria-valuemin="COMMENT_PANE_MIN_WIDTH"
-      :aria-valuemax="COMMENT_PANE_MAX_WIDTH"
+      :aria-valuenow="activePaneWidth"
+      :aria-valuemin="activePaneMinWidth"
+      :aria-valuemax="activePaneMaxWidth"
       tabindex="0"
       @mousedown="startCommentPaneResize"
       @keydown.left.prevent="resizeCommentPaneBy(16)"
       @keydown.right.prevent="resizeCommentPaneBy(-16)"
     />
     <AnnotaMDCommentPane v-if="commentPaneActive" />
+    <AgentWorkspacePanel
+      v-else-if="agentPaneActive"
+      :workspace-path="agentWorkspacePath"
+      :document-context="agentDocumentContext"
+      :maximized="agentMaximized"
+      @close="closeAgentWorkspace"
+      @toggle-maximize="rightPaneStore.toggleAgentMaximized()"
+      @clear-selection="agentSelectionText = ''"
+    />
   </div>
 </template>
 
@@ -60,6 +83,8 @@
 import { computed, watch, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useMainStore } from '@/store'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
+import { Cpu } from '@element-plus/icons-vue'
 import { addStyles, addThemeStyle, addCustomStyle, type AddStylesOptions } from '@/util/theme'
 import Recent from '@/components/recent/index.vue'
 import EditorWithTabs from '@/components/editorWithTabs/index.vue'
@@ -71,6 +96,8 @@ import ExportSettingDialog from '@/components/exportSettings/index.vue'
 import Rename from '@/components/rename/index.vue'
 import ImportModal from '@/components/import/index.vue'
 import AnnotaMDCommentPane from '@/components/annotamd/CommentPane.vue'
+import AgentWorkspacePanel from '@/components/agent/AgentWorkspacePanel.vue'
+import { subscribeAgentDocumentTransactionIpc } from '@/components/agent/agentDocumentTransactionIpc'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
 import { useLayoutStore } from '@/store/layout'
@@ -81,12 +108,15 @@ import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
 import { useNotificationStore } from '@/store/notification'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import { useRightPaneStore } from '@/store/rightPane'
+import type { AiDocumentContext } from '@shared/types/aiWorkspace'
+import { createAgentDocumentUri } from '@/components/editorWithTabs/agentDocumentTransaction'
 import {
-  COMMENT_PANE_MAX_WIDTH,
-  COMMENT_PANE_MIN_WIDTH,
-  clampCommentPaneWidth,
-  readCommentPaneWidth,
-  writeCommentPaneWidth
+  RIGHT_PANE_MAX_WIDTH,
+  RIGHT_PANE_MIN_WIDTH,
+  clampRightPaneWidth,
+  readRightPaneWidth,
+  writeRightPaneWidth
 } from '@/util/commentPaneResize'
 
 const mainStore = useMainStore()
@@ -98,37 +128,58 @@ const listenForMainStore = useListenForMainStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 const annotaMDCommentsStore = useAnnotaMDCommentsStore()
+const rightPaneStore = useRightPaneStore()
+const { t } = useI18n()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
-const commentPaneWidth = ref(readCommentPaneWidth(window.localStorage, window.innerWidth))
+const rightPaneWidth = ref(readRightPaneWidth(window.localStorage, window.innerWidth))
+const agentSelectionText = ref('')
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
-const { showTabBar } = storeToRefs(layoutStore)
+const { showTabBar, effectiveSideBarWidth } = storeToRefs(layoutStore)
 const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTrees } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
+const { mode: rightPaneMode, agentMaximized } = storeToRefs(rightPaneStore)
 
 const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 const commentPaneActive = computed<boolean>(() => {
   return init.value && hasCurrentFile.value && commentPaneVisible.value
+    && rightPaneMode.value === 'comments'
+})
+const agentPaneActive = computed<boolean>(() => {
+  return init.value && rightPaneMode.value === 'agent'
+})
+const rightPaneActive = computed<boolean>(() => {
+  return commentPaneActive.value || agentPaneActive.value
+})
+const activePaneWidth = computed(() => rightPaneWidth.value)
+const activePaneMinWidth = RIGHT_PANE_MIN_WIDTH
+const activePaneMaxWidth = RIGHT_PANE_MAX_WIDTH
+const emptyAgentLauncherVisible = computed<boolean>(() => {
+  return init.value && !hasCurrentFile.value && !agentPaneActive.value
 })
 
-const commentPaneStyle = computed<Record<string, string>>(() => ({
-  '--annotamd-comment-pane-width': commentPaneActive.value ? `${commentPaneWidth.value}px` : '0px',
-  '--annotamd-editor-tab-height': '28px'
-}))
+const commentPaneStyle = computed<Record<string, string>>(() => {
+  const maximizedWidth = `calc(100vw - ${effectiveSideBarWidth.value}px)`
+  return {
+    '--annotamd-comment-pane-width': rightPaneActive.value
+      ? (agentPaneActive.value && agentMaximized.value ? maximizedWidth : `${activePaneWidth.value}px`)
+      : '0px',
+    '--annotamd-agent-maximized-left': `${effectiveSideBarWidth.value}px`,
+    '--annotamd-editor-tab-height': '28px'
+  }
+})
 
 let stopCommentPaneResize: (() => void) | null = null
+let stopAgentDocumentTransactionIpc: (() => void) | null = null
 
 const resizeCommentPaneBy = (delta: number): void => {
-  commentPaneWidth.value = clampCommentPaneWidth(
-    commentPaneWidth.value + delta,
-    window.innerWidth
-  )
-  writeCommentPaneWidth(commentPaneWidth.value, window.localStorage)
+  rightPaneWidth.value = clampRightPaneWidth(rightPaneWidth.value + delta, window.innerWidth)
+  writeRightPaneWidth(rightPaneWidth.value, window.localStorage)
 }
 
 const startCommentPaneResize = (event: MouseEvent): void => {
@@ -136,21 +187,19 @@ const startCommentPaneResize = (event: MouseEvent): void => {
   event.preventDefault()
 
   const startX = event.clientX
-  const startWidth = commentPaneWidth.value
+  const startWidth = rightPaneWidth.value
   const previousCursor = document.body.style.cursor
   const previousUserSelect = document.body.style.userSelect
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
 
   const handleMouseMove = (moveEvent: MouseEvent): void => {
-    commentPaneWidth.value = clampCommentPaneWidth(
-      startWidth + startX - moveEvent.clientX,
-      window.innerWidth
-    )
+    const nextWidth = startWidth + startX - moveEvent.clientX
+    rightPaneWidth.value = clampRightPaneWidth(nextWidth, window.innerWidth)
   }
 
   const handleMouseUp = (): void => {
-    writeCommentPaneWidth(commentPaneWidth.value, window.localStorage)
+    writeRightPaneWidth(rightPaneWidth.value, window.localStorage)
     document.removeEventListener('mousemove', handleMouseMove)
     document.removeEventListener('mouseup', handleMouseUp)
     document.body.style.cursor = previousCursor
@@ -165,6 +214,36 @@ const startCommentPaneResize = (event: MouseEvent): void => {
 }
 
 const pathname = computed(() => currentFile.value?.pathname)
+const agentWorkspacePath = computed<string>(() => {
+  const filePath = pathname.value
+  if (!filePath) {
+    return projectTrees.value[0]?.pathname || ''
+  }
+
+  const projectRoot = projectTrees.value
+    .filter(
+      (tree) => tree.pathname === filePath
+        || window.fileUtils.isChildOfDirectory(tree.pathname, filePath)
+    )
+    .sort((left, right) => right.pathname.length - left.pathname.length)[0]
+
+  return projectRoot?.pathname ?? window.path.dirname(filePath)
+})
+const agentDocumentContext = computed<AiDocumentContext | null>(() => {
+  const file = currentFile.value
+  if (!file?.id) return null
+  const filePath = file.pathname || undefined
+  return {
+    documentHandleId: file.id,
+    documentId: file.id,
+    documentUri: createAgentDocumentUri(file.id, filePath),
+    filePath,
+    markdown: file.markdown ?? '',
+    revision: 0,
+    dirty: !file.isSaved,
+    ...(agentSelectionText.value ? { selectionText: agentSelectionText.value } : {})
+  }
+})
 const currentProject = computed(() => {
   if (!pathname.value) return projectTrees.value[0] ?? null
   return projectTrees.value.find(
@@ -187,10 +266,47 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
   () => currentFile.value?.muyaIndexCursor as Record<string, unknown> | undefined
 )
 
+const closeAgentWorkspace = (): void => {
+  rightPaneStore.closeIf('agent')
+}
+
+const openAgentWorkspace = (): void => {
+  annotaMDCommentsStore.setPaneVisible(false)
+  rightPaneStore.openAgent()
+}
+
+const captureAgentSelection = (event: Event): void => {
+  const detail = (event as CustomEvent<{ documentId?: string; text?: string }>).detail
+  if (!detail?.text || detail.documentId !== currentFile.value?.id) return
+  agentSelectionText.value = detail.text
+}
+
+watch(commentPaneVisible, (visible) => {
+  if (visible) {
+    rightPaneStore.openComments()
+  } else {
+    rightPaneStore.closeIf('comments')
+  }
+}, { immediate: true })
+
+watch(rightPaneMode, (mode) => {
+  if (mode !== 'comments' && commentPaneVisible.value) {
+    annotaMDCommentsStore.setPaneVisible(false)
+  }
+})
+
 watch([init, hasCurrentFile], ([isInitialized, hasFile]) => {
   if (isInitialized && !hasFile) {
     layoutStore.SET_LAYOUT({ rightColumn: '' })
+    rightPaneStore.closeIf('comments')
+    if (commentPaneVisible.value) {
+      annotaMDCommentsStore.setPaneVisible(false)
+    }
   }
+})
+
+watch(() => currentFile.value?.id, () => {
+  agentSelectionText.value = ''
 })
 
 // Watchers
@@ -249,6 +365,10 @@ const setupDragDropHandler = (): void => {
   )
 }
 onMounted(async () => {
+  window.addEventListener('annotamd:agent-selection-changed', captureAgentSelection)
+  stopAgentDocumentTransactionIpc = subscribeAgentDocumentTransactionIpc({
+    editorAvailable: () => hasCurrentFile.value && !sourceCode.value
+  })
   if (window.annotamd?.initialState) {
     preferencesStore.SET_USER_PREFERENCE(window.annotamd.initialState)
   }
@@ -309,7 +429,12 @@ onMounted(async () => {
   })
 })
 
-onBeforeUnmount(() => stopCommentPaneResize?.())
+onBeforeUnmount(() => {
+  window.removeEventListener('annotamd:agent-selection-changed', captureAgentSelection)
+  stopCommentPaneResize?.()
+  stopAgentDocumentTransactionIpc?.()
+  stopAgentDocumentTransactionIpc = null
+})
 </script>
 
 <style scoped>
@@ -318,6 +443,7 @@ onBeforeUnmount(() => stopCommentPaneResize?.())
   --annotamd-surface: #ffffff;
   --annotamd-surface-soft: #f7f8fa;
   --annotamd-surface-blue: #e8f1ff;
+  --annotamd-fill-soft: #f2f3f5;
   --annotamd-border: #dee0e3;
   --annotamd-border-soft: #eceff3;
   --annotamd-text: #2f3437;
@@ -368,9 +494,23 @@ onBeforeUnmount(() => stopCommentPaneResize?.())
 }
 
 :global(.annotamd-shared-scroll-source::-webkit-scrollbar) {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+
+:global(.annotamd-shared-scroll-source::-webkit-scrollbar-thumb),
+:global(.annotamd-shared-scroll-source::-webkit-scrollbar-thumb:hover) {
+  background: transparent;
+}
+
+:global(.annotamd-editor-width-stable) {
+  scrollbar-gutter: stable;
+}
+
+:global(.annotamd-editor-width-stable::-webkit-scrollbar) {
+  width: 10px;
+  height: 10px;
 }
 
 .editor-placeholder,
@@ -419,6 +559,29 @@ onBeforeUnmount(() => stopCommentPaneResize?.())
 .annotamd-comment-pane-resizer:focus-visible::after {
   background: var(--annotamd-blue);
 }
+.annotamd-empty-agent-toggle {
+  position: fixed;
+  z-index: 20;
+  top: calc(var(--titleBarHeight) + 10px);
+  right: 10px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  color: var(--annotamd-muted);
+  border: 1px solid var(--annotamd-border);
+  border-radius: 7px;
+  background: var(--annotamd-surface);
+  box-shadow: 0 4px 14px color-mix(in srgb, #000 10%, transparent);
+  cursor: pointer;
+}
+.annotamd-empty-agent-toggle:hover,
+.annotamd-empty-agent-toggle:focus-visible {
+  color: var(--annotamd-blue);
+  border-color: color-mix(in srgb, var(--annotamd-blue) 45%, var(--annotamd-border));
+}
+.annotamd-empty-agent-toggle :deep(svg) { width: 17px; height: 17px; }
 .editor-container .hide {
   z-index: -1;
   opacity: 0;

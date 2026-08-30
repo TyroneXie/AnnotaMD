@@ -646,6 +646,19 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
       void this.persistFile(filePath)
     },
 
+    addAgentReply(filePath: string, id: string, body: string): void {
+      const comment = this.commentsByFile[filePath]?.find((item) => item.id === id)
+      if (!comment || !body.trim()) return
+      comment.replies.push({
+        id: createId(),
+        body: body.trim(),
+        author: 'agent',
+        createdAt: Date.now()
+      })
+      comment.updatedAt = Date.now()
+      void this.persistFile(filePath)
+    },
+
     updateReply(filePath: string, commentId: string, replyId: string, body: string): void {
       const comment = this.commentsByFile[filePath]?.find((item) => item.id === commentId)
       const reply = comment?.replies.find((item) => item.id === replyId)

@@ -113,6 +113,8 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     max-width: calc(100vw - var(--prefSideBarWidth));
+    min-width: 0;
+    background: var(--editorBgColor);
     & .title-bar {
       width: 100%;
       height: var(--titleBarHeight);
@@ -122,10 +124,12 @@ onMounted(() => {
       -webkit-app-region: drag;
     }
     & .pref-setting {
-      padding: 32px;
-      padding-top: var(--titleBarHeight);
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      padding: calc(var(--titleBarHeight) + 68px) 36px 36px;
       flex: 1;
-      height: calc(100vh - var(--titleBarHeight));
+      height: 100vh;
       overflow: auto;
     }
     & span,
@@ -142,7 +146,8 @@ onMounted(() => {
   & .pref-content.frameless .pref-setting {
     /* Move the scrollbar below the titlebar */
     margin-top: var(--titleBarHeight);
-    padding-top: 0;
+    height: calc(100vh - var(--titleBarHeight));
+    padding-top: 68px;
   }
 }
 </style>

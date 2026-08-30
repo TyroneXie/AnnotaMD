@@ -22,3 +22,9 @@ export interface AnnotaMDMcpClientConfigureResult {
 export interface AnnotaMDMcpManualConfigResult {
   manualConfig: string
 }
+
+export interface AnnotaMDExternalAgentGuide {
+  manualConfig: string
+  skillName: string
+  skillContent: string
+}

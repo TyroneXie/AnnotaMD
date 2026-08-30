@@ -7,7 +7,7 @@ const mode = process.argv[2] ?? 'quick'
 const pack = process.argv[3] ?? 'smoke'
 
 if (!['quick', 'feature'].includes(mode)) {
-  console.error('Usage: node scripts/verifyAnnotaMD.mjs <quick|feature> [smoke|menu|table|comments]')
+  console.error('Usage: node scripts/verifyAnnotaMD.mjs <quick|feature> [smoke|menu|table|comments|agent]')
   process.exit(2)
 }
 
@@ -76,8 +76,33 @@ const testPacks = {
       'test/unit/specs/annotamd-mcp-clients.spec.ts',
       'test/unit/specs/annotamd-agent-profiles.spec.ts',
       'test/unit/specs/annotamd-agent-turns.spec.ts',
+      'test/unit/specs/annotamd-right-pane.spec.ts',
       'test/unit/specs/annotamd-comment-skill.spec.ts',
       'test/unit/specs/mcp-client-initial-render.spec.ts'
+    ]
+  },
+  agent: {
+    cwd: path.join(root, 'packages/desktop'),
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
+    files: [
+      'test/unit/specs/annotamd-pi-executable-resolver.spec.ts',
+      'test/unit/specs/annotamd-pi-rpc-process.spec.ts',
+      'test/unit/specs/annotamd-pi-adapter-contract.spec.ts',
+      'test/unit/specs/annotamd-pi-agent-host.spec.ts',
+      'test/unit/specs/annotamd-agent-cli-detection.spec.ts',
+      'test/unit/specs/annotamd-agent-workspace.spec.ts',
+      'test/unit/specs/annotamd-ai-shared-contract.spec.ts',
+      'test/unit/specs/annotamd-ai-store.spec.ts',
+      'test/unit/specs/annotamd-ai-hosts.spec.ts',
+      'test/unit/specs/annotamd-ai-settings-store.spec.ts',
+      'test/unit/specs/annotamd-ai-workspace-service.spec.ts',
+      'test/unit/specs/annotamd-agent-document-mcp.spec.ts',
+      'test/unit/specs/annotamd-agent-document-scope.spec.ts',
+      'test/unit/specs/annotamd-agent-document-transaction.spec.ts',
+      'test/unit/specs/annotamd-agent-document-renderer-bridge.spec.ts',
+      'test/unit/specs/annotamd-agent-document-transaction-ipc.spec.ts',
+      'test/unit/specs/annotamd-right-pane.spec.ts',
+      'test/unit/specs/annotamd-i18n.spec.ts'
     ]
   },
   editor: {
@@ -148,6 +173,16 @@ if (selectedPacks.includes('comments')) {
       'src/ui/inlineFormatToolbar/__tests__/selectionSync.spec.ts'
     ],
     cwd: path.join(root, 'packages/muya'),
+    env: { ...process.env, CI: '1' }
+  })
+}
+
+if (selectedPacks.includes('agent')) {
+  checks.push({
+    label: 'MCP document Agent workflow tests',
+    command: 'npm',
+    args: ['test'],
+    cwd: path.join(root, 'tools/annotamd-mcp'),
     env: { ...process.env, CI: '1' }
   })
 }

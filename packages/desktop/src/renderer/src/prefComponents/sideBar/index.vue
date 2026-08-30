@@ -1,6 +1,7 @@
 <template>
   <div class="pref-sidebar">
     <h3 class="title">
+      <el-icon><Setting /></el-icon>
       {{ t('preferences.title') }}
     </h3>
     <section class="search-wrapper">
@@ -13,7 +14,7 @@
         :trigger-on-focus="false"
         @select="handleSelect"
       >
-        <template #suffix>
+        <template #prefix>
           <Search
             width="16"
             height="16"
@@ -45,7 +46,7 @@
 import { getCategory, getTranslatedSearchContent } from './config'
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
 let stopCategoryListener: (() => void) | null = null
@@ -162,36 +163,67 @@ onUnmounted(() => {
   -webkit-app-region: drag;
   display: flex;
   flex-direction: column;
-  background: var(--sideBarBgColor);
+  flex: none;
+  background: var(--editorBgColor);
   width: var(--prefSideBarWidth);
   height: 100vh;
-  padding-top: 20px;
+  padding: 22px 14px 24px;
+  border-right: 1px solid var(--editorColor10);
   box-sizing: border-box;
   & h3 {
+    display: flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 9px;
     margin: 0;
-    font-size: 18px;
-    font-weight: normal;
-    text-align: center;
-    color: var(--sideBarColor);
+    padding: 0 10px;
+    font-size: 17px;
+    font-weight: 700;
+    text-align: left;
+    color: var(--editorColor);
+  }
+  & h3 .el-icon {
+    width: 17px;
+    height: 17px;
+    font-size: 17px;
   }
 }
 .search-wrapper {
   -webkit-app-region: no-drag;
-  padding: 0 14px;
-  margin: 14px 0;
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  right: 36px;
+  left: calc(var(--prefSideBarWidth) + 36px);
+  margin: 0;
+  padding: 13px 20px 12px 0;
+  background: var(--editorBgColor);
 }
 .el-autocomplete {
   width: 100%;
 
   & .el-input__wrapper {
-    background: transparent;
+    min-height: 46px;
+    padding: 0 16px;
+    border: 1px solid color-mix(in srgb, var(--editorColor) 15%, transparent);
+    border-radius: 13px;
+    background: var(--editorColor02);
+    box-shadow: none;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+
+  & .el-input__wrapper:hover,
+  & .el-input__wrapper.is-focus {
+    border-color: var(--editorColor30);
+    background: var(--editorBgColor);
+    box-shadow: none;
   }
 
   & .el-input__inner {
     border: none;
     background: transparent;
-    height: 28px;
-    line-height: 28px;
+    height: 44px;
+    line-height: 44px;
     font-size: 13px;
   }
 }
@@ -228,12 +260,16 @@ onUnmounted(() => {
 .category {
   -webkit-app-region: no-drag;
   overflow-y: auto;
+  margin-top: 32px;
   & .item {
     width: 100%;
-    height: 34px;
-    font-size: 14px;
-    color: var(--sideBarColor);
-    padding-left: 16px;
+    min-height: 36px;
+    margin-bottom: 3px;
+    padding: 0 11px;
+    color: var(--editorColor60);
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
     box-sizing: border-box;
     display: flex;
     flex-direction: row;
@@ -242,35 +278,19 @@ onUnmounted(() => {
     position: relative;
     user-select: none;
     & > svg {
-      width: 16px;
-      height: 16px;
-      color: var(--sideBarColor);
-      margin-right: 10px;
-    }
-    &.active > svg {
-      color: var(--sideBarTitleColor);
+      display: none;
     }
     &:hover {
-      background: var(--sideBarItemHoverBgColor);
-    }
-    &::before {
-      content: '';
-      width: 4px;
-      height: 0;
-      background: var(--highlightThemeColor);
-      position: absolute;
-      left: 0;
-      border-top-right-radius: 3px;
-      border-bottom-right-radius: 3px;
-      transition: height 0.25s ease-in-out;
-      top: 50%;
-      transform: translateY(-50%);
+      color: var(--editorColor);
+      background: var(--editorColor06);
     }
     &.active {
-      color: var(--sideBarTitleColor);
+      color: #fff;
+      background: var(--highlightThemeColor);
+      font-weight: 650;
     }
-    &.active::before {
-      height: 100%;
+    &.active:hover {
+      background: color-mix(in srgb, var(--highlightThemeColor) 88%, #000);
     }
   }
 }

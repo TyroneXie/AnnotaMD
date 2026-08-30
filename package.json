@@ -1,6 +1,6 @@
 {
   "name": "annotamd-monorepo",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "description": "AnnotaMD desktop Markdown editor monorepo",
   "private": true,
   "homepage": "https://github.com/TyroneXie/AnnotaMD",
@@ -38,6 +38,7 @@
     "verify:menu": "node scripts/verifyAnnotaMD.mjs quick menu",
     "verify:table": "node scripts/verifyAnnotaMD.mjs quick table",
     "verify:comments": "node scripts/verifyAnnotaMD.mjs quick comments",
+    "verify:agent": "node scripts/verifyAnnotaMD.mjs feature agent",
     "check": "pnpm lint && pnpm typecheck",
     "gen-third-party": "tsx scripts/generateThirdPartyLicense.ts",
     "validate-licenses": "tsx scripts/validateLicenses.ts",

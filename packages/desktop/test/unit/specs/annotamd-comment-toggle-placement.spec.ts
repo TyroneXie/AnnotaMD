@@ -1,14 +1,20 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+
+vi.hoisted(() => {
+  const target = globalThis as unknown as { window?: { path?: { sep: string } } }
+  target.window ??= {}
+  target.window.path ??= { sep: '/' }
+})
 
 const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
 
 describe('AnnotaMD comment toggle placement', () => {
-  it('places the single comment toggle in the document tab bar', () => {
+  it('places the comment and Agent toggles in the top title bar', () => {
     const titleBar = read(
       'packages/desktop/src/renderer/src/components/titleBar/index.vue'
     )
@@ -21,23 +27,44 @@ describe('AnnotaMD comment toggle placement', () => {
     const commentPane = read(
       'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'
     )
+    const agentHeader = read(
+      'packages/desktop/src/renderer/src/components/agent/AgentPanelHeader.vue'
+    )
 
-    expect(titleBar).not.toContain('class="comment-toggle')
-    expect(tabs).toContain('class="tab-comment-toggle"')
-    expect(tabs).toContain('v-if="!commentPaneVisible"')
-    expect(tabs).toContain('@click.stop="openCommentPane"')
+    expect(titleBar).toContain('class="title-pane-toggle tab-comment-toggle"')
+    expect(titleBar).toContain('class="title-pane-toggle tab-agent-toggle"')
+    expect(titleBar).toContain(':aria-pressed="commentPaneActive"')
+    expect(titleBar).toContain(':aria-pressed="agentPaneActive"')
+    expect(titleBar).toContain('@click.stop="openCommentPane"')
+    expect(tabs).not.toContain('class="tab-comment-toggle"')
+    expect(tabs).not.toContain('class="tab-agent-toggle"')
     expect(editorWithTabs).toContain('<tabs :show-tabs="showTabBar" />')
     expect(editorWithTabs).not.toContain('<tabs v-show="showTabBar" />')
     expect(tabs).toContain('defineProps<{ showTabs: boolean }>()')
     expect(tabs).toContain('v-show="showTabs"')
-    expect(tabs).toMatch(
-      /\.tab-comment-toggle\s*\{[^}]*flex:\s*0 0 40px;[^}]*margin-left:\s*auto;[^}]*width:\s*40px;[^}]*height:\s*28px;/s
+    expect(titleBar).toMatch(
+      /\.title-pane-toggles\s*\{[^}]*top:\s*50%;[^}]*right:\s*12px;[^}]*display:\s*inline-flex;/s
     )
+    expect(titleBar).toMatch(
+      /\.title-pane-toggle\s*\{[^}]*width:\s*32px;[^}]*height:\s*30px;[^}]*border-radius:\s*8px;/s
+    )
+    expect(titleBar).toMatch(
+      /\.title-pane-toggle\.is-active\s*\{[^}]*var\(--annotamd-green/s
+    )
+    expect(commentPane).toContain(':content="t(\'annotamd.comments.closePane\')"')
+    expect(commentPane).toContain('<el-icon><Close /></el-icon>')
+    expect(commentPane).not.toContain('m5 5 7 7-7 7')
     expect(commentPane).toMatch(
       /\.annotamd-comment-pane\s*\{[^}]*top:\s*var\(--titleBarHeight\);[^}]*bottom:\s*0;/s
     )
     expect(commentPane).toMatch(
       /\.annotamd-comment-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;/s
+    )
+    expect(agentHeader).toMatch(
+      /\.annotamd-agent-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;[^}]*background:\s*var\(--annotamd-surface-soft\);/s
+    )
+    expect(agentHeader).toMatch(
+      /\.annotamd-agent-title strong\s*\{[^}]*font-size:\s*14px;[^}]*font-weight:\s*650;[^}]*line-height:\s*20px;/s
     )
   })
 

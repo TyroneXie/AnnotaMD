@@ -13,6 +13,9 @@ import {
   ElButton,
   ElCol,
   ElDialog,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElForm,
   ElFormItem,
   ElIcon,
@@ -36,6 +39,9 @@ import 'element-plus/es/components/autocomplete/style/css'
 import 'element-plus/es/components/button/style/css'
 import 'element-plus/es/components/col/style/css'
 import 'element-plus/es/components/dialog/style/css'
+import 'element-plus/es/components/dropdown/style/css'
+import 'element-plus/es/components/dropdown-item/style/css'
+import 'element-plus/es/components/dropdown-menu/style/css'
 import 'element-plus/es/components/form/style/css'
 import 'element-plus/es/components/form-item/style/css'
 import 'element-plus/es/components/icon/style/css'
@@ -82,6 +88,9 @@ const elementPlusComponents = [
   ElButton,
   ElCol,
   ElDialog,
+  ElDropdown,
+  ElDropdownItem,
+  ElDropdownMenu,
   ElForm,
   ElFormItem,
   ElIcon,

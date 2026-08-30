@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "name": "annotamd-pi-rpc-adapter",
+  "adapterProtocol": 1,
+  "adapterVersion": "1.0.0",
+  "entry": "adapter.mjs",
+  "piPackage": "@earendil-works/pi-coding-agent",
+  "minimumPiVersion": "0.84.3",
+  "verifiedPiVersions": [
+    "0.84.3"
+  ],
+  "maxDocumentBytes": 8388608,
+  "capabilities": [
+    "snapshot-v1",
+    "proposal-v1",
+    "approval-v1",
+    "feedback-v1",
+    "abortable-input"
+  ],
+  "toolOwners": {
+    "read": "annotamd-pi-adapter/v1",
+    "edit": "annotamd-pi-adapter/v1",
+    "write": "annotamd-pi-adapter/v1"
+  }
+}

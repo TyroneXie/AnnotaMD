@@ -77,8 +77,7 @@
                   <button
                     v-if="isLatestLocalMessage(comment, comment.id)"
                     type="button"
-                    :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
-                      agentTurns.isRunning(comment.id)"
+                    :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
                     :title="agentSendTitle"
                     @click.stop="sendExistingMessageToAgent(comment, comment.id, comment.body)"
                   >
@@ -161,8 +160,7 @@
                     <button
                       v-if="isLatestLocalMessage(comment, reply.id)"
                       type="button"
-                      :disabled="!selectedAgentProfile || !agentReadiness.directSendReady ||
-                        agentTurns.isRunning(comment.id)"
+                      :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
                       :title="agentSendTitle"
                       @click.stop="sendExistingMessageToAgent(comment, reply.id, reply.body)"
                     >
@@ -202,8 +200,8 @@
         <button
           class="annotamd-send-agent"
           type="button"
-          :disabled="!replyBody.trim() || !selectedAgentProfile ||
-            !agentReadiness.directSendReady || agentTurns.isRunning(comment.id)"
+          :disabled="!replyBody.trim() || !agentTurns.directSendReady ||
+            agentTurns.isRunning(comment.id)"
           @click="saveReplyToAgent(comment.id)"
         >
           {{ agentTurns.isRunning(comment.id)
@@ -212,9 +210,18 @@
         </button>
       </div>
 
-      <p v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-status">
-        {{ t('annotamd.comments.agentRunning') }}
-      </p>
+      <div v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-actions">
+        <p class="annotamd-agent-turn-status">
+          {{ t('annotamd.comments.agentRunning') }}
+        </p>
+        <button
+          class="annotamd-agent-turn-stop"
+          type="button"
+          @click="agentTurns.stop(comment.id)"
+        >
+          {{ t('annotamd.comments.agentStop') }}
+        </button>
+      </div>
       <p v-else-if="agentTurns.errorFor(comment.id)" class="annotamd-agent-turn-error">
         {{ agentTurns.errorFor(comment.id) }}
       </p>
@@ -248,7 +255,7 @@
         <button
           class="annotamd-send-agent"
           type="button"
-          :disabled="!draftBody.trim() || !selectedAgentProfile || !agentReadiness.directSendReady"
+          :disabled="!draftBody.trim() || !agentTurns.directSendReady"
           @click="submitCommentToAgent"
         >
           {{ t('annotamd.comments.sendAgent') }}
@@ -266,24 +273,18 @@ import {
   useAnnotaMDCommentsStore,
   type AnnotaMDComment
 } from '@/store/annotamdComments'
-import { usePreferencesStore } from '@/store/preferences'
 import { useAgentTurnsStore } from '@/store/agentTurns'
-import { useAgentReadinessStore } from '@/store/agentReadiness'
 import { useI18n } from 'vue-i18n'
 import { formatCommentTimestamp } from '@/util/annotamdCommentTime'
-import { defaultAgentProfile } from '@shared/types/agentProfiles'
 
 const editorStore = useEditorStore()
 const commentStore = useAnnotaMDCommentsStore()
-const preferences = usePreferencesStore()
 const agentTurns = useAgentTurnsStore()
-const agentReadiness = useAgentReadinessStore()
 const { t, locale } = useI18n()
 
 const formatMessageTime = (createdAt: number): string =>
   formatCommentTimestamp(createdAt, locale.value)
 const { currentFile } = storeToRefs(editorStore)
-const { agentProfiles, defaultAgentProfileId } = storeToRefs(preferences)
 
 const draftBody = ref('')
 const editingId = ref<string | null>(null)
@@ -294,13 +295,9 @@ const replyingId = ref<string | null>(null)
 const replyBody = ref('')
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
-const selectedAgentProfile = computed(() => defaultAgentProfile(
-  agentProfiles.value,
-  defaultAgentProfileId.value
-))
 const agentSendTitle = computed(() => (
-  agentReadiness.directSendReady
-    ? t('annotamd.comments.sendAgentTo', { agent: agentReadiness.selectedAgentName })
+  agentTurns.directSendReady
+    ? t('annotamd.comments.sendAgentTo', { agent: agentTurns.selectedAgentName })
     : t('annotamd.comments.agentStatusDirectUnavailable')
 ))
 const documentComments = computed(() =>
@@ -320,15 +317,14 @@ const submitComment = (): void => {
 }
 
 const submitCommentToAgent = async(): Promise<void> => {
-  const profile = selectedAgentProfile.value
   const latestMessage = draftBody.value.trim()
-  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
   const comment = commentStore.addDocumentComment(filePath.value, latestMessage)
   if (!comment) return
   draftBody.value = ''
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, comment.id, latestMessage, profile)
+  const reply = await agentTurns.send(filePath.value, comment.id, latestMessage)
+  if (reply) commentStore.addAgentReply(filePath.value, comment.id, reply)
 }
 
 const saveEdit = (id: string): void => {
@@ -417,15 +413,14 @@ const saveReply = (id: string): void => {
 }
 
 const saveReplyToAgent = async(id: string): Promise<void> => {
-  const profile = selectedAgentProfile.value
   const latestMessage = replyBody.value.trim()
-  if (!filePath.value || !profile || !latestMessage || !agentReadiness.directSendReady) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
+  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
   commentStore.addReply(filePath.value, id, latestMessage)
   replyingId.value = null
   replyBody.value = ''
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, id, latestMessage, profile)
+  const reply = await agentTurns.send(filePath.value, id, latestMessage)
+  if (reply) commentStore.addAgentReply(filePath.value, id, reply)
 }
 
 const sendExistingMessageToAgent = async(
@@ -434,22 +429,15 @@ const sendExistingMessageToAgent = async(
   latestMessage: string
 ): Promise<void> => {
   closeMessageMenus()
-  const profile = selectedAgentProfile.value
-  if (!filePath.value || !profile || !agentReadiness.directSendReady ||
+  if (!filePath.value || !agentTurns.directSendReady ||
     !isLatestLocalMessage(comment, messageId)) return
-  if (!await editorStore.SAVE_CURRENT_FOR_AGENT()) return
   await commentStore.persistFile(filePath.value)
-  await agentTurns.send(filePath.value, comment.id, latestMessage, profile)
+  const reply = await agentTurns.send(filePath.value, comment.id, latestMessage)
+  if (reply) commentStore.addAgentReply(filePath.value, comment.id, reply)
 }
 
-watch(
-  [agentProfiles, defaultAgentProfileId, () => preferences.commentMcpEnabled],
-  () => void agentReadiness.refresh(),
-  { deep: true }
-)
-
 onMounted(() => {
-  agentReadiness.start()
+  agentTurns.startReadiness()
   document.addEventListener('pointerdown', handleMessageMenuOutsidePointerDown, true)
   document.addEventListener('click', handleMessageMenuOutsidePointerDown, true)
 })
@@ -681,10 +669,27 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-agent-turn-status {
-  margin: 8px 10px 0;
+  margin: 0;
   color: var(--themeColor);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.annotamd-agent-turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 10px 0;
+}
+
+.annotamd-agent-turn-stop {
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--themeColor);
+  font-size: 12px;
 }
 
 .annotamd-document-comment-top button:hover,

@@ -143,6 +143,13 @@ import { useAnnotaMDCommentsStore, type AnnotaMDSelection } from '@/store/annota
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
+import {
+  AGENT_DOCUMENT_TRANSACTION_EVENT,
+  AgentDocumentTurnController,
+  createAgentDocumentUri,
+  type AgentDocumentEditorContext,
+  type AgentDocumentTransactionEvent
+} from './agentDocumentTransaction'
 import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
 
 // Importing the engine entrypoint auto-injects its editor CSS (the muya.ts
@@ -156,6 +163,7 @@ import { type InputNumberInstance } from 'element-plus'
 
 const { t } = useI18n()
 const STANDAR_Y = 320
+const agentDocumentTurnController = new AgentDocumentTurnController()
 
 // Map the desktop language preference to the engine's bundled locale objects.
 const MUYA_LOCALES: Record<string, ILocale> = {
@@ -1964,6 +1972,51 @@ const flushActiveEditor = () => {
   captureActiveEngineHistory()
 }
 
+const getAgentDocumentEditorContext = (): AgentDocumentEditorContext | null => {
+  const muya = editor.value
+  if (!muya) return null
+  return {
+    flush: () => muya.flush(),
+    getCurrentDocument: () => {
+      const file = currentFile.value
+      if (!file?.id) return null
+      const filePath = file.pathname || undefined
+      return {
+        documentHandleId: file.id,
+        documentId: file.id,
+        documentUri: createAgentDocumentUri(file.id, filePath),
+        filePath
+      }
+    },
+    getMarkdown: () => muya.getMarkdown(),
+    normalizeMarkdown: (markdown) => muya.editor.jsonState.getMarkdownFromState(
+      muya.editor.jsonState.markdownToState(markdown)
+    ),
+    getState: () => muya.getState(),
+    replaceContent: (markdown) => muya.replaceContent(markdown),
+    setCommentTransformSuppressed: (suppressed) => {
+      skipNextCommentOtTransform = suppressed
+    },
+    remapComments: (filePath, previousDocument, nextDocument) => {
+      annotaMDCommentsStore.remapSelectionAnchorsBetweenDocuments(
+        filePath,
+        previousDocument,
+        nextDocument
+      )
+      queueAnnotaMDCommentHighlights()
+    }
+  }
+}
+
+const handleAgentDocumentTransaction = (payload: unknown): void => {
+  const event = payload as Partial<AgentDocumentTransactionEvent> | null
+  if (!event?.request || typeof event.resolve !== 'function') return
+  event.resolve(agentDocumentTurnController.handle(
+    event.request,
+    getAgentDocumentEditorContext()
+  ))
+}
+
 const focusEditor = () => {
   editor.value?.focus()
 }
@@ -2154,6 +2207,7 @@ onMounted(() => {
 
   const container = getScrollContainer()!
   container.classList.add('annotamd-editor-scroll-container')
+  container.classList.add('annotamd-editor-width-stable')
   stopEditorScrollbarModeWatch = watch(
     [commentPaneVisible, editorScrollbarVisible],
     ([paneVisible, scrollbarVisible]) => {
@@ -2199,6 +2253,7 @@ onMounted(() => {
   bus.on('image-uploaded', handleUploadedImage)
   bus.on('file-changed', handleFileChange)
   bus.on('flush-active-editor', flushActiveEditor)
+  bus.on(AGENT_DOCUMENT_TRANSACTION_EVENT, handleAgentDocumentTransaction)
   bus.on('editor-blur', blurEditor)
   bus.on('editor-focus', focusEditor)
   bus.on('copyAsRich', handleCopyPaste)
@@ -2395,6 +2450,12 @@ onMounted(() => {
     const annotaMDSelection = getAnnotaMDSelection(changes)
     if (annotaMDSelection) {
       annotaMDCommentsStore.setActiveSelection(annotaMDSelection)
+      window.dispatchEvent(new CustomEvent('annotamd:agent-selection-changed', {
+        detail: {
+          documentId: currentFile.value?.id ?? '',
+          text: annotaMDSelection.exactQuote || annotaMDSelection.quote
+        }
+      }))
     }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what
@@ -2432,6 +2493,7 @@ onBeforeUnmount(() => {
   bus.off('image-uploaded', handleUploadedImage)
   bus.off('file-changed', handleFileChange)
   bus.off('flush-active-editor', flushActiveEditor)
+  bus.off(AGENT_DOCUMENT_TRANSACTION_EVENT, handleAgentDocumentTransaction)
   bus.off('editor-blur', blurEditor)
   bus.off('editor-focus', focusEditor)
   bus.off('copyAsRich', handleCopyPaste)

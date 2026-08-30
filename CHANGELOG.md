@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.16.0 - 2026-08-30
+
+### Added
+
+- Added a persistent Agent workspace beside the editor with streaming messages, tool activity, attachments, suggested document tasks, searchable and renameable conversation history, and model and reasoning-effort selection.
+- Added local CLI Agent profiles for Codex, Claude Code, OpenCode, Cursor, CodeBuddy, Qoder, Grok, and Pi, with executable detection, connection testing, and provider-specific model discovery.
+- Added native CLI approval forwarding with Request Approval and Full Access modes, plus document change review with per-turn Diff, keep, and rollback actions.
+- Added current-document, selected-text, unsaved-buffer, and comment context for Agent conversations, along with setup guides and copyable Skills and MCP configuration.
+- Added image copying from the image toolbar, block menu, and native context menu, together with direct image downloading from the context menu.
+
+### Changed
+
+- Reworked Agent settings into a denser bordered layout with compact CLI configuration rows, clearer status results, and manual external-Agent setup instructions.
+- Unified Comments and Agent in the same adjustable right pane, moved their switches into the top bar, and kept the selected Agent, model, reasoning effort, and permission mode consistent when consulting from comments.
+- Redesigned Agent messages as compact opposing bubbles: user messages use a restrained green surface on the right, while Agent replies use a neutral surface on the left.
+- Improved image resize lifecycle, editor floating-menu boundaries, and continuous comment underlines across mixed inline content.
+
+### Fixed
+
+- Fixed Agent model and permission menus closing before all options were selected, inconsistent Comments and Agent pane widths, and history rows failing to identify the active conversation in green.
+- Fixed image resize tasks continuing after the selected image had been removed, image and diagram copy actions failing for local or remote sources, and stale image controls causing renderer errors.
+- Fixed floating format controls overflowing the editor edges and comment highlights breaking around inline formatting.
+
 ## 2.15.0 - 2026-08-02
 
 ### Added

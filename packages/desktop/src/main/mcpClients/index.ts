@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
-import { access } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
@@ -15,6 +15,7 @@ import type {
   AnnotaMDMcpClientConfigureResult,
   AnnotaMDMcpClientId,
   AnnotaMDMcpClientState,
+  AnnotaMDExternalAgentGuide,
   AnnotaMDMcpManualConfigResult
 } from '@shared/types/mcpClients'
 
@@ -199,6 +200,12 @@ export const createCustomAgentManualConfig = (): AnnotaMDMcpManualConfigResult =
     manualConfig: createStandardMcpManualConfig(getLaunchSpec())
   }
 }
+
+export const createExternalAgentGuide = async(): Promise<AnnotaMDExternalAgentGuide> => ({
+  manualConfig: createStandardMcpManualConfig(getLaunchSpec()),
+  skillName: 'annotamd-comment-review',
+  skillContent: await readFile(join(getCommentSkillSourceDirectory(), 'SKILL.md'), 'utf8')
+})
 
 export const inspectMcpClient = async(id: AnnotaMDMcpClientId): Promise<AnnotaMDMcpClientState> => {
   const executable = await findExecutable(id)

@@ -53,13 +53,25 @@ describe('empty editor start actions', () => {
     )
   })
 
-  it('does not reserve comment-pane space while the editor is empty', () => {
+  it('keeps Agent available in the empty editor while comments still close', () => {
     expect(appComponent).toMatch(
       /const commentPaneActive = computed<boolean>\(\(\) => \{[\s\S]*?init\.value && hasCurrentFile\.value && commentPaneVisible\.value/
     )
-    expect(appComponent).toContain(":class=\"{ 'comment-pane-open': commentPaneActive }\"")
     expect(appComponent).toMatch(
-      /'--annotamd-comment-pane-width': commentPaneActive\.value \? `\$\{commentPaneWidth\.value\}px` : '0px'/
+      /const agentPaneActive = computed<boolean>\(\(\) => \{\s*return init\.value && rightPaneMode\.value === 'agent'/
+    )
+    expect(appComponent).toMatch(
+      /const emptyAgentLauncherVisible = computed<boolean>\(\(\) => \{\s*return init\.value && !hasCurrentFile\.value && !agentPaneActive\.value/
+    )
+    expect(appComponent).toContain('data-testid="empty-agent-toggle"')
+    expect(appComponent).toMatch(
+      /watch\(\[init, hasCurrentFile\][\s\S]*?rightPaneStore\.closeIf\('comments'\)/
+    )
+    expect(appComponent).toMatch(
+      /:class="\{[\s\S]*?'comment-pane-open': rightPaneActive,[\s\S]*?'agent-pane-maximized': agentPaneActive && agentMaximized[\s\S]*?\}"/
+    )
+    expect(appComponent).toMatch(
+      /'--annotamd-comment-pane-width': rightPaneActive\.value[\s\S]*?agentPaneActive\.value && agentMaximized\.value[\s\S]*?`\$\{activePaneWidth\.value\}px`[\s\S]*?: '0px'/
     )
   })
 

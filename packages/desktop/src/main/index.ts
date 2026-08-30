@@ -17,7 +17,7 @@ import { registerSandboxIpcHandlers } from './ipc'
 import { scheduleMcpClientInspection } from './ipc/mcpClients'
 import { cleanupMountedAnnotaMdInstallers } from './utils/macosInstallerVolumes'
 import { scheduleStartupUpdateCheck, setAutomaticUpdateDownloads } from './updater'
-import { stopAllAgentTurns } from './agentTurns/ClaudeAgentTurnService'
+import { disposeAiWorkspace } from './ai'
 
 // Set version strings into global and process.versions
 process.env.ANNOTAMD_VERSION = ANNOTAMD_VERSION
@@ -157,7 +157,7 @@ onInternalChannel('broadcast-preferences-changed', (change: Record<string, unkno
   }
 })
 app.once('before-quit', () => {
-  stopAllAgentTurns()
+  void disposeAiWorkspace()
   if (agentBridgeModule) {
     void agentBridgeModule
       .then(({ setAgentBridgeEnabled }) => setAgentBridgeEnabled(false))

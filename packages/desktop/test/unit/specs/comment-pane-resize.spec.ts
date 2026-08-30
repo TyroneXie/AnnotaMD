@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  AGENT_PANE_DEFAULT_WIDTH,
+  AGENT_PANE_MAX_WIDTH,
+  AGENT_PANE_MIN_WIDTH,
   COMMENT_PANE_DEFAULT_WIDTH,
   COMMENT_PANE_MAX_WIDTH,
   COMMENT_PANE_MIN_WIDTH,
+  clampAgentPaneWidth,
   clampCommentPaneWidth,
+  readAgentPaneWidth,
   readCommentPaneWidth,
+  writeAgentPaneWidth,
   writeCommentPaneWidth
 } from '@/util/commentPaneResize'
 
@@ -28,6 +34,20 @@ describe('comment pane resizing', () => {
     expect(readCommentPaneWidth(storage, 1400)).toBe(COMMENT_PANE_DEFAULT_WIDTH)
     writeCommentPaneWidth(438, storage)
     expect(readCommentPaneWidth(storage, 1400)).toBe(438)
+  })
+
+  it('shares one width between comments and Agent', () => {
+    expect(readAgentPaneWidth(storage, 1400)).toBe(AGENT_PANE_DEFAULT_WIDTH)
+    expect(clampAgentPaneWidth(120, 1400)).toBe(AGENT_PANE_MIN_WIDTH)
+    expect(clampAgentPaneWidth(900, 1400)).toBe(AGENT_PANE_MAX_WIDTH)
+
+    writeCommentPaneWidth(438, storage)
+    expect(readCommentPaneWidth(storage, 1400)).toBe(438)
+    expect(readAgentPaneWidth(storage, 1400)).toBe(438)
+
+    writeAgentPaneWidth(476, storage)
+    expect(readCommentPaneWidth(storage, 1400)).toBe(476)
+    expect(readAgentPaneWidth(storage, 1400)).toBe(476)
   })
 
   it('ignores invalid persisted values', () => {

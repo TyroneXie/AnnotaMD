@@ -20,9 +20,26 @@ interface ConnectedClient {
   connected: boolean
 }
 
+export interface AnnotaMDAgentDocumentGateway {
+  getContext: (scopeToken: string) => Promise<unknown> | unknown
+  readDocument: (
+    scopeToken: string,
+    params: Record<string, unknown>
+  ) => Promise<unknown> | unknown
+  editDocument: (
+    scopeToken: string,
+    params: Record<string, unknown>
+  ) => Promise<unknown> | unknown
+  replaceDocument: (
+    scopeToken: string,
+    params: Record<string, unknown>
+  ) => Promise<unknown> | unknown
+}
+
 let server: Server | null = null
 let connectionPath = ''
 let enabled = false
+let documentGateway: AnnotaMDAgentDocumentGateway | null = null
 let clientCleanupTimer: NodeJS.Timeout | null = null
 let bridgeTransition: Promise<void> = Promise.resolve()
 const clients = new Map<string, ConnectedClient>()
@@ -117,13 +134,16 @@ const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown>
       return getAgentBridgeStatus()
     }
     case 'list_comments': {
+      if (!enabled) throw new Error('AnnotaMD comment access is disabled')
       const comments = service.listComments(stringParam(params, 'filePath'))
       if (!comments) throw new Error('Commented Markdown file not found')
       return comments
     }
     case 'get_comment':
+      if (!enabled) throw new Error('AnnotaMD comment access is disabled')
       return service.getComments(commentIdsParam(params))
     case 'reply_comment': {
+      if (!enabled) throw new Error('AnnotaMD comment access is disabled')
       const result = service.reply(
         stringParam(params, 'commentId'),
         stringParam(params, 'body'),
@@ -133,13 +153,28 @@ const dispatch = async({ method, params = {} }: BridgeRequest): Promise<unknown>
       broadcastCommentsChanged(result.filePath)
       return result
     }
+    case 'agent_get_context': {
+      if (!documentGateway) throw new Error('No AnnotaMD Agent document session is active')
+      return documentGateway.getContext(stringParam(params, 'scopeToken'))
+    }
+    case 'agent_read_document': {
+      if (!documentGateway) throw new Error('No AnnotaMD Agent document session is active')
+      return documentGateway.readDocument(stringParam(params, 'scopeToken'), params)
+    }
+    case 'agent_edit_document': {
+      if (!documentGateway) throw new Error('No AnnotaMD Agent document session is active')
+      return documentGateway.editDocument(stringParam(params, 'scopeToken'), params)
+    }
+    case 'agent_replace_document': {
+      if (!documentGateway) throw new Error('No AnnotaMD Agent document session is active')
+      return documentGateway.replaceDocument(stringParam(params, 'scopeToken'), params)
+    }
     default:
       throw new Error(`Unknown bridge method: ${method}`)
   }
 }
 
-export const startAgentBridgeServer = async(): Promise<void> => {
-  enabled = true
+const startAgentBridgeTransport = async(): Promise<void> => {
   if (server) {
     broadcastMcpStatus()
     return
@@ -189,8 +224,7 @@ export const startAgentBridgeServer = async(): Promise<void> => {
   broadcastMcpStatus()
 }
 
-export const stopAgentBridgeServer = async(): Promise<void> => {
-  enabled = false
+const stopAgentBridgeTransport = async(): Promise<void> => {
   if (clientCleanupTimer) clearInterval(clientCleanupTimer)
   clientCleanupTimer = null
   const activeServer = server
@@ -199,6 +233,32 @@ export const stopAgentBridgeServer = async(): Promise<void> => {
   for (const client of clients.values()) client.connected = false
   if (connectionPath && existsSync(connectionPath)) unlinkSync(connectionPath)
   broadcastMcpStatus()
+}
+
+export const startAgentBridgeServer = async(): Promise<void> => {
+  enabled = true
+  await startAgentBridgeTransport()
+}
+
+export const stopAgentBridgeServer = async(): Promise<void> => {
+  enabled = false
+  if (documentGateway) {
+    broadcastMcpStatus()
+    return
+  }
+  await stopAgentBridgeTransport()
+}
+
+export const setAgentDocumentGateway = async(
+  gateway: AnnotaMDAgentDocumentGateway | null
+): Promise<void> => {
+  documentGateway = gateway
+  bridgeTransition = bridgeTransition
+    .catch(() => {})
+    .then(() => (documentGateway || enabled)
+      ? startAgentBridgeTransport()
+      : stopAgentBridgeTransport())
+  await bridgeTransition
 }
 
 export const setAgentBridgeEnabled = async(nextEnabled: boolean): Promise<void> => {

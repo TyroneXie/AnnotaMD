@@ -21902,6 +21902,7 @@ var resolveClientIdentity = (configuredName, clientInfo) => {
 
 // src/index.ts
 var configuredClientName = process.env.ANNOTAMD_CLIENT_NAME?.trim();
+var agentScopeToken = process.env.ANNOTAMD_AGENT_SCOPE_TOKEN?.trim();
 var initialized = false;
 var clientIdentity = () => resolveClientIdentity(
   configuredClientName,
@@ -21950,6 +21951,12 @@ var callBridge = async (method, params = {}) => {
   const payload = await requestBridge(config2, method, params);
   return payload.result;
 };
+var callScopedBridge = async (method, params = {}) => {
+  if (!agentScopeToken) {
+    throw new Error("\u5F53\u524D AnnotaMD MCP \u8FDB\u7A0B\u6CA1\u6709\u6587\u6863 Agent \u6388\u6743\u3002");
+  }
+  return callBridge(method, { ...params, scopeToken: agentScopeToken });
+};
 var result = (value) => ({
   content: [{ type: "text", text: JSON.stringify(value, null, 2) }]
 });
@@ -21961,7 +21968,7 @@ var server = new McpServer({
     "\u5904\u7406\u672C\u5730 Markdown \u8BC4\u8BBA\u65F6\uFF0C\u5148\u6309\u7EDD\u5BF9 filePath \u8C03\u7528 annotamd_list_comments \u83B7\u53D6\u5168\u90E8\u8F7B\u91CF\u7D22\u5F15\u3002",
     "Local \u7ED3\u5C3E\u7EBF\u7A0B\u901A\u5E38\u7B49\u5F85\u5904\u7406\uFF1BAgent \u7ED3\u5C3E\u7EBF\u7A0B\u4ECD\u662F\u6709\u6548\u4E0A\u4E0B\u6587\uFF0C\u7528\u6237\u8981\u6C42\u7EE7\u7EED\u6216\u9700\u8981\u5B9E\u8D28\u6027\u8865\u5145\u3001\u7EA0\u9519\u65F6\u53EF\u4EE5\u7EE7\u7EED\u8BFB\u53D6\u548C\u56DE\u590D\u3002",
     "\u6839\u636E\u4EFB\u52A1\u548C\u4E0A\u4E0B\u6587\u9884\u7B97\uFF0C\u7528 annotamd_get_comment \u5355\u6761\u6216\u5206\u6279\u8BFB\u53D6\u5B8C\u6574\u7EBF\u7A0B\uFF1B\u7528\u6237\u660E\u786E\u8981\u6C42\u4F9D\u636E\u5168\u90E8\u8BC4\u8BBA\u65F6\u5FC5\u987B\u8986\u76D6\u5168\u90E8 commentId\u3002",
-    "\u662F\u5426\u8BFB\u53D6\u6B63\u6587\u3001\u8BFB\u53D6\u54EA\u4E9B\u8303\u56F4\u4EE5\u53CA\u5982\u4F55\u4FEE\u6539 Markdown\uFF0C\u7531\u5F53\u524D Agent \u4F7F\u7528\u81EA\u8EAB\u53EF\u7528\u7684\u6587\u4EF6\u80FD\u529B\u51B3\u5B9A\u3002AnnotaMD MCP \u4E0D\u8BFB\u53D6\u6216\u7F16\u8F91\u6B63\u6587\u3002",
+    agentScopeToken ? "\u5F53\u524D\u8FDB\u7A0B\u7531 AnnotaMD Agent \u4F1A\u8BDD\u542F\u52A8\u3002\u6B63\u6587\u53EA\u80FD\u901A\u8FC7 annotamd_get_context\u3001annotamd_read_document\u3001annotamd_edit_document\u3001annotamd_replace_document \u8BFB\u53D6\u6216\u4FEE\u6539\uFF1B\u4E0D\u8981\u4F7F\u7528\u6587\u4EF6\u6216 shell \u5DE5\u5177\u7ED5\u8FC7 Muya\u3002" : "\u5F53\u524D\u8FDB\u7A0B\u53EA\u63D0\u4F9B\u8BC4\u8BBA\u80FD\u529B\uFF0C\u4E0D\u8BFB\u53D6\u6216\u7F16\u8F91 Markdown \u6B63\u6587\u3002",
     "\u95EE\u9898\u3001\u8BA8\u8BBA\u3001\u5F81\u8BE2\u610F\u89C1\u548C\u6B67\u4E49\u5185\u5BB9\u4F7F\u7528 annotamd_reply_comment\uFF1B\u6B63\u6587\u5C40\u90E8\u4FEE\u6539\u4FDD\u7559\u8BC4\u8BBA\uFF0C\u53EA\u6709\u6574\u6BB5\u6279\u6CE8\u9009\u533A\u88AB\u5B8C\u5168\u66FF\u6362\u6216\u5220\u9664\u65F6\u8BC4\u8BBA\u624D\u968F\u951A\u70B9\u81EA\u52A8\u6D88\u5931\uFF0C\u5176\u4ED6\u60C5\u51B5\u7531\u7528\u6237\u51B3\u5B9A\u4F55\u65F6\u89E3\u51B3\u3002",
     "\u6BCF\u6B21\u56DE\u590D\u6216\u4FEE\u6539 Markdown \u540E\u91CD\u65B0\u8C03\u7528 annotamd_list_comments\uFF0C\u907F\u514D\u4F7F\u7528\u5DF2\u53D8\u5316\u7684\u8BC4\u8BBA\u7D22\u5F15\u548C revision\u3002",
     "\u4E0D\u8981\u4F7F\u7528\u6D4F\u89C8\u5668\u731C\u6D4B\u8BC4\u8BBA\u5185\u5BB9\u6216\u5185\u90E8\u6807\u8BC6\uFF1B\u6279\u6CE8\u670D\u52A1\u4E0D\u53EF\u7528\u65F6\u660E\u786E\u8BF4\u660E\u65E0\u6CD5\u8BFB\u53D6 AnnotaMD \u79C1\u6709\u8BC4\u8BBA\u3002"
@@ -22006,6 +22013,60 @@ server.registerTool("annotamd_reply_comment", {
   body,
   expectedRevision
 })));
+if (agentScopeToken) {
+  server.registerTool("annotamd_get_context", {
+    title: "\u8BFB\u53D6 AnnotaMD Agent \u4E0A\u4E0B\u6587",
+    description: "\u8FD4\u56DE\u672C\u6B21 Agent turn \u88AB\u6388\u6743\u7684\u6D3B\u52A8\u6587\u6863 handle\u3001\u865A\u62DF URI\u3001revision\u3001contentHash\u3001\u4FDD\u5B58\u72B6\u6001\u548C\u663E\u5F0F\u9009\u533A\u6458\u8981\uFF0C\u4E0D\u8FD4\u56DE\u672A\u6388\u6743\u6587\u4EF6\u3002",
+    inputSchema: {}
+  }, async () => result(await callScopedBridge("agent_get_context")));
+  server.registerTool("annotamd_read_document", {
+    title: "\u8BFB\u53D6 Muya \u5B9E\u65F6\u6587\u6863",
+    description: "\u6309\u6388\u6743 handle \u8BFB\u53D6 Muya \u5F53\u524D\u5B9E\u65F6 Markdown\uFF0C\u800C\u4E0D\u662F\u78C1\u76D8\u4E2D\u7684\u65E7\u5185\u5BB9\uFF1B\u8FD4\u56DE\u7684 revision \u548C contentHash \u5FC5\u987B\u539F\u6837\u7528\u4E8E\u4E0B\u4E00\u6B21\u4FEE\u6539\u3002",
+    inputSchema: {
+      handleId: string2().min(1).optional()
+    }
+  }, async ({ handleId }) => result(await callScopedBridge("agent_read_document", {
+    ...handleId ? { handleId } : {}
+  })));
+  server.registerTool("annotamd_edit_document", {
+    title: "\u7CBE\u786E\u4FEE\u6539 Muya \u6587\u6863",
+    description: "\u5728\u6307\u5B9A revision/hash \u4E0A\u6267\u884C\u4E00\u7EC4\u552F\u4E00\u3001\u975E\u91CD\u53E0\u7684\u7CBE\u786E\u6587\u672C\u66FF\u6362\u5E76\u7ACB\u5373\u66F4\u65B0 Muya\u3002\u4EFB\u4F55\u65E7\u57FA\u7EBF\u3001\u91CD\u590D\u76EE\u6807\u6216\u91CD\u53E0\u7F16\u8F91\u90FD\u4F1A\u6574\u6B21\u62D2\u7EDD\uFF1B\u6210\u529F\u540E\u8FD4\u56DE\u65B0\u7684 revision/hash\u3002",
+    inputSchema: {
+      handleId: string2().min(1),
+      expectedRevision: number2().int().nonnegative(),
+      expectedHash: string2().regex(/^[a-f0-9]{64}$/),
+      edits: array(object2({
+        oldText: string2().min(1),
+        newText: string2(),
+        occurrence: number2().int().positive().optional()
+      })).min(1).max(100)
+    }
+  }, async ({ handleId, expectedRevision, expectedHash, edits }) => result(
+    await callScopedBridge("agent_edit_document", {
+      handleId,
+      expectedRevision,
+      expectedHash,
+      edits
+    })
+  ));
+  server.registerTool("annotamd_replace_document", {
+    title: "\u66FF\u6362 Muya \u6587\u6863",
+    description: "\u5728\u6307\u5B9A revision/hash \u4E0A\u7528\u5B8C\u6574 canonical Markdown \u7ACB\u5373\u66FF\u6362\u672C\u6B21\u6388\u6743\u6587\u6863\u3002\u53EA\u9002\u5408\u65E0\u6CD5\u8868\u8FBE\u4E3A\u7CBE\u786E\u5C40\u90E8\u66FF\u6362\u7684\u4FEE\u6539\u3002",
+    inputSchema: {
+      handleId: string2().min(1),
+      expectedRevision: number2().int().nonnegative(),
+      expectedHash: string2().regex(/^[a-f0-9]{64}$/),
+      markdown: string2()
+    }
+  }, async ({ handleId, expectedRevision, expectedHash, markdown }) => result(
+    await callScopedBridge("agent_replace_document", {
+      handleId,
+      expectedRevision,
+      expectedHash,
+      markdown
+    })
+  ));
+}
 var transport = new StdioServerTransport();
 await server.connect(transport);
 var heartbeat = setInterval(() => {

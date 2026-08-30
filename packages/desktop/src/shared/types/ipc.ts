@@ -40,13 +40,48 @@ import type {
   AnnotaMDMcpStatus
 } from './comments'
 import type {
+  AnnotaMDExternalAgentGuide,
   AnnotaMDMcpClientConfigureResult,
   AnnotaMDMcpClientId,
   AnnotaMDMcpClientState,
   AnnotaMDMcpManualConfigResult
 } from './mcpClients'
 import type { AppUpdateState } from './update'
-import type { AnnotaMDAgentTurnRequest, AnnotaMDAgentTurnResult } from './agentTurns'
+import type {
+  AnnotaMDAgentTurnRequest,
+  AnnotaMDAgentTurnResult,
+  AnnotaMDAgentTurnStartedEvent,
+  AnnotaMDAgentTurnStopRequest
+} from './agentTurns'
+import type {
+  AiChangeSet,
+  AiChangeSetResolveRequest,
+  AiApprovalResolveRequest,
+  AiChangeSetResolveResult,
+  AiCliDetectionRequest,
+  AiCliDetectionResult,
+  AiConfigSaveRequest,
+  AiConfigSummary,
+  AiConnectionTestResult,
+  AiConversation,
+  AiConversationContents,
+  AiConversationCreateRequest,
+  AiConversationRenameRequest,
+  AiModelInfo,
+  AiRetryRequest,
+  AiSendRequest,
+  AiSendResult,
+  AiStopRequest,
+  AiTemplate,
+  AiTemplateSaveRequest,
+  AiWorkspaceEvent,
+  AiWorkspacePreferences,
+  AiWorkspaceSnapshot
+} from './aiWorkspace'
+import type {
+  AgentDocumentTransactionBridgeRequest,
+  AgentDocumentTransactionBridgeResponse
+} from './agentDocumentTransactions'
 
 export interface LinkPreviewMetadata {
   title: string
@@ -58,9 +93,54 @@ export interface LinkPreviewMetadata {
 // =================================================================
 
 export interface IpcInvokeChannels {
+  'annotamd::ai::snapshot': { args: []; ret: AiWorkspaceSnapshot }
+  'annotamd::ai::preferences:get': { args: []; ret: AiWorkspacePreferences }
+  'annotamd::ai::preferences:save': {
+    args: [preferences: AiWorkspacePreferences]
+    ret: AiWorkspacePreferences
+  }
+  'annotamd::ai::configs:list': { args: []; ret: AiConfigSummary[] }
+  'annotamd::ai::configs:save': { args: [request: AiConfigSaveRequest]; ret: AiConfigSummary }
+  'annotamd::ai::configs:delete': { args: [configId: string]; ret: boolean }
+  'annotamd::ai::configs:test': { args: [configId: string]; ret: AiConnectionTestResult }
+  'annotamd::ai::configs:models': { args: [configId: string]; ret: AiModelInfo[] }
+  'annotamd::ai::configs:detect-cli': {
+    args: [request: AiCliDetectionRequest]
+    ret: AiCliDetectionResult
+  }
+  'annotamd::ai::conversations:list': { args: []; ret: AiConversation[] }
+  'annotamd::ai::conversations:create': {
+    args: [request: AiConversationCreateRequest]
+    ret: AiConversation
+  }
+  'annotamd::ai::conversations:select': {
+    args: [conversationId: string]
+    ret: AiConversationContents
+  }
+  'annotamd::ai::conversations:rename': {
+    args: [request: AiConversationRenameRequest]
+    ret: AiConversation
+  }
+  'annotamd::ai::conversations:delete': { args: [conversationId: string]; ret: boolean }
+  'annotamd::ai::templates:list': { args: []; ret: AiTemplate[] }
+  'annotamd::ai::templates:save': { args: [request: AiTemplateSaveRequest]; ret: AiTemplate }
+  'annotamd::ai::templates:delete': { args: [templateId: string]; ret: boolean }
+  'annotamd::ai::change-sets:list': { args: [conversationId: string]; ret: AiChangeSet[] }
+  'annotamd::ai::change-sets:resolve': {
+    args: [request: AiChangeSetResolveRequest]
+    ret: AiChangeSetResolveResult
+  }
+  'annotamd::ai::send': { args: [request: AiSendRequest]; ret: AiSendResult }
+  'annotamd::ai::stop': { args: [request: AiStopRequest]; ret: boolean }
+  'annotamd::ai::approvals:resolve': { args: [request: AiApprovalResolveRequest]; ret: boolean }
+  'annotamd::ai::retry': { args: [request: AiRetryRequest]; ret: AiSendResult }
   'annotamd::agent-turns::run': {
     args: [request: AnnotaMDAgentTurnRequest]
     ret: AnnotaMDAgentTurnResult
+  }
+  'annotamd::agent-turns::stop': {
+    args: [request: AnnotaMDAgentTurnStopRequest]
+    ret: boolean
   }
   'annotamd::update:get-state': { args: []; ret: AppUpdateState }
   'annotamd::update:check': { args: []; ret: AppUpdateState }
@@ -77,6 +157,10 @@ export interface IpcInvokeChannels {
   'annotamd::mcp-clients::manual-config': {
     args: []
     ret: AnnotaMDMcpManualConfigResult
+  }
+  'annotamd::mcp-clients::manual-guide': {
+    args: []
+    ret: AnnotaMDExternalAgentGuide
   }
   'annotamd::mcp-clients::install-portable-skill': { args: []; ret: void }
   'annotamd::comments::mcp-status': { args: []; ret: AnnotaMDMcpStatus }
@@ -146,6 +230,9 @@ export interface IpcInvokeChannels {
 // =================================================================
 
 export interface IpcSendChannels {
+  'annotamd::ai-workspace::document-transaction-response': [
+    response: AgentDocumentTransactionBridgeResponse
+  ]
   'app-create-editor-window': [config?: unknown]
   'app-create-settings-window': []
   'app-open-directory-by-id': [windowId: number, dirPath: string]
@@ -271,6 +358,11 @@ export interface IpcSyncChannels {
 // =================================================================
 
 export interface IpcMainEventChannels {
+  'annotamd::agent-turns::started': [event: AnnotaMDAgentTurnStartedEvent]
+  'annotamd::ai::event': [event: AiWorkspaceEvent]
+  'annotamd::ai-workspace::document-transaction-request': [
+    request: AgentDocumentTransactionBridgeRequest
+  ]
   'annotamd::comments::changed': [filePath: string]
   'annotamd::comments::mcp-status-changed': [status: AnnotaMDMcpStatus]
   'language-changed': [language: string]
