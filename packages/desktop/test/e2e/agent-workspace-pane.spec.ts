@@ -43,7 +43,7 @@ test('carries selected document text into Agent context and adds text attachment
   try {
     await clearRendererErrors(app)
     await selectEditorPhrase(page, phrase)
-    await page.locator('.tab-agent-toggle').click()
+    await page.locator('.sidebar-agent-toggle').click()
 
     const pane = page.locator('.annotamd-agent-workspace')
     await expect(pane.getByTestId('ai-selection-context')).toContainText(phrase)
@@ -112,7 +112,7 @@ test('keeps the model card open while selecting model and reasoning effort', asy
       ipcMain.handle('annotamd::ai::preferences:get', () => ({ maxApiRetries: 2 }))
     })
     await clearRendererErrors(app)
-    await page.locator('.tab-agent-toggle').click()
+    await page.locator('.sidebar-agent-toggle').click()
 
     const pane = page.locator('.annotamd-agent-workspace')
     await pane.getByTestId('ai-model-selector').click()
@@ -156,7 +156,7 @@ test('shows two or three suggested document tasks and fills the composer without
 
   try {
     await clearRendererErrors(app)
-    await page.locator('.tab-agent-toggle').click()
+    await page.locator('.sidebar-agent-toggle').click()
 
     const agentPane = page.locator('.annotamd-agent-workspace')
     const suggestions = agentPane.getByTestId('ai-suggested-prompt')
@@ -175,6 +175,160 @@ test('shows two or three suggested document tasks and fills the composer without
   }
 })
 
+test('keeps one process disclosure with plain text and flat tool events', async() => {
+  const { app, page } = await launchWithMarkdown(
+    '# Tool activity\n\nCompact the Agent execution trace.\n',
+    { suppressErrorDialog: true }
+  )
+
+  try {
+    await app.evaluate(({ ipcMain }) => {
+      for (const channel of [
+        'annotamd::ai::snapshot',
+        'annotamd::ai::configs:list',
+        'annotamd::ai::configs:models',
+        'annotamd::ai::preferences:get'
+      ]) ipcMain.removeHandler(channel)
+      const now = Date.now()
+      const config = {
+        id: 'tool-trace-cli',
+        name: 'Codex CLI',
+        kind: 'cli',
+        provider: 'codex',
+        isDefault: true,
+        enabled: true,
+        defaultModelId: 'tool-trace-model'
+      }
+      const conversation = {
+        id: 'tool-trace-conversation',
+        title: 'Review document',
+        mode: 'agent',
+        configId: config.id,
+        modelId: config.defaultModelId,
+        templateIds: [],
+        status: 'completed',
+        createdAt: now,
+        updatedAt: now
+      }
+      const messages = [
+        {
+          id: 'tool-trace-user', conversationId: conversation.id, role: 'user',
+          content: 'Review this document', status: 'complete', createdAt: now
+        },
+        {
+          id: 'tool-trace-summary', conversationId: conversation.id, role: 'system',
+          content: JSON.stringify({ durationMs: 125_000 }), status: 'complete',
+          toolName: 'annotamd:run-summary', createdAt: now + 1
+        },
+        {
+          id: 'tool-trace-reasoning', conversationId: conversation.id, role: 'system',
+          content: 'Checking the document structure.', status: 'complete',
+          toolName: 'annotamd:reasoning', createdAt: now + 2
+        },
+        {
+          id: 'tool-trace-intro', conversationId: conversation.id, role: 'assistant',
+          content: 'I will inspect the document first.', status: 'complete', createdAt: now + 3
+        },
+        ...Array.from({ length: 3 }, (_, index) => ({
+          id: `tool-trace-${index + 1}`,
+          conversationId: conversation.id,
+          role: 'tool',
+          content: `Output ${index + 1}`,
+          status: 'complete',
+          createdAt: now + index + 4,
+          toolCallId: `call-${index + 1}`,
+          toolName: index === 0 ? 'commandExecution' : 'mcpToolCall'
+        })),
+        {
+          id: 'tool-trace-progress', conversationId: conversation.id, role: 'assistant',
+          content: 'I found three issues and will apply the fixes.', status: 'complete',
+          createdAt: now + 7
+        },
+        ...Array.from({ length: 3 }, (_, index) => ({
+          id: `tool-trace-${index + 4}`,
+          conversationId: conversation.id,
+          role: 'tool',
+          content: `Output ${index + 4}`,
+          status: 'complete',
+          createdAt: now + index + 8,
+          toolCallId: `call-${index + 4}`,
+          toolName: 'mcpToolCall'
+        })),
+        {
+          id: 'tool-trace-final', conversationId: conversation.id, role: 'assistant',
+          content: 'The full review is complete.', status: 'complete', createdAt: now + 11
+        }
+      ]
+      ipcMain.handle('annotamd::ai::snapshot', () => ({
+        readiness: { status: 'ready', configId: config.id, modelId: config.defaultModelId },
+        configs: [config],
+        conversations: [conversation],
+        activeConversationId: conversation.id,
+        messages,
+        changeSets: [],
+        running: false
+      }))
+      ipcMain.handle('annotamd::ai::configs:list', () => [config])
+      ipcMain.handle('annotamd::ai::configs:models', () => [
+        { id: config.defaultModelId, name: 'Tool Trace Model', provider: 'codex' }
+      ])
+      ipcMain.handle('annotamd::ai::preferences:get', () => ({ maxApiRetries: 2 }))
+    })
+    await clearRendererErrors(app)
+    await page.locator('.sidebar-agent-toggle').click()
+
+    const pane = page.locator('.annotamd-agent-workspace')
+    const processToggle = pane.getByTestId('ai-process-group-toggle')
+    await expect(processToggle).toHaveCount(1)
+    await expect(processToggle).toContainText('6')
+    await expect(processToggle).toContainText('2 min 5 sec')
+    await expect(pane.getByTestId('ai-process-group-body')).toHaveCount(0)
+    await expect(pane.getByText('The full review is complete.', { exact: true })).toBeVisible()
+
+    await processToggle.click()
+    const processBody = pane.getByTestId('ai-process-group-body')
+    const toolLists = pane.getByTestId('ai-tool-list')
+    const toolRows = pane.getByTestId('ai-tool-message')
+    const processMessages = pane.getByTestId('ai-process-message')
+    await expect(processBody).toBeVisible()
+    await expect(toolLists).toHaveCount(2)
+    await expect(toolRows).toHaveCount(6)
+    await expect(processMessages).toHaveCount(3)
+    await expect(pane.getByTestId('ai-tool-group')).toHaveCount(0)
+    await expect(pane.getByTestId('ai-tool-group-viewport')).toHaveCount(0)
+    await expect(pane.getByTestId('ai-tool-details')).toHaveCount(0)
+    await expect(toolRows.locator('button')).toHaveCount(0)
+    await expect(pane.getByText('I will inspect the document first.', { exact: true })).toBeVisible()
+    await expect(pane.getByText(
+      'I found three issues and will apply the fixes.', { exact: true }
+    )).toBeVisible()
+    await expect(pane.getByText('Run command', { exact: true })).toHaveCount(1)
+    await expect(pane.getByText('Use MCP tool', { exact: true })).toHaveCount(5)
+    await expect(processMessages.nth(0)).toHaveAttribute('aria-label', 'Reasoning summary')
+    await expect(pane.getByText('Reasoning summary', { exact: true })).toHaveCount(0)
+    expect(await processMessages.nth(0).evaluate((element) => (
+      getComputedStyle(element).borderLeftWidth
+    ))).toBe('0px')
+
+    const introBox = await pane.getByText(
+      'I will inspect the document first.', { exact: true }
+    ).boundingBox()
+    const firstToolBox = await toolRows.nth(0).boundingBox()
+    const progressBox = await pane.getByText(
+      'I found three issues and will apply the fixes.', { exact: true }
+    ).boundingBox()
+    const fourthToolBox = await toolRows.nth(3).boundingBox()
+    const finalBox = await pane.getByText('The full review is complete.', { exact: true }).boundingBox()
+    expect(firstToolBox?.y ?? 0).toBeGreaterThan(introBox?.y ?? 0)
+    expect(progressBox?.y ?? 0).toBeGreaterThan(firstToolBox?.y ?? 0)
+    expect(fourthToolBox?.y ?? 0).toBeGreaterThan(progressBox?.y ?? 0)
+    expect(finalBox?.y ?? 0).toBeGreaterThan(fourthToolBox?.y ?? 0)
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps the no-config Agent sidebar controls clickable and the header minimal', async() => {
   const { app, page } = await launchWithMarkdown(
     '# AI workspace controls\n\nNo configuration interaction test.\n',
@@ -183,7 +337,7 @@ test('keeps the no-config Agent sidebar controls clickable and the header minima
 
   try {
     await clearRendererErrors(app)
-    await page.locator('.tab-agent-toggle').click()
+    await page.locator('.sidebar-agent-toggle').click()
 
     const agentPane = page.locator('.annotamd-agent-workspace')
     await expect(agentPane).toBeVisible()
@@ -203,11 +357,11 @@ test('keeps the no-config Agent sidebar controls clickable and the header minima
       [agentPane.getByTestId('ai-new-session'), 'New chat'],
       [agentPane.getByTestId('ai-history-toggle'), 'Chat history'],
       [agentPane.getByTestId('ai-delete-current').locator('..'), 'Delete chat'],
-      [agentPane.getByTestId('ai-toggle-maximize'), 'Maximize'],
       [agentPane.getByTestId('ai-close'), 'Close AI Assistant']
     ] as const
     for (const [control, label] of headerTooltips) {
       await control.hover()
+      await page.waitForTimeout(200)
       await expect(visibleTooltip).toContainText(label)
       await timeline.hover()
       await expect(visibleTooltip).toHaveCount(0)
@@ -535,40 +689,30 @@ test('provides unified AI conversations and keeps Agent available without a docu
       })
     })
     await clearRendererErrors(app)
+    await page.locator('.editor-component').waitFor({ state: 'visible' })
 
     const agentPane = page.locator('.annotamd-agent-workspace')
     const commentPane = page.locator('.annotamd-comment-pane')
-    const titleBar = page.locator('.title-bar')
-    const commentToggle = titleBar.locator('.tab-comment-toggle')
-    const agentToggle = titleBar.locator('.tab-agent-toggle')
+    const commentToggle = page.locator('.editor-tabs .tab-comment-toggle')
+    const agentToggle = page.locator('.sidebar-agent-toggle')
     await expect(commentToggle).toBeVisible()
     await expect(agentToggle).toBeVisible()
     await expect(commentToggle).not.toHaveClass(/is-active/)
-    await expect(agentToggle).not.toHaveClass(/is-active/)
+    await expect(agentToggle).not.toHaveClass(/\bactive\b/)
     await expect.poll(async() => {
-      const [bar, comment, agent] = await Promise.all([
-        titleBar.boundingBox(),
+      const [comment, agent] = await Promise.all([
         commentToggle.boundingBox(),
         agentToggle.boundingBox()
       ])
-      if (!bar || !comment || !agent) return null
-      return {
-        sameWidth: Math.abs(comment.width - agent.width) <= 1,
-        sameHeight: Math.abs(comment.height - agent.height) <= 1,
-        commentInside: comment.y >= bar.y && comment.y + comment.height <= bar.y + bar.height + 1,
-        agentInside: agent.y >= bar.y && agent.y + agent.height <= bar.y + bar.height + 1
-      }
-    }).toEqual({
-      sameWidth: true,
-      sameHeight: true,
-      commentInside: true,
-      agentInside: true
-    })
+      if (!comment || !agent) return null
+      return agent.x < comment.x
+    }).toBe(true)
     await agentToggle.click()
     await expect(agentPane).toBeVisible()
-    await expect(agentToggle).toHaveClass(/is-active/)
+    await expect(agentToggle).toHaveClass(/\bactive\b/)
     await expect(commentToggle).not.toHaveClass(/is-active/)
-    await expect(agentPane).toHaveCSS('width', '360px')
+    await expect(page.locator('.side-bar')).toHaveCSS('width', '428px')
+    await expect(agentPane).toHaveCSS('width', '380px')
     await expect(agentPane).toHaveCSS('box-sizing', 'border-box')
     await agentPane.getByTestId('ai-history-toggle').click()
     const activeHistoryDot = page.locator(
@@ -577,7 +721,6 @@ test('provides unified AI conversations and keeps Agent available without a docu
     await expect(activeHistoryDot).toHaveCSS('background-color', 'rgb(32, 161, 98)')
     await agentPane.getByTestId('ai-history-toggle').click()
     await expect(page.locator('.annotamd-agent-history')).not.toBeVisible()
-    const sharedPaneWidth = await agentPane.evaluate(element => element.getBoundingClientRect().width)
     const agentEditorClientWidth = await page.locator('.editor-component')
       .evaluate(element => element.clientWidth)
     await expect(page.locator('.annotamd-editor-scroll-container'))
@@ -647,19 +790,13 @@ test('provides unified AI conversations and keeps Agent available without a docu
     await agentPane.getByTestId('ai-send').click()
     const userMessage = agentPane.locator('.annotamd-agent-message.is-user')
     const assistantMessage = agentPane.locator('.annotamd-agent-message.is-assistant')
+    const streamingProcessMessage = agentPane.getByTestId('ai-process-message')
     await expect(userMessage).toContainText('Revise this document')
-    await expect(assistantMessage).toContainText('Mocked unified response')
+    await expect(streamingProcessMessage).toContainText('Mocked unified response')
+    await expect(assistantMessage).toHaveCount(0)
     await expect(agentPane.locator('.annotamd-agent-message-labels')).toHaveCount(0)
     await expect(userMessage).toHaveCSS('align-self', 'flex-end')
-    await expect(assistantMessage).toHaveCSS('align-self', 'flex-start')
-    await expect(agentPane.locator('.annotamd-agent-message-meta')).toHaveCount(2)
-    expect(await userMessage.locator('.annotamd-agent-message-bubble').evaluate((element) => {
-      const userColor = getComputedStyle(element).backgroundColor
-      const assistant = document.querySelector(
-        '.annotamd-agent-message.is-assistant .annotamd-agent-message-bubble'
-      )
-      return assistant ? userColor !== getComputedStyle(assistant).backgroundColor : false
-    })).toBe(true)
+    await expect(agentPane.locator('.annotamd-agent-message-meta')).toHaveCount(1)
     await expect(agentPane.getByTestId('ai-stop')).toBeVisible()
     await expect.poll(() => app.evaluate(() => (
       (global as unknown as { __annotamd_ai_e2e__?: { sends: Array<Record<string, unknown>> } })
@@ -673,6 +810,16 @@ test('provides unified AI conversations and keeps Agent available without a docu
 
     await agentPane.getByTestId('ai-stop').click()
     await expect(agentPane.getByTestId('ai-send')).toBeVisible()
+    await expect(assistantMessage).toContainText('Mocked unified response')
+    await expect(assistantMessage).toHaveCSS('align-self', 'flex-start')
+    await expect(agentPane.locator('.annotamd-agent-message-meta')).toHaveCount(2)
+    expect(await userMessage.locator('.annotamd-agent-message-bubble').evaluate((element) => {
+      const userColor = getComputedStyle(element).backgroundColor
+      const assistant = document.querySelector(
+        '.annotamd-agent-message.is-assistant .annotamd-agent-message-bubble'
+      )
+      return assistant ? userColor !== getComputedStyle(assistant).backgroundColor : false
+    })).toBe(true)
     await expect.poll(() => app.evaluate(() => (
       (global as unknown as { __annotamd_ai_e2e__?: { stops: unknown[] } })
         .__annotamd_ai_e2e__?.stops.length ?? 0
@@ -747,15 +894,16 @@ test('provides unified AI conversations and keeps Agent available without a docu
         .__annotamd_ai_e2e__?.resolves.length ?? 0
     ))).toBe(1)
 
-    await agentPane.getByTestId('ai-toggle-maximize').click()
-    await expect(agentPane).toHaveClass(/is-maximized/)
-    await agentPane.getByTestId('ai-toggle-maximize').click()
-    await expect(agentPane).not.toHaveClass(/is-maximized/)
-
     await commentToggle.click()
     await expect(commentPane).toBeVisible()
     await expect(commentToggle).toHaveClass(/is-active/)
-    await expect(agentToggle).not.toHaveClass(/is-active/)
+    await expect(agentToggle).not.toHaveClass(/\bactive\b/)
+    await commentToggle.click()
+    await expect(commentPane).toHaveCount(0)
+    await expect(commentToggle).not.toHaveClass(/is-active/)
+    await commentToggle.click()
+    await expect(commentPane).toBeVisible()
+    await expect(commentToggle).toHaveClass(/is-active/)
     const commentClose = commentPane.locator('.annotamd-pane-close')
     await expect(commentClose.locator('.el-icon')).toBeVisible()
     const commentCloseLabel = await commentClose.getAttribute('aria-label')
@@ -764,10 +912,8 @@ test('provides unified AI conversations and keeps Agent available without a docu
     await expect(page.getByRole('tooltip')).toContainText(commentCloseLabel ?? '')
     await expect(commentPane).toHaveCSS('box-sizing', 'border-box')
     await expect(agentPane).toHaveCount(0)
-    await expect.poll(() => commentPane.evaluate(element => element.getBoundingClientRect().width))
-      .toBe(sharedPaneWidth)
     await expect.poll(() => page.locator('.editor-component').evaluate(element => element.clientWidth))
-      .toBe(agentEditorClientWidth)
+      .toBeGreaterThan(agentEditorClientWidth)
     await expect.poll(async() => {
       const [tabsBottom, commentHeaderBottom] = await Promise.all([
         page.locator('.editor-tabs').evaluate(element => element.getBoundingClientRect().bottom),
@@ -778,10 +924,15 @@ test('provides unified AI conversations and keeps Agent available without a docu
     }).toBeLessThanOrEqual(1)
     await agentToggle.click()
     await expect(agentPane).toBeVisible()
-    await expect(agentToggle).toHaveClass(/is-active/)
+    await expect(agentToggle).toHaveClass(/\bactive\b/)
+    await expect(commentPane).toHaveCount(0)
     await expect(commentToggle).not.toHaveClass(/is-active/)
-    await expect.poll(() => agentPane.evaluate(element => element.getBoundingClientRect().width))
-      .toBe(sharedPaneWidth)
+    await page.setViewportSize({ width: 1500, height: 800 })
+    await commentToggle.click()
+    await expect(commentPane).toBeVisible()
+    await expect(agentPane).toBeVisible()
+    await expect(agentToggle).toHaveClass(/\bactive\b/)
+    await expect(commentToggle).toHaveClass(/is-active/)
     await expect.poll(async() => {
       const [tabsShadow, agentHeaderShadow] = await Promise.all([
         page.locator('.editor-tabs').evaluate(element => getComputedStyle(element).boxShadow),
@@ -796,12 +947,11 @@ test('provides unified AI conversations and keeps Agent available without a docu
     await expect(page.locator('.recent-files-projects')).toBeVisible()
     await expect(agentPane).toBeVisible()
     await expect(agentPane.getByTestId('ai-open-comments')).toHaveCount(0)
-    await expect(page.getByTestId('empty-agent-toggle')).toHaveCount(0)
 
     await agentPane.getByTestId('ai-close').click()
     await expect(agentPane).toHaveCount(0)
-    await expect(page.getByTestId('empty-agent-toggle')).toBeVisible()
-    await page.getByTestId('empty-agent-toggle').click()
+    await expect(agentToggle).not.toHaveClass(/\bactive\b/)
+    await agentToggle.click()
     await expect(agentPane).toBeVisible()
     await expect(agentPane.locator('.annotamd-agent-message')).toHaveCount(2)
 

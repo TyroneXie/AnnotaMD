@@ -12,8 +12,8 @@ import type { AiConfigSummary, AiWorkspaceEvent } from '@shared/types/aiWorkspac
 import { useAgentConversationsStore } from './agentConversations'
 import { useAiSettingsStore } from './aiSettings'
 import { useEditorStore } from './editor'
+import { useLayoutStore } from './layout'
 import { usePreferencesStore } from './preferences'
-import { useRightPaneStore } from './rightPane'
 
 interface AgentTurnsState {
   runningByComment: Record<string, boolean>
@@ -160,7 +160,7 @@ export const useAgentTurnsStore = defineStore('agentTurns', {
       if (!shouldRevealCommentAgentConversation(result)) return
       const conversations = useAgentConversationsStore()
       await conversations.select(result.conversationId, true)
-      useRightPaneStore().openAgent()
+      useLayoutStore().SET_LAYOUT({ rightColumn: 'agent', showSideBar: true })
     },
 
     async send(

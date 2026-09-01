@@ -106,7 +106,7 @@ describe('AnnotaMD unified AI comment turns', () => {
     expect(turnStore).toContain('activeByComment')
     expect(turnStore).toContain('if (!shouldRevealCommentAgentConversation(result)) return')
     expect(turnStore).toContain('await conversations.select(result.conversationId, true)')
-    expect(turnStore).toContain('useRightPaneStore().openAgent()')
+    expect(turnStore).toContain("useLayoutStore().SET_LAYOUT({ rightColumn: 'agent', showSideBar: true })")
     expect(turnStore).toContain("settings.selectedConfig('agent')")
     expect(turnStore).toContain('modelId: settings.selections.agent.modelId')
     for (const relativePath of [

@@ -203,8 +203,8 @@ onUnmounted(() => {
   width: 100%;
 
   & .el-input__wrapper {
-    min-height: 46px;
-    padding: 0 16px;
+    min-height: 38px;
+    padding: 0 14px;
     border: 1px solid color-mix(in srgb, var(--editorColor) 15%, transparent);
     border-radius: 13px;
     background: var(--editorColor02);
@@ -222,8 +222,8 @@ onUnmounted(() => {
   & .el-input__inner {
     border: none;
     background: transparent;
-    height: 44px;
-    line-height: 44px;
+    height: 36px;
+    line-height: 36px;
     font-size: 13px;
   }
 }

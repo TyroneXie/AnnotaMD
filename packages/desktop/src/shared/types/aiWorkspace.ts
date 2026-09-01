@@ -221,6 +221,9 @@ export interface AiConversationRenameRequest {
 export type AiMessageRole = 'user' | 'assistant' | 'tool' | 'system'
 export type AiMessageStatus = 'streaming' | 'complete' | 'failed' | 'cancelled'
 
+export const AI_REASONING_MESSAGE_TOOL = 'annotamd:reasoning'
+export const AI_RUN_SUMMARY_TOOL = 'annotamd:run-summary'
+
 export interface AiMessage {
   id: string
   conversationId: string
@@ -425,8 +428,9 @@ export type AiWorkspaceEvent =
       conversationId: string
       turnId: string
       messageId: string
-      role: Extract<AiMessageRole, 'assistant' | 'tool'>
+      role: Extract<AiMessageRole, 'assistant' | 'tool' | 'system'>
       delta: string
+      toolName?: string
     }
   | { type: 'message'; conversationId: string; turnId?: string; message: AiMessage }
   | { type: 'tool'; conversationId: string; turnId: string; tool: AiToolCall }

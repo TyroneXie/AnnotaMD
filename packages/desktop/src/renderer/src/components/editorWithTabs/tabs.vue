@@ -44,17 +44,34 @@
         <Plus />
       </el-icon>
     </div>
+    <button
+      type="button"
+      class="tab-comment-toggle"
+      :class="{ 'is-active': commentPaneActive }"
+      :title="t('annotamd.comments.title')"
+      :aria-label="t('annotamd.comments.title')"
+      :aria-pressed="commentPaneActive"
+      @click.stop="openCommentPane"
+    >
+      <el-icon class="tab-comment-icon" aria-hidden="true"><ChatLineRound /></el-icon>
+      <span v-if="selectionCommentCount" class="tab-comment-count">
+        {{ selectionCommentCount }}
+      </span>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useEditorStore } from '@/store/editor'
-import { useLayoutStore } from '@/store/layout'
+import { DUAL_SIDE_PANE_MIN_WIDTH, useLayoutStore } from '@/store/layout'
+import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
+import { useRightPaneStore } from '@/store/rightPane'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
-import { Plus, Close } from '@element-plus/icons-vue'
+import { ChatLineRound, Plus, Close } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { showContextMenu } from '../../contextMenu/tabs'
 import { copyFileName, copyFilePath } from '../../util/copyFileInfo'
 import bus from '../../bus'
@@ -64,8 +81,36 @@ defineProps<{ showTabs: boolean }>()
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
+const commentsStore = useAnnotaMDCommentsStore()
+const rightPaneStore = useRightPaneStore()
+const { t } = useI18n()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
+const { paneVisible: commentPaneVisible } = storeToRefs(commentsStore)
+const { mode: rightPaneMode } = storeToRefs(rightPaneStore)
+
+const commentPaneActive = computed(() => (
+  commentPaneVisible.value && rightPaneMode.value === 'comments'
+))
+const selectionCommentCount = computed(() => {
+  const pathname = currentFile.value?.pathname
+  if (!pathname) return 0
+  return commentsStore
+    .commentsForFile(pathname)
+    .filter(comment => comment.scope === 'selection' && !comment.resolved).length
+})
+
+const openCommentPane = (): void => {
+  if (commentPaneActive.value) {
+    commentsStore.setPaneVisible(false)
+    return
+  }
+  if (window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH && layoutStore.rightColumn === 'agent') {
+    layoutStore.SET_LAYOUT({ rightColumn: '' })
+  }
+  rightPaneStore.openComments()
+  commentsStore.setPaneVisible(true)
+}
 
 interface AutoScroller {
   readonly down: boolean
@@ -424,6 +469,66 @@ onBeforeUnmount(() => {
   & > svg {
     fill: var(--focusColor);
   }
+}
+
+.tab-comment-toggle {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  place-items: center;
+  color: #646a73;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.tab-comment-toggle:hover {
+  color: #1f2329;
+  background: #f3f5f7;
+}
+
+.tab-comment-toggle.is-active {
+  color: var(--annotamd-green, #159f67);
+  background: color-mix(in srgb, var(--annotamd-green, #159f67) 12%, #fff);
+}
+
+.tab-comment-toggle:active {
+  transform: scale(0.96);
+}
+
+.tab-comment-toggle:focus-visible {
+  outline: 2px solid var(--annotamd-green, #159f67);
+  outline-offset: -2px;
+}
+
+.tab-comment-icon,
+.tab-comment-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tab-comment-count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  box-sizing: border-box;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #3370ff;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 11px;
+  text-align: center;
 }
 
 /* dragula effects */

@@ -14,7 +14,7 @@ const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
 
 describe('AnnotaMD comment toggle placement', () => {
-  it('places the comment and Agent toggles in the top title bar', () => {
+  it('places comments at the right edge of the document tab row and Agent in the left activity bar', () => {
     const titleBar = read(
       'packages/desktop/src/renderer/src/components/titleBar/index.vue'
     )
@@ -30,27 +30,35 @@ describe('AnnotaMD comment toggle placement', () => {
     const agentHeader = read(
       'packages/desktop/src/renderer/src/components/agent/AgentPanelHeader.vue'
     )
+    const sideBar = read(
+      'packages/desktop/src/renderer/src/components/sideBar/index.vue'
+    )
+    const sideBarHelp = read(
+      'packages/desktop/src/renderer/src/components/sideBar/help.ts'
+    )
 
-    expect(titleBar).toContain('class="title-pane-toggle tab-comment-toggle"')
-    expect(titleBar).toContain('class="title-pane-toggle tab-agent-toggle"')
-    expect(titleBar).toContain(':aria-pressed="commentPaneActive"')
-    expect(titleBar).toContain(':aria-pressed="agentPaneActive"')
-    expect(titleBar).toContain('@click.stop="openCommentPane"')
-    expect(tabs).not.toContain('class="tab-comment-toggle"')
+    expect(titleBar).not.toContain('tab-comment-toggle')
+    expect(titleBar).not.toContain('tab-agent-toggle')
+    expect(sideBar).toContain('`sidebar-${c.id}-toggle`')
+    expect(sideBar).toContain('v-else-if="rightColumn === \'agent\'"')
+    expect(sideBarHelp).toContain("id: 'agent'")
+    expect(tabs).toContain('class="tab-comment-toggle"')
+    expect(tabs).toContain(':aria-pressed="commentPaneActive"')
+    expect(tabs).toContain('@click.stop="openCommentPane"')
+    expect(tabs).toMatch(
+      /if \(commentPaneActive\.value\) \{\s*commentsStore\.setPaneVisible\(false\)\s*return\s*\}/s
+    )
+    expect(tabs).toContain("layoutStore.rightColumn === 'agent'")
+    expect(tabs).toContain("layoutStore.SET_LAYOUT({ rightColumn: '' })")
     expect(tabs).not.toContain('class="tab-agent-toggle"')
     expect(editorWithTabs).toContain('<tabs :show-tabs="showTabBar" />')
     expect(editorWithTabs).not.toContain('<tabs v-show="showTabBar" />')
     expect(tabs).toContain('defineProps<{ showTabs: boolean }>()')
     expect(tabs).toContain('v-show="showTabs"')
-    expect(titleBar).toMatch(
-      /\.title-pane-toggles\s*\{[^}]*top:\s*50%;[^}]*right:\s*12px;[^}]*display:\s*inline-flex;/s
+    expect(tabs).toMatch(
+      /\.tab-comment-toggle\s*\{[^}]*width:\s*32px;[^}]*height:\s*28px;[^}]*margin-left:\s*auto;[^}]*border-radius:\s*8px;/s
     )
-    expect(titleBar).toMatch(
-      /\.title-pane-toggle\s*\{[^}]*width:\s*32px;[^}]*height:\s*30px;[^}]*border-radius:\s*8px;/s
-    )
-    expect(titleBar).toMatch(
-      /\.title-pane-toggle\.is-active\s*\{[^}]*var\(--annotamd-green/s
-    )
+    expect(tabs).toMatch(/\.tab-comment-toggle\.is-active\s*\{[^}]*var\(--annotamd-green/s)
     expect(commentPane).toContain(':content="t(\'annotamd.comments.closePane\')"')
     expect(commentPane).toContain('<el-icon><Close /></el-icon>')
     expect(commentPane).not.toContain('m5 5 7 7-7 7')

@@ -48,6 +48,12 @@ describe('AnnotaMD preference styling', () => {
       /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 68px\) 36px 36px;/s
     )
     expect(sidebar).toMatch(/\.search-wrapper\s*\{[^}]*position:\s*fixed;[^}]*top:\s*0;[^}]*padding:\s*13px 20px 12px 0;[^}]*background:\s*var\(--editorBgColor\);/s)
+    expect(sidebar).toMatch(
+      /\.el-input__wrapper\s*\{[^}]*min-height:\s*38px;[^}]*padding:\s*0 14px;/s
+    )
+    expect(sidebar).toMatch(
+      /\.el-input__inner\s*\{[^}]*height:\s*36px;[^}]*line-height:\s*36px;/s
+    )
     expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--highlightThemeColor\);/s)
   })
 

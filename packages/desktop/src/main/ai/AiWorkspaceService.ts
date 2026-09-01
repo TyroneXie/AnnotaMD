@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import {
+  AI_REASONING_MESSAGE_TOOL,
+  AI_RUN_SUMMARY_TOOL
+} from '@shared/types/aiWorkspace'
 import type {
   AiAttachment,
   AiApprovalResolveRequest,
@@ -88,12 +92,20 @@ export interface AiWorkspaceServiceOptions {
   createMcpLaunchSpec?: AiMcpLaunchSpecFactory
   prepareAgentRun?: () => Promise<void>
   documentTransactions?: AiDocumentTransactionProvider
+  agentWorkspacePath?: string
 }
 
 interface ActiveRun {
   conversationId: string
   turnId: string
+  startedAt: number
+  summaryMessageId: string
   assistantMessageId: string
+  assistantMessagePersisted: boolean
+  assistantSegmentClosed: boolean
+  assistantSegmentText: string
+  reasoningMessageId?: string
+  reasoningText: string
   mode: AiConversation['mode']
   host: AiHost
   filePath?: string
@@ -213,6 +225,7 @@ export class AiWorkspaceService {
   private readonly piHost: AiHost
   private readonly now: () => number
   private readonly createId: () => string
+  private readonly agentWorkspacePath?: string
   private documentScopes?: AiDocumentScopeController
   private createMcpLaunchSpec?: AiMcpLaunchSpecFactory
   private prepareAgentRun?: () => Promise<void>
@@ -227,6 +240,7 @@ export class AiWorkspaceService {
     this.piHost = options.piHost
     this.now = options.now ?? Date.now
     this.createId = options.createId ?? randomUUID
+    this.agentWorkspacePath = options.agentWorkspacePath
     this.documentScopes = options.documentScopes
     this.createMcpLaunchSpec = options.createMcpLaunchSpec
     this.prepareAgentRun = options.prepareAgentRun
@@ -585,11 +599,11 @@ export class AiWorkspaceService {
 
     const turnId = this.createId()
     let scopeToken: string | undefined
+    let runRequest = request
     try {
       if (conversation.mode === 'agent') {
         if (!this.prepareAgentRun) throw new Error('AnnotaMD document Agent bridge is not ready.')
         await this.prepareAgentRun()
-        scopeToken = this.issueDocumentScope(windowId, conversation.id, turnId, request)
         if (
           request.filePath &&
           request.documentId &&
@@ -603,14 +617,27 @@ export class AiWorkspaceService {
             turnId,
             documentId: request.documentId,
             documentUri: request.documentUri,
-            filePath: request.filePath,
-            expectedMarkdown: request.markdown
+            filePath: request.filePath
           })
           if (started.status !== 'started') {
             const reason = 'reason' in started ? started.reason : 'message' in started ? started.message : started.status
             throw new Error(`Could not create the Agent document checkpoint: ${reason}.`)
           }
+          if (started.documentDirty) {
+            await this.documentTransactions.request(windowId, {
+              action: 'keep',
+              sessionId: conversation.id,
+              turnId
+            })
+            throw new Error('Save the current document before allowing a CLI Agent to modify it.')
+          }
+          runRequest = {
+            ...request,
+            markdown: started.transaction.beforeMarkdown,
+            documentContentHash: hashAgentDocument(started.transaction.beforeMarkdown)
+          }
         }
+        scopeToken = this.issueDocumentScope(windowId, conversation.id, turnId, runRequest)
       }
       const mcp = scopeToken ? this.createMcpLaunchSpec!(scopeToken, config.provider) : undefined
       const userMessage = this.store.addMessage({
@@ -619,29 +646,38 @@ export class AiWorkspaceService {
         content: text,
         status: 'complete'
       })
-      const assistantMessage = this.store.addMessage({
+      const startedAt = this.now()
+      const summaryMessage = this.store.addMessage({
         conversationId: conversation.id,
-        role: 'assistant',
-        content: '',
-        status: 'streaming'
+        role: 'system',
+        content: JSON.stringify({ durationMs: 0 }),
+        status: 'streaming',
+        toolName: AI_RUN_SUMMARY_TOOL
       })
+      const assistantMessageId = this.createId()
       const host = this.hostFor(config)
       const active: ActiveRun = {
         conversationId: conversation.id,
         turnId,
-        assistantMessageId: assistantMessage.id,
+        startedAt,
+        summaryMessageId: summaryMessage.id,
+        assistantMessageId,
+        assistantMessagePersisted: false,
+        assistantSegmentClosed: false,
+        assistantSegmentText: '',
+        reasoningText: '',
         mode: conversation.mode,
         host,
-        ...(request.filePath ? { filePath: request.filePath } : {}),
+        ...(runRequest.filePath ? { filePath: runRequest.filePath } : {}),
         ...(scopeToken ? { scopeToken } : {}),
-        ...(request.filePath && request.documentId && request.documentUri && request.markdown !== undefined
+        ...(runRequest.filePath && runRequest.documentId && runRequest.documentUri && runRequest.markdown !== undefined
           ? {
               nativeDocument: {
                 windowId,
-                documentId: request.documentId,
-                documentUri: request.documentUri,
-                filePath: request.filePath,
-                beforeMarkdown: request.markdown,
+                documentId: runRequest.documentId,
+                documentUri: runRequest.documentUri,
+                filePath: runRequest.filePath,
+                beforeMarkdown: runRequest.markdown,
                 captured: false
               }
             }
@@ -654,14 +690,14 @@ export class AiWorkspaceService {
       conversation = this.store.updateConversationStatus(conversation.id, 'running')
       this.emit({ type: 'conversation-updated', conversation })
       this.emit({ type: 'message', conversationId: conversation.id, turnId, message: userMessage })
-      this.emit({ type: 'message', conversationId: conversation.id, turnId, message: assistantMessage })
+      this.emit({ type: 'message', conversationId: conversation.id, turnId, message: summaryMessage })
       this.emit({ type: 'turn-started', conversationId: conversation.id, turnId })
 
       const result: AiSendResult = {
         conversationId: conversation.id,
         turnId,
         userMessageId: userMessage.id,
-        assistantMessageId: assistantMessage.id
+        assistantMessageId
       }
       started?.(result)
 
@@ -671,7 +707,7 @@ export class AiWorkspaceService {
         config,
         conversation,
         hostMessages,
-        request.workspacePath,
+        runRequest.workspacePath,
         mcp,
         attachments
       )
@@ -812,6 +848,13 @@ export class AiWorkspaceService {
     attachments: readonly AiAttachment[] = []
   ): Promise<void> {
     try {
+      const usesNativeCli = config.kind === 'cli' && config.provider !== 'pi'
+      const cliWorkspacePath = usesNativeCli
+        ? this.agentWorkspacePath?.trim() || workspacePath
+        : workspacePath
+      const additionalWorkspacePaths = usesNativeCli && workspacePath && workspacePath !== cliWorkspacePath
+        ? [workspacePath]
+        : []
       const result = await active.host.run({
         runId: active.turnId,
         conversationId: active.conversationId,
@@ -823,17 +866,28 @@ export class AiWorkspaceService {
         ),
         messages,
         mode: conversation.mode,
-        workspacePath: workspacePath || undefined,
+        workspacePath: cliWorkspacePath || undefined,
+        ...(additionalWorkspacePaths.length ? { additionalWorkspacePaths } : {}),
+        ...(usesNativeCli && this.agentWorkspacePath
+          ? {
+              workspaceProject: {
+                name: 'AnnotaMD',
+                idempotencyKey: 'annotamd-agent-workspace-v1'
+              }
+            }
+          : {}),
         permissionMode: conversation.permissionMode,
         ...(mcp ? { mcp } : {}),
         ...(attachments.length ? { attachments } : {})
       }, event => this.onHostEvent(active, event))
       await this.captureNativeDocumentChange(active)
-      if (!active.text && result) active.text = result
-      const message = this.store.updateMessage(active.assistantMessageId, {
-        content: active.text,
-        status: 'complete'
-      })
+      if (!active.text && result) {
+        active.text = result
+        active.assistantSegmentText = result
+      }
+      const message = this.persistAssistantSegment(active, 'complete')
+      this.finishReasoning(active, 'complete')
+      this.persistRunSummary(active, 'complete')
       const updated = this.store.updateConversationStatus(conversation.id, 'completed')
       this.emit({ type: 'message', conversationId: conversation.id, turnId: active.turnId, message })
       this.emit({ type: 'conversation-updated', conversation: updated })
@@ -848,10 +902,13 @@ export class AiWorkspaceService {
     } catch (error) {
       const stopped = error instanceof AiRunStoppedError
       const status = stopped ? 'cancelled' : 'failed'
-      const message = this.store.updateMessage(active.assistantMessageId, {
-        content: active.text,
-        status
-      })
+      const message = this.persistAssistantSegment(active, status)
+      this.finishReasoning(active, status)
+      this.persistRunSummary(
+        active,
+        status,
+        stopped ? undefined : error instanceof Error ? error.message : String(error)
+      )
       const updated = this.store.updateConversationStatus(conversation.id, status)
       this.emit({ type: 'message', conversationId: conversation.id, turnId: active.turnId, message })
       this.emit({ type: 'conversation-updated', conversation: updated })
@@ -918,8 +975,28 @@ export class AiWorkspaceService {
       return
     }
     if (event.type === 'text-delta') {
+      if (active.assistantSegmentClosed) {
+        active.assistantMessageId = this.createId()
+        active.assistantMessagePersisted = false
+        active.assistantSegmentClosed = false
+        active.assistantSegmentText = ''
+      }
       active.text += event.delta
-      this.store.updateMessage(active.assistantMessageId, { content: active.text })
+      active.assistantSegmentText += event.delta
+      if (active.assistantMessagePersisted) {
+        this.store.updateMessage(active.assistantMessageId, {
+          content: active.assistantSegmentText
+        })
+      } else {
+        this.store.addMessage({
+          id: active.assistantMessageId,
+          conversationId: active.conversationId,
+          role: 'assistant',
+          content: active.assistantSegmentText,
+          status: 'streaming'
+        })
+        active.assistantMessagePersisted = true
+      }
       this.emit({
         type: 'message-delta',
         conversationId: active.conversationId,
@@ -930,7 +1007,42 @@ export class AiWorkspaceService {
       })
       return
     }
+    if (event.type === 'reasoning-delta') {
+      active.reasoningText += event.delta
+      if (active.reasoningMessageId) {
+        this.store.updateMessage(active.reasoningMessageId, { content: active.reasoningText })
+      } else {
+        const message = this.store.addMessage({
+          conversationId: active.conversationId,
+          role: 'system',
+          content: active.reasoningText,
+          status: 'streaming',
+          toolName: AI_REASONING_MESSAGE_TOOL
+        })
+        active.reasoningMessageId = message.id
+      }
+      this.emit({
+        type: 'message-delta',
+        conversationId: active.conversationId,
+        turnId: active.turnId,
+        messageId: active.reasoningMessageId,
+        role: 'system',
+        delta: event.delta,
+        toolName: AI_REASONING_MESSAGE_TOOL
+      })
+      return
+    }
     if (event.type === 'tool-started') {
+      if (active.assistantMessagePersisted && !active.assistantSegmentClosed) {
+        const message = this.store.updateMessage(active.assistantMessageId, { status: 'complete' })
+        active.assistantSegmentClosed = true
+        this.emit({
+          type: 'message',
+          conversationId: active.conversationId,
+          turnId: active.turnId,
+          message
+        })
+      }
       const call: AiToolCall = {
         id: event.toolCallId,
         conversationId: active.conversationId,
@@ -987,18 +1099,78 @@ export class AiWorkspaceService {
     }
   }
 
+  private persistAssistantSegment(
+    active: ActiveRun,
+    status: Extract<AiMessage['status'], 'complete' | 'failed' | 'cancelled'>
+  ): AiMessage {
+    if (active.assistantMessagePersisted) {
+      return this.store.updateMessage(active.assistantMessageId, {
+        content: active.assistantSegmentText,
+        status
+      })
+    }
+    const message = this.store.addMessage({
+      id: active.assistantMessageId,
+      conversationId: active.conversationId,
+      role: 'assistant',
+      content: active.assistantSegmentText,
+      status
+    })
+    active.assistantMessagePersisted = true
+    return message
+  }
+
+  private finishReasoning(
+    active: ActiveRun,
+    status: Extract<AiMessage['status'], 'complete' | 'failed' | 'cancelled'>
+  ): void {
+    if (!active.reasoningMessageId) return
+    const message = this.store.updateMessage(active.reasoningMessageId, { status })
+    this.emit({
+      type: 'message',
+      conversationId: active.conversationId,
+      turnId: active.turnId,
+      message
+    })
+  }
+
+  private persistRunSummary(
+    active: ActiveRun,
+    status: Extract<AiMessage['status'], 'complete' | 'failed' | 'cancelled'>,
+    error?: string
+  ): void {
+    const message = this.store.updateMessage(active.summaryMessageId, {
+      content: JSON.stringify({
+        durationMs: Math.max(0, this.now() - active.startedAt),
+        ...(error ? { error } : {})
+      }),
+      status,
+      toolName: AI_RUN_SUMMARY_TOOL
+    })
+    this.emit({
+      type: 'message',
+      conversationId: active.conversationId,
+      turnId: active.turnId,
+      message
+    })
+  }
+
   private hostMessages(conversation: AiConversation): AiHostMessage[] {
     const templates = new Map(this.store.listTemplates().map(template => [template.id, template]))
     const system = conversation.templateIds
       .map(id => templates.get(id)?.content)
       .filter((content): content is string => Boolean(content))
-    return [
-      ...system.map(content => ({ role: 'system' as const, content })),
-      ...this.store.listMessages(conversation.id)
-        .filter(message => message.role === 'user' || message.role === 'assistant')
-        .filter(message => message.content.length > 0)
-        .map(message => ({ role: message.role as 'user' | 'assistant', content: message.content }))
-    ]
+    const history = this.store.listMessages(conversation.id)
+      .filter(message => message.role === 'user' || message.role === 'assistant')
+      .filter(message => message.content.length > 0)
+      .reduce<AiHostMessage[]>((messages, message) => {
+        const role = message.role as 'user' | 'assistant'
+        const previous = messages.at(-1)
+        if (role === 'assistant' && previous?.role === role) previous.content += `\n\n${message.content}`
+        else messages.push({ role, content: message.content })
+        return messages
+      }, [])
+    return [...system.map(content => ({ role: 'system' as const, content })), ...history]
   }
 
   private persistRunChangeSet(active: ActiveRun): void {

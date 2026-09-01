@@ -27,6 +27,7 @@ export interface AgentDocumentTransactionEvent {
 export interface AgentDocumentEditorContext {
   flush: () => void
   getCurrentDocument: () => (AgentDocumentTarget & { documentHandleId: string }) | null
+  isDirty?: () => boolean
   getMarkdown: () => string
   normalizeMarkdown: (markdown: string) => string
   getState: () => unknown
@@ -450,18 +451,22 @@ export class AgentDocumentTurnController {
       if (
         existing.documentId !== request.documentId ||
         existing.documentUri !== request.documentUri ||
-        existing.beforeMarkdown !== request.expectedMarkdown
+        (request.expectedMarkdown !== undefined && existing.beforeMarkdown !== request.expectedMarkdown)
       ) {
         return { status: 'stale', reason: 'checkpoint-mismatch' }
       }
-      return { status: 'started', transaction: cloneSnapshot(existing) }
+      return {
+        status: 'started',
+        transaction: cloneSnapshot(existing),
+        documentDirty: context?.isDirty?.() ?? false
+      }
     }
 
     const activeKey = this.activeTurnByDocument.get(request.documentUri)
     if (activeKey && activeKey !== key) return { status: 'stale', reason: 'document-turn-busy' }
     const validated = validateTarget(request, context)
     if ('reason' in validated) return { status: 'stale', reason: validated.reason }
-    if (validated.markdown !== request.expectedMarkdown) {
+    if (request.expectedMarkdown !== undefined && validated.markdown !== request.expectedMarkdown) {
       return { status: 'stale', reason: 'document-content-changed' }
     }
 
@@ -478,7 +483,11 @@ export class AgentDocumentTurnController {
     })
     this.transactions.set(key, transaction)
     this.activeTurnByDocument.set(request.documentUri, key)
-    return { status: 'started', transaction: cloneSnapshot(transaction) }
+    return {
+      status: 'started',
+      transaction: cloneSnapshot(transaction),
+      documentDirty: context?.isDirty?.() ?? false
+    }
   }
 
   private mutate(

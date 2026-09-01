@@ -63,7 +63,9 @@ const piAdapterPath = (): string => (
 export const getAiWorkspaceService = (): AiWorkspaceService => {
   if (service) return service
   const databasePath = join(app.getPath('userData'), 'ai-workspace.sqlite')
+  const agentWorkspacePath = join(app.getPath('userData'), 'agent-workspace')
   mkdirSync(dirname(databasePath), { recursive: true })
+  mkdirSync(agentWorkspacePath, { recursive: true })
   rendererBridge = createRendererBridge()
   scopeService = new AgentDocumentScopeService(
     candidate => rendererBridge!.applyCandidate(candidate),
@@ -85,7 +87,8 @@ export const getAiWorkspaceService = (): AiWorkspaceService => {
     prepareAgentRun: async() => {
       await setAgentDocumentGateway(scopeService)
     },
-    documentTransactions: rendererBridge
+    documentTransactions: rendererBridge,
+    agentWorkspacePath
   })
   return service
 }

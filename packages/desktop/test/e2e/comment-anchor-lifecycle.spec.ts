@@ -342,6 +342,30 @@ test('opens a new comment composer after dragging across an existing comment hig
   }
 })
 
+test('keeps Agent open when clicking and selecting annotated text', async() => {
+  const text = '在 Agent 中选中已有批注文字继续提问。'
+  const { app, page } = await launchWithMarkdown(`${text}\n`)
+  try {
+    await addComment(page, 0, '已有批注', 1, text)
+    await page.locator('.sidebar-agent-toggle').click()
+
+    const agentPane = page.locator('.annotamd-agent-workspace')
+    const paragraph = page.locator('span.mu-paragraph-content').first()
+    await expect(agentPane).toBeVisible()
+    await expect(page.locator('.annotamd-comment-pane')).toHaveCount(0)
+
+    await paragraph.click({ position: { x: 24, y: 10 } })
+    await expect(agentPane).toBeVisible()
+    await expect(page.locator('.annotamd-comment-pane')).toHaveCount(0)
+
+    await selectParagraphText(page, 0)
+    await expect(agentPane.getByTestId('ai-selection-context')).toContainText(text)
+    await expect(page.locator('.annotamd-comment-pane')).toHaveCount(0)
+  } finally {
+    await app.close()
+  }
+})
+
 test('uses a one-line reply input with cancel, blur, and automatic growth', async() => {
   const { app, page } = await launchWithMarkdown('回复输入框锚点。\n')
   try {

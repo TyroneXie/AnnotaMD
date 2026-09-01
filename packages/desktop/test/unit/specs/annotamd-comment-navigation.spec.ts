@@ -65,7 +65,7 @@ describe('AnnotaMD comment navigation', () => {
     expect(store.commentFocusRequest?.commentId).toBe('comment-1')
   })
 
-  it('connects highlighted text clicks to the matching comment card', () => {
+  it('connects highlighted text clicks to comments without replacing the Agent pane', () => {
     const editor = read(
       'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
     )
@@ -75,6 +75,7 @@ describe('AnnotaMD comment navigation', () => {
 
     expect(editor).toContain('findAnnotaMDCommentAtPosition')
     expect(editor).toContain('handleCommentHighlightHover')
+    expect(editor).toContain("if (layoutStore.rightColumn !== 'agent')")
     expect(editor).toContain("annotaMDCommentsStore.requestCommentFocus(comment.id)")
     expect(pane).toContain(':data-comment-id="comment.id"')
     expect(pane).toContain('commentFocusRequest')

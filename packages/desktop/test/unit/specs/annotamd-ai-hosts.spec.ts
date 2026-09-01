@@ -273,7 +273,7 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
       args: ['/mcp/index.mjs'],
       env: { ANNOTAMD_AGENT_SCOPE_TOKEN: 'scope-token' },
       enabledTools: ['annotamd_get_context', 'annotamd_read_document']
-    }, [], '/workspace/project')
+    }, [], '/annotamd/agent-workspace', ['/workspace/project'])
     expect(spec.program).toBe('/opt/homebrew/bin/codex')
     expect(spec.args).toContain('danger-full-access')
     expect(spec.args).toContain('--dangerously-bypass-approvals-and-sandbox')
@@ -281,7 +281,8 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
     expect(spec.args).not.toContain('--ignore-rules')
     expect(spec.args.join(' ')).toContain('annotamd_get_context')
     expect(spec.args.join(' ')).not.toContain('annotamd_edit_document')
-    expect(spec.cwd).toBe('/workspace/project')
+    expect(spec.cwd).toBe('/annotamd/agent-workspace')
+    expect(spec.args).toEqual(expect.arrayContaining(['--add-dir', '/workspace/project']))
     expect(spec.env.ANNOTAMD_AGENT_SCOPE_TOKEN).toBe('scope-token')
     expect(() => resolveCliProgram({ id: 'x', provider: 'codex', executablePath: 'wrapper' }))
       .toThrow('absolute path')
@@ -299,14 +300,15 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
       args: ['/mcp/index.mjs'],
       env: { ANNOTAMD_AGENT_SCOPE_TOKEN: 'scope-token' },
       enabledTools: ['annotamd_get_context', 'annotamd_read_document']
-    }, [], '/workspace/project')
+    }, [], '/annotamd/agent-workspace', ['/workspace/project'])
     expect(spec.args).not.toContain('--safe-mode')
     expect(spec.args).not.toContain('--disable-slash-commands')
     expect(spec.args).toContain('--no-chrome')
     expect(spec.args).not.toContain('--strict-mcp-config')
     expect(spec.args).toContain('--dangerously-skip-permissions')
     expect(spec.args).toContain('default')
-    expect(spec.cwd).toBe('/workspace/project')
+    expect(spec.cwd).toBe('/annotamd/agent-workspace')
+    expect(spec.args).toEqual(expect.arrayContaining(['--add-dir', '/workspace/project']))
   })
 
   it('normalizes Codex, Claude Code and OpenCode output', () => {
@@ -495,8 +497,9 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
         const request = JSON.parse(line) as Record<string, unknown>
         requests.push(request)
         if (request.id === 1) reply({ id: 1, result: {} })
-        if (request.id === 2) reply({ id: 2, result: { thread: { id: 'thread-1' } } })
-        if (request.id === 3) {
+        if (request.id === 2) reply({ id: 2, result: { project: { id: 'project-1' } } })
+        if (request.id === 3) reply({ id: 3, result: { thread: { id: 'thread-1' } } })
+        if (request.id === 4) {
           reply({
             id: 91,
             method: 'item/commandExecution/requestApproval',
@@ -522,7 +525,12 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
       config: { id: 'codex', provider: 'codex', executablePath: '/mock/codex' },
       messages: [{ role: 'user', content: 'Run the checks' }],
       mode: 'agent',
-      workspacePath: '/workspace',
+      workspacePath: '/annotamd/agent-workspace',
+      additionalWorkspacePaths: ['/workspace/project'],
+      workspaceProject: {
+        name: 'AnnotaMD',
+        idempotencyKey: 'annotamd-agent-workspace-v1'
+      },
       permissionMode: 'request'
     }, event => events.push(event))
 
@@ -544,11 +552,27 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
       result: { decision: 'acceptForSession' }
     }))
     expect(requests).toContainEqual(expect.objectContaining({
+      method: 'project/create',
+      params: {
+        idempotencyKey: 'annotamd-agent-workspace-v1',
+        name: 'AnnotaMD',
+        roots: [{ path: '/annotamd/agent-workspace' }]
+      }
+    }))
+    expect(requests).toContainEqual(expect.objectContaining({
       method: 'thread/start',
       params: expect.objectContaining({
-        cwd: '/workspace',
+        cwd: '/annotamd/agent-workspace',
         approvalPolicy: 'on-request',
-        sandbox: 'workspace-write'
+        sandbox: 'workspace-write',
+        projectId: 'project-1',
+        runtimeWorkspaceRoots: ['/annotamd/agent-workspace', '/workspace/project']
+      })
+    }))
+    expect(requests).toContainEqual(expect.objectContaining({
+      method: 'turn/start',
+      params: expect.objectContaining({
+        input: [expect.objectContaining({ text: expect.stringMatching(/^Run the checks\n/) })]
       })
     }))
     host.dispose()
@@ -616,7 +640,14 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
       config: { id: 'codex', provider: 'codex' as const },
       messages: [{ role: 'user' as const, content: 'Hello' }]
     }
-    expect(buildCliPrompt({ ...common, mode: 'agent' })).toContain('annotamd_get_context first')
+    const agentPrompt = buildCliPrompt({
+      ...common,
+      mode: 'agent',
+      additionalWorkspacePaths: ['/workspace/project']
+    })
+    expect(agentPrompt).toMatch(/^Hello\n/)
+    expect(agentPrompt).toContain('annotamd_get_context first')
+    expect(agentPrompt).toContain('/workspace/project')
     expect(buildCliPrompt({ ...common, mode: 'ask' })).toContain('without using filesystem')
   })
 

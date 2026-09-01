@@ -40,19 +40,6 @@
           </button>
         </span>
       </el-tooltip>
-      <el-tooltip :content="t(maximized ? 'annotamd.agentWorkspace.restore' : 'annotamd.agentWorkspace.maximize')" placement="bottom" :show-after="150">
-        <span class="annotamd-agent-tooltip-anchor">
-          <button
-            type="button"
-            class="annotamd-agent-icon-button"
-            data-testid="ai-toggle-maximize"
-            :aria-label="t(maximized ? 'annotamd.agentWorkspace.restore' : 'annotamd.agentWorkspace.maximize')"
-            @click="emit('toggle-maximize')"
-          >
-            <el-icon><ScaleToOriginal v-if="maximized" /><FullScreen v-else /></el-icon>
-          </button>
-        </span>
-      </el-tooltip>
       <el-tooltip :content="t('annotamd.agentWorkspace.close')" placement="bottom" :show-after="150">
         <span class="annotamd-agent-tooltip-anchor">
           <button
@@ -74,9 +61,7 @@
 import {
   Close,
   Delete,
-  FullScreen,
-  Plus,
-  ScaleToOriginal
+  Plus
 } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import AgentConversationHistory from './AgentConversationHistory.vue'
@@ -86,7 +71,6 @@ defineProps<{
   status: string
   newDisabled: boolean
   deleteDisabled: boolean
-  maximized: boolean
 }>()
 
 const emit = defineEmits<{
@@ -95,7 +79,6 @@ const emit = defineEmits<{
   'delete-conversation': [id: string]
   'stop-conversation': [id: string]
   'delete-current': []
-  'toggle-maximize': []
   close: []
 }>()
 const { t } = useI18n()

@@ -140,6 +140,7 @@ import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useProjectStore } from '@/store/project'
 import { useAnnotaMDCommentsStore, type AnnotaMDSelection } from '@/store/annotamdComments'
+import { useLayoutStore } from '@/store/layout'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { SyntheticHistory, type IFileHistoryLike } from './syntheticHistory'
@@ -234,6 +235,7 @@ const preferencesStore = usePreferencesStore()
 const editorStore = useEditorStore()
 const projectStore = useProjectStore()
 const annotaMDCommentsStore = useAnnotaMDCommentsStore()
+const layoutStore = useLayoutStore()
 const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
 const {
   scrollbarVisible: editorScrollbarVisible,
@@ -1436,7 +1438,9 @@ const handleCommentHighlightClick = (event: MouseEvent): void => {
   if (comment?.id === ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID) return
   if (comment?.id) {
     annotaMDCommentsStore.setActiveComment(comment.id)
-    annotaMDCommentsStore.requestCommentFocus(comment.id)
+    if (layoutStore.rightColumn !== 'agent') {
+      annotaMDCommentsStore.requestCommentFocus(comment.id)
+    }
   }
 }
 
@@ -1988,6 +1992,7 @@ const getAgentDocumentEditorContext = (): AgentDocumentEditorContext | null => {
         filePath
       }
     },
+    isDirty: () => !currentFile.value?.isSaved,
     getMarkdown: () => muya.getMarkdown(),
     normalizeMarkdown: (markdown) => muya.editor.jsonState.getMarkdownFromState(
       muya.editor.jsonState.markdownToState(markdown)

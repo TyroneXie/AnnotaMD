@@ -12,7 +12,7 @@ describe('AnnotaMD right pane', () => {
     setActivePinia(createPinia())
   })
 
-  it('keeps comments and Agent mutually exclusive in one mode', () => {
+  it('keeps the right pane scoped to comments', () => {
     const store = useRightPaneStore()
 
     expect(store.mode).toBe('closed')
@@ -20,21 +20,13 @@ describe('AnnotaMD right pane', () => {
     store.openComments()
     expect(store.mode).toBe('comments')
 
-    store.openAgent()
-    expect(store.mode).toBe('agent')
-
     store.closeIf('comments')
-    expect(store.mode).toBe('agent')
-
-    store.closeIf('agent')
     expect(store.mode).toBe('closed')
   })
 
-  it('keeps Agent available without a document while comments remain document-scoped', () => {
+  it('places Agent in the left workspace while comments remain document-scoped', () => {
     const app = read('packages/desktop/src/renderer/src/pages/app.vue')
-    const titleBar = read(
-      'packages/desktop/src/renderer/src/components/titleBar/index.vue'
-    )
+    const sideBar = read('packages/desktop/src/renderer/src/components/sideBar/index.vue')
     const panel = read(
       'packages/desktop/src/renderer/src/components/agent/AgentWorkspacePanel.vue'
     )
@@ -46,23 +38,19 @@ describe('AnnotaMD right pane', () => {
     )
 
     expect(app).toContain('<AnnotaMDCommentPane v-if="commentPaneActive" />')
-    expect(app).toMatch(/<AgentWorkspacePanel\s+v-else-if="agentPaneActive"/)
+    expect(app).toContain(':agent-workspace-path="agentWorkspacePath"')
+    expect(app).toContain(':agent-document-context="agentDocumentContext"')
+    expect(sideBar).toMatch(/<AgentWorkspacePanel\s+v-else-if="rightColumn === 'agent'"/)
+    expect(sideBar).toContain('window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH')
+    expect(sideBar).toContain("rightPaneStore.closeIf('comments')")
     expect(app).toMatch(
       /commentPaneVisible\.value\s+&& rightPaneMode\.value === 'comments'/
     )
     expect(app).toMatch(
-      /const agentPaneActive = computed<boolean>\(\(\) => \{\s*return init\.value && rightPaneMode\.value === 'agent'/
-    )
-    expect(app).toMatch(
-      /watch\(rightPaneMode[\s\S]*?mode !== 'comments'[\s\S]*?setPaneVisible\(false\)/
+      /watch\(\[init, hasCurrentFile\][\s\S]*?rightColumn !== 'agent'[\s\S]*?SET_LAYOUT\(\{ rightColumn: '' \}\)/
     )
     expect(app).toMatch(
       /watch\(\[init, hasCurrentFile\][\s\S]*?rightPaneStore\.closeIf\('comments'\)[\s\S]*?setPaneVisible\(false\)/
-    )
-    expect(app).toContain('data-testid="empty-agent-toggle"')
-    expect(app).toContain('@click="openAgentWorkspace"')
-    expect(titleBar).toMatch(
-      /const openAgentPane[\s\S]*?setPaneVisible\(false\)[\s\S]*?rightPaneStore\.openAgent\(\)/
     )
     expect(header).toContain("@click=\"emit('close')\"")
     expect(header).not.toContain("emit('open-comments')")
@@ -70,7 +58,7 @@ describe('AnnotaMD right pane', () => {
     expect(panel).toContain('@new="newConversation"')
     expect(composer).toContain("@click=\"emit('send')\"")
     expect(composer).toContain("@click=\"emit('stop')\"")
-    expect(app).toContain(':maximized="agentMaximized"')
-    expect(app).toContain('@toggle-maximize="rightPaneStore.toggleAgentMaximized()"')
+    expect(panel).not.toContain('is-maximized')
+    expect(panel).toMatch(/width:\s*100%;[^}]*height:\s*100%/s)
   })
 })

@@ -131,7 +131,8 @@ export const useAgentConversationsStore = defineStore('agentConversations', {
               role: event.role,
               content: event.delta,
               status: 'streaming',
-              createdAt: Date.now()
+              createdAt: Date.now(),
+              ...(event.toolName ? { toolName: event.toolName } : {})
             })
           } else {
             const message = this.messages[index]!

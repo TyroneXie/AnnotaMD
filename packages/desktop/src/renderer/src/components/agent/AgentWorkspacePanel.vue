@@ -1,7 +1,6 @@
 <template>
   <aside
     class="annotamd-agent-workspace"
-    :class="{ 'is-maximized': maximized }"
     :aria-label="t('annotamd.agentWorkspace.title')"
   >
     <AgentPanelHeader
@@ -9,13 +8,11 @@
       :status="displayedStatus"
       :new-disabled="conversations.loading"
       :delete-disabled="deleteCurrentDisabled"
-      :maximized="Boolean(maximized)"
       @new="newConversation"
       @select-conversation="selectConversation"
       @delete-conversation="deleteConversation"
       @stop-conversation="stopConversation"
       @delete-current="deleteCurrentConversation"
-      @toggle-maximize="emit('toggle-maximize')"
       @close="emit('close')"
     />
 
@@ -106,11 +103,9 @@ import { isAgentTimelineNearBottom } from './agentTimelineScroll'
 const props = defineProps<{
   workspacePath: string
   documentContext?: AiDocumentContext | null
-  maximized?: boolean
 }>()
 const emit = defineEmits<{
   close: []
-  'toggle-maximize': []
   clearSelection: []
 }>()
 
@@ -330,8 +325,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.annotamd-agent-workspace { position: fixed; z-index: 30; top: var(--titleBarHeight); right: 0; bottom: 0; display: flex; box-sizing: border-box; min-width: 320px; width: var(--annotamd-comment-pane-width); flex-direction: column; color: var(--annotamd-text); border-left: 1px solid var(--annotamd-border); background: var(--annotamd-surface); }
-.annotamd-agent-workspace.is-maximized { left: var(--annotamd-agent-maximized-left, 0px); width: auto; }
+.annotamd-agent-workspace { display: flex; box-sizing: border-box; width: 100%; height: 100%; min-width: 0; padding-top: var(--titleBarHeight); flex-direction: column; color: var(--annotamd-text); background: var(--annotamd-surface); user-select: text; }
 .annotamd-agent-timeline { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 12px; padding: 14px; overflow: auto; background: var(--annotamd-surface-soft); }
 .annotamd-agent-error { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 8px 9px; color: #b42318; border: 1px solid color-mix(in srgb, #ef4444 25%, var(--annotamd-border)); border-radius: 7px; background: color-mix(in srgb, #ef4444 7%, var(--annotamd-surface)); font-size: 10px; line-height: 1.45; }
 .annotamd-agent-error button { flex: none; padding: 2px 5px; color: inherit; border: 0; background: transparent; cursor: pointer; text-decoration: underline; }
@@ -343,6 +337,4 @@ onBeforeUnmount(() => {
 .annotamd-agent-setup p { margin: 3px 0 0; color: var(--annotamd-muted); font-size: 10px; line-height: 1.45; }
 .annotamd-agent-setup button { grid-column: 2; justify-self: start; min-height: 28px; padding: 0 10px; color: #fff; border: 0; border-radius: 6px; background: var(--annotamd-blue); font-size: 11px; cursor: pointer; }
 .annotamd-agent-setup button:focus-visible, .annotamd-agent-error button:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 2px; }
-.annotamd-agent-workspace.is-maximized .annotamd-agent-timeline > * { width: min(920px, 100%); margin-right: auto; margin-left: auto; }
-.annotamd-agent-workspace.is-maximized :deep(.annotamd-agent-composer) { width: min(940px, 100%); box-sizing: border-box; margin-right: auto; margin-left: auto; }
 </style>

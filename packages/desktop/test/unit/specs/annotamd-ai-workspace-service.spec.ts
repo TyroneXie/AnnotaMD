@@ -49,7 +49,7 @@ class FakeHost implements AiHost {
 }
 
 const directories: string[] = []
-const setup = () => {
+const setup = (options: { now?: () => number; agentWorkspacePath?: string } = {}) => {
   const directory = mkdtempSync(join(tmpdir(), 'annotamd-ai-service-'))
   directories.push(directory)
   const apiHost = new FakeHost('api')
@@ -95,7 +95,9 @@ const setup = () => {
       command: '/annotamd', args: ['/mcp'], env: { ANNOTAMD_AGENT_SCOPE_TOKEN: token }
     }),
     prepareAgentRun: async() => {},
-    documentTransactions: transactions
+    documentTransactions: transactions,
+    ...(options.now ? { now: options.now } : {}),
+    ...(options.agentWorkspacePath ? { agentWorkspacePath: options.agentWorkspacePath } : {})
   })
   const owner = {
     id: 5,
@@ -175,6 +177,30 @@ describe('AnnotaMD AI workspace service', () => {
     service.dispose()
   })
 
+  it('runs native CLIs from the fixed AnnotaMD project while preserving active workspace access', async() => {
+    const { service, cliHost, owner } = setup({ agentWorkspacePath: '/annotamd/agent-workspace' })
+    await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' },
+      isDefault: true
+    })
+
+    await service.sendAndWait(owner, {
+      text: 'Review this project',
+      selection: { mode: 'agent', templateIds: [] },
+      workspacePath: '/workspace/project'
+    })
+
+    expect(cliHost.requests[0]).toMatchObject({
+      workspacePath: '/annotamd/agent-workspace',
+      additionalWorkspacePaths: ['/workspace/project'],
+      workspaceProject: {
+        name: 'AnnotaMD',
+        idempotencyKey: 'annotamd-agent-workspace-v1'
+      }
+    })
+    service.dispose()
+  })
+
   it('lets comment turns await the same streamed Host completion used by the sidebar', async() => {
     const { service, cliHost, owner } = setup()
     const started: Array<{ conversationId: string; turnId: string }> = []
@@ -228,6 +254,139 @@ describe('AnnotaMD AI workspace service', () => {
       id: result.assistantMessageId,
       content: 'Done',
       status: 'complete'
+    })
+    service.dispose()
+  })
+
+  it('persists assistant text after tool activity as a separate message segment', async() => {
+    const { service, cliHost, owner } = setup()
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+    vi.spyOn(cliHost, 'run').mockImplementation(async(request, emit) => {
+      cliHost.requests.push(request)
+      emit({ type: 'run-started', runId: request.runId, conversationId: request.conversationId })
+      emit({ type: 'text-delta', runId: request.runId, delta: 'I will inspect the document.' })
+      emit({
+        type: 'tool-started',
+        runId: request.runId,
+        toolCallId: 'tool-1',
+        toolName: 'readDocument'
+      })
+      emit({
+        type: 'tool-finished',
+        runId: request.runId,
+        toolCallId: 'tool-1',
+        toolName: 'readDocument',
+        output: 'Document read',
+        isError: false
+      })
+      emit({ type: 'text-delta', runId: request.runId, delta: 'The review is complete.' })
+      emit({ type: 'run-finished', runId: request.runId })
+      return 'The review is complete.'
+    })
+
+    const result = await service.send(owner, {
+      text: 'Review the document',
+      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      workspacePath: '/workspace'
+    })
+    await vi.waitFor(async() => {
+      expect((await service.getSnapshot(owner)).running).toBe(false)
+    })
+
+    const messages = (await service.getSnapshot(owner)).messages.filter(message => (
+      message.toolName !== 'annotamd:run-summary'
+    ))
+    expect(messages.map(message => [message.role, message.content])).toEqual([
+      ['user', 'Review the document'],
+      ['assistant', 'I will inspect the document.'],
+      ['tool', 'Document read'],
+      ['assistant', 'The review is complete.']
+    ])
+    expect(messages[1]?.id).toBe(result.assistantMessageId)
+    service.dispose()
+  })
+
+  it('persists provider reasoning and run duration as process metadata', async() => {
+    let now = 1_000
+    const { service, cliHost, events, owner } = setup({ now: () => now })
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+    vi.spyOn(cliHost, 'run').mockImplementation(async(request, emit) => {
+      cliHost.requests.push(request)
+      emit({ type: 'run-started', runId: request.runId, conversationId: request.conversationId })
+      emit({ type: 'reasoning-delta', runId: request.runId, delta: 'Checking the document structure.' })
+      emit({ type: 'text-delta', runId: request.runId, delta: 'I will inspect the document.' })
+      emit({
+        type: 'tool-started', runId: request.runId, toolCallId: 'tool-1', toolName: 'readDocument'
+      })
+      emit({
+        type: 'tool-finished', runId: request.runId, toolCallId: 'tool-1',
+        toolName: 'readDocument', output: 'Document read', isError: false
+      })
+      emit({ type: 'text-delta', runId: request.runId, delta: 'The review is complete.' })
+      now = 3_500
+      emit({ type: 'run-finished', runId: request.runId })
+      return 'The review is complete.'
+    })
+
+    await service.send(owner, {
+      text: 'Review the document',
+      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      workspacePath: '/workspace'
+    })
+    await vi.waitFor(async() => {
+      expect((await service.getSnapshot(owner)).running).toBe(false)
+    })
+
+    const messages = (await service.getSnapshot(owner)).messages
+    expect(messages.map(message => [message.role, message.toolName, message.content])).toEqual([
+      ['user', undefined, 'Review the document'],
+      ['system', 'annotamd:run-summary', JSON.stringify({ durationMs: 2_500 })],
+      ['system', 'annotamd:reasoning', 'Checking the document structure.'],
+      ['assistant', undefined, 'I will inspect the document.'],
+      ['tool', 'readDocument', 'Document read'],
+      ['assistant', undefined, 'The review is complete.']
+    ])
+    expect(events).toContainEqual(expect.objectContaining({
+      type: 'message-delta',
+      role: 'system',
+      toolName: 'annotamd:reasoning',
+      delta: 'Checking the document structure.'
+    }))
+    service.dispose()
+  })
+
+  it('persists the run failure reason in process metadata', async() => {
+    let now = 1_000
+    const { service, cliHost, owner } = setup({ now: () => now })
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+    vi.spyOn(cliHost, 'run').mockImplementation(async(request) => {
+      cliHost.requests.push(request)
+      now = 2_500
+      throw new Error('CLI process exited with code 1')
+    })
+
+    await service.send(owner, {
+      text: 'Review the document',
+      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      workspacePath: '/workspace'
+    })
+    await vi.waitFor(async() => {
+      expect((await service.getSnapshot(owner)).running).toBe(false)
+    })
+
+    const summary = (await service.getSnapshot(owner)).messages.find(message => (
+      message.toolName === 'annotamd:run-summary'
+    ))
+    expect(summary).toMatchObject({ status: 'failed' })
+    expect(JSON.parse(summary?.content ?? '{}')).toEqual({
+      durationMs: 1_500,
+      error: 'CLI process exited with code 1'
     })
     service.dispose()
   })
@@ -514,6 +673,106 @@ describe('AnnotaMD AI workspace service', () => {
         status: 'applied-unreviewed'
       })
     ])
+    service.dispose()
+  })
+
+  it('uses the live Muya checkpoint when the sidebar document snapshot is stale', async() => {
+    const { service, scopes, transactions, owner } = setup()
+    const filePath = join(directories.at(-1)!, 'live.md')
+    writeFileSync(filePath, 'live\n', 'utf8')
+    transactions.getRunTransaction.mockReturnValue(undefined)
+    transactions.request.mockImplementation(async(_windowId, request) => {
+      const transaction = {
+        sessionId: request.sessionId,
+        turnId: request.turnId,
+        documentId: 'doc-1',
+        documentUri: `file://${filePath}`,
+        filePath,
+        beforeMarkdown: 'live\n',
+        finalMarkdown: 'live\n',
+        mutationCount: 0,
+        diff: { additions: 0, deletions: 0, lines: [] },
+        status: request.action === 'keep' ? 'kept' as const : 'active' as const
+      }
+      if (request.action === 'begin') return { status: 'started' as const, transaction }
+      if (request.action === 'keep') return { status: 'kept' as const, transaction, changed: false as const }
+      throw new Error(`Unexpected transaction action: ${request.action}`)
+    })
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+
+    await service.sendAndWait(owner, {
+      text: 'Summarize it',
+      selection: {
+        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+      },
+      workspacePath: join(directories.at(-1)!),
+      documentHandleId: 'handle-1',
+      documentId: 'doc-1',
+      documentUri: `file://${filePath}`,
+      filePath,
+      markdown: 'stale\n',
+      documentRevision: 1,
+      documentDirty: false
+    })
+
+    expect(transactions.request).toHaveBeenCalledWith(expect.any(Number), expect.not.objectContaining({
+      action: 'begin',
+      expectedMarkdown: expect.anything()
+    }))
+    expect(scopes.issued).toContainEqual(expect.objectContaining({
+      document: expect.objectContaining({
+        markdown: 'live\n'
+      })
+    }))
+    service.dispose()
+  })
+
+  it('rejects an editor that becomes dirty while the Agent checkpoint is being captured', async() => {
+    const { service, transactions, owner } = setup()
+    const filePath = join(directories.at(-1)!, 'dirty-during-send.md')
+    writeFileSync(filePath, 'before\n', 'utf8')
+    transactions.request.mockImplementation(async(_windowId, request) => {
+      const transaction = {
+        sessionId: request.sessionId,
+        turnId: request.turnId,
+        documentId: 'doc-1',
+        documentUri: `file://${filePath}`,
+        filePath,
+        beforeMarkdown: 'typed but unsaved\n',
+        finalMarkdown: 'typed but unsaved\n',
+        mutationCount: 0,
+        diff: { additions: 0, deletions: 0, lines: [] },
+        status: request.action === 'keep' ? 'kept' as const : 'active' as const
+      }
+      if (request.action === 'begin') {
+        return { status: 'started' as const, transaction, documentDirty: true }
+      }
+      if (request.action === 'keep') return { status: 'kept' as const, transaction, changed: false as const }
+      throw new Error(`Unexpected transaction action: ${request.action}`)
+    })
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+
+    await expect(service.send(owner, {
+      text: 'Edit it',
+      selection: {
+        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+      },
+      workspacePath: join(directories.at(-1)!),
+      documentHandleId: 'handle-1',
+      documentId: 'doc-1',
+      documentUri: `file://${filePath}`,
+      filePath,
+      markdown: 'before\n',
+      documentRevision: 1,
+      documentDirty: false
+    })).rejects.toThrow('Save the current document')
+    expect(transactions.request).toHaveBeenLastCalledWith(expect.any(Number), expect.objectContaining({
+      action: 'keep'
+    }))
     service.dispose()
   })
 

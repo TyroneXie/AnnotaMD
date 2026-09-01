@@ -359,7 +359,8 @@ export const buildCliCommand = (
   prompt: string,
   mcp?: AiMcpLaunchSpec,
   attachments: readonly AiAttachment[] = [],
-  workspacePath?: string
+  workspacePath?: string,
+  additionalWorkspacePaths: readonly string[] = []
 ): CliCommandSpec => {
   const program = resolveCliProgram(config)
   const model = config.model?.trim()
@@ -381,6 +382,7 @@ export const buildCliCommand = (
       '--setting-sources', 'user,project,local',
       '--tools', 'default'
     ]
+    for (const path of additionalWorkspacePaths) args.push('--add-dir', path)
     if (permissionMode === 'full-access') args.push('--dangerously-skip-permissions')
     if (model && model.toLowerCase() !== 'default') args.push('--model', model)
     if (effort) args.push('--effort', effort)
@@ -398,6 +400,7 @@ export const buildCliCommand = (
       'exec', '--json', '--skip-git-repo-check', '--sandbox',
       permissionMode === 'full-access' ? 'danger-full-access' : 'workspace-write'
     ]
+    for (const path of additionalWorkspacePaths) args.push('--add-dir', path)
     if (permissionMode === 'full-access') args.push('--dangerously-bypass-approvals-and-sandbox')
     const overrides: string[] = []
     if (effort) overrides.push(`model_reasoning_effort=${tomlString(effort)}`)
@@ -445,7 +448,7 @@ export const buildCliCommand = (
       ...(permissionMode === 'full-access' ? ['--force'] : []),
       '--approve-mcps',
       '--trust',
-      '--workspace', isolated.workspace
+      '--workspace', workspaceCwd ?? isolated.workspace
     ]
     if (model && model.toLowerCase() !== 'default') args.push('--model', model)
     return {
@@ -455,7 +458,7 @@ export const buildCliCommand = (
         CURSOR_CONFIG_DIR: isolated.config,
         CURSOR_DATA_DIR: isolated.data
       }),
-      cwd: isolated.workspace,
+      cwd: workspaceCwd ?? isolated.workspace,
       stdin: prompt,
       dialect: 'cursor-cli',
       cleanup: isolated.cleanup
@@ -481,7 +484,7 @@ export const buildCliCommand = (
         GROK_HOME: isolated.grokHome,
         GROK_AUTH_PATH: isolated.authPath
       }),
-      cwd: isolated.root,
+      cwd: workspaceCwd ?? isolated.root,
       dialect: 'grok-cli',
       cleanup: isolated.cleanup
     }
@@ -509,7 +512,7 @@ export const buildCliCommand = (
       program,
       args,
       env,
-      cwd: isolated.path,
+      cwd: workspaceCwd ?? isolated.path,
       stdin: prompt,
       dialect: 'codebuddy-cli',
       cleanup: isolated.cleanup
@@ -534,7 +537,7 @@ export const buildCliCommand = (
       program,
       args,
       env: processEnvironment(config, mcp),
-      cwd: isolated.path,
+      cwd: workspaceCwd ?? isolated.path,
       stdin: prompt,
       dialect: 'qoder-cli',
       cleanup: isolated.cleanup
@@ -899,16 +902,34 @@ export const parseCliJsonlLine = (dialect: CliDialect, line: string): ParsedCliL
 }
 
 export const buildCliPrompt = (request: AiHostRunRequest): string => {
-  const sections = [
+  let latestUserIndex = -1
+  for (let index = request.messages.length - 1; index >= 0; index -= 1) {
+    if (request.messages[index]?.role === 'user') {
+      latestUserIndex = index
+      break
+    }
+  }
+  const latestUserMessage = latestUserIndex >= 0 ? request.messages[latestUserIndex] : undefined
+  const priorMessages = request.messages.filter((_, index) => index !== latestUserIndex)
+  const sections = latestUserMessage ? [latestUserMessage.content, ''] : []
+  sections.push(
+    '<annotamd_runtime_context>',
     'You are running inside AnnotaMD.',
     request.mode === 'agent'
       ? 'Use your native Agent tools for files, shell commands, network access, Skills, extensions, and project work. The scoped AnnotaMD MCP only provides live editor context that is not reliably available from disk, such as unsaved Markdown, selected text, and comments. Call annotamd_get_context first when the user refers to the current document or selected text. Modify saved files with your native file tools; do not look for AnnotaMD edit or replace tools.'
       : 'Answer the user without using filesystem, shell, or document-editing tools.',
-    '',
-    '## Conversation'
-  ]
-  for (const message of request.messages) {
-    sections.push(`### ${message.role}`, message.content, '')
+    ...(request.additionalWorkspacePaths?.length
+      ? [`The active document or project is available at: ${request.additionalWorkspacePaths.join(', ')}`]
+      : []),
+    '</annotamd_runtime_context>',
+    ''
+  )
+  if (priorMessages.length) {
+    sections.push('<conversation_history>')
+    for (const message of priorMessages) {
+      sections.push(`### ${message.role}`, message.content, '')
+    }
+    sections.push('</conversation_history>', '')
   }
   const textAttachments = request.attachments?.filter(attachment => attachment.kind === 'text') ?? []
   if (textAttachments.length) {
@@ -1430,7 +1451,8 @@ export class CliAgentHost implements AiHost {
       prompt,
       request.mode === 'agent' ? request.mcp : undefined,
       request.attachments,
-      request.workspacePath
+      request.workspacePath,
+      request.additionalWorkspacePaths
     )
     const child = this.spawnProcess(spec.program, spec.args, {
       cwd: spec.cwd,
@@ -1536,6 +1558,7 @@ export class CliAgentHost implements AiHost {
     const effort = request.config.reasoningEffort?.trim()
     if (model && model.toLowerCase() !== 'default') args.push('--model', model)
     if (effort) args.push('--effort', effort)
+    for (const path of request.additionalWorkspacePaths ?? []) args.push('--add-dir', path)
     const env = processEnvironment(request.config, request.mcp)
     if (provider === 'codebuddy-cli') delete env.CLAUDECODE
     const child = this.spawnProcess(resolveCliProgram(request.config), args, {
@@ -2024,10 +2047,34 @@ export class CliAgentHost implements AiHost {
     let settled = false
     let outputBytes = 0
     const initializeId = 1
-    const threadStartId = 2
-    const turnStartId = 3
+    const projectCreateId = 2
+    const threadStartId = 3
+    const turnStartId = 4
+    let projectId: string | undefined
     const send = (value: unknown): void => {
       child.stdin.write(`${JSON.stringify(value)}\n`)
+    }
+    const runtimeWorkspaceRoots = [
+      request.workspacePath,
+      ...(request.additionalWorkspacePaths ?? [])
+    ].filter((path, index, paths): path is string => Boolean(path) && paths.indexOf(path) === index)
+    const startThread = (): void => {
+      send({
+        method: 'thread/start',
+        id: threadStartId,
+        params: {
+          cwd: request.workspacePath ?? null,
+          model: request.config.model && request.config.model !== 'default'
+            ? request.config.model
+            : null,
+          approvalPolicy: 'on-request',
+          approvalsReviewer: 'user',
+          sandbox: 'workspace-write',
+          ephemeral: false,
+          ...(projectId ? { projectId } : {}),
+          ...(runtimeWorkspaceRoots.length ? { runtimeWorkspaceRoots } : {})
+        }
+      })
     }
     const lines = createInterface({ input: child.stdout, crlfDelay: Infinity })
     child.stderr.setEncoding('utf8')
@@ -2057,20 +2104,34 @@ export class CliAgentHost implements AiHost {
           if (!message) return
           if (message.id === initializeId && isRecord(message.result)) {
             send({ method: 'initialized' })
-            send({
-              method: 'thread/start',
-              id: threadStartId,
-              params: {
-                cwd: request.workspacePath ?? null,
-                model: request.config.model && request.config.model !== 'default'
-                  ? request.config.model
-                  : null,
-                approvalPolicy: 'on-request',
-                approvalsReviewer: 'user',
-                sandbox: 'workspace-write',
-                ephemeral: false
-              }
-            })
+            if (request.workspaceProject && request.workspacePath) {
+              send({
+                method: 'project/create',
+                id: projectCreateId,
+                params: {
+                  idempotencyKey: request.workspaceProject.idempotencyKey,
+                  name: request.workspaceProject.name,
+                  roots: [{ path: request.workspacePath }]
+                }
+              })
+            } else {
+              startThread()
+            }
+            return
+          }
+          if (message.id === projectCreateId && request.workspaceProject) {
+            if (message.error) {
+              fail(errorMessage(message, 'Codex could not create or find the AnnotaMD project.'))
+              return
+            }
+            const result = isRecord(message.result) ? message.result : {}
+            const project = isRecord(result.project) ? result.project : {}
+            if (typeof project.id !== 'string') {
+              fail('Codex project/create returned no project id.')
+              return
+            }
+            projectId = project.id
+            startThread()
             return
           }
           if (message.id === threadStartId) {

@@ -41,7 +41,8 @@ export interface AgentDocumentTurnSnapshot extends AgentDocumentTurnRoute, Agent
 
 export interface BeginAgentDocumentTurnRequest extends AgentDocumentTurnRoute, AgentDocumentTarget {
   action: 'begin'
-  expectedMarkdown: string
+  /** Omit when the renderer should atomically capture the current Muya document as the checkpoint. */
+  expectedMarkdown?: string
 }
 
 export interface ApplyAgentDocumentMutationRequest extends AgentDocumentTurnRoute, AgentDocumentTarget {
@@ -98,7 +99,7 @@ export type AgentDocumentRollbackConflictReason =
 
 export type AgentDocumentTransactionResult =
   | { status: 'snapshot'; snapshot: AgentDocumentRendererSnapshot }
-  | { status: 'started'; transaction: AgentDocumentTurnSnapshot }
+  | { status: 'started'; transaction: AgentDocumentTurnSnapshot; documentDirty?: boolean }
   | {
     status: 'applied'
     transaction: AgentDocumentTurnSnapshot

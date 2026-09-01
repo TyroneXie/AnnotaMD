@@ -47,31 +47,25 @@ describe('empty editor start actions', () => {
     )
   })
 
-  it('collapses the sidebar content panel whenever the editor becomes empty', () => {
+  it('collapses document navigation but preserves an active Agent workspace when the editor becomes empty', () => {
     expect(appComponent).toMatch(
-      /watch\(\[init, hasCurrentFile\],[\s\S]*?isInitialized && !hasFile[\s\S]*?SET_LAYOUT\(\{ rightColumn: '' \}\)/
+      /watch\(\[init, hasCurrentFile\],[\s\S]*?isInitialized && !hasFile[\s\S]*?rightColumn !== 'agent'[\s\S]*?SET_LAYOUT\(\{ rightColumn: '' \}\)/
     )
   })
 
-  it('keeps Agent available in the empty editor while comments still close', () => {
+  it('keeps Agent available from the left activity bar while comments still close', () => {
     expect(appComponent).toMatch(
       /const commentPaneActive = computed<boolean>\(\(\) => \{[\s\S]*?init\.value && hasCurrentFile\.value && commentPaneVisible\.value/
     )
-    expect(appComponent).toMatch(
-      /const agentPaneActive = computed<boolean>\(\(\) => \{\s*return init\.value && rightPaneMode\.value === 'agent'/
-    )
-    expect(appComponent).toMatch(
-      /const emptyAgentLauncherVisible = computed<boolean>\(\(\) => \{\s*return init\.value && !hasCurrentFile\.value && !agentPaneActive\.value/
-    )
-    expect(appComponent).toContain('data-testid="empty-agent-toggle"')
+    expect(appComponent).toContain(':agent-workspace-path="agentWorkspacePath"')
+    expect(appComponent).toContain(':agent-document-context="agentDocumentContext"')
     expect(appComponent).toMatch(
       /watch\(\[init, hasCurrentFile\][\s\S]*?rightPaneStore\.closeIf\('comments'\)/
     )
+    expect(appComponent).not.toContain('empty-agent-toggle')
+    expect(appComponent).not.toContain('agent-pane-maximized')
     expect(appComponent).toMatch(
-      /:class="\{[\s\S]*?'comment-pane-open': rightPaneActive,[\s\S]*?'agent-pane-maximized': agentPaneActive && agentMaximized[\s\S]*?\}"/
-    )
-    expect(appComponent).toMatch(
-      /'--annotamd-comment-pane-width': rightPaneActive\.value[\s\S]*?agentPaneActive\.value && agentMaximized\.value[\s\S]*?`\$\{activePaneWidth\.value\}px`[\s\S]*?: '0px'/
+      /'--annotamd-comment-pane-width': commentPaneActive\.value[\s\S]*?`\$\{activePaneWidth\.value\}px`[\s\S]*?: '0px'/
     )
   })
 

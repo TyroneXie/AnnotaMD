@@ -47,37 +47,6 @@
         </span>
       </div>
       <div
-        v-if="filename"
-        class="title-pane-toggles title-no-drag"
-        :class="{ 'with-window-controls': titleBarStyle === 'custom' && !isOsx }"
-      >
-        <button
-          type="button"
-          class="title-pane-toggle tab-comment-toggle"
-          :class="{ 'is-active': commentPaneActive }"
-          :title="t('annotamd.comments.title')"
-          :aria-label="t('annotamd.comments.title')"
-          :aria-pressed="commentPaneActive"
-          @click.stop="openCommentPane"
-        >
-          <el-icon class="title-pane-icon" aria-hidden="true"><ChatLineRound /></el-icon>
-          <span v-if="selectionCommentCount" class="title-pane-count">
-            {{ selectionCommentCount }}
-          </span>
-        </button>
-        <button
-          type="button"
-          class="title-pane-toggle tab-agent-toggle"
-          :class="{ 'is-active': agentPaneActive }"
-          :title="t('annotamd.agentWorkspace.open')"
-          :aria-label="t('annotamd.agentWorkspace.open')"
-          :aria-pressed="agentPaneActive"
-          @click.stop="openAgentPane"
-        >
-          <el-icon class="title-pane-icon" aria-hidden="true"><Cpu /></el-icon>
-        </button>
-      </div>
-      <div
         v-if="showCustomTitleBar"
         class="left-toolbar title-no-drag"
       >
@@ -154,10 +123,7 @@ import { PATH_SEPARATOR } from '../../config'
 import { isOsx as isOsxPlatform } from '@/util'
 import { shouldShowInAppTitleBar } from './visibility'
 import { useEditorStore } from '@/store/editor'
-import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
-import { useRightPaneStore } from '@/store/rightPane'
-import { ArrowRight, ChatLineRound, Cpu } from '@element-plus/icons-vue'
-import { useI18n } from 'vue-i18n'
+import { ArrowRight } from '@element-plus/icons-vue'
 import type { FileWordCount } from '@shared/types/files'
 
 interface ProjectInfo {
@@ -177,9 +143,6 @@ const props = defineProps<{
 const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
 const editorStore = useEditorStore()
-const commentsStore = useAnnotaMDCommentsStore()
-const rightPaneStore = useRightPaneStore()
-const { t } = useI18n()
 
 const isOsx = isOsxPlatform
 const windowIconMinimize = minimizePath
@@ -203,31 +166,6 @@ onMounted(async () => {
 
 const { titleBarStyle } = storeToRefs(preferencesStore)
 const { showTabBar } = storeToRefs(layoutStore)
-const { paneVisible: commentPaneVisible } = storeToRefs(commentsStore)
-const { mode: rightPaneMode } = storeToRefs(rightPaneStore)
-
-const commentPaneActive = computed(() => (
-  commentPaneVisible.value && rightPaneMode.value === 'comments'
-))
-const agentPaneActive = computed(() => rightPaneMode.value === 'agent')
-const selectionCommentCount = computed(() => {
-  if (!props.pathname) return 0
-  return commentsStore
-    .commentsForFile(props.pathname)
-    .filter(comment => comment.scope === 'selection' && !comment.resolved).length
-})
-
-const openCommentPane = (): void => {
-  if (commentPaneActive.value) return
-  rightPaneStore.openComments()
-  commentsStore.setPaneVisible(true)
-}
-
-const openAgentPane = (): void => {
-  if (agentPaneActive.value) return
-  commentsStore.setPaneVisible(false)
-  rightPaneStore.openAgent()
-}
 
 const paths = computed(() => {
   if (!props.pathname) return []
@@ -404,70 +342,6 @@ div.title > span {
   font-weight: 600;
 }
 
-.title-pane-toggles {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transform: translateY(-50%);
-}
-.title-pane-toggles.with-window-controls {
-  right: 150px;
-}
-.title-pane-toggle {
-  position: relative;
-  display: inline-grid;
-  width: 32px;
-  height: 30px;
-  padding: 0;
-  place-items: center;
-  color: #646a73;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-}
-.title-pane-toggle:hover {
-  color: #1f2329;
-  background: #f3f5f7;
-}
-.title-pane-toggle.is-active {
-  color: var(--annotamd-green, #159f67);
-  background: #eaf7f0;
-  background: color-mix(in srgb, var(--annotamd-green, #159f67) 12%, #fff);
-}
-.title-pane-toggle:active {
-  transform: scale(0.96);
-}
-.title-pane-toggle:focus-visible {
-  outline: 2px solid var(--annotamd-green, #159f67);
-  outline-offset: 1px;
-}
-.title-pane-icon,
-.title-pane-icon svg {
-  width: 17px;
-  height: 17px;
-}
-.title-pane-count {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  box-sizing: border-box;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 4px;
-  color: #fff;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  background: #3370ff;
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 11px;
-  text-align: center;
-}
 
 .active .save-dot {
   margin-right: 0.25rem;

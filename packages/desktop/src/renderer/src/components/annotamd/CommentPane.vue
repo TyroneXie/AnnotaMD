@@ -2509,15 +2509,16 @@ onBeforeUnmount(() => {
   margin-left: auto;
 }
 
-.annotamd-comment-action-row .annotamd-reply-cancel,
-.annotamd-comment-action-row .annotamd-reply-submit {
+.annotamd-reply-controls > button {
+  min-width: 46px;
   height: 26px;
   padding: 0 10px;
-  border: 1px solid var(--annotamd-border);
+  border: 1px solid transparent;
   border-radius: 5px;
 }
 
 .annotamd-comment-action-row .annotamd-reply-cancel {
+  border-color: var(--annotamd-border);
   background: var(--annotamd-surface);
   color: var(--annotamd-text);
 }

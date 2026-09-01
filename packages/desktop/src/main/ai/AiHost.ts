@@ -64,6 +64,11 @@ export interface AiHostRunRequest {
   messages: AiHostMessage[]
   mode?: 'ask' | 'agent'
   workspacePath?: string
+  additionalWorkspacePaths?: string[]
+  workspaceProject?: {
+    name: string
+    idempotencyKey: string
+  }
   permissionMode?: AiPermissionMode
   mcp?: AiMcpLaunchSpec
   attachments?: readonly AiAttachment[]

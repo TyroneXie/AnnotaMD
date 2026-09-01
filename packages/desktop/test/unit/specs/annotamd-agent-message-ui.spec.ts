@@ -44,8 +44,8 @@ describe('Agent message presentation', () => {
     expect(timeline).toContain('data-testid="ai-copy-code"')
     expect(timeline).toContain('CopyDocument,')
     expect(timeline).toContain('renderAgentMarkdown(message.content)')
-    expect(timeline).toContain("message.role === 'assistant' && message.status === 'streaming'")
-    expect(timeline).toContain('message.content.trim().length > 0')
+    expect(timeline).toContain("message.role === 'assistant' && message.status !== 'failed'")
+    expect(timeline).toContain('entry.message.content.trim().length > 0')
   })
 
   it('uses compact opposing bubbles without visible role-label rows', () => {
@@ -70,16 +70,68 @@ describe('Agent message presentation', () => {
     expect(timeline).toMatch(/\.annotamd-agent-message-meta\s*\{[^}]*justify-content:\s*flex-end;/s)
   })
 
-  it('shows persisted tool messages as compact expandable status rows', () => {
+  it('uses one completed-process disclosure with a flat internal timeline', () => {
     const timeline = read(
       'packages/desktop/src/renderer/src/components/agent/AgentMessageTimeline.vue'
     )
+    expect(timeline).toContain('data-testid="ai-process-group"')
+    expect(timeline).toContain('data-testid="ai-process-group-toggle"')
+    expect(timeline).toContain('data-testid="ai-process-group-body"')
+    expect(timeline).toContain('data-testid="ai-process-message"')
+    expect(timeline).toContain('data-testid="ai-tool-list"')
     expect(timeline).toContain('data-testid="ai-tool-message"')
-    expect(timeline).toContain('data-testid="ai-tool-details"')
-    expect(timeline).toContain("entry.message.status === 'streaming'")
-    expect(timeline).toContain("entry.message.status === 'complete'")
-    expect(timeline).toContain("entry.message.status === 'failed'")
-    expect(timeline).toContain('entry.message.toolName')
+    expect(timeline).not.toContain('data-testid="ai-tool-group"')
+    expect(timeline).not.toContain('data-testid="ai-tool-group-viewport"')
+    expect(timeline).not.toContain('data-testid="ai-tool-details"')
+    expect(timeline).toContain("entry.type === 'process-group'")
+    expect(timeline).toContain("item.type === 'activity'")
+    expect(timeline).toContain("type: 'process'")
+    expect(timeline).toContain('AI_REASONING_MESSAGE_TOOL')
+    expect(timeline).toContain('AI_RUN_SUMMARY_TOOL')
+    expect(timeline).toContain('missingFinalAnswer')
+    expect(timeline).toContain('toolActivityDuration')
+    expect(timeline).toContain('runError(entry.summary)')
+    expect(timeline).toContain('v-if="entry.missingFinal"')
+    expect(timeline).toContain(':aria-label="processLabel(item.message)"')
+    expect(timeline).not.toContain('annotamd-agent-process-note-header')
+    expect(timeline).toContain('flushToolGroup()')
+    expect(timeline).toContain('processItems.push')
+    expect(timeline).toContain('processGroupExpansionOverrides.value.get(entry.id)')
+    expect(timeline).toContain("entry.running || runStatus(entry) === 'failed'")
+    expect(timeline).toContain('@click="toggleProcessGroup(entry)"')
+    expect(timeline).toContain('v-if="processGroupExpanded(entry) && entry.items.length"')
+    expect(timeline).toContain("t('annotamd.agentWorkspace.toolActivityComplete')")
+    expect(timeline).toContain('v-for="activity in item.messages"')
+    expect(timeline).not.toContain('toolGroupExpanded(')
+    expect(timeline).not.toContain('toolExpanded(')
+    expect(timeline).not.toContain('toggleToolGroup')
+    expect(timeline).not.toContain('toggleTool(')
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-group-toggle\s*\{[^}]*min-height:\s*30px;[^}]*align-items:\s*baseline;/s
+    )
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-group-body\s*\{[^}]*gap:\s*7px;[^}]*margin:\s*3px 4px 6px 24px;/s
+    )
+    expect(timeline).not.toMatch(/\.annotamd-agent-process-group-body\s*\{[^}]*border-left:/s)
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-note\s*\{[^}]*padding:\s*1px 0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s
+    )
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*11px;[^}]*line-height:\s*1\.55;/s
+    )
+    expect(timeline).toMatch(
+      /\.annotamd-agent-tool-line\s*\{[^}]*min-height:\s*24px;[^}]*align-items:\s*center;/s
+    )
+    expect(timeline).toContain(
+      '.annotamd-agent-process-group-toggle > .annotamd-agent-tool-state { align-self: baseline; }'
+    )
+    expect(timeline).toContain("activity.message.status === 'streaming'")
+    expect(timeline).toContain("activity.message.status === 'complete'")
+    expect(timeline).toContain("activity.message.status === 'failed'")
+    expect(timeline).toContain('toolDisplayName(activity.message.toolName)')
+    expect(timeline).toContain("return t('annotamd.agentWorkspace.toolActivityComplete')")
+    expect(timeline).toContain("message.toolName === AI_REASONING_MESSAGE_TOOL")
+    expect(timeline).toContain("activity.message.status === 'failed' && activity.message.content")
   })
 })
 

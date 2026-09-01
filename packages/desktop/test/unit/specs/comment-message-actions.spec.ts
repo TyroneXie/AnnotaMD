@@ -267,4 +267,10 @@ describe('Feishu-style comment messages', () => {
       /\.annotamd-comment-card-actions button,[\s\S]*?\.annotamd-message-actions button\s*\{[^}]*white-space:\s*nowrap;/s
     )
   })
+
+  it('keeps reply actions the same size', () => {
+    expect(commentPane).toMatch(
+      /\.annotamd-reply-controls > button\s*\{[^}]*min-width:\s*46px;[^}]*height:\s*26px;[^}]*padding:\s*0 10px;/s
+    )
+  })
 })
