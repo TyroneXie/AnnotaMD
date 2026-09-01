@@ -27,6 +27,7 @@ const ICON_CANDIDATES = {
   'inline-code': ['code-xml', 'code-2', 'code', 'brackets-angle', 'code-slash'],
   color: ['highlighter', 'text-color', 'format-color-text', 'palette', 'paint-brush'],
   comment: ['message-square', 'message', 'comment', 'chat', 'chat-square'],
+  agent: ['cpu', 'bot', 'sparkles', 'microchip', 'robot'],
   delete: ['trash-2', 'trash', 'delete', 'bin'],
   'move-up': ['arrow-up'],
   'move-down': ['arrow-down'],

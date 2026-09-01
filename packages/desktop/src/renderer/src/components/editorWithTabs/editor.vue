@@ -2426,6 +2426,19 @@ onMounted(() => {
     annotaMDCommentsStore.requestComposer('selection')
   })
 
+  editor.value.on('annotamd-agent-selection', (selection?: AnnotaMDSelection) => {
+    const text = (selection?.exactQuote ?? selection?.quote ?? '').replace(/\s+/g, ' ').trim()
+    if (!text) return
+
+    window.dispatchEvent(new CustomEvent('annotamd:agent-selection-changed', {
+      detail: {
+        documentId: currentFile.value?.id ?? '',
+        text
+      }
+    }))
+    window.dispatchEvent(new CustomEvent('annotamd:open-agent-with-selection'))
+  })
+
   editor.value.on('selection-change', (changes: MuyaChange) => {
     const y = (changes.cursorCoords?.y ?? null) as number | null
     if (y != null) {

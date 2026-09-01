@@ -74,15 +74,6 @@
                   >
                     {{ t('annotamd.comments.delete') }}
                   </button>
-                  <button
-                    v-if="isLatestLocalMessage(comment, comment.id)"
-                    type="button"
-                    :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
-                    :title="agentSendTitle"
-                    @click.stop="sendExistingMessageToAgent(comment, comment.id, comment.body)"
-                  >
-                    {{ t('annotamd.comments.sendAgent') }}
-                  </button>
                 </div>
               </details>
             </template>
@@ -157,15 +148,6 @@
                     <button type="button" @click.stop="deleteReply(comment.id, reply.id)">
                       {{ t('annotamd.comments.delete') }}
                     </button>
-                    <button
-                      v-if="isLatestLocalMessage(comment, reply.id)"
-                      type="button"
-                      :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
-                      :title="agentSendTitle"
-                      @click.stop="sendExistingMessageToAgent(comment, reply.id, reply.body)"
-                    >
-                      {{ t('annotamd.comments.sendAgent') }}
-                    </button>
                   </div>
                 </details>
               </template>
@@ -196,17 +178,6 @@
           @click="saveReply(comment.id)"
         >
           {{ t('annotamd.comments.reply') }}
-        </button>
-        <button
-          class="annotamd-send-agent"
-          type="button"
-          :disabled="!replyBody.trim() || !agentTurns.directSendReady ||
-            agentTurns.isRunning(comment.id)"
-          @click="saveReplyToAgent(comment.id)"
-        >
-          {{ agentTurns.isRunning(comment.id)
-            ? t('annotamd.comments.agentRunning')
-            : t('annotamd.comments.sendAgent') }}
         </button>
       </div>
 
@@ -252,14 +223,6 @@
         >
           {{ t('annotamd.comments.send') }}
         </button>
-        <button
-          class="annotamd-send-agent"
-          type="button"
-          :disabled="!draftBody.trim() || !agentTurns.directSendReady"
-          @click="submitCommentToAgent"
-        >
-          {{ t('annotamd.comments.sendAgent') }}
-        </button>
       </div>
     </div>
   </section>
@@ -270,8 +233,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import {
-  useAnnotaMDCommentsStore,
-  type AnnotaMDComment
+  useAnnotaMDCommentsStore
 } from '@/store/annotamdComments'
 import { useAgentTurnsStore } from '@/store/agentTurns'
 import { useI18n } from 'vue-i18n'
@@ -295,36 +257,13 @@ const replyingId = ref<string | null>(null)
 const replyBody = ref('')
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
-const agentSendTitle = computed(() => (
-  agentTurns.directSendReady
-    ? t('annotamd.comments.sendAgentTo', { agent: agentTurns.selectedAgentName })
-    : t('annotamd.comments.agentStatusDirectUnavailable')
-))
 const documentComments = computed(() =>
   commentStore.commentsForFile(filePath.value).filter((comment) => comment.scope === 'document')
 )
-const isLatestLocalMessage = (comment: AnnotaMDComment, messageId: string): boolean => {
-  const latestReply = comment.replies.at(-1)
-  return latestReply
-    ? latestReply.author === 'user' && latestReply.id === messageId
-    : comment.id === messageId
-}
-
 const submitComment = (): void => {
   if (!filePath.value || !draftBody.value.trim()) return
   commentStore.addDocumentComment(filePath.value, draftBody.value)
   draftBody.value = ''
-}
-
-const submitCommentToAgent = async(): Promise<void> => {
-  const latestMessage = draftBody.value.trim()
-  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
-  const comment = commentStore.addDocumentComment(filePath.value, latestMessage)
-  if (!comment) return
-  draftBody.value = ''
-  await commentStore.persistFile(filePath.value)
-  const reply = await agentTurns.send(filePath.value, comment.id, latestMessage)
-  if (reply) commentStore.addAgentReply(filePath.value, comment.id, reply)
 }
 
 const saveEdit = (id: string): void => {
@@ -412,32 +351,7 @@ const saveReply = (id: string): void => {
   replyBody.value = ''
 }
 
-const saveReplyToAgent = async(id: string): Promise<void> => {
-  const latestMessage = replyBody.value.trim()
-  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
-  commentStore.addReply(filePath.value, id, latestMessage)
-  replyingId.value = null
-  replyBody.value = ''
-  await commentStore.persistFile(filePath.value)
-  const reply = await agentTurns.send(filePath.value, id, latestMessage)
-  if (reply) commentStore.addAgentReply(filePath.value, id, reply)
-}
-
-const sendExistingMessageToAgent = async(
-  comment: AnnotaMDComment,
-  messageId: string,
-  latestMessage: string
-): Promise<void> => {
-  closeMessageMenus()
-  if (!filePath.value || !agentTurns.directSendReady ||
-    !isLatestLocalMessage(comment, messageId)) return
-  await commentStore.persistFile(filePath.value)
-  const reply = await agentTurns.send(filePath.value, comment.id, latestMessage)
-  if (reply) commentStore.addAgentReply(filePath.value, comment.id, reply)
-}
-
 onMounted(() => {
-  agentTurns.startReadiness()
   document.addEventListener('pointerdown', handleMessageMenuOutsidePointerDown, true)
   document.addEventListener('click', handleMessageMenuOutsidePointerDown, true)
 })
@@ -653,12 +567,6 @@ onBeforeUnmount(() => {
   background: transparent;
   color: #3370ff;
   font-size: 12px;
-}
-
-.annotamd-document-reply-editor .annotamd-send-agent,
-.annotamd-document-composer .annotamd-send-agent {
-  background: var(--themeColor);
-  color: #fff;
 }
 
 .annotamd-agent-turn-error {

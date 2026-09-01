@@ -77,20 +77,24 @@ describe('AnnotaMD unified AI comment turns', () => {
     expect(read('packages/desktop/src/main/ipc/agentTurns.ts')).not.toContain('agentPromptTemplate')
   })
 
-  it('routes both comment surfaces through the unified runtime and appends its final reply', () => {
+  it('removes visible Agent consultation actions from comments while retaining legacy turn recovery', () => {
     for (const relativePath of [
       'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue',
       'packages/desktop/src/renderer/src/components/annotamd/DocumentCommentFooter.vue'
     ]) {
       const source = read(relativePath)
-      expect(source).toContain("t('annotamd.comments.sendAgent')")
-      expect(source).toContain('submitCommentToAgent')
-      expect(source).toContain('saveReplyToAgent')
-      expect(source).toContain('agentTurns.send')
-      expect(source).toContain('commentStore.addAgentReply')
+      expect(source).not.toContain("t('annotamd.comments.sendAgent')")
+      expect(source).not.toContain('annotamd-send-agent')
+      expect(source).not.toContain('submitCommentToAgent')
+      expect(source).not.toContain('saveReplyToAgent')
+      expect(source).not.toContain('sendExistingMessageToAgent')
+      expect(source).not.toContain('agentTurns.send')
       expect(source).not.toContain('SAVE_CURRENT_FOR_AGENT')
       expect(source).not.toContain('selectedAgentProfile')
     }
+
+    expect(read('packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue'))
+      .not.toContain('class="annotamd-agent-status"')
 
     const main = read('packages/desktop/src/main/ipc/agentTurns.ts')
     expect(main).toContain('service.sendAndWait')

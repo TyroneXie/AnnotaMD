@@ -33,7 +33,7 @@ const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: 
   await page.waitForTimeout(150)
 }
 
-test('carries selected document text into Agent context and adds text attachments', async() => {
+test('opens Agent from the selection toolbar, carries context, and adds text attachments', async() => {
   const phrase = 'Select this exact phrase for Agent.'
   const { app, page } = await launchWithMarkdown(
     `# Agent context\n\n${phrase}\n`,
@@ -43,7 +43,9 @@ test('carries selected document text into Agent context and adds text attachment
   try {
     await clearRendererErrors(app)
     await selectEditorPhrase(page, phrase)
-    await page.locator('.sidebar-agent-toggle').click()
+    const agentAction = page.locator('.mu-format-picker li.annotamd_agent')
+    await expect(agentAction).toBeVisible()
+    await agentAction.click()
 
     const pane = page.locator('.annotamd-agent-workspace')
     await expect(pane.getByTestId('ai-selection-context')).toContainText(phrase)
@@ -169,6 +171,93 @@ test('shows two or three suggested document tasks and fills the composer without
     await suggestions.first().click()
     await expect(agentPane.getByTestId('ai-composer')).toHaveValue(firstSuggestion)
     await expect(agentPane.locator('.annotamd-agent-message')).toHaveCount(0)
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('adjusts Agent message text size from the Agent settings page', async() => {
+  const { app, page } = await launchWithMarkdown(
+    '# Agent typography\n\nKeep Agent text compact and adjustable.\n',
+    { suppressErrorDialog: true }
+  )
+
+  try {
+    await app.evaluate(({ ipcMain }) => {
+      for (const channel of [
+        'annotamd::ai::snapshot',
+        'annotamd::ai::configs:list',
+        'annotamd::ai::configs:models',
+        'annotamd::ai::preferences:get'
+      ]) ipcMain.removeHandler(channel)
+      const now = Date.now()
+      const config = {
+        id: 'font-size-cli',
+        name: 'Codex CLI',
+        kind: 'cli',
+        provider: 'codex',
+        isDefault: true,
+        enabled: true,
+        defaultModelId: 'font-size-model'
+      }
+      const conversation = {
+        id: 'font-size-conversation',
+        title: 'Agent typography',
+        mode: 'agent',
+        configId: config.id,
+        modelId: config.defaultModelId,
+        templateIds: [],
+        status: 'completed',
+        createdAt: now,
+        updatedAt: now
+      }
+      ipcMain.handle('annotamd::ai::snapshot', () => ({
+        readiness: { status: 'ready', configId: config.id, modelId: config.defaultModelId },
+        configs: [config],
+        conversations: [conversation],
+        activeConversationId: conversation.id,
+        messages: [{
+          id: 'font-size-answer',
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: 'Compact Agent answer.',
+          status: 'complete',
+          createdAt: now
+        }],
+        changeSets: [],
+        running: false
+      }))
+      ipcMain.handle('annotamd::ai::configs:list', () => [config])
+      ipcMain.handle('annotamd::ai::configs:models', () => [
+        { id: config.defaultModelId, name: 'Font Size Model', provider: 'codex' }
+      ])
+      ipcMain.handle('annotamd::ai::preferences:get', () => ({ maxApiRetries: 2 }))
+    })
+    await clearRendererErrors(app)
+    await page.locator('.sidebar-agent-toggle').click()
+
+    const pane = page.locator('.annotamd-agent-workspace')
+    const message = pane.locator('.annotamd-agent-message-content')
+    await expect(message).toHaveCSS('font-size', '12px')
+
+    const settingsWindowPromise = app.waitForEvent('window')
+    await page.evaluate(() => {
+      window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
+    })
+    const settingsWindow = await settingsWindowPromise
+    await settingsWindow.waitForLoadState('domcontentloaded')
+    await expect.poll(() => settingsWindow.url()).toContain('/preference/agent')
+
+    const fontSizeInput = settingsWindow.locator('.pref-ai .stepper-input').first()
+    await expect(fontSizeInput).toHaveAttribute('min', '10')
+    await expect(fontSizeInput).toHaveAttribute('max', '18')
+    await expect(fontSizeInput).toHaveValue('12')
+    await fontSizeInput.fill('16')
+    await fontSizeInput.press('Tab')
+
+    await expect(message).toHaveCSS('font-size', '16px')
+    await settingsWindow.close()
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

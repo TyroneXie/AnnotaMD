@@ -61,25 +61,16 @@ describe('Feishu-style comment messages', () => {
     )
   })
 
-  it('lets the latest unsent Local message be sent to Agent without duplicating it', () => {
+  it('keeps consultation actions out of comment threads now that Agent has its own pane', () => {
     for (const component of [commentPane, documentFooter]) {
-      expect(component).toContain('isLatestLocalMessage(comment, comment.id)')
-      expect(component).toContain('isLatestLocalMessage(comment, reply.id)')
-      expect(component).toContain(
-        'sendExistingMessageToAgent(comment, comment.id, comment.body)'
-      )
-      expect(component).toContain(
-        'sendExistingMessageToAgent(comment, reply.id, reply.body)'
-      )
-      expect(component).toMatch(
-        /const sendExistingMessageToAgent[\s\S]*?isLatestLocalMessage\(comment, messageId\)[\s\S]*?commentStore\.persistFile\(filePath\.value\)[\s\S]*?(?:appendAgentReply\(comment\.id, latestMessage\)|agentTurns\.send\(filePath\.value, comment\.id, latestMessage\))/
-      )
-      const sendExistingMessage = component.match(
-        /const sendExistingMessageToAgent[\s\S]*?\n}\n/
-      )?.[0] ?? ''
-      expect(sendExistingMessage).not.toContain('commentStore.addReply')
-      expect(component).toContain('commentStore.addAgentReply')
+      expect(component).not.toContain('annotamd-send-agent')
+      expect(component).not.toContain("t('annotamd.comments.sendAgent')")
+      expect(component).not.toContain('sendExistingMessageToAgent')
+      expect(component).not.toContain('submitCommentToAgent')
+      expect(component).not.toContain('saveReplyToAgent')
+      expect(component).not.toContain('agentTurns.send(')
     }
+    expect(commentPane).not.toContain('class="annotamd-agent-status"')
   })
 
   it('permanently deletes a comment when the user marks it resolved', () => {
@@ -112,7 +103,6 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('menu.contains(target)')
     expect(commentPane).toContain('menu.open = false')
     expect(commentPane).toContain('closeMenuOnOutsidePointerDown(resolveAllMenu.value, target)')
-    expect(commentPane).toContain('closeMenuOnOutsidePointerDown(agentStatusMenu.value, target)')
     expect(commentPane).toContain(
       "document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)"
     )

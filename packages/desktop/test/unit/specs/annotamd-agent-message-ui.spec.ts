@@ -8,6 +8,40 @@ const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8')
 
 describe('Agent message presentation', () => {
+  it('persists an independently adjustable Agent text size with a smaller default', () => {
+    const schema = read('packages/desktop/src/main/preferences/schema.json')
+    const defaults = read('packages/desktop/static/preference.json')
+    const store = read('packages/desktop/src/renderer/src/store/preferences.ts')
+    const preference = read(
+      'packages/desktop/src/renderer/src/prefComponents/agent/index.vue'
+    )
+    const workspace = read(
+      'packages/desktop/src/renderer/src/components/agent/AgentWorkspacePanel.vue'
+    )
+    const timeline = read(
+      'packages/desktop/src/renderer/src/components/agent/AgentMessageTimeline.vue'
+    )
+
+    expect(schema).toMatch(
+      /"agentFontSize"\s*:\s*\{[^}]*"maximum"\s*:\s*18[^}]*"minimum"\s*:\s*10[^}]*"default"\s*:\s*12/s
+    )
+    expect(defaults).toMatch(/"agentFontSize"\s*:\s*12/)
+    expect(store).toMatch(/agentFontSize:\s*number/)
+    expect(store).toMatch(/agentFontSize:\s*12/)
+    expect(preference).toContain(':value="agentFontSize"')
+    expect(preference).toContain("onSelectChange('agentFontSize', value)")
+    expect(preference).toContain(':min="10"')
+    expect(preference).toContain(':max="18"')
+    expect(workspace).toContain(':style="agentWorkspaceStyle"')
+    expect(workspace).toContain("'--annotamd-agent-font-size': `${agentFontSize.value}px`")
+    expect(timeline).toMatch(
+      /\.annotamd-agent-message-content\s*\{[^}]*font-size:\s*var\(--annotamd-agent-font-size,\s*12px\);/s
+    )
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(9px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);/s
+    )
+  })
+
   it('renders Markdown while keeping fenced code in a separately copyable part', () => {
     const source = [
       'A **bold** answer.',
@@ -117,7 +151,7 @@ describe('Agent message presentation', () => {
       /\.annotamd-agent-process-note\s*\{[^}]*padding:\s*1px 0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*11px;[^}]*line-height:\s*1\.55;/s
+      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(9px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);[^}]*line-height:\s*1\.55;/s
     )
     expect(timeline).toMatch(
       /\.annotamd-agent-tool-line\s*\{[^}]*min-height:\s*24px;[^}]*align-items:\s*center;/s

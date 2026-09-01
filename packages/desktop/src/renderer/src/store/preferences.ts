@@ -45,6 +45,7 @@ export interface PreferencesState {
   defaultAgentProfileId: string
   agentSessionByDocument: Record<string, Record<string, Record<string, string>>>
   agentPromptTemplate: string
+  agentFontSize: number
 
   // ----- Editor / typography -----
   editorFontFamily: string
@@ -172,6 +173,7 @@ export const usePreferencesStore = defineStore('preferences', {
     defaultAgentProfileId: '',
     agentSessionByDocument: {},
     agentPromptTemplate: DEFAULT_AGENT_PROMPT_TEMPLATE,
+    agentFontSize: 12,
 
     editorFontFamily: 'Open Sans',
     fontSize: 15,

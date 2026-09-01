@@ -37,39 +37,6 @@
             </button>
           </div>
         </details>
-        <details
-          ref="agentStatusMenu"
-          class="annotamd-agent-status"
-          :class="agentTurns.readinessLoading ? 'checking' : agentTurns.readinessLevel"
-        >
-          <summary :title="agentStatusTitle">
-            <span
-              class="annotamd-agent-status-dot"
-              :class="{ heartbeat: agentHeartbeatVisible }"
-              aria-hidden="true"
-            />
-            <span>Agent</span>
-          </summary>
-          <div class="annotamd-agent-status-popover">
-            <strong>{{ agentStatusTitle }}</strong>
-            <p
-              v-for="(description, index) in agentStatusDescriptions"
-              :key="description"
-              class="annotamd-agent-status-row"
-              :class="{ 'direct-channel': !agentTurns.readinessLoading && index === 0 }"
-            >
-              <span
-                class="annotamd-agent-channel-dot"
-                :class="{ active: agentTurns.directSendReady }"
-                aria-hidden="true"
-              />
-              <span>{{ description }}</span>
-            </p>
-            <button type="button" @click="openAgentSettings">
-              {{ t('annotamd.comments.agentStatusSettings') }}
-            </button>
-          </div>
-        </details>
         <el-tooltip
           :content="t('annotamd.comments.closePane')"
           placement="bottom"
@@ -138,16 +105,6 @@
             @click="submitComment"
           >
             {{ t('annotamd.comments.send') }}
-          </button>
-          <button
-            class="annotamd-send-agent"
-            type="button"
-            :disabled="!draftBody.trim() || !activeSelection ||
-              !agentTurns.directSendReady"
-            :title="agentSendTitle"
-            @click="submitCommentToAgent"
-          >
-            {{ t('annotamd.comments.sendAgent') }}
           </button>
         </div>
       </article>
@@ -273,15 +230,6 @@
                     >
                       {{ t('annotamd.comments.delete') }}
                     </button>
-                    <button
-                      v-if="isLatestLocalMessage(comment, comment.id)"
-                      type="button"
-                      :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
-                      :title="agentSendTitle"
-                      @click.stop="sendExistingMessageToAgent(comment, comment.id, comment.body)"
-                    >
-                      {{ t('annotamd.comments.sendAgent') }}
-                    </button>
                   </div>
                 </details>
               </template>
@@ -360,15 +308,6 @@
                       <button type="button" @click.stop="deleteReply(comment.id, reply.id)">
                         {{ t('annotamd.comments.delete') }}
                       </button>
-                      <button
-                        v-if="isLatestLocalMessage(comment, reply.id)"
-                        type="button"
-                        :disabled="!agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
-                        :title="agentSendTitle"
-                        @click.stop="sendExistingMessageToAgent(comment, reply.id, reply.body)"
-                      >
-                        {{ t('annotamd.comments.sendAgent') }}
-                      </button>
                     </div>
                   </details>
                 </template>
@@ -444,19 +383,6 @@
               @click.stop="saveReply(comment.id, $event)"
             >
               {{ t('annotamd.comments.reply') }}
-            </button>
-            <button
-              class="annotamd-send-agent"
-              type="button"
-              :disabled="!(replyBodies[comment.id] ?? '').trim() ||
-                !agentTurns.directSendReady || agentTurns.isRunning(comment.id)"
-              :title="agentSendTitle"
-              @mousedown.prevent
-              @click.stop="saveReplyToAgent(comment.id, $event)"
-            >
-              {{ agentTurns.isRunning(comment.id)
-                ? t('annotamd.comments.agentRunning')
-                : t('annotamd.comments.sendAgent') }}
             </button>
           </div>
           <span
@@ -599,8 +525,6 @@ const localScrollMaxHeight = ref(0)
 const composerTextarea = ref<HTMLTextAreaElement | null>(null)
 const commentList = ref<HTMLElement | null>(null)
 const resolveAllMenu = ref<HTMLDetailsElement | null>(null)
-const agentStatusMenu = ref<HTMLDetailsElement | null>(null)
-const agentHeartbeatVisible = ref(false)
 const resolveAllArmed = ref(false)
 const commentAnchors = ref<CommentAnchorRect[]>([])
 const commentLayout = ref<CommentBubbleLayout>({ positions: {}, height: 0 })
@@ -611,7 +535,6 @@ let commentLayoutFrame: number | null = null
 let commentLayoutDisposed = false
 let sharedEditorScroller: HTMLElement | null = null
 let syncingFromEditor = false
-let agentHeartbeatTimer: ReturnType<typeof setTimeout> | null = null
 const commentCardHeights = new Map<string, number>()
 const observedCommentCards = new Map<string, HTMLElement>()
 const {
@@ -621,27 +544,6 @@ const {
 } = useAutoHideScrollbar()
 
 const filePath = computed(() => currentFile.value?.pathname ?? '')
-const agentStatusTitle = computed(() => {
-  if (agentTurns.readinessLoading) return t('annotamd.comments.agentStatusChecking')
-  if (agentTurns.directSendReady) return t('annotamd.comments.agentStatusDirectReadyTitle')
-  return t('annotamd.comments.agentStatusUnavailableTitle')
-})
-const agentStatusDescriptions = computed(() => {
-  if (agentTurns.readinessLoading) {
-    return [t('annotamd.comments.agentStatusCheckingDescription')]
-  }
-  if (agentTurns.directSendReady) {
-    return [t('annotamd.comments.agentStatusDirectReadyDescription', {
-      agent: agentTurns.selectedAgentName
-    })]
-  }
-  return [t('annotamd.comments.agentStatusDirectUnavailable')]
-})
-const agentSendTitle = computed(() => (
-  agentTurns.directSendReady
-    ? t('annotamd.comments.sendAgentTo', { agent: agentTurns.selectedAgentName })
-    : agentStatusDescriptions.value.join(' ')
-))
 const comments = computed(() => commentStore.commentsForFile(filePath.value))
 const selectionComments = computed(() => comments.value.filter((comment) => comment.scope === 'selection'))
 const anchoredSelectionComments = computed(() => selectionComments.value.filter(
@@ -696,13 +598,6 @@ const commentMessageCount = (comment: AnnotaMDComment): number => 1 + comment.re
 const latestReplyId = (comment: AnnotaMDComment): string | null => (
   comment.replies.at(-1)?.id ?? null
 )
-
-const isLatestLocalMessage = (comment: AnnotaMDComment, messageId: string): boolean => {
-  const latestReply = comment.replies.at(-1)
-  return latestReply
-    ? latestReply.author === 'user' && latestReply.id === messageId
-    : comment.id === messageId
-}
 
 const latestCommentMessage = (comment: AnnotaMDComment): string => (
   comment.replies.at(-1)?.body ?? comment.body
@@ -1113,11 +1008,6 @@ const handleCommentListScroll = (): void => {
   updateCommentBubbleLayout()
 }
 
-const openAgentSettings = (): void => {
-  if (agentStatusMenu.value) agentStatusMenu.value.open = false
-  window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
-}
-
 const handleResolveAllMenuToggle = (): void => {
   if (!resolveAllMenu.value?.open) resolveAllArmed.value = false
 }
@@ -1133,7 +1023,6 @@ const closeMenuOnOutsidePointerDown = (
 const handleHeaderMenusOutsidePointerDown = (event: PointerEvent): void => {
   const target = event.target
   closeMenuOnOutsidePointerDown(resolveAllMenu.value, target)
-  closeMenuOnOutsidePointerDown(agentStatusMenu.value, target)
   const targetElement = target instanceof Element
     ? target
     : target instanceof Node
@@ -1222,21 +1111,6 @@ const createSelectionComment = (): AnnotaMDComment | null => {
 const submitComment = (): void => {
   if (!createSelectionComment()) return
   closeComposer()
-}
-
-const appendAgentReply = async(commentId: string, latestMessage: string): Promise<void> => {
-  const reply = await agentTurns.send(filePath.value, commentId, latestMessage)
-  if (reply) commentStore.addAgentReply(filePath.value, commentId, reply)
-}
-
-const submitCommentToAgent = async(): Promise<void> => {
-  const latestMessage = draftBody.value.trim()
-  if (!agentTurns.directSendReady) return
-  const addedComment = createSelectionComment()
-  if (!addedComment) return
-  closeComposer()
-  await commentStore.persistFile(filePath.value)
-  await appendAgentReply(addedComment.id, latestMessage)
 }
 
 const saveEdit = (id: string): void => {
@@ -1359,29 +1233,6 @@ const saveReply = (id: string, event: MouseEvent): void => {
   resetReplyEditor(event)
 }
 
-const saveReplyToAgent = async(id: string, event: MouseEvent): Promise<void> => {
-  const latestMessage = (replyBodies.value[id] ?? '').trim()
-  if (!filePath.value || !latestMessage || !agentTurns.directSendReady) return
-  commentStore.addReply(filePath.value, id, latestMessage)
-  replyBodies.value[id] = ''
-  replyingId.value = null
-  resetReplyEditor(event)
-  await commentStore.persistFile(filePath.value)
-  await appendAgentReply(id, latestMessage)
-}
-
-const sendExistingMessageToAgent = async(
-  comment: AnnotaMDComment,
-  messageId: string,
-  latestMessage: string
-): Promise<void> => {
-  closeMessageMenus()
-  if (!filePath.value || !agentTurns.directSendReady ||
-    !isLatestLocalMessage(comment, messageId)) return
-  await commentStore.persistFile(filePath.value)
-  await appendAgentReply(comment.id, latestMessage)
-}
-
 const focusCommentCard = async (commentId: string): Promise<void> => {
   composerOpen.value = false
   draftBody.value = ''
@@ -1490,26 +1341,8 @@ watch(filePath, () => {
   void nextTick(bindSharedEditorScroller)
 })
 
-watch(
-  () => agentTurns.checkRevision,
-  (revision) => {
-    if (revision === 0 || agentTurns.readinessLevel !== 'ready') return
-    if (agentHeartbeatTimer) clearTimeout(agentHeartbeatTimer)
-    agentHeartbeatVisible.value = false
-    void nextTick(() => {
-      if (commentLayoutDisposed) return
-      agentHeartbeatVisible.value = true
-      agentHeartbeatTimer = setTimeout(() => {
-        agentHeartbeatVisible.value = false
-        agentHeartbeatTimer = null
-      }, 900)
-    })
-  }
-)
-
 onMounted(() => {
   bindSharedEditorScroller()
-  agentTurns.startReadiness()
   document.addEventListener('keydown', handleFocusReadingKeydown)
   document.addEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)
   document.addEventListener('click', handleHeaderMenusOutsidePointerDown, true)
@@ -1532,8 +1365,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   commentLayoutDisposed = true
-  if (agentHeartbeatTimer) clearTimeout(agentHeartbeatTimer)
-  agentHeartbeatTimer = null
   document.removeEventListener('keydown', handleFocusReadingKeydown)
   document.removeEventListener('pointerdown', handleHeaderMenusOutsidePointerDown, true)
   document.removeEventListener('click', handleHeaderMenusOutsidePointerDown, true)
@@ -1684,154 +1515,6 @@ onBeforeUnmount(() => {
   background: transparent;
   color: #b5bac3;
   cursor: default;
-}
-
-.annotamd-agent-status {
-  position: relative;
-}
-
-.annotamd-agent-status summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 7px;
-  border-radius: 7px;
-  color: var(--annotamd-muted);
-  font-size: 11px;
-  font-weight: 650;
-  list-style: none;
-  cursor: pointer;
-}
-
-.annotamd-agent-status summary::-webkit-details-marker {
-  display: none;
-}
-
-.annotamd-agent-status summary:hover,
-.annotamd-agent-status[open] summary {
-  background: #eef1f5;
-}
-
-.annotamd-agent-status-dot {
-  position: relative;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #aeb4bf;
-}
-
-.annotamd-agent-status-dot::after {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: rgba(32, 161, 98, 0.24);
-  content: '';
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.45);
-}
-
-.annotamd-agent-status.ready summary {
-  color: #16794c;
-}
-
-.annotamd-agent-status.ready .annotamd-agent-status-dot {
-  background: var(--annotamd-green);
-  box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
-}
-
-.annotamd-agent-status.ready .annotamd-agent-status-dot.heartbeat::after {
-  animation: annotamd-agent-heartbeat 900ms ease-in-out;
-}
-
-.annotamd-agent-status.checking .annotamd-agent-status-dot {
-  background: #aeb4bf;
-}
-
-@keyframes annotamd-agent-heartbeat {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(0.45);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .annotamd-agent-status.ready .annotamd-agent-status-dot.heartbeat::after {
-    animation: none;
-  }
-}
-
-.annotamd-agent-status-popover {
-  position: absolute;
-  z-index: 4;
-  top: 31px;
-  right: -32px;
-  width: min(300px, calc(var(--annotamd-comment-pane-width, 310px) - 24px));
-  box-sizing: border-box;
-  padding: 12px;
-  border: 1px solid var(--annotamd-border);
-  border-radius: 9px;
-  background: var(--annotamd-surface);
-  box-shadow: 0 8px 24px rgb(31 35 41 / 14%);
-}
-
-.annotamd-agent-status-popover strong {
-  display: block;
-  color: var(--annotamd-ink);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.annotamd-agent-status-popover p {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin: 5px 0 0;
-  padding: 0;
-  color: var(--annotamd-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.annotamd-agent-status-row.direct-channel > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.annotamd-agent-channel-dot {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  margin-top: 6px;
-  border-radius: 50%;
-  background: #aeb4bf;
-}
-
-.annotamd-agent-channel-dot.active {
-  background: var(--annotamd-green);
-  box-shadow: 0 0 0 3px rgba(32, 161, 98, 0.12);
-}
-
-.annotamd-agent-status-popover p:last-of-type {
-  margin-bottom: 10px;
-}
-
-.annotamd-agent-status-popover button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--annotamd-blue);
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .annotamd-pane-close {
@@ -2049,15 +1732,6 @@ onBeforeUnmount(() => {
   color: var(--annotamd-blue);
   font-size: 12px;
   white-space: nowrap;
-}
-
-.annotamd-comment-action-row .annotamd-send-agent {
-  background: var(--annotamd-blue);
-  color: #fff;
-}
-
-.annotamd-comment-action-row .annotamd-send-agent:hover:not(:disabled) {
-  background: #245ee8;
 }
 
 .annotamd-agent-turn-error {

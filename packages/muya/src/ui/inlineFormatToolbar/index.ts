@@ -54,9 +54,10 @@ const NON_EDITING_KEYS = new Set([
     'Tab',
 ]);
 
-type AnnotaMDSelectionAction = 'annotamd_comment' | 'annotamd_delete_selection';
+type AnnotaMDSelectionAction = 'annotamd_comment' | 'annotamd_agent' | 'annotamd_delete_selection';
 const ANNOTAMD_SELECTION_ACTIONS = new Set<string>([
     'annotamd_comment',
+    'annotamd_agent',
     'annotamd_delete_selection',
 ]);
 
@@ -397,9 +398,11 @@ export class InlineFormatToolbar extends BaseFloat {
                 ? renderActionIcon('color')
                 : icon.type === 'annotamd_comment'
                     ? renderActionIcon('comment')
-                    : icon.type === 'annotamd_delete_selection'
-                        ? renderActionIcon('delete')
-                        : renderActionIcon(formatActionIcon(icon.type)!);
+                    : icon.type === 'annotamd_agent'
+                        ? renderActionIcon('agent')
+                        : icon.type === 'annotamd_delete_selection'
+                            ? renderActionIcon('delete')
+                            : renderActionIcon(formatActionIcon(icon.type)!);
 
         const iconWrapper = h('div.icon-wrapper', icon.type === 'text_style'
             ? [actionIcon, h('span.mu-text-style-chevron', '⌄')]
@@ -667,7 +670,7 @@ export class InlineFormatToolbar extends BaseFloat {
         if (!anchor || !focus || !anchorBlock || !focusBlock)
             return;
 
-        if (type === 'annotamd_comment') {
+        if (type === 'annotamd_comment' || type === 'annotamd_agent') {
             const anchorKey = Array.isArray(anchorPath) ? anchorPath.join('/') : '';
             const focusKey = Array.isArray(focusPath) ? focusPath.join('/') : anchorKey;
             const anchorOffset = anchor.offset ?? 0;
@@ -682,7 +685,10 @@ export class InlineFormatToolbar extends BaseFloat {
             }
 
             quote = quote.replace(/\s+/g, ' ').trim();
-            this.muya.eventCenter.emit('annotamd-comment-selection', {
+            this.muya.eventCenter.emit(
+                type === 'annotamd_comment'
+                    ? 'annotamd-comment-selection'
+                    : 'annotamd-agent-selection', {
                 quote,
                 anchor: {
                     key: anchorKey,

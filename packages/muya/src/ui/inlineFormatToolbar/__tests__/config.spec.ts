@@ -60,6 +60,7 @@ describe('inlineFormatToolbar config — required inline format types', () => {
             'inline_code',
             'color_palette',
             'annotamd_comment',
+            'annotamd_agent',
             'annotamd_delete_selection',
         ]);
     });

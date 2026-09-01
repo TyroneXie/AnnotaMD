@@ -36,6 +36,10 @@ export function clampFloatXToBoundary(
     return maxX < minX ? minX : Math.max(minX, Math.min(x, maxX));
 }
 
+export function boundaryClipPath(top: number, right: number, bottom: number, left: number): string {
+    return `inset(${top}px ${right}px ${bottom}px ${left}px)`;
+}
+
 abstract class BaseFloat {
     protected options: IBaseOptions;
     public status: boolean = false;
@@ -231,11 +235,15 @@ abstract class BaseFloat {
                         floatBox.offsetWidth,
                         boundary,
                     );
-                    const top = Math.max(0, boundary.top - safeY);
-                    const right = Math.max(0, safeX + floatBox.offsetWidth - boundary.right);
-                    const bottom = Math.max(0, safeY + floatBox.offsetHeight - boundary.bottom);
-                    const left = Math.max(0, boundary.left - safeX);
-                    clipPath = `inset(${top}px ${right}px ${bottom}px ${left}px)`;
+                    // Signed insets make the clipping rectangle match the
+                    // editor viewport rather than the float wrapper itself.
+                    // Negative sides intentionally leave room for tooltips and
+                    // dropdowns while still clipping them at the editor edge.
+                    const top = boundary.top - safeY;
+                    const right = safeX + floatBox.offsetWidth - boundary.right;
+                    const bottom = safeY + floatBox.offsetHeight - boundary.bottom;
+                    const left = boundary.left - safeX;
+                    clipPath = boundaryClipPath(top, right, bottom, left);
                 }
                 Object.assign(floatBox.style, {
                     left: `${safeX}px`,

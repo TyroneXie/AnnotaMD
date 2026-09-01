@@ -501,41 +501,41 @@ onBeforeUnmount(() => {
 .annotamd-agent-message-stream { display: flex; min-width: 0; width: 100%; flex-direction: column; gap: 12px; }
 .annotamd-agent-empty { display: grid; min-height: 320px; flex: 1; grid-template-rows: auto minmax(190px, 1fr); gap: 12px; color: var(--annotamd-muted); }
 .annotamd-agent-suggestions { display: grid; gap: 7px; }
-.annotamd-agent-suggestions > span { color: var(--annotamd-muted); font-size: 10px; font-weight: 600; }
-.annotamd-agent-suggestions button { width: 100%; padding: 8px 10px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border-soft); border-radius: 8px; background: var(--annotamd-surface); cursor: pointer; font: inherit; font-size: 11px; line-height: 1.45; text-align: left; transition: border-color .15s ease, background .15s ease; }
+.annotamd-agent-suggestions > span { color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 600; }
+.annotamd-agent-suggestions button { width: 100%; padding: 8px 10px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border-soft); border-radius: 8px; background: var(--annotamd-surface); cursor: pointer; font: inherit; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.45; text-align: left; transition: border-color .15s ease, background .15s ease; }
 .annotamd-agent-suggestions button:hover { border-color: color-mix(in srgb, var(--annotamd-blue) 35%, var(--annotamd-border)); background: color-mix(in srgb, var(--annotamd-blue) 5%, var(--annotamd-surface)); }
 .annotamd-agent-suggestions button:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 2px; }
 .annotamd-agent-empty-intro { display: grid; align-content: center; justify-items: center; gap: 7px; padding: 20px 10px 28px; text-align: center; }
 .annotamd-agent-empty-mark { display: grid; width: 42px; height: 42px; margin-bottom: 4px; place-items: center; color: var(--annotamd-blue); border-radius: 13px; background: color-mix(in srgb, var(--annotamd-blue) 10%, transparent); font-size: 13px; font-weight: 700; }
 .annotamd-agent-empty-mark :deep(svg) { width: 20px; height: 20px; }
-.annotamd-agent-empty-intro strong { color: var(--annotamd-text); font-size: 13px; }
-.annotamd-agent-empty-intro p { max-width: 280px; margin: 0; font-size: 11px; line-height: 1.5; }
+.annotamd-agent-empty-intro strong { color: var(--annotamd-text); font-size: var(--annotamd-agent-font-size, 12px); }
+.annotamd-agent-empty-intro p { max-width: 280px; margin: 0; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.5; }
 .annotamd-agent-message { display: grid; width: fit-content; max-width: 92%; box-sizing: border-box; align-self: flex-start; gap: 3px; }
 .annotamd-agent-message.is-user { max-width: 82%; align-self: flex-end; justify-items: end; }
 .annotamd-agent-message-bubble { min-width: 0; width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: color-mix(in srgb, var(--annotamd-surface-soft) 76%, var(--annotamd-surface)); }
 .annotamd-agent-message.is-user .annotamd-agent-message-bubble { border-color: color-mix(in srgb, var(--annotamd-green) 26%, var(--annotamd-border)); background: color-mix(in srgb, var(--annotamd-green) 10%, var(--annotamd-surface)); }
-.annotamd-agent-message-meta { display: flex; min-height: 20px; width: 100%; align-items: center; justify-content: flex-end; gap: 2px; color: var(--annotamd-muted); font-size: 9px; }
+.annotamd-agent-message-meta { display: flex; min-height: 20px; width: 100%; align-items: center; justify-content: flex-end; gap: 2px; color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
 .annotamd-agent-message-meta time { padding: 0 2px; line-height: 1.4; white-space: nowrap; }
 .annotamd-agent-process-group { width: 100%; min-width: 0; }
-.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 30px; align-items: baseline; gap: 7px; padding: 3px 4px; color: var(--annotamd-muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; font: inherit; font-size: 9px; line-height: 1.4; text-align: left; }
+.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 30px; align-items: baseline; gap: 7px; padding: 3px 4px; color: var(--annotamd-muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; font: inherit; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.4; text-align: left; }
 .annotamd-agent-process-group-toggle:hover { background: color-mix(in srgb, var(--annotamd-surface-soft) 84%, transparent); }
 .annotamd-agent-process-group-toggle > .annotamd-agent-tool-state { align-self: baseline; }
-.annotamd-agent-process-group-toggle strong { color: var(--annotamd-text); font-size: 10px; font-weight: 650; }
+.annotamd-agent-process-group-toggle strong { color: var(--annotamd-text); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 650; }
 .annotamd-agent-process-group-chevron { flex: none; margin-left: auto; transition: transform .15s ease; }
 .annotamd-agent-process-group-chevron.is-expanded { transform: rotate(90deg); }
 .annotamd-agent-process-group-chevron :deep(svg) { width: 13px; height: 13px; }
 .annotamd-agent-process-group-body { display: grid; min-width: 0; gap: 7px; margin: 3px 4px 6px 24px; }
 .annotamd-agent-process-note { padding: 1px 0; color: var(--annotamd-muted); border: 0; background: transparent; }
-.annotamd-agent-process-note-content { min-width: 0; font-size: 11px; line-height: 1.55; word-break: break-word; }
+.annotamd-agent-process-note-content { min-width: 0; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); line-height: 1.55; word-break: break-word; }
 .annotamd-agent-process-note-content pre { margin: 5px 0 0; overflow: auto; white-space: pre-wrap; }
-.annotamd-agent-run-error { margin: -2px 4px 4px 24px; color: #ef4444; font-size: 9px; line-height: 1.45; word-break: break-word; }
-.annotamd-agent-missing-final { margin: -2px 4px 4px 24px; color: var(--annotamd-muted); font-size: 9px; line-height: 1.45; }
+.annotamd-agent-run-error { margin: -2px 4px 4px 24px; color: #ef4444; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; word-break: break-word; }
+.annotamd-agent-missing-final { margin: -2px 4px 4px 24px; color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; }
 .annotamd-agent-tool-list { display: grid; min-width: 0; gap: 2px; }
 .annotamd-agent-tool-row { min-width: 0; }
 .annotamd-agent-tool-line { display: flex; min-width: 0; min-height: 24px; align-items: center; gap: 7px; padding: 1px 0; color: var(--annotamd-muted); }
-.annotamd-agent-tool-line strong { overflow: hidden; color: var(--annotamd-text); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.annotamd-agent-tool-line > span { overflow: hidden; flex: 1; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.annotamd-agent-tool-error { margin: 0 0 5px 20px; color: #ef4444; font: 9px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+.annotamd-agent-tool-line strong { overflow: hidden; color: var(--annotamd-text); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-tool-line > span { overflow: hidden; flex: 1; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-tool-error { margin: 0 0 5px 20px; color: #ef4444; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .annotamd-agent-tool-state { flex: none; color: var(--annotamd-muted); }
 .annotamd-agent-tool-state.is-streaming { color: var(--annotamd-blue); animation: ai-tool-spin 1s linear infinite; }
 .annotamd-agent-tool-state.is-complete { color: #22a06b; }
@@ -545,7 +545,7 @@ onBeforeUnmount(() => {
 .annotamd-agent-copy-action:hover { color: var(--annotamd-text); background: var(--annotamd-surface-soft); }
 .annotamd-agent-process-group-toggle:focus-visible, .annotamd-agent-copy-action:focus-visible, .annotamd-agent-message-error button:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: -2px; }
 .annotamd-agent-copy-action :deep(svg) { width: 13px; height: 13px; }
-.annotamd-agent-message-content { min-width: 0; color: var(--annotamd-text); font-size: 13px; line-height: 1.6; word-break: break-word; }
+.annotamd-agent-message-content { min-width: 0; color: var(--annotamd-text); font-size: var(--annotamd-agent-font-size, 12px); line-height: 1.6; word-break: break-word; }
 .annotamd-agent-markdown :deep(> :first-child) { margin-top: 0; }
 .annotamd-agent-markdown :deep(> :last-child) { margin-bottom: 0; }
 .annotamd-agent-markdown :deep(p) { margin: .35em 0; }
@@ -566,10 +566,10 @@ onBeforeUnmount(() => {
 .annotamd-agent-markdown :deep(th),
 .annotamd-agent-markdown :deep(td) { padding: 4px 6px; border: 1px solid var(--annotamd-border); text-align: left; }
 .annotamd-agent-code-block { overflow: hidden; margin: 7px 0; border: 1px solid var(--annotamd-border-soft); border-radius: 7px; background: color-mix(in srgb, var(--annotamd-surface-soft) 75%, var(--annotamd-surface)); }
-.annotamd-agent-code-header { display: flex; min-height: 28px; align-items: center; justify-content: space-between; padding: 2px 5px 2px 9px; color: var(--annotamd-muted); border-bottom: 1px solid var(--annotamd-border-soft); font-size: 9px; }
+.annotamd-agent-code-header { display: flex; min-height: 28px; align-items: center; justify-content: space-between; padding: 2px 5px 2px 9px; color: var(--annotamd-muted); border-bottom: 1px solid var(--annotamd-border-soft); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
 .annotamd-agent-code-block pre { max-width: 100%; margin: 0; padding: 9px; overflow: auto; white-space: pre; }
-.annotamd-agent-code-block code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.55; }
-.annotamd-agent-message-error { display: flex; align-items: center; gap: 6px; margin: 0; color: #ef4444; font-size: 10px; }
+.annotamd-agent-code-block code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.55; }
+.annotamd-agent-message-error { display: flex; align-items: center; gap: 6px; margin: 0; color: #ef4444; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); }
 .annotamd-agent-message-error button { padding: 0; color: inherit; border: 0; background: transparent; cursor: pointer; text-decoration: underline; }
 .annotamd-agent-thinking { display: inline-flex; gap: 4px; padding: 8px 11px; }
 .annotamd-agent-thinking span { width: 5px; height: 5px; border-radius: 50%; background: var(--annotamd-muted); animation: ai-thinking 1s infinite alternate; }

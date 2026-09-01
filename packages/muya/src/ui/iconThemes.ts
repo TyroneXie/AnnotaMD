@@ -360,6 +360,7 @@ const FEATHER_ICONS: Record<string, string[]> = {
  * toolbars; each theme still applies its own stroke weight, caps and joins.
  */
 const COMPLETE_MENU_ICONS: Record<string, string[]> = {
+    'agent': ['M9 3h6v3h3v3h3v6h-3v3h-3v3H9v-3H6v-3H3V9h3V6h3z', 'M9 9h6v6H9z', 'M11 11h2v2h-2z'],
     'copy': ['M9 3h6v4H9z', 'M6 5h12v16H6z'],
     'wrap': ['M4 7h11a4 4 0 0 1 0 8H9', 'm12 12-3 3 3 3'],
     'heading-link': ['M9 15l6-6', 'M7 5H4v14h3', 'M17 5h3v14h-3'],

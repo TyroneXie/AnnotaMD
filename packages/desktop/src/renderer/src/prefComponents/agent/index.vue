@@ -2,6 +2,20 @@
   <div class="pref-ai">
     <section class="pref-ai-section">
       <header>
+        <h4>{{ t('preferences.theme.title') }}</h4>
+      </header>
+      <Range
+        :description="t('preferences.editor.textEditor.fontSize')"
+        :value="agentFontSize"
+        :min="10"
+        :max="18"
+        :step="1"
+        :on-change="(value) => onSelectChange('agentFontSize', value)"
+      />
+    </section>
+
+    <section class="pref-ai-section">
+      <header>
         <h4>{{ t('preferences.agent.aiWorkspace.configsTitle') }}</h4>
         <el-button type="primary" :icon="Plus" @click="openConfigDialog">
           {{ t('preferences.agent.aiWorkspace.addConfig') }}
@@ -191,6 +205,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Cpu, Delete, Plus, Refresh } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type {
@@ -206,7 +221,9 @@ import {
   type AiProviderOption
 } from '@shared/types/aiProviderPresets'
 import { useAiSettingsStore } from '@/store/aiSettings'
+import { usePreferencesStore, type PreferencesState } from '@/store/preferences'
 import AiProviderLogo from '@/components/agent/AiProviderLogo.vue'
+import Range from '../common/range/index.vue'
 import AgentIntegrationGuide from './AgentIntegrationGuide.vue'
 
 interface EnvironmentRow {
@@ -230,6 +247,8 @@ interface ConfigTestState {
 
 const { t } = useI18n()
 const settings = useAiSettingsStore()
+const preferenceStore = usePreferencesStore()
+const { agentFontSize } = storeToRefs(preferenceStore)
 const configDialogVisible = ref(false)
 const editingConfigId = ref('')
 const configTests = reactive<Record<string, ConfigTestState>>({})
@@ -263,6 +282,9 @@ const cliEnvironment = computed<Record<string, string>>(() => Object.fromEntries
     .filter(([key]) => key)
 ))
 const canSaveConfig = computed(() => Boolean(configDraft.name.trim()))
+const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
+  preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
+}
 const cliDetectionTitle = computed(() => {
   if (cliDetecting.value) return t('preferences.agent.aiWorkspace.detecting')
   if (cliDetection.value?.found) return t('preferences.agent.aiWorkspace.detected')

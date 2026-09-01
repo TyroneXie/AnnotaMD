@@ -55,11 +55,52 @@ test('text format toolbar stays inside both horizontal editor edges', async() =>
       }).toBe(true)
       await expect.poll(() => wrapper.evaluate((element) => {
         const values = element.style.clipPath.match(/^inset\((.*)\)$/)?.[1].split(' ') ?? []
-        const right = values.length === 1 ? values[0] : values[1]
-        const left = values.length < 4 ? right : values[3]
-        return right === '0px' && left === '0px'
+        const right = Number.parseFloat(values.length === 1 ? values[0]! : values[1]!)
+        const left = Number.parseFloat(values.length < 4 ? values[1]! : values[3]!)
+        return right <= 0 && left <= 0
       })).toBe(true)
     }
+  } finally {
+    await app.close()
+  }
+})
+
+test('shows toolbar tooltips and applies the text-style menu without clipping', async() => {
+  const text = 'Convert this paragraph to a heading.'
+  const { app, page } = await launchWithMarkdown(`${text}\n`)
+  try {
+    await selectTextSlice(page, 0, text.length)
+
+    const wrapper = page.locator('.mu-format-picker-container')
+    const strong = page.locator('.mu-format-picker li.strong')
+    await strong.hover()
+    await expect.poll(() => strong.evaluate((element) => {
+      const tooltip = getComputedStyle(element, '::after')
+      return {
+        content: tooltip.content,
+        visibility: tooltip.visibility,
+        opacity: tooltip.opacity
+      }
+    })).toEqual(expect.objectContaining({
+      visibility: 'visible',
+      opacity: '1'
+    }))
+    await expect.poll(() => wrapper.evaluate((element) => {
+      const values = element.style.clipPath.match(/^inset\((.*)\)$/)?.[1].split(' ') ?? []
+      return values.some((value) => Number.parseFloat(value) < 0)
+    })).toBe(true)
+
+    await page.locator('.mu-format-picker li.text_style').click()
+    const headingOption = page.locator('[data-paragraph-type="heading 2"]')
+    await expect(headingOption).toBeVisible()
+    await expect.poll(() => headingOption.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+      return target === element || element.contains(target)
+    })).toBe(true)
+    await headingOption.click()
+
+    await expect(page.locator('h2.mu-atx-heading')).toContainText(text)
   } finally {
     await app.close()
   }

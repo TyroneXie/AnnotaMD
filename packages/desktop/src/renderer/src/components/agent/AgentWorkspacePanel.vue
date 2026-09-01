@@ -2,6 +2,7 @@
   <aside
     class="annotamd-agent-workspace"
     :aria-label="t('annotamd.agentWorkspace.title')"
+    :style="agentWorkspaceStyle"
   >
     <AgentPanelHeader
       :title="conversationTitle"
@@ -80,6 +81,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type {
@@ -93,6 +95,7 @@ import type {
 import { matchesAiConversationIdentity } from '@shared/types/aiConversationIdentity'
 import { useAgentConversationsStore } from '@/store/agentConversations'
 import { useAiSettingsStore } from '@/store/aiSettings'
+import { usePreferencesStore } from '@/store/preferences'
 import AgentChangeSetCard from './AgentChangeSetCard.vue'
 import AgentApprovalCard from './AgentApprovalCard.vue'
 import AgentComposer from './AgentComposer.vue'
@@ -112,6 +115,11 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const conversations = useAgentConversationsStore()
 const settings = useAiSettingsStore()
+const preferences = usePreferencesStore()
+const { agentFontSize } = storeToRefs(preferences)
+const agentWorkspaceStyle = computed<Record<string, string>>(() => ({
+  '--annotamd-agent-font-size': `${agentFontSize.value}px`
+}))
 const draft = ref('')
 const attachments = ref<AiAttachment[]>([])
 const timeline = ref<HTMLElement | null>(null)

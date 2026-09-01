@@ -4,7 +4,7 @@ import { getIconDefinition, getIconThemeConfig } from './iconThemes';
 
 export const ACTION_ICON_NAMES = [
     'text-style', 'strong', 'strikethrough', 'italic', 'underline',
-    'link', 'unlink', 'inline-code', 'color', 'comment', 'delete',
+    'link', 'unlink', 'inline-code', 'color', 'comment', 'agent', 'delete',
     'move-up', 'move-down', 'move-left', 'move-right',
     'insert-left', 'insert-right', 'insert-above', 'insert-below',
     'align-left', 'align-center', 'align-right', 'reset-width',

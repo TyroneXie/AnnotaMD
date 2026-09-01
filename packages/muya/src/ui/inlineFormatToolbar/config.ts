@@ -82,6 +82,12 @@ const icons = [
         groupBreakBefore: true,
     },
     {
+        type: 'annotamd_agent',
+        tooltip: 'Agent',
+        shortcut: '',
+        label: '',
+    },
+    {
         type: 'annotamd_delete_selection',
         tooltip: 'Delete Selection',
         shortcut: '',

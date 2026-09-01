@@ -27,6 +27,7 @@ export interface IUserPreferences {
   defaultAgentProfileId?: string
   agentSessionByDocument?: Record<string, Record<string, Record<string, string>>>
   agentPromptTemplate?: string
+  agentFontSize?: number
   editorFontFamily?: string
   fontSize?: number
   lineHeight?: number

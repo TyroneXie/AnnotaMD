@@ -70,7 +70,7 @@ describe('AnnotaMD compact inline toolbar', () => {
     )
   })
 
-  it('renders a separated, neutral comment-bubble action wired to selection comments', () => {
+  it('renders separated comment and Agent actions wired to their selection events', () => {
     const css = readFileSync(
       resolve(repoRoot, 'packages/muya/src/ui/inlineFormatToolbar/index.css'),
       'utf8'
@@ -89,8 +89,10 @@ describe('AnnotaMD compact inline toolbar', () => {
     )
     expect(config).not.toContain("type: 'mark'")
     expect(toolbar).toContain("renderActionIcon('comment')")
+    expect(toolbar).toContain("renderActionIcon('agent')")
     expect(toolbar).toContain("import '../actionIcons.css'")
     expect(css).not.toMatch(/\.mu-format-picker li\.item\.annotamd_comment\s*\{[^}]*background:/s)
-    expect(toolbar).toContain("this.muya.eventCenter.emit('annotamd-comment-selection'")
+    expect(toolbar).toContain("? 'annotamd-comment-selection'")
+    expect(toolbar).toContain(": 'annotamd-agent-selection'")
   })
 })

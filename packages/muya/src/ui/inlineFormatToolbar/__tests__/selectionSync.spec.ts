@@ -135,6 +135,8 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
         expect(toolbar.status).toBe(true);
         const commentItem = toolbar.container!.querySelector<HTMLElement>('li.item.annotamd_comment');
         expect(commentItem).toBeTruthy();
+        const agentItem = toolbar.container!.querySelector<HTMLElement>('li.item.annotamd_agent');
+        expect(agentItem).toBeTruthy();
         for (const type of [
             'text_style',
             'strong',
@@ -144,6 +146,7 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
             'inline_code',
             'color_palette',
             'annotamd_comment',
+            'annotamd_agent',
             'annotamd_delete_selection',
         ]) {
             expect(toolbar.container!.querySelector(`li.item.${type}`), type).toBeTruthy();
@@ -175,6 +178,20 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
             .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(commentSelection).toMatchObject({
+            isCrossBlock: true,
+            anchor: { key: first.path.join('/'), offset: 0 },
+            focus: { key: second.path.join('/'), offset: 6 },
+        });
+
+        let agentSelection: Record<string, unknown> | null = null;
+        muya.on('annotamd-agent-selection', (payload: unknown) => {
+            agentSelection = payload as Record<string, unknown>;
+        });
+        toolbar.container!
+            .querySelector<HTMLElement>('li.item.annotamd_agent')!
+            .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(agentSelection).toMatchObject({
             isCrossBlock: true,
             anchor: { key: first.path.join('/'), offset: 0 },
             focus: { key: second.path.join('/'), offset: 6 },
