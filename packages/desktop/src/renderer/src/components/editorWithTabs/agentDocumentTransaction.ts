@@ -336,16 +336,19 @@ export const replaceAgentDocumentMarkdownInEditor = (
   target: AgentDocumentTarget,
   expectedMarkdown: string,
   nextMarkdown: string,
-  context: AgentDocumentEditorContext | null
+  context: AgentDocumentEditorContext | null,
+  canonicalizeCandidate = false
 ): EditorMutationResult => {
   const validated = validateTarget(target, context)
   if ('reason' in validated) return { status: 'stale', reason: validated.reason }
 
   try {
-    if (context!.normalizeMarkdown(nextMarkdown) !== nextMarkdown) {
+    const normalizedMarkdown = context!.normalizeMarkdown(nextMarkdown)
+    if (!canonicalizeCandidate && normalizedMarkdown !== nextMarkdown) {
       return { status: 'stale', reason: 'candidate-not-canonical' }
     }
-    if (validated.markdown === nextMarkdown) {
+    const candidateMarkdown = canonicalizeCandidate ? normalizedMarkdown : nextMarkdown
+    if (validated.markdown === candidateMarkdown) {
       return { status: 'applied', appliedMarkdown: validated.markdown, changed: false }
     }
     if (validated.markdown !== expectedMarkdown) {
@@ -356,12 +359,12 @@ export const replaceAgentDocumentMarkdownInEditor = (
     let changed = false
     context!.setCommentTransformSuppressed(true)
     try {
-      changed = context!.replaceContent(nextMarkdown)
+      changed = context!.replaceContent(candidateMarkdown)
     } finally {
       context!.setCommentTransformSuppressed(false)
     }
     const appliedMarkdown = context!.getMarkdown()
-    if (appliedMarkdown !== nextMarkdown) {
+    if (appliedMarkdown !== candidateMarkdown) {
       return { status: 'failed', message: 'Muya did not apply the requested Markdown.' }
     }
     if (changed && validated.current.filePath) {
@@ -518,7 +521,8 @@ export class AgentDocumentTurnController {
       request,
       request.expectedMarkdown,
       request.nextMarkdown,
-      context
+      context,
+      request.canonicalizeCandidate
     )
     if (applied.status !== 'applied') return applied
 

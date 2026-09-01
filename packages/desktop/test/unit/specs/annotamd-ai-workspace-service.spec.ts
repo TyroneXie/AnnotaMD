@@ -201,6 +201,31 @@ describe('AnnotaMD AI workspace service', () => {
     service.dispose()
   })
 
+  it('passes the exact active AnnotaMD document identity to the CLI host', async() => {
+    const { service, cliHost, owner } = setup()
+    await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' },
+      isDefault: true
+    })
+
+    await service.sendAndWait(owner, {
+      text: 'Summarize the current document',
+      selection: { mode: 'agent', templateIds: [] },
+      workspacePath: '/workspace/project',
+      documentHandleId: 'handle-1',
+      documentId: 'document-1',
+      documentUri: 'annotamd://document/document-1',
+      markdown: '# Live document\n',
+      documentRevision: 1
+    })
+
+    expect(cliHost.requests[0]?.activeDocument).toEqual({
+      documentId: 'document-1',
+      documentUri: 'annotamd://document/document-1'
+    })
+    service.dispose()
+  })
+
   it('lets comment turns await the same streamed Host completion used by the sidebar', async() => {
     const { service, cliHost, owner } = setup()
     const started: Array<{ conversationId: string; turnId: string }> = []
@@ -664,7 +689,8 @@ describe('AnnotaMD AI workspace service', () => {
       action: 'mutate',
       turnId: result.turnId,
       expectedMarkdown: 'before\n',
-      nextMarkdown: 'after\n'
+      nextMarkdown: 'after\n',
+      canonicalizeCandidate: true
     }))
     expect(service.listChangeSets(owner, result.conversationId)).toEqual([
       expect.objectContaining({
@@ -673,6 +699,60 @@ describe('AnnotaMD AI workspace service', () => {
         status: 'applied-unreviewed'
       })
     ])
+    service.dispose()
+  })
+
+  it('does not mistake an unchanged non-canonical disk file for a native CLI write', async() => {
+    const { service, transactions, owner } = setup()
+    const filePath = join(directories.at(-1)!, 'compact-table.md')
+    const diskMarkdown = '| A | B |\n| --- | --- |\n| x | longer value |\n'
+    const liveMarkdown = '| A | B            |\n| - | ------------ |\n| x | longer value |\n'
+    writeFileSync(filePath, diskMarkdown, 'utf8')
+    transactions.getRunTransaction.mockReturnValue(undefined)
+    transactions.request.mockImplementation(async(_windowId, request) => {
+      const transaction = {
+        sessionId: request.sessionId,
+        turnId: request.turnId,
+        documentId: 'doc-1',
+        documentUri: `file://${filePath}`,
+        filePath,
+        beforeMarkdown: liveMarkdown,
+        finalMarkdown: liveMarkdown,
+        mutationCount: 0,
+        diff: { additions: 0, deletions: 0, lines: [] },
+        status: request.action === 'keep' ? 'kept' as const : 'active' as const
+      }
+      if (request.action === 'begin') return { status: 'started' as const, transaction }
+      if (request.action === 'keep') return { status: 'kept' as const, transaction, changed: false as const }
+      throw new Error(`Unexpected transaction action: ${request.action}`)
+    })
+    const config = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' }
+    })
+
+    const completion = await service.sendAndWait(owner, {
+      text: 'Summarize it without editing',
+      selection: {
+        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+      },
+      workspacePath: join(directories.at(-1)!),
+      documentHandleId: 'handle-1',
+      documentId: 'doc-1',
+      documentUri: `file://${filePath}`,
+      filePath,
+      markdown: liveMarkdown,
+      documentRevision: 1,
+      documentDirty: false
+    })
+
+    expect(completion.status).toBe('completed')
+    expect(transactions.request).toHaveBeenCalledWith(expect.any(Number), expect.objectContaining({
+      action: 'keep',
+      turnId: completion.turnId
+    }))
+    expect(transactions.request).not.toHaveBeenCalledWith(expect.any(Number), expect.objectContaining({
+      action: 'mutate'
+    }))
     service.dispose()
   })
 

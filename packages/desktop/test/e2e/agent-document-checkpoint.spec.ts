@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -17,8 +17,9 @@ test('starts an Agent turn from the live Muya checkpoint when the sidebar snapsh
     'printf \'%s\\n\' \'{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}\''
   ].join('\n'), 'utf8')
   chmodSync(executablePath, 0o755)
-  const { app, page } = await launchWithMarkdown(
-    '# Live checkpoint\n\nThe renderer owns this current document.\n',
+  const diskMarkdown = '# Live checkpoint\n\n| A | B |\n| --- | --- |\n| x | a much longer value |\n'
+  const { app, page, filePath } = await launchWithMarkdown(
+    diskMarkdown,
     { suppressErrorDialog: true }
   )
 
@@ -87,7 +88,9 @@ test('starts an Agent turn from the live Muya checkpoint when the sidebar snapsh
 
     expect(result.turnId).toBeTruthy()
     await expect(pane).toContainText('Live checkpoint accepted.')
-    await expect(pane.locator('.annotamd-agent-error')).toHaveCount(0)
+    const agentErrors = await pane.locator('.annotamd-agent-error').allTextContents()
+    expect(agentErrors, `Unexpected Agent errors: ${agentErrors.join(' | ')}`).toEqual([])
+    expect(readFileSync(filePath, 'utf8')).toBe(diskMarkdown)
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

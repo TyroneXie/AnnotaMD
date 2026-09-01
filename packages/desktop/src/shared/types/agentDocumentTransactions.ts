@@ -49,6 +49,8 @@ export interface ApplyAgentDocumentMutationRequest extends AgentDocumentTurnRout
   action: 'mutate'
   expectedMarkdown: string
   nextMarkdown: string
+  /** Native CLI file writes may use valid, non-canonical Markdown syntax. */
+  canonicalizeCandidate?: boolean
 }
 
 export interface ReadAgentDocumentSnapshotRequest extends AgentDocumentTurnRoute, AgentDocumentTarget {

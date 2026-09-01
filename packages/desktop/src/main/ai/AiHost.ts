@@ -69,6 +69,11 @@ export interface AiHostRunRequest {
     name: string
     idempotencyKey: string
   }
+  activeDocument?: {
+    documentId: string
+    documentUri: string
+    filePath?: string
+  }
   permissionMode?: AiPermissionMode
   mcp?: AiMcpLaunchSpec
   attachments?: readonly AiAttachment[]

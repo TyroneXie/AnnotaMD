@@ -643,11 +643,18 @@ describe('AnnotaMD CLI Host runtime and JSONL normalization', () => {
     const agentPrompt = buildCliPrompt({
       ...common,
       mode: 'agent',
-      additionalWorkspacePaths: ['/workspace/project']
+      additionalWorkspacePaths: ['/workspace/project'],
+      activeDocument: {
+        documentId: 'document-1',
+        documentUri: 'file:///workspace/project/current.md',
+        filePath: '/workspace/project/current.md'
+      }
     })
     expect(agentPrompt).toMatch(/^Hello\n/)
     expect(agentPrompt).toContain('annotamd_get_context first')
     expect(agentPrompt).toContain('/workspace/project')
+    expect(agentPrompt).toContain('current.md')
+    expect(agentPrompt).toContain('exact document open in the active AnnotaMD tab')
     expect(buildCliPrompt({ ...common, mode: 'ask' })).toContain('without using filesystem')
   })
 

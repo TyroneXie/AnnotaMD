@@ -921,6 +921,12 @@ export const buildCliPrompt = (request: AiHostRunRequest): string => {
     ...(request.additionalWorkspacePaths?.length
       ? [`The active document or project is available at: ${request.additionalWorkspacePaths.join(', ')}`]
       : []),
+    ...(request.activeDocument
+      ? [
+          `The exact document open in the active AnnotaMD tab is: ${JSON.stringify(request.activeDocument)}.`,
+          'When the user refers to this document or the current document, do not search the project to infer the target. Call annotamd_get_context first, then use the returned document identity.'
+        ]
+      : []),
     '</annotamd_runtime_context>',
     ''
   )

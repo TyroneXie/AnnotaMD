@@ -355,6 +355,27 @@ describe('Agent document turn transaction', () => {
     expect(harness.replaceContent).not.toHaveBeenCalled()
   })
 
+  it('canonicalizes a native CLI file candidate before applying it to Muya', () => {
+    const before = 'base\n'
+    const canonical = 'not canonical\n'
+    const harness = createHarness(
+      before,
+      savedTarget,
+      (markdown) => markdown === 'not canonical' ? canonical : markdown
+    )
+    const controller = new AgentDocumentTurnController()
+    controller.handle(beginRequest(before), harness.context)
+
+    expect(controller.handle({
+      ...mutationRequest(before, 'not canonical'),
+      canonicalizeCandidate: true
+    }, harness.context)).toMatchObject({
+      status: 'applied',
+      appliedMarkdown: canonical
+    })
+    expect(harness.getMarkdown()).toBe(canonical)
+  })
+
   it('revalidates live Muya content before acknowledging a retried mutation', () => {
     const before = 'base\n'
     const final = 'agent edit\n'

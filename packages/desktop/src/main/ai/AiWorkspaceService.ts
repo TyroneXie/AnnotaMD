@@ -110,12 +110,18 @@ interface ActiveRun {
   host: AiHost
   filePath?: string
   scopeToken?: string
+  activeDocument?: {
+    documentId: string
+    documentUri: string
+    filePath?: string
+  }
   nativeDocument?: {
     windowId: number
     documentId: string
     documentUri: string
     filePath: string
     beforeMarkdown: string
+    diskBeforeMarkdown?: string
     captured: boolean
   }
   externalTransaction?: AgentDocumentTurnSnapshot
@@ -656,6 +662,14 @@ export class AiWorkspaceService {
       })
       const assistantMessageId = this.createId()
       const host = this.hostFor(config)
+      let diskBeforeMarkdown: string | undefined
+      if (runRequest.filePath) {
+        try {
+          diskBeforeMarkdown = readFileSync(runRequest.filePath, 'utf8')
+        } catch {
+          // The existing end-of-run path already tolerates unreadable files.
+        }
+      }
       const active: ActiveRun = {
         conversationId: conversation.id,
         turnId,
@@ -670,6 +684,15 @@ export class AiWorkspaceService {
         host,
         ...(runRequest.filePath ? { filePath: runRequest.filePath } : {}),
         ...(scopeToken ? { scopeToken } : {}),
+        ...(runRequest.documentId && runRequest.documentUri
+          ? {
+              activeDocument: {
+                documentId: runRequest.documentId,
+                documentUri: runRequest.documentUri,
+                ...(runRequest.filePath ? { filePath: runRequest.filePath } : {})
+              }
+            }
+          : {}),
         ...(runRequest.filePath && runRequest.documentId && runRequest.documentUri && runRequest.markdown !== undefined
           ? {
               nativeDocument: {
@@ -678,6 +701,7 @@ export class AiWorkspaceService {
                 documentUri: runRequest.documentUri,
                 filePath: runRequest.filePath,
                 beforeMarkdown: runRequest.markdown,
+                ...(diskBeforeMarkdown !== undefined ? { diskBeforeMarkdown } : {}),
                 captured: false
               }
             }
@@ -876,6 +900,7 @@ export class AiWorkspaceService {
               }
             }
           : {}),
+        ...(active.activeDocument ? { activeDocument: active.activeDocument } : {}),
         permissionMode: conversation.permissionMode,
         ...(mcp ? { mcp } : {}),
         ...(attachments.length ? { attachments } : {})
@@ -1208,7 +1233,10 @@ export class AiWorkspaceService {
     } catch {
       return
     }
-    if (markdown === document.beforeMarkdown) {
+    const diskUnchanged = document.diskBeforeMarkdown !== undefined
+      ? markdown === document.diskBeforeMarkdown
+      : markdown === document.beforeMarkdown
+    if (diskUnchanged) {
       const result = await this.documentTransactions.request(document.windowId, {
         action: 'keep',
         sessionId: active.conversationId,
@@ -1233,7 +1261,8 @@ export class AiWorkspaceService {
       documentUri: document.documentUri,
       filePath: document.filePath,
       expectedMarkdown: document.beforeMarkdown,
-      nextMarkdown: markdown
+      nextMarkdown: markdown,
+      canonicalizeCandidate: true
     })
     if (result.status === 'applied') {
       active.externalTransaction = result.transaction
