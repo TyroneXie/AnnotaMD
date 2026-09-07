@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.17.0 - 2026-09-07
+
+### Added
+
+- Added an Agent entry to the left activity bar and selection toolbar, so selected document text can be sent directly into the Agent workspace without passing through Comments.
+- Added an Agent text-size preference with a smaller default for denser long-form conversations.
+- Added project-aware native CLI sessions rooted in a dedicated AnnotaMD Agent workspace while preserving access to the active document's actual directory.
+
+### Changed
+
+- Moved the Agent workspace from the right inspector to the left sidebar alongside Files, Search, and Outline, while keeping Comments focused on document review.
+- Rebuilt Agent execution output as a chronological timeline: narration, reasoning, and consecutive tool calls retain their real order; completed runs collapse into one compact process row and keep the final answer separate.
+- Grouped AnnotaMD-created native CLI conversations under the AnnotaMD project and derived new conversation titles from the user's actual request instead of the injected context preamble.
+- Removed the redundant Agent consultation actions and readiness indicator from Comments, and restored concise hover labels across the inline formatting toolbar.
+
+### Fixed
+
+- Fixed Agent turns losing their active-document identity, rejecting unchanged non-canonical Markdown as `candidate-not-canonical`, or comparing a normalized editor snapshot directly with the original disk serialization.
+- Fixed running-state alignment, missing reasoning and tool activity, duplicated process nesting, and completed turns that incorrectly treated opening narration as the final answer.
+- Fixed the text-style control failing to open near editor boundaries and aligned the comment, Agent, and formatting toolbar controls.
+
 ## 2.16.0 - 2026-08-30
 
 ### Added
