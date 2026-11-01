@@ -374,7 +374,7 @@ div.title > span {
   height: 100%;
   position: absolute;
   top: 0;
-  right: 14px;
+  right: 0;
   width: auto;
   min-width: 186px;
   display: flex;
