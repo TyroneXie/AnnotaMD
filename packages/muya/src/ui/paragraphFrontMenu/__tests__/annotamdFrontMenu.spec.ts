@@ -814,14 +814,11 @@ describe('AnnotaMD paragraph front menu actions', () => {
         expect(muya.getMarkdown()).toBe(source);
     });
 
-    it('requires a second menu click before deleting an entire heading section', async () => {
+    it('deletes an entire heading section with one menu click', async () => {
         const muya = bootMuya('# First\n\nbody\n\n# Second\n\nkeep\n');
         const menu = new ParagraphFrontMenu(muya, {});
 
         openOn(menu, blocks(muya)[0]);
-        menu.selectItem(new Event('click'), { label: 'delete-section' });
-        expect(muya.getMarkdown()).toContain('# First');
-
         menu.selectItem(new Event('click'), { label: 'delete-section' });
         await vi.waitFor(() => expect(muya.getMarkdown()).not.toContain('# First'));
         expect(muya.getMarkdown()).toContain('# Second');

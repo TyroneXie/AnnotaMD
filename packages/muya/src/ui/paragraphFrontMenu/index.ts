@@ -131,7 +131,6 @@ export class ParagraphFrontMenu extends BaseFloat {
     private _kind: 'image' | null = null;
     private _frontMenuContainer: HTMLDivElement = document.createElement('div');
     private _collapsedSections = new WeakMap<Parent, Map<Parent, boolean>>();
-    private _pendingSectionDelete: Parent | null = null;
     private _headingObserver: MutationObserver | null = null;
     private _typeTooltip: HTMLDivElement | null = null;
     private _conversionLocked = false;
@@ -201,7 +200,6 @@ export class ParagraphFrontMenu extends BaseFloat {
             this.hide();
             this._block = null;
             this._kind = null;
-            this._pendingSectionDelete = null;
         };
 
         const enterLeaveHandler = () => {
@@ -218,11 +216,6 @@ export class ParagraphFrontMenu extends BaseFloat {
             if (event instanceof KeyboardEvent && event.key === 'Escape')
                 closeMenu();
         });
-    }
-
-    override hide() {
-        this._pendingSectionDelete = null;
-        super.hide();
     }
 
     private _isActiveType(block: Parent, label: string): boolean {
@@ -416,26 +409,20 @@ export class ParagraphFrontMenu extends BaseFloat {
             const isDisabled = disabled?.(block!) ?? false;
             const iconWrapperSelector = 'div.icon-wrapper';
             const iconWrapper = h(iconWrapperSelector, renderMenuIcon({ icon, label }));
-            const actionText = label === 'delete-section' && this._pendingSectionDelete === block
-                ? 'Confirm Delete Section'
-                : text;
-            const textWrapper = h('span.text', i18n.t(actionText));
+            const textWrapper = h('span.text', i18n.t(text));
             const shortCutWrapper = shortCut
                 ? h('div.short-cut', [h('span', shortCut)])
                 : null;
-            const isConfirmingDelete = label === 'delete-section' && this._pendingSectionDelete === block;
             const itemSelector = `li.item.${label}${isDisabled ? '.disabled' : ''}`;
             const itemChildren = [iconWrapper, textWrapper, shortCutWrapper];
 
             children.push(h(
                 itemSelector,
                 {
-                    // Keep the selector stable so confirmation preserves the focused node.
-                    class: { confirming: isConfirmingDelete },
                     attrs: {
                         role: 'button',
                         tabindex: isDisabled ? '-1' : '0',
-                        'aria-label': i18n.t(actionText),
+                        'aria-label': i18n.t(text),
                         'aria-disabled': String(isDisabled),
                     },
                     on: {
@@ -502,14 +489,6 @@ export class ParagraphFrontMenu extends BaseFloat {
             });
             return;
         }
-
-        if (label === 'delete-section' && this._pendingSectionDelete !== block) {
-            this._pendingSectionDelete = block;
-            this.render();
-            return;
-        }
-
-        this._pendingSectionDelete = null;
 
         const oldState = block.getState();
         const parent = block.parent;

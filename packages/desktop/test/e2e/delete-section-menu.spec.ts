@@ -47,15 +47,11 @@ for (const [name, markdown, remaining] of [
   ['nested section', '# First\n\nbody\n\n## Child\n\ndetail\n\n# Second\n\nkeep\n', '# Second\n\nkeep\n'],
   ['only heading', '# First\n', '']
 ]) {
-  test(`deletes ${name} with real confirmation clicks and supports undo`, async() => {
+  test(`deletes ${name} with one click and supports undo`, async() => {
     const { app, page } = await launchWithMarkdown(markdown, { suppressErrorDialog: true })
     try {
       await useDevRenderer(page, app, markdown)
       const item = await openHeadingMenu(page)
-      await item.click()
-      await expect(item).toHaveClass(/confirming/)
-      await expect(page.locator('.mu-front-menu').locator('..')).toHaveCSS('opacity', '1')
-      await expect(page.locator('.editor-component')).toContainText('First')
       const box = await item.boundingBox()
       expect(box).not.toBeNull()
       expect(box!.y).toBeGreaterThanOrEqual(0)
@@ -63,8 +59,18 @@ for (const [name, markdown, remaining] of [
 
       await item.click()
       await expect(page.locator('.editor-component')).not.toContainText('First')
+      await expect(page.locator('.mu-front-menu').locator('..')).toHaveCSS('opacity', '0')
       await expect.poll(() => engineMarkdown(page)).toBe(remaining.trim())
-      await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
+      // Undo is handled by Electron's native menu accelerator, not a DOM key handler.
+      await app.evaluate(({ Menu, BrowserWindow }) => {
+        const accelerator = process.platform === 'darwin' ? 'Command+Z' : 'Ctrl+Z'
+        const undo = Menu.getApplicationMenu()?.items
+          .flatMap(item => item.submenu?.items ?? [])
+          .find(item => item.accelerator === accelerator)
+        if (!undo) throw new Error(`Undo accelerator ${accelerator} is not registered`)
+        const win = BrowserWindow.getAllWindows()[0]
+        undo.click(undefined, win, win?.webContents)
+      })
       await expect(page.locator('.editor-component')).toContainText('First')
       await expect.poll(() => engineMarkdown(page)).toBe(markdown.trim())
       expect((await getMarkdownContent(page, app)).trim()).toBe(markdown.trim())
@@ -75,16 +81,13 @@ for (const [name, markdown, remaining] of [
   })
 }
 
-test('cancelling confirmation does not arm the next menu opening', async() => {
+test('dismissing and reopening the menu preserves single-click deletion', async() => {
   const markdown = '# First\n\nbody\n\n# Second\n\nkeep\n'
   const { app, page } = await launchWithMarkdown(markdown, { suppressErrorDialog: true })
   try {
     await useDevRenderer(page, app, markdown)
     for (const cancel of ['outside', 'escape']) {
       const item = await openHeadingMenu(page)
-      await expect(item).not.toHaveClass(/confirming/)
-      await item.click()
-      await expect(item).toHaveClass(/confirming/)
       if (cancel === 'outside') {
         await page.locator('.editor-component .mu-paragraph').first().click()
       } else {
@@ -92,11 +95,12 @@ test('cancelling confirmation does not arm the next menu opening', async() => {
         await page.keyboard.press('Escape')
       }
       await expect(page.locator('.mu-front-menu').locator('..')).toHaveCSS('opacity', '0')
+      await expect.poll(() => engineMarkdown(page)).toBe(markdown.trim())
     }
     const item = await openHeadingMenu(page)
     await item.click()
-    await expect(item).toHaveClass(/confirming/)
-    await expect(page.locator('.editor-component')).toContainText('First')
+    await expect(page.locator('.editor-component')).not.toContainText('First')
+    await expect.poll(() => engineMarkdown(page)).toBe('# Second\n\nkeep')
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

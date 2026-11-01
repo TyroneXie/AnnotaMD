@@ -269,15 +269,6 @@
     color: var(--delete-color);
 }
 
-.mu-front-menu > ul li.item.delete-section.confirming {
-    background: color-mix(in srgb, var(--delete-color) 10%, white);
-}
-
-.mu-front-menu > ul li.item.delete-section.confirming span,
-.mu-front-menu > ul li.item.delete-section.confirming .menu-symbol {
-    color: var(--delete-color);
-}
-
 .mu-front-menu > ul li.divider {
     width: auto;
     height: 1px;
