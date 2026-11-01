@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.17.1 - 2026-11-01
+
+### Fixed
+
+- Fixed heading-section deletion requiring repeated clicks; one click now deletes the section, and Undo restores it in one step.
+- Corrected the Windows title-bar control order to minimize, maximize/restore, and close.
+- Removed the gap beside the Windows close button so its clickable area and hover background reach the window's right edge.
+
 ## 2.17.0 - 2026-09-07
 
 ### Added

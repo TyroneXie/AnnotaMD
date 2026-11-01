@@ -44,9 +44,14 @@ jobs:
             arch: arm64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.3.1
         with:
           fetch-depth: 0
+
+      - name: Enable Git long paths on Windows
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: git config --global core.longpaths true
 
       - name: Install Linux Build Dependencies
         if: matrix.platform == 'linux'
@@ -58,7 +63,25 @@ jobs:
           echo "CC=clang" >> $GITHUB_ENV
           echo "CXX=clang++" >> $GITHUB_ENV
 
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
       - uses: ./.github/actions/setup
+        with:
+          node-version: '24.14.1'
+
+      - name: Cache Electron binary
+        uses: actions/cache@v4.3.0
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key: electron-${{ matrix.os }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            electron-${{ matrix.os }}-
 
       # Must be set before postinstall runs electron-rebuild
       - name: Set C++20 for MacOS
@@ -77,17 +100,23 @@ jobs:
       - name: build-linux
         if: matrix.platform == 'linux'
         run: pnpm run build:linux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build-mac
         if: matrix.platform == 'macos'
         run: pnpm run build:mac:${{ matrix.arch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build-win
         if: matrix.platform == 'windows'
         run: pnpm run build:win:${{ matrix.arch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: annotamd-${{ matrix.name }}
           retention-days: 30
@@ -95,6 +124,8 @@ jobs:
             dist/*.exe
             dist/*.zip
             dist/*.dmg
+            dist/*.blockmap
+            dist/*.yml
             dist/*.AppImage
             dist/*.snap
             dist/*.deb
