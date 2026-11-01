@@ -63,15 +63,15 @@
         :class="[{ 'title-no-drag': titleBarStyle === 'custom' }]"
       >
         <div
-          class="frameless-titlebar-button frameless-titlebar-close"
-          @click.stop="handleCloseClick"
+          class="frameless-titlebar-button frameless-titlebar-minimize"
+          @click.stop="handleMinimizeClick"
         >
           <div>
             <svg
               width="10"
               height="10"
             >
-              <path :d="windowIconClose" />
+              <path :d="windowIconMinimize" />
             </svg>
           </div>
         </div>
@@ -96,15 +96,15 @@
           </div>
         </div>
         <div
-          class="frameless-titlebar-button frameless-titlebar-minimize"
-          @click.stop="handleMinimizeClick"
+          class="frameless-titlebar-button frameless-titlebar-close"
+          @click.stop="handleCloseClick"
         >
           <div>
             <svg
               width="10"
               height="10"
             >
-              <path :d="windowIconMinimize" />
+              <path :d="windowIconClose" />
             </svg>
           </div>
         </div>

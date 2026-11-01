@@ -20,6 +20,7 @@ const testPacks = {
       'src/ui/baseFloat/__tests__/horizontalBoundary.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/canTurnIntoMenu.spec.ts',
       'src/ui/paragraphFrontMenu/__tests__/annotamdFrontMenu.spec.ts',
+      'src/ui/paragraphFrontMenu/__tests__/confirmFocusRestore.spec.ts',
       'src/ui/paragraphQuickInsertMenu/__tests__/replaceBlockByLabel.spec.ts',
       'src/ui/paragraphQuickInsertMenu/__tests__/search.spec.ts',
       'src/block/content/paragraphContent/__tests__/enterConvert.spec.ts',

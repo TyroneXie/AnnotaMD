@@ -220,6 +220,11 @@ export class ParagraphFrontMenu extends BaseFloat {
         });
     }
 
+    override hide() {
+        this._pendingSectionDelete = null;
+        super.hide();
+    }
+
     private _isActiveType(block: Parent, label: string): boolean {
         const activeBlock = isListItemBlock(block) ? block.parent : block;
         if (!activeBlock)
@@ -419,12 +424,14 @@ export class ParagraphFrontMenu extends BaseFloat {
                 ? h('div.short-cut', [h('span', shortCut)])
                 : null;
             const isConfirmingDelete = label === 'delete-section' && this._pendingSectionDelete === block;
-            const itemSelector = `li.item.${label}${isDisabled ? '.disabled' : ''}${isConfirmingDelete ? '.confirming' : ''}`;
+            const itemSelector = `li.item.${label}${isDisabled ? '.disabled' : ''}`;
             const itemChildren = [iconWrapper, textWrapper, shortCutWrapper];
 
             children.push(h(
                 itemSelector,
                 {
+                    // Keep the selector stable so confirmation preserves the focused node.
+                    class: { confirming: isConfirmingDelete },
                     attrs: {
                         role: 'button',
                         tabindex: isDisabled ? '-1' : '0',
