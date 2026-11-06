@@ -63,7 +63,6 @@ const COMMAND_KEY_MAP: Record<string, string> = {
 
   // Select and copy
   'edit.select-all': 'commands.edit.selectAll',
-  'edit.duplicate': 'commands.edit.duplicate',
 
   // Paragraph operations
   'edit.create-paragraph': 'commands.edit.createParagraph',

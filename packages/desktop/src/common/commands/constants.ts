@@ -5,7 +5,6 @@ const COMMANDS = Object.freeze({
   EDIT_CREATE_PARAGRAPH: 'edit.create-paragraph',
   EDIT_CUT: 'edit.cut',
   EDIT_DELETE_PARAGRAPH: 'edit.delete-paragraph',
-  EDIT_DUPLICATE: 'edit.duplicate',
   EDIT_FIND: 'edit.find',
   EDIT_FIND_IN_FOLDER: 'edit.find-in-folder',
   EDIT_FIND_NEXT: 'edit.find-next',

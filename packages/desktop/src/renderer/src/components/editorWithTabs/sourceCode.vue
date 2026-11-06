@@ -421,6 +421,8 @@ onBeforeUnmount(() => {
   height: auto;
   margin: 50px auto;
   width: min(100%, var(--annotamd-editor-area-width, 980px));
+  padding-inline: var(--annotamd-editor-side-padding, 56px);
+  box-sizing: border-box;
   background: transparent;
 }
 .source-code .CodeMirror-gutters {

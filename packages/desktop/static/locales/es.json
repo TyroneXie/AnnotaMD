@@ -522,6 +522,7 @@
         "fontSize": "Tamaño de fuente",
         "lineHeight": "Altura de línea",
         "fontFamily": "Familia de fuente",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "Ancho máximo",
         "maxWidthNotes": "Ancho máximo del contenido del editor"
       },

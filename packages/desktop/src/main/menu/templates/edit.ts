@@ -85,13 +85,6 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
         type: 'separator'
       },
       {
-        label: t('menu.edit.duplicate'),
-        accelerator: keybindings.getAccelerator(COMMANDS.EDIT_DUPLICATE) ?? undefined,
-        click(_menuItem, browserWindow) {
-          actions.editorDuplicate(browserWindow as BrowserWindow | undefined)
-        }
-      },
-      {
         label: t('menu.edit.createParagraph'),
         accelerator: keybindings.getAccelerator(COMMANDS.EDIT_CREATE_PARAGRAPH) ?? undefined,
         click(_menuItem, browserWindow) {

@@ -65,10 +65,6 @@ export const editorSelectAll = (win: Win): void => {
   edit(win, 'selectAll')
 }
 
-export const editorDuplicate = (win: Win): void => {
-  edit(win, 'duplicate')
-}
-
 export const editorCreateParagraph = (win: Win): void => {
   edit(win, 'createParagraph')
 }
@@ -140,7 +136,6 @@ export const loadEditCommands = (commandManager: CommandManager): void => {
   commandManager.add(COMMANDS.EDIT_CREATE_PARAGRAPH, editorCreateParagraph)
   commandManager.add(COMMANDS.EDIT_CUT, nativeCut)
   commandManager.add(COMMANDS.EDIT_DELETE_PARAGRAPH, editorDeleteParagraph)
-  commandManager.add(COMMANDS.EDIT_DUPLICATE, editorDuplicate)
   commandManager.add(COMMANDS.EDIT_FIND, editorFind)
   commandManager.add(COMMANDS.EDIT_FIND_IN_FOLDER, findInFolder)
   commandManager.add(COMMANDS.EDIT_FIND_NEXT, editorFindNext)

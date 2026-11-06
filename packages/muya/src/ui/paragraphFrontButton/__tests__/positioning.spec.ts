@@ -11,6 +11,7 @@ import {
     frontButtonBlockKind,
     frontButtonBlockLabel,
     frontButtonMainAxis,
+    frontButtonAnchorRect,
     frontButtonTarget,
     imageFrontButtonWrapper,
     imageFrontButtonTarget,
@@ -29,6 +30,22 @@ afterEach(() => {
 });
 
 describe('paragraph front button positioning', () => {
+    it.each(['h1', 'p', 'li'])('anchors %s to the block top regardless of line height or wrapping', (tag) => {
+        const element = document.createElement(tag);
+        element.style.lineHeight = '44px';
+        element.style.paddingTop = '12px';
+        element.getBoundingClientRect = () => new DOMRect(200, 100, 600, 800);
+        expect(frontButtonAnchorRect(element)).toEqual(new DOMRect(200, 100, 600, 24));
+    });
+
+    it('anchors a table to its visible border below the figure padding', () => {
+        const figure = document.createElement('figure');
+        figure.innerHTML = '<table><tr><td>Header</td></tr></table>';
+        figure.getBoundingClientRect = () => new DOMRect(200, 80, 600, 800);
+        figure.querySelector('table')!.getBoundingClientRect = () => new DOMRect(200, 96, 600, 400);
+        expect(frontButtonAnchorRect(figure)).toEqual(new DOMRect(200, 96, 600, 24));
+    });
+
     it('identifies raw HTML blocks instead of presenting them as plain text', () => {
         const block = { blockName: 'html-block' } as unknown as Parent;
         expect(frontButtonBlockKind(block)).toBe('html');

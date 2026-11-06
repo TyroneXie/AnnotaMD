@@ -48,7 +48,6 @@ function renderMenuIcon({ label, icon }: { label: string; icon?: ActionIconName 
         'copy-plain-text': 'copy-plain-text',
         'copy-markdown': 'copy-markdown',
         'copy-section': 'copy',
-        'duplicate': 'duplicate',
         'duplicate-section': 'duplicate',
         'cut': 'cut',
         'cut-section': 'cut',
@@ -74,7 +73,6 @@ const META_ACTIONS = new Set([
     'copy-plain-text',
     'copy-markdown',
     'copy-section',
-    'duplicate',
     'duplicate-section',
     'cut',
     'cut-section',
@@ -571,13 +569,6 @@ export class ParagraphFrontMenu extends BaseFloat {
             case 'copy-section':
                 this._writeClipboardText(this._markdownStates(this._headingSection(block)));
                 return null;
-
-            case 'duplicate': {
-                const state = deepClone(oldState);
-                const dupBlock = ScrollPage.loadBlock(state.name).create(muya, state);
-                block.parent!.insertAfter(dupBlock, block);
-                return dupBlock.lastContentInDescendant();
-            }
 
             case 'duplicate-section': {
                 const section = this._headingSectionBlocks(block);

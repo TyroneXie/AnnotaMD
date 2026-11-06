@@ -152,6 +152,11 @@ export function frontButtonMainAxis(
     return (isLooseList ? paddingTop * 2 : paddingTop) + 8 + (isCollapsedSection ? 18 : 0);
 }
 
+export function frontButtonAnchorRect(element: HTMLElement): DOMRect {
+    const rect = (element.querySelector('table') ?? element).getBoundingClientRect();
+    return new DOMRect(rect.left, rect.top, rect.width, 24);
+}
+
 export function frontButtonBlockLabel(block: Parent) {
     switch (block.blockName) {
         case 'atx-heading':
@@ -584,7 +589,7 @@ export class ParagraphFrontButton {
     }
 
     render() {
-        const { _container: container, _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
+        const { _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
 
         const visualBlock = displayBlock(block!);
         const kind = this._kindOverride ?? frontButtonBlockKind(visualBlock);
@@ -629,9 +634,6 @@ export class ParagraphFrontButton {
 
         this._oldVNode = vnode;
 
-        // Reset float box style height
-        const { lineHeight } = getComputedStyle(block!.domNode!);
-        container.style.height = lineHeight;
     }
 
     hide() {
@@ -696,7 +698,15 @@ export class ParagraphFrontButton {
         }
 
         const updatePosition = () => {
-            computePosition(domNode!, floatBox, {
+            Object.assign(floatBox.style, {
+                width: `${this._container.offsetWidth}px`,
+                height: '24px',
+            });
+            const reference = {
+                contextElement: domNode!,
+                getBoundingClientRect: () => frontButtonAnchorRect(domNode!),
+            };
+            computePosition(reference, floatBox, {
                 placement,
                 middleware: [
                     offset({
@@ -707,6 +717,8 @@ export class ParagraphFrontButton {
                     flip(),
                 ],
             }).then(({ x, y }) => {
+                if (this._block !== block || this._kindOverride !== kindOverride)
+                    return;
                 Object.assign(floatBox.style, {
                     left: `${x}px`,
                     top: `${y}px`,

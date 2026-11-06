@@ -153,6 +153,13 @@
     "type": "boolean",
     "default": true
   },
+  "editorSidePadding": {
+    "description": "Theme--Space on each side of the document in pixels.",
+    "type": "number",
+    "minimum": 24,
+    "maximum": 240,
+    "default": 56
+  },
   "editorLineWidth": {
     "description": "Theme--Maximum editor width in pixels.",
     "type": "string",

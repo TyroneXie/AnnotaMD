@@ -522,6 +522,7 @@
         "fontSize": "Taille de police",
         "lineHeight": "Hauteur de ligne",
         "fontFamily": "Famille de police",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "Largeur maximale",
         "maxWidthNotes": "Largeur maximale du contenu de l'éditeur"
       },

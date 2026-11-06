@@ -522,6 +522,7 @@
         "fontSize": "Yazı tipi boyutu",
         "lineHeight": "Satır yüksekliği",
         "fontFamily": "Yazı tipi ailesi",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "Maksimum genişlik",
         "maxWidthNotes": "Düzenleyici içeriğinin maksimum genişliği"
       },

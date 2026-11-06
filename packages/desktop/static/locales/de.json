@@ -522,6 +522,7 @@
         "fontSize": "Schriftgröße",
         "lineHeight": "Zeilenhöhe",
         "fontFamily": "Schriftfamilie",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "Maximale Breite",
         "maxWidthNotes": "Maximale Breite des Editor-Inhalts"
       },

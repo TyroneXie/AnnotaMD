@@ -181,12 +181,6 @@ const commands: CommandDescriptor[] = [
     }
   },
   {
-    id: 'edit.duplicate',
-    execute: async() => {
-      focusEditorAndExecute(() => bus.emit('duplicate', 'duplicate'))
-    }
-  },
-  {
     id: 'edit.create-paragraph',
     execute: async() => {
       focusEditorAndExecute(() => bus.emit('createParagraph', 'createParagraph'))

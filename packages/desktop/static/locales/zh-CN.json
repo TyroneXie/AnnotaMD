@@ -737,6 +737,7 @@
         "fontSize": "字体大小",
         "lineHeight": "行高",
         "fontFamily": "字体系列",
+        "sidePadding": "左右留白（每侧）",
         "maxWidth": "最大宽度",
         "maxWidthNotes": "编辑器内容的最大宽度",
         "iconTheme": "图标主题"

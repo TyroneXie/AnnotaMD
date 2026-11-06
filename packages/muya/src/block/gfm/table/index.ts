@@ -162,6 +162,7 @@ class Table extends Parent {
     }
 
     insertColumn(offset: number, align = 'none') {
+        this.resetColumnWidths();
         const tableInner = this.firstChild as TableInner;
         let firstCellInNewColumn: Nullable<TableBodyCell> = null;
 
@@ -228,6 +229,10 @@ class Table extends Parent {
             this.remove();
             return outsideContent ?? null;
         }
+
+        // Resized widths are DOM-only and indexed by column position. Drop
+        // them before changing the columns so surviving cells use auto layout.
+        this.resetColumnWidths();
 
         // Capture the first row's surviving neighbour cell before mutation so
         // the caller can setCursor on a still-attached cell after the column
@@ -304,7 +309,11 @@ class Table extends Parent {
             cell.style.removeProperty('max-width');
         });
         const inner = this.domNode?.querySelector<HTMLElement>('.mu-table-inner');
+        inner?.querySelector('colgroup[data-muya-column-widths]')?.remove();
+        if (inner)
+            delete inner.dataset.columnResized;
         inner?.style.removeProperty('width');
+        inner?.style.removeProperty('min-width');
         inner?.style.removeProperty('table-layout');
     }
 

@@ -46,14 +46,17 @@ describe('appearance preferences', () => {
     expect(appearance).toContain('class="custom-css-input"')
   })
 
-  it('uses a numeric stepper with a visible default for editor width', () => {
+  it('offers one always-enabled margin control with the same default in both processes', () => {
+    const schema = JSON.parse(read('packages/desktop/src/main/preferences/schema.json'))
+    const defaults = JSON.parse(read('packages/desktop/static/preference.json'))
+    expect(schema.editorSidePadding.default).toBe(56)
+    expect(defaults.editorSidePadding).toBe(56)
     const appearance = read('packages/desktop/src/renderer/src/prefComponents/theme/index.vue')
-
-    expect(appearance).toContain(':value="editorWidthValue"')
-    expect(appearance).toContain(':min="600"')
-    expect(appearance).toContain(':max="1600"')
-    expect(appearance).toContain(':step="20"')
-    expect(appearance).toContain('const DEFAULT_EDITOR_WIDTH = 980')
+    expect(appearance).toContain(':value="editorSidePadding"')
+    expect(appearance).toContain(':min="24"')
+    expect(appearance).toContain(':max="240"')
+    expect(appearance).not.toContain('editorAutoWidth')
+    expect(appearance).not.toContain('editorLineWidth')
     expect(appearance).not.toContain('maxWidthNotes')
   })
 

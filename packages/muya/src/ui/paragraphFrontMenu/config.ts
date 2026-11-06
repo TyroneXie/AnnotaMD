@@ -88,13 +88,6 @@ export const FRONT_MENU = [
         visible: (block: Parent) => /^(?:atx|setext)-heading$/.test(block.blockName),
     },
     {
-        label: 'duplicate',
-        text: 'Duplicate',
-        shortCut: `⇧${COMMAND_KEY}P`,
-        group: 1,
-        visible: (block: Parent) => exceptBlocks('frontmatter')(block) && exceptHeadings(block),
-    },
-    {
         label: 'duplicate-section',
         text: 'Duplicate Section',
         shortCut: '',

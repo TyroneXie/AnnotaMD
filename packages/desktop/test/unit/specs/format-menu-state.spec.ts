@@ -308,7 +308,7 @@ describe('menu template accelerators match the platform keybinding tables (Parag
   it('binds the checklist-named ids to their documented platform accelerators', () => {
     expect(referencedIds(paragraphTemplate as unknown as Template)).toContain('paragraph.heading-1')
     expect(referencedIds(paragraphTemplate as unknown as Template)).toContain('paragraph.front-matter')
-    expect(referencedIds(editTemplate as unknown as Template)).toContain('edit.duplicate')
+    expect(referencedIds(editTemplate as unknown as Template)).not.toContain('edit.duplicate')
     expect(referencedIds(editTemplate as unknown as Template)).toContain('edit.find-next')
     expect(referencedIds(editTemplate as unknown as Template)).toContain('edit.find-previous')
     expect(referencedIds(viewTemplate as unknown as Template)).toContain('view.source-code-mode')
@@ -317,8 +317,9 @@ describe('menu template accelerators match the platform keybinding tables (Parag
 
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'paragraph.heading-1'), 'Command+1')).toBe(true)
     expect(keybindingsWindows.get('paragraph.heading-1')).toBe('')
-    expect(isEqualAccelerator(accel(keybindingsDarwin, 'edit.duplicate'), 'Command+Option+D')).toBe(true)
-    expect(isEqualAccelerator(accel(keybindingsLinux, 'edit.duplicate'), 'Ctrl+Shift+E')).toBe(true)
+    for (const bindings of [keybindingsDarwin, keybindingsLinux, keybindingsWindows]) {
+      expect(bindings.has('edit.duplicate')).toBe(false)
+    }
     expect(isEqualAccelerator(accel(keybindingsLinux, 'edit.find-next'), 'F3')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsDarwin, 'edit.find-next'), 'Cmd+G')).toBe(true)
     expect(isEqualAccelerator(accel(keybindingsWindows, 'view.source-code-mode'), 'Ctrl+E')).toBe(true)

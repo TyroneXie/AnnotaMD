@@ -36,7 +36,6 @@ const keybindings: Map<string, string> = new Map([
   ['edit.copy-as-html', ''],
   ['edit.paste-as-plaintext', 'Command+Shift+V'],
   ['edit.select-all', 'Command+A'],
-  ['edit.duplicate', 'Command+Option+D'],
   ['edit.create-paragraph', 'Shift+Command+N'],
   ['edit.delete-paragraph', 'Shift+Command+D'],
   ['edit.find', 'Command+F'],

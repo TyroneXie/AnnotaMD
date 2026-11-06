@@ -40,7 +40,6 @@ const keybindings: Map<string, string> = new Map([
   ['edit.copy-as-html', ''],
   ['edit.paste-as-plaintext', 'Ctrl+Shift+V'],
   ['edit.select-all', 'Ctrl+A'],
-  ['edit.duplicate', 'Ctrl+Shift+E'],
   ['edit.create-paragraph', 'Ctrl+Shift+N'],
   ['edit.delete-paragraph', 'Ctrl+Shift+D'],
   ['edit.find', 'Ctrl+F'],

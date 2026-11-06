@@ -9,7 +9,7 @@ vi.hoisted(() => {
   w.window.path ??= { sep: '/' }
 })
 
-import { addCommonStyle, setEditorWidth } from '@/util/theme'
+import { addCommonStyle, setEditorSidePadding } from '@/util/theme'
 import { COMMON_STYLE_ID, DEFAULT_CODE_FONT_FAMILY } from '@/config'
 
 const styleHtml = (id: string) =>
@@ -73,49 +73,26 @@ describe('theme.ts style injection helpers', () => {
     })
   })
 
-  // Item 209 — setEditorWidth validates input and injects --editorAreaWidth override.
-  describe('setEditorWidth', () => {
-    const WIDTH_STYLE_ID = 'editor-width'
-
-    it.each(['60ch', '800px', '50%'])('writes the valid value %s directly', (value) => {
-      setEditorWidth(value)
-
-      expect(styleHtml(WIDTH_STYLE_ID)).toBe(
-        `:root { --editorAreaWidth: ${value}; --editor-area-width: ${value}; --annotamd-editor-area-width: ${value}; }`
-      )
+  describe('setEditorSidePadding', () => {
+    it('keeps all editor modes responsive and applies a shared margin', () => {
+      setEditorSidePadding(80)
+      const css = styleHtml('editor-width')
+      expect(css).toContain('--editorAreaWidth: 100%;')
+      expect(css).toContain('--editor-area-width: 100%;')
+      expect(css).toContain('--annotamd-editor-area-width: 100%;')
+      expect(css).toContain('--annotamd-editor-side-padding: 80px;')
     })
 
-    it('overrides the active @muyajs/core width variable, not only the legacy one', () => {
-      // The WYSIWYG engine reads the kebab-case `--editor-area-width`
-      // (`.mu-container` max-width); the legacy camelCase `--editorAreaWidth`
-      // only reaches source mode. Both must be set or the preference is a no-op
-      // on the default theme (issue #4828).
-      setEditorWidth('60%')
-
-      expect(styleHtml(WIDTH_STYLE_ID)).toContain('--editor-area-width: 60%;')
+    it.each([[0, 24], [400, 240], [NaN, 56]])('bounds margin %s to %s', (value, expected) => {
+      setEditorSidePadding(value)
+      expect(styleHtml('editor-width')).toContain(`--annotamd-editor-side-padding: ${expected}px;`)
     })
 
-    it('clears the override (empty innerHTML) for an empty string', () => {
-      setEditorWidth('800px')
-      setEditorWidth('')
-
-      expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
-    })
-
-    it.each(['abc', '10', '10em'])('rejects the invalid value %s and writes nothing', (value) => {
-      setEditorWidth(value)
-
-      expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
-    })
-
-    it('reuses a single style element across calls', () => {
-      setEditorWidth('60ch')
-      setEditorWidth('50%')
-      setEditorWidth('abc')
-
-      expect(styleCount(WIDTH_STYLE_ID)).toBe(1)
-      // the invalid final call cleared the previously valid override
-      expect(styleHtml(WIDTH_STYLE_ID)).toBe('')
+    it('updates one shared style without accumulating overrides', () => {
+      setEditorSidePadding(56)
+      setEditorSidePadding(100)
+      expect(styleCount('editor-width')).toBe(1)
+      expect(styleHtml('editor-width')).toContain('--annotamd-editor-side-padding: 100px;')
     })
   })
 })

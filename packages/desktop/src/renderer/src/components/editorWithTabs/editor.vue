@@ -134,7 +134,7 @@ import {
   syncAnnotaMDCommentHighlights,
   type CommentRangeLayout
 } from '@/util/annotamdCommentHighlights'
-import { addCommonStyle, setEditorWidth } from '@/util/theme'
+import { addCommonStyle, setEditorSidePadding } from '@/util/theme'
 import { AnnotaMDStickyTableHeader } from '@/util/annotamdStickyTableHeader'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
@@ -272,7 +272,7 @@ const {
   hideQuickInsertHint,
   hideLinkPopup,
   autoCheck,
-  editorLineWidth,
+  editorSidePadding,
   wrapCodeBlocks,
   imageInsertAction,
   imagePreferRelativeDirectory,
@@ -838,11 +838,7 @@ watch(hideQuickInsertHint, (value, oldValue) => {
   }
 })
 
-watch(editorLineWidth, (value, oldValue) => {
-  if (value !== oldValue) {
-    setEditorWidth(value)
-  }
-})
+watch(editorSidePadding, setEditorSidePadding)
 
 watch(wrapCodeBlocks, (value, oldValue) => {
   if (value !== oldValue && editor.value) {
@@ -1741,16 +1737,13 @@ const handleEditParagraph = (type: unknown) => {
   }
 }
 
-// handle `duplicate`, `delete`, `create paragraph below`
+// handle `delete`, `create paragraph below`
 const handleParagraph = (type: unknown) => {
   if (sourceCode.value) {
     return
   }
   if (editor.value) {
     switch (type) {
-      case 'duplicate': {
-        return editor.value.duplicate()
-      }
       case 'createParagraph': {
         return editor.value.insertParagraph('after', '', true)
       }
@@ -2264,7 +2257,6 @@ onMounted(() => {
   bus.on('copyAsRich', handleCopyPaste)
   bus.on('copyAsHtml', handleCopyPaste)
   bus.on('pasteAsPlainText', handleCopyPaste)
-  bus.on('duplicate', handleParagraph)
   bus.on('createParagraph', handleParagraph)
   bus.on('deleteParagraph', handleParagraph)
   bus.on('insertParagraph', handleInsertParagraph)
@@ -2486,7 +2478,7 @@ onMounted(() => {
 
   document.addEventListener('keyup', keyup)
 
-  setEditorWidth(editorLineWidth.value)
+  setEditorSidePadding(editorSidePadding.value)
 })
 
 onBeforeUnmount(() => {
@@ -2517,7 +2509,6 @@ onBeforeUnmount(() => {
   bus.off('copyAsRich', handleCopyPaste)
   bus.off('copyAsHtml', handleCopyPaste)
   bus.off('pasteAsPlainText', handleCopyPaste)
-  bus.off('duplicate', handleParagraph)
   bus.off('createParagraph', handleParagraph)
   bus.off('deleteParagraph', handleParagraph)
   bus.off('insertParagraph', handleInsertParagraph)
@@ -2748,7 +2739,7 @@ body.annotamd-image-viewer-open .annotamd-sticky-table-header {
   width: min(100%, var(--annotamd-editor-area-width, 980px));
   max-width: 100%;
   box-sizing: border-box;
-  padding: 24px 56px 100vh;
+  padding: 24px var(--annotamd-editor-side-padding, 56px) 100vh;
   overflow-x: hidden !important;
   color: #2f3437;
   font-size: var(--mu-font-size, 15px);

@@ -114,6 +114,7 @@ function makeFakeTable(rowCount: number, cellCount: number) {
         firstChild: inner,
         columnCount: cellCount,
         remove: vi.fn(),
+        resetColumnWidths: vi.fn(),
         // The whole-table-removed branch (pre-migration implementation 6293d408 cover-the-edge
         // case) calls `nextContentInContext()` / `previousContentInContext()`
         // on `this` before `this.remove()`. Stub both to return null in the

@@ -255,7 +255,7 @@ describe('AnnotaMD preference styling', () => {
     )
   })
 
-  it('keeps the maximum-width setting connected to the live editor canvas', () => {
+  it('keeps responsive width and side margins connected to the live editor canvas', () => {
     const editor = readRepoFile(
       'packages/desktop/src/renderer/src/components/editorWithTabs/editor.vue'
     )
@@ -264,6 +264,7 @@ describe('AnnotaMD preference styling', () => {
     expect(editor).toMatch(
       /\.editor-component \.mu-container\s*\{[^}]*width:\s*min\(100%, var\(--annotamd-editor-area-width, 980px\)\);/s
     )
-    expect(theme).toContain('--annotamd-editor-area-width: ${width}')
+    expect(theme).toContain('--annotamd-editor-area-width: 100%;')
+    expect(theme).toContain('--annotamd-editor-side-padding: ${padding}px;')
   })
 })

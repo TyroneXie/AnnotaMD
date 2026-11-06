@@ -522,6 +522,7 @@
         "fontSize": "フォントサイズ",
         "lineHeight": "行の高さ",
         "fontFamily": "フォントファミリー",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "最大幅",
         "maxWidthNotes": "エディターコンテンツの最大幅"
       },

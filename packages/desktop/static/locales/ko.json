@@ -522,6 +522,7 @@
         "fontSize": "글꼴 크기",
         "lineHeight": "줄 높이",
         "fontFamily": "글꼴 패밀리",
+        "sidePadding": "Side margins (each side)",
         "maxWidth": "최대 너비",
         "maxWidthNotes": "편집기 콘텐츠의 최대 너비"
       },

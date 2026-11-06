@@ -66,11 +66,12 @@ export const launchElectron = async(
   options: LaunchOptions = {}
 ): Promise<LaunchResult> => {
   userArgs = userArgs || []
-  const executablePath = getElectronPath()
-  // Pass project root as entry so Electron reads package.json and getAppPath() returns project root.
+  const packagedExecutable = process.env.ANNOTAMD_TEST_EXECUTABLE
+  const executablePath = packagedExecutable || getElectronPath()
+  // Development launches pass the project root so Electron reads package.json.
   // Passing out/main/index.js directly bypasses package.json and breaks __static path resolution.
   const userDataDir = trackTempDir(getTempPath())
-  const args = [projectRoot, '--user-data-dir', userDataDir].concat(userArgs)
+  const args = [...(packagedExecutable ? [] : [projectRoot]), '--user-data-dir', userDataDir].concat(userArgs)
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
   env.PERF_TESTING = 'true'

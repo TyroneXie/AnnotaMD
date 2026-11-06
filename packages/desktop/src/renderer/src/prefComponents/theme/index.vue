@@ -61,12 +61,13 @@
           :on-change="(value) => onSelectChange('lineHeight', value)"
         />
         <range
-          :description="t('preferences.editor.textEditor.maxWidth')"
-          :value="editorWidthValue"
-          :min="600"
-          :max="1600"
-          :step="20"
-          :on-change="setEditorWidthPreference"
+          :description="t('preferences.editor.textEditor.sidePadding')"
+          :value="editorSidePadding"
+          :min="24"
+          :max="240"
+          :step="4"
+          unit="px"
+          :on-change="(value) => onSelectChange('editorSidePadding', value)"
         />
         <font-text-box
           :description="t('preferences.editor.textEditor.fontFamily')"
@@ -194,7 +195,6 @@ interface ThemePreview {
 }
 
 const themes = ref<ThemePreview[]>([])
-const DEFAULT_EDITOR_WIDTH = 980
 const hoveredThemeName = ref('')
 const previewPosition = ref({ left: '0px', top: '0px' })
 
@@ -209,18 +209,13 @@ const {
   fontSize,
   editorFontFamily,
   lineHeight,
-  editorLineWidth,
+  editorSidePadding,
   iconTheme,
   codeFontFamily,
   codeBlockLineNumbers,
   wrapCodeBlocks,
   trimUnnecessaryCodeBlockEmptyLines
 } = storeToRefs(preferenceStore)
-
-const editorWidthValue = computed(() => {
-  const match = editorLineWidth.value.match(/^(\d+)px$/)
-  return match?.[1] ? Number(match[1]) : DEFAULT_EDITOR_WIDTH
-})
 
 const hoveredTheme = computed(() =>
   themes.value.find((themeItem) => themeItem.name === hoveredThemeName.value)
@@ -249,10 +244,6 @@ onMounted(async () => {
 
 const onSelectChange = (type: keyof PreferencesState, value: unknown): void => {
   preferenceStore.SET_SINGLE_PREFERENCE({ type, value })
-}
-
-const setEditorWidthPreference = (value: number): void => {
-  onSelectChange('editorLineWidth', `${value}px`)
 }
 
 const showThemePreview = (themeName: string, anchor: DOMRect): void => {

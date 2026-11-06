@@ -64,7 +64,6 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'copy-plain-text',
             'copy-markdown',
             'copy-section',
-            'duplicate',
             'duplicate-section',
             'cut',
             'cut-section',
@@ -81,7 +80,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'delete-section',
         ]);
         expect(FRONT_MENU.map(item => item.group)).toEqual([
-            1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1,
             2, 2, 2, 2,
             3, 3, 3, 3,
             4, 4, 4,

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.18.0 - 2026-11-06
+
+### Added
+
+- Added a saved side-margin setting, defaulting to 56px per side, while the document expands with the available window width.
+
+### Changed
+
+- Removed the paragraph duplication action from block menus, the Edit menu, commands, and shortcuts; Copy Markdown and Copy Plain Text remain available.
+- Kept block menu buttons compact and aligned their top edges with paragraphs, headings, lists, and visible table borders.
+
+### Fixed
+
+- Fixed narrow or displaced text columns after adding or deleting resized table columns; tables now recalculate their layout from the remaining content.
+
 ## 2.17.1 - 2026-11-01
 
 ### Fixed

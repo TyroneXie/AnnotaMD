@@ -197,24 +197,15 @@ export const addThemeStyle = (theme: string): void => {
   }
 }
 
-export const setEditorWidth = (value: string): void => {
-  const EDITOR_WIDTH_STYLE_ID = 'editor-width'
-  let result = ''
-  if (value && /^[0-9]+(?:ch|px|%)$/.test(value)) {
-    // Keep all editor modes on the same explicit outer width. The previous
-    // control described content width and added padding invisibly, which made
-    // its displayed value differ from the actual editor width.
-    const width = value
-    result = `:root { --editorAreaWidth: ${width}; --editor-area-width: ${width}; --annotamd-editor-area-width: ${width}; }`
-  }
-  let styleEle = document.querySelector(`#${EDITOR_WIDTH_STYLE_ID}`) as HTMLStyleElement | null
+export const setEditorSidePadding = (value: number): void => {
+  const padding = Number.isFinite(value) ? Math.min(240, Math.max(24, value)) : 56
+  let styleEle = document.querySelector('#editor-width') as HTMLStyleElement | null
   if (!styleEle) {
     styleEle = document.createElement('style')
-    styleEle.setAttribute('id', EDITOR_WIDTH_STYLE_ID)
+    styleEle.id = 'editor-width'
     document.head.appendChild(styleEle)
   }
-
-  styleEle.innerHTML = result
+  styleEle.textContent = `:root { --editorAreaWidth: 100%; --editor-area-width: 100%; --annotamd-editor-area-width: 100%; --annotamd-editor-side-padding: ${padding}px; }`
 }
 
 export interface CommonStyleOptions {
