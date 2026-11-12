@@ -119,6 +119,7 @@
       </template>
       <template #children>
         <bool
+          v-if="!isOsx"
           :description="t('updates.autoDownload')"
           :notes="t('updates.manualInstallNote')"
           :bool="autoDownloadUpdates"

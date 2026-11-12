@@ -411,6 +411,7 @@ ipcMain.on('annotamd::close-window-confirm', async(e, unsavedFiles: UnsavedFile[
   }
   const userResult = await showUnsavedFilesMessage(win, unsavedFiles)
   if (!userResult) {
+    ipcMain.emit('annotamd::window-close-cancelled', win.id)
     return
   }
 
@@ -447,6 +448,8 @@ ipcMain.on('annotamd::close-window-confirm', async(e, unsavedFiles: UnsavedFile[
           .then(({ response }) => {
             if (win.id && response === 0) {
               ipcMain.emit('window-close-by-id', win.id)
+            } else {
+              ipcMain.emit('annotamd::window-close-cancelled', win.id)
             }
           })
       })

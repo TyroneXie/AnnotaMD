@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.20.0 - 2026-11-12
+
+### Added
+
+- Download macOS updates inside the app with visible progress, then click Restart to install and reopen AnnotaMD.
+- Preserve unsaved documents across an update and restore the previous application if the new version fails to start.
+
+### Changed
+
+- macOS updates now wait for an explicit download click and a separate restart click; the automatic-download preference is no longer shown on macOS.
+
+### Fixed
+
+- Allow macOS builds with ad-hoc signatures to update in place from a writable application folder instead of always opening GitHub downloads.
+
 ## 2.19.0 - 2026-11-12
 
 ### Added

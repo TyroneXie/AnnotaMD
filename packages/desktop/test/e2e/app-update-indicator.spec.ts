@@ -60,7 +60,8 @@ test.describe('application update indicator', () => {
       version: '2.12.0',
       progress: 47
     })
-    await expect(updateButton.locator('svg')).toHaveCount(1)
+    await expect(updateButton.locator('.app-update-icon')).toHaveCount(1)
+    await expect(updateButton.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '47')
     await expect(updateButton).toHaveText('')
 
     await sendIpcToRenderer(app, 'annotamd::update:state', {
@@ -85,16 +86,17 @@ test.describe('application update indicator', () => {
     const automaticDownload = settingsPage!
       .locator('.pref-switch-item')
       .filter({ hasText: 'Automatically download updates' })
-    await expect(automaticDownload.locator('input')).toBeChecked()
-    await automaticDownload.locator('.el-switch').click()
-    await expect(automaticDownload.locator('input')).not.toBeChecked()
-    await settingsPage!.reload()
-    const persistedAutomaticDownload = settingsPage!
-      .locator('.pref-switch-item')
-      .filter({ hasText: 'Automatically download updates' })
-    await expect(persistedAutomaticDownload.locator('input')).not.toBeChecked()
-    await persistedAutomaticDownload.locator('.el-switch').click()
-    await expect(persistedAutomaticDownload.locator('input')).toBeChecked()
+    if (process.platform === 'darwin') {
+      await expect(automaticDownload).toHaveCount(0)
+    } else {
+      await expect(automaticDownload.locator('input')).toBeChecked()
+      await automaticDownload.locator('.el-switch').click()
+      await expect(automaticDownload.locator('input')).not.toBeChecked()
+      await settingsPage!.reload()
+      await expect(automaticDownload.locator('input')).not.toBeChecked()
+      await automaticDownload.locator('.el-switch').click()
+      await expect(automaticDownload.locator('input')).toBeChecked()
+    }
     await expect(settingsPage!.locator('.app-update-panel')).toContainText(
       'This package cannot update itself.'
     )
@@ -132,17 +134,25 @@ test.describe('application update indicator', () => {
     )
     await expect(settingsPage!.locator('.app-update-panel button')).toContainText('View downloads')
 
-    const switchBox = await persistedAutomaticDownload.locator('.el-switch').boundingBox()
-    const switchLabelBox = await persistedAutomaticDownload.locator('.description').boundingBox()
+    const referenceSwitch = process.platform === 'darwin'
+      ? settingsPage!.locator('.pref-switch-item').first() : automaticDownload
+    const switchBox = await referenceSwitch.locator('.el-switch').boundingBox()
+    const switchLabelBox = await referenceSwitch.locator('.description').boundingBox()
     const updateActionBox = await settingsPage!
       .locator('.app-update-panel button')
       .boundingBox()
     expect(switchBox).not.toBeNull()
     expect(switchLabelBox).not.toBeNull()
     expect(updateActionBox).not.toBeNull()
-    expect(Math.abs(
-      switchBox!.y + switchBox!.height / 2 - (switchLabelBox!.y + switchLabelBox!.height / 2)
-    )).toBeLessThanOrEqual(1)
+    if (process.platform === 'darwin') {
+      const updatePanelBox = (await settingsPage!.locator('.app-update-panel').boundingBox())!
+      expect(Math.abs(updateActionBox!.y + updateActionBox!.height / 2
+        - (updatePanelBox.y + updatePanelBox.height / 2))).toBeLessThanOrEqual(1)
+    } else {
+      expect(Math.abs(
+        switchBox!.y + switchBox!.height / 2 - (switchLabelBox!.y + switchLabelBox!.height / 2)
+      )).toBeLessThanOrEqual(1)
+    }
     expect(Math.abs(switchBox!.x + switchBox!.width - (updateActionBox!.x + updateActionBox!.width)))
       .toBeLessThanOrEqual(1)
 

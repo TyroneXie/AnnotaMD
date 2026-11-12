@@ -1,6 +1,7 @@
 import path from 'path'
 import { spawnSync } from 'node:child_process'
 import fs from 'fs-extra'
+import { canReplaceMacAppBundle } from './macBundleInstaller'
 
 interface UpdateSupportOptions {
   resourcesPath?: string
@@ -9,6 +10,7 @@ interface UpdateSupportOptions {
   executablePath?: string
   pathExists?: (filePath: string) => boolean
   hasTrustedMacSignature?: (executablePath: string) => boolean
+  canReplaceMacBundle?: (executablePath: string) => boolean
 }
 
 const hasTrustedMacSignature = (executablePath: string): boolean => {
@@ -52,3 +54,7 @@ export const isAutomaticUpdateInstallSupported = (
   const signatureCheck = options.hasTrustedMacSignature ?? hasTrustedMacSignature
   return signatureCheck(executablePath)
 }
+
+export const isMacBundleUpdateSupported = (options: UpdateSupportOptions = {}): boolean =>
+  (options.platform ?? process.platform) === 'darwin' && isAppUpdateSupported(options)
+  && (options.canReplaceMacBundle ?? canReplaceMacAppBundle)(options.executablePath ?? process.execPath)

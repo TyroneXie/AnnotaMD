@@ -1,23 +1,29 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import log from 'electron-log'
-import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater'
+import { autoUpdater as standardUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater'
 import type { AppUpdateState } from '@shared/types/update'
 import { t } from '../i18n'
-import { isAppUpdateSupported, isAutomaticUpdateInstallSupported } from './support'
+import { isAppUpdateSupported, isAutomaticUpdateInstallSupported, isMacBundleUpdateSupported } from './support'
 import { reduceUpdateState, shouldAutomaticallyDownload, type AppUpdateEvent } from './state'
+import { isOsx } from '../config'
+import { MacArchiveUpdater } from './macArchiveUpdater'
+import { acknowledgeMacBundleUpdate } from './macBundleInstaller'
 
 const updateSupported = isAppUpdateSupported()
+const nativeInstallSupported = isAutomaticUpdateInstallSupported()
+const bundleInstallSupported = !nativeInstallSupported && isMacBundleUpdateSupported()
+const autoUpdater = bundleInstallSupported ? new MacArchiveUpdater() : standardUpdater
 const updateState: AppUpdateState = {
   status: 'idle',
   currentVersion: app.getVersion(),
-  ...(updateSupported && !isAutomaticUpdateInstallSupported()
+  ...(updateSupported && !nativeInstallSupported && !bundleInstallSupported
     ? { manualInstallRequired: true }
     : {})
 }
 
 let registered = false
 let startupTimer: NodeJS.Timeout | null = null
-let automaticDownloadsEnabled = true
+let automaticDownloadsEnabled = !isOsx
 
 const snapshot = (): AppUpdateState => ({ ...updateState })
 
@@ -169,8 +175,8 @@ export const installDownloadedUpdate = (): AppUpdateState => {
 }
 
 export const setAutomaticUpdateDownloads = (enabled: boolean): void => {
-  automaticDownloadsEnabled = enabled
-  if (shouldAutomaticallyDownload(enabled, updateState)) {
+  automaticDownloadsEnabled = !isOsx && enabled
+  if (shouldAutomaticallyDownload(automaticDownloadsEnabled, updateState)) {
     void downloadUpdate()
   }
 }
@@ -179,6 +185,13 @@ export const registerAppUpdater = (): void => {
   if (registered) return
   registered = true
   bindUpdaterEvents()
+  if (isOsx) {
+    ipcMain.on('annotamd::window-initialized', () => {
+      void acknowledgeMacBundleUpdate(process.execPath, app.getVersion(), app.getPath('userData')).catch(error => {
+        log.error('Failed to acknowledge application update:', error)
+      })
+    })
+  }
 
   if (!isAppUpdateSupported()) {
     Object.assign(updateState, reduceUpdateState(updateState, { type: 'unsupported' }))

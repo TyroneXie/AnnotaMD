@@ -23,15 +23,17 @@ const mocks = vi.hoisted(() => {
     showMessageBox: vi.fn(),
     ipcHandle: vi.fn(),
     supported: { value: true },
-    automaticInstallSupported: { value: true }
+    automaticInstallSupported: { value: true },
+    bundleInstallSupported: { value: false },
+    isMac: { value: false }
   }
 })
 
 vi.mock('electron', () => ({
-  app: { getVersion: () => '2.13.0' },
+  app: { getVersion: () => '2.13.0', getPath: () => '/tmp/annotamd-updater-test' },
   BrowserWindow: { getAllWindows: () => [] },
   dialog: { showMessageBox: mocks.showMessageBox },
-  ipcMain: { handle: mocks.ipcHandle }
+  ipcMain: { handle: mocks.ipcHandle, on: vi.fn() }
 }))
 
 vi.mock('electron-log', () => ({
@@ -39,10 +41,15 @@ vi.mock('electron-log', () => ({
 }))
 
 vi.mock('electron-updater', () => ({ autoUpdater: mocks.autoUpdater }))
+vi.mock('../../../src/main/config', () => ({ get isOsx() { return mocks.isMac.value } }))
+vi.mock('../../../src/main/updater/macArchiveUpdater', () => ({
+  MacArchiveUpdater: class { constructor() { return mocks.autoUpdater } }
+}))
 
 vi.mock('../../../src/main/updater/support', () => ({
   isAppUpdateSupported: () => mocks.supported.value,
-  isAutomaticUpdateInstallSupported: () => mocks.automaticInstallSupported.value
+  isAutomaticUpdateInstallSupported: () => mocks.automaticInstallSupported.value,
+  isMacBundleUpdateSupported: () => mocks.bundleInstallSupported.value
 }))
 
 vi.mock('../../../src/main/i18n', () => ({
@@ -75,6 +82,8 @@ describe('application updater flow', () => {
     mocks.handlers.clear()
     mocks.supported.value = true
     mocks.automaticInstallSupported.value = true
+    mocks.bundleInstallSupported.value = false
+    mocks.isMac.value = false
     mocks.showMessageBox.mockReset().mockResolvedValue({ response: 0 })
     mocks.ipcHandle.mockReset()
     mocks.autoUpdater.on.mockClear()
@@ -180,5 +189,29 @@ describe('application updater flow', () => {
       manualInstallRequired: true
     })
     expect(mocks.autoUpdater.downloadUpdate).not.toHaveBeenCalled()
+  })
+
+  it('requires separate download and restart clicks for a Mac bundle update', async() => {
+    mocks.isMac.value = true
+    mocks.automaticInstallSupported.value = false
+    mocks.bundleInstallSupported.value = true
+    mocks.autoUpdater.checkForUpdates.mockImplementation(async() => {
+      mocks.handlers.get('update-available')?.({ version: '2.14.0' })
+    })
+    mocks.autoUpdater.downloadUpdate.mockImplementation(async() => {
+      mocks.handlers.get('update-downloaded')?.({ version: '2.14.0' })
+      return ['/tmp/update.zip']
+    })
+    const updater = await loadUpdater()
+    updater.setAutomaticUpdateDownloads(true)
+    await updater.checkForUpdates()
+    expect(updater.getUpdateState()).toMatchObject({status: 'available'})
+    expect(updater.getUpdateState().manualInstallRequired).not.toBe(true)
+    expect(mocks.autoUpdater.downloadUpdate).not.toHaveBeenCalled()
+    await updater.downloadUpdate()
+    expect(updater.getUpdateState()).toMatchObject({status: 'downloaded'})
+    expect(mocks.autoUpdater.quitAndInstall).not.toHaveBeenCalled()
+    updater.installDownloadedUpdate()
+    await vi.waitFor(() => expect(mocks.autoUpdater.quitAndInstall).toHaveBeenCalledOnce())
   })
 })

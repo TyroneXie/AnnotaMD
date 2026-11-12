@@ -10,6 +10,19 @@
       :aria-label="statusText"
       @click.stop="runAction"
     >
+      <svg
+        v-if="state.status === 'downloading'"
+        class="app-update-ring"
+        viewBox="0 0 36 36"
+        role="progressbar"
+        :aria-label="statusText"
+        :aria-valuenow="roundedProgress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <circle class="app-update-ring-track" cx="18" cy="18" r="15" />
+        <circle cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="100" :stroke-dashoffset="100 - roundedProgress" />
+      </svg>
       <Download class="app-update-icon" aria-hidden="true" />
     </button>
   </template>
@@ -176,6 +189,22 @@ onBeforeUnmount(() => {
 .app-update-icon {
   width: 17px;
   height: 17px;
+}
+
+.app-update-ring {
+  position: absolute;
+  inset: 0;
+  width: 36px;
+  height: 36px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+}
+
+.app-update-ring-track {
+  opacity: 0.15;
 }
 
 .app-update-panel {
