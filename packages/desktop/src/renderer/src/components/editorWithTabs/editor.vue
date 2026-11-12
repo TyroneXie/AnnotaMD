@@ -118,7 +118,7 @@ import Printer from '@/services/printService'
 import { SpellcheckerLanguageCommand } from '@/commands'
 import { SpellChecker } from '@/spellchecker'
 import { isOsx, animatedScrollTo } from '@/util'
-import { moveImageToFolder, uploadImage } from '@/util/fileSystem'
+import { imageDataUrlToFile, moveImageToFolder, uploadImage } from '@/util/fileSystem'
 import { guessClipboardFilePath } from '@/util/clipboard'
 import { getCssForOptions, getHtmlToc, type PdfCssOptions, type HtmlTocOptions } from '@/util/pdf'
 import {
@@ -1019,6 +1019,9 @@ const imageAction = async (
 ): Promise<string> => {
   // TODO(Refactor): Refactor this method.
   if (!currentFile.value) return ''
+  if (typeof image === 'string' && /^data:image\//i.test(image)) {
+    image = imageDataUrlToFile(image)
+  }
   const { filename, pathname: currentPathname } = currentFile.value
 
   // Figure out the current working directory.

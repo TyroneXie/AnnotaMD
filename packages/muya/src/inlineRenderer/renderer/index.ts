@@ -152,6 +152,11 @@ class Renderer {
             ],
             [] as VNode[],
         );
+        // A text anchor gives Chromium a drawable caret on the empty line.
+        // Selection/source extraction ignores this placeholder character.
+        const lastToken = tokens[tokens.length - 1];
+        if (block.blockName === 'table.cell.content' && lastToken?.type === 'html_tag' && lastToken.tag === 'br')
+            children.push(h(`span.mu-table-cell-line-end.${CLASS_NAMES.MU_OUTPUT_REMOVE}`, '\u200B'));
         const vNode = h('span', children);
         const rawHtml = toHTML(vNode);
 

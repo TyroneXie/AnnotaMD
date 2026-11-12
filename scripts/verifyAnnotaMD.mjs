@@ -40,6 +40,7 @@ const testPacks = {
       'src/block/content/paragraphContent/__tests__/enterHandler.spec.ts',
       'src/block/commonMark/html/__tests__/htmlPreviewEmptyGuard.spec.ts',
       'src/editor/__tests__/initialPreviewFocus.spec.ts',
+      'src/editor/__tests__/blankAreaInsert.spec.ts',
       'src/state/__tests__/markdownToState.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeBarStyle.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeSnap.spec.ts',
@@ -54,6 +55,10 @@ const testPacks = {
     command: path.join(root, 'packages/muya/node_modules/.bin/vitest'),
     files: [
       'src/block/gfm/table/__tests__/tableLayoutCss.spec.ts',
+      'src/editor/__tests__/tableCellBlankLine.spec.ts',
+      'src/selection/__tests__/tableCellCaret.spec.ts',
+      'src/block/content/tableCell/__tests__/enterHandler.spec.ts',
+      'src/block/content/tableCell/__tests__/backspaceSafety.spec.ts',
       'src/block/gfm/table/__tests__/columnWidthMutation.spec.ts',
       'src/block/gfm/table/__tests__/removeRowColumn.spec.ts',
       'src/ui/tableDragBar/__tests__/columnResize.spec.ts',
@@ -202,6 +207,21 @@ if (selectedPacks.includes('menu')) {
       'test/unit/specs/annotamd-diagram-controls.spec.ts',
       'test/unit/specs/annotamd-diagram-toolbar-style.spec.ts',
       'test/unit/specs/image-context-menu.spec.ts'
+    ],
+    cwd: path.join(root, 'packages/desktop'),
+    env: { ...process.env, CI: '1' }
+  })
+}
+
+if (selectedPacks.includes('table')) {
+  checks.push({
+    label: 'desktop pasted image persistence tests',
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
+    args: [
+      'run',
+      'test/unit/specs/image-data-url.spec.ts',
+      'test/unit/specs/move-image-to-folder.spec.ts',
+      'test/unit/specs/upload-image.spec.ts'
     ],
     cwd: path.join(root, 'packages/desktop'),
     env: { ...process.env, CI: '1' }

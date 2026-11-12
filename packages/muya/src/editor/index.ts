@@ -21,6 +21,7 @@ import { getBlock } from '../utils/dom';
 import logger from '../utils/logger';
 import { attachDragDropImageHandlers } from './dragDropImage';
 import { attachLinkMouseHandlers } from './linkMouseEvents';
+import { attachTableCellMouseHandlers } from './tableCellMouseEvents';
 
 const debug = logger('editor:');
 const PREVIEW_ONLY_BLOCKS = new Set(['html-block', 'math-block', 'diagram']);
@@ -295,6 +296,7 @@ export class Editor {
         // as a new `![](src)` block. Cleanup is likewise handled by
         // `detachAllDomEvents`.
         attachDragDropImageHandlers(muya);
+        attachTableCellMouseHandlers(muya);
         this.focus();
     }
 

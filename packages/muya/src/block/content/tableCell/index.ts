@@ -62,7 +62,7 @@ class TableCellContent extends Format {
         return row.prev || null;
     }
 
-    private _shiftEnter(event: Event) {
+    private _insertLineBreak(event: Event) {
         event.preventDefault();
 
         const { start, end } = this.getCursor()!;
@@ -86,50 +86,14 @@ class TableCellContent extends Format {
         cursorBlock.setCursor(0, 0);
     }
 
-    private _normalEnter(event: Event) {
-        event.preventDefault();
-
-        const nextRow = this._findNextRow();
-        const { _row: row } = this;
-        let cursorBlock = null;
-        if (nextRow) {
-            cursorBlock = nextRow.firstContentInDescendant();
-        }
-        else {
-            const lastCellContent = row.lastContentInDescendant();
-            const nextContent = lastCellContent?.nextContentInContext();
-
-            if (nextContent) {
-                cursorBlock = nextContent;
-            }
-            else {
-                const state = {
-                    name: 'paragraph',
-                    text: '',
-                };
-
-                const newParagraphBlock = ScrollPage.loadBlock('paragraph').create(
-                    this.muya,
-                    state,
-                );
-                this.scrollPage?.append(newParagraphBlock, 'user');
-                cursorBlock = newParagraphBlock.firstContentInDescendant();
-            }
-        }
-
-        cursorBlock.setCursor(0, 0, true);
-    }
-
     override enterHandler(event: Event) {
         if (!isKeyboardEvent(event))
             return;
 
-        if (event.shiftKey)
-            return this._shiftEnter(event);
-        else if ((isOsx && event.metaKey) || (!isOsx && event.ctrlKey))
+        if (!event.shiftKey && ((isOsx && event.metaKey) || (!isOsx && event.ctrlKey)))
             return this._commandEnter(event);
-        else
-            return this._normalEnter(event);
+
+        return this._insertLineBreak(event);
     }
 
     override arrowHandler(event: Event) {
@@ -201,7 +165,42 @@ class TableCellContent extends Format {
         }
     }
 
+    private _removeAdjacentLineBreak(event: Event, backward: boolean): boolean {
+        const cursor = this.getCursor();
+        if (!cursor || cursor.start.offset !== cursor.end.offset)
+            return false;
+
+        const tokens = [...this.getFormatsInRange(cursor).tokens];
+        while (tokens.length) {
+            const token = tokens.shift()!;
+            const boundary = backward ? token.range.end : token.range.start;
+            if (token.type === 'html_tag' && token.tag === 'br' && boundary === cursor.start.offset) {
+                event.preventDefault();
+                event.stopPropagation();
+                this.muya.editor.history.markInputBoundary(
+                    backward ? 'deleteContentBackward' : 'deleteContentForward',
+                    null,
+                );
+                const { start, end } = token.range;
+                this.text = this.text.substring(0, start) + this.text.substring(end);
+                this.setCursor(start, start, true);
+                return true;
+            }
+            if ('children' in token && Array.isArray(token.children))
+                tokens.unshift(...token.children);
+        }
+        return false;
+    }
+
+    override deleteHandler(event: KeyboardEvent) {
+        if (!this._removeAdjacentLineBreak(event, false))
+            super.deleteHandler(event);
+    }
+
     override backspaceHandler(event: Event) {
+        if (this._removeAdjacentLineBreak(event, true))
+            return;
+
         const { start, end } = this.getCursor()!;
         const previousContentBlock = this.previousContentInContext();
 

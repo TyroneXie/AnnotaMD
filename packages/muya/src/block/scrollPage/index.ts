@@ -6,6 +6,7 @@ import type TreeNode from '../base/treeNode';
 import type { IConstructor, TBlockPath } from '../types';
 import { BLOCK_DOM_PROPERTY } from '../../config';
 import { isHTMLElement, isMouseEvent } from '../../utils';
+import { getBlock } from '../../utils/dom';
 import logger from '../../utils/logger';
 import Parent from '../base/parent';
 
@@ -91,6 +92,7 @@ export class ScrollPage extends Parent {
         const { domNode } = this;
 
         eventCenter.attachDOMEvent(domNode!, 'click', this._clickHandler.bind(this));
+        eventCenter.attachDOMEvent(this.muya.domNode, 'dblclick', this._doubleClickHandler.bind(this));
     }
 
     updateState(state: TState[]) {
@@ -179,7 +181,78 @@ export class ScrollPage extends Parent {
         };
     };
 
-    // Create a new paragraph if click the blank area in editor.
+    private _focusOrCreateParagraph(previous: Nullable<Parent>, next: Nullable<Parent>) {
+        const existing = [previous, next].find(block =>
+            block?.blockName === 'paragraph' && block.firstContentInDescendant()?.text === '',
+        );
+        let paragraph = existing;
+        if (!paragraph) {
+            this.muya.editor.history.cutoff();
+            paragraph = ScrollPage.loadBlock('paragraph').create(this.muya, { name: 'paragraph', text: '' });
+            if (next)
+                this.insertBefore(paragraph, next, 'user');
+            else
+                this.append(paragraph, 'user');
+        }
+        this.muya.domNode.focus({ preventScroll: true });
+        paragraph.firstContentInDescendant()?.setCursor(0, 0, true);
+    }
+
+    private _doubleClickParagraph(event: MouseEvent, block: Parent | Content) {
+        const content = block.isContent() ? block : block.firstContentInDescendant();
+        if (!content)
+            return;
+        if (content.text === '') {
+            this.muya.domNode.focus({ preventScroll: true });
+            content.setCursor(0, 0, true);
+            return;
+        }
+        const outer = block.outMostBlock;
+        if (outer?.blockName !== 'paragraph' || !content.domNode?.querySelector('.mu-inline-image'))
+            return;
+        const range = document.createRange();
+        range.selectNodeContents(content.domNode);
+        const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
+        if (!rects.length || rects.some(rect => event.clientY <= rect.bottom))
+            return;
+        event.preventDefault();
+        this._focusOrCreateParagraph(outer, outer.next);
+    }
+
+    private _doubleClickHandler(event: Event) {
+        if (!(event instanceof MouseEvent) || event.button !== 0 || !isHTMLElement(event.target))
+            return;
+        const target = event.target;
+        if (target.closest('[contenteditable="false"], button, input, textarea, a'))
+            return;
+        const block = getBlock(target);
+        if (block?.blockName === 'paragraph' || block?.blockName === 'paragraph.content') {
+            this._doubleClickParagraph(event, block);
+            return;
+        }
+
+        if (target !== this.domNode && target !== this.muya.domNode)
+            return;
+        const bounds = this.domNode!.getBoundingClientRect();
+        if (event.clientX <= bounds.left || event.clientX >= bounds.right || event.clientY < bounds.top)
+            return;
+
+        let previous: Nullable<Parent> = null;
+        let next = this.firstChild as Nullable<Parent>;
+        while (next) {
+            const rect = next.domNode!.getBoundingClientRect();
+            if (event.clientY < rect.top)
+                break;
+            if (event.clientY <= rect.bottom)
+                return;
+            previous = next;
+            next = next.next;
+        }
+        event.preventDefault();
+        this._focusOrCreateParagraph(previous, next);
+    }
+
+    // Preserve single-click insertion at the end of the document.
     private _clickHandler(event: Event) {
         if (!isMouseEvent(event) || !isHTMLElement(event.target))
             return;
@@ -188,32 +261,10 @@ export class ScrollPage extends Parent {
 
         if (target[BLOCK_DOM_PROPERTY] === this) {
             const lastChild = this.lastChild as Parent;
-            const lastContentBlock = lastChild.lastContentInDescendant()!;
             const { clientY } = event;
-            const lastChildDom = lastChild.domNode;
-            const { bottom } = lastChildDom!.getBoundingClientRect();
-
-            if (clientY > bottom) {
-                if (
-                    lastChild.blockName === 'paragraph'
-                    && lastContentBlock.text === ''
-                ) {
-                    lastContentBlock.setCursor(0, 0);
-                }
-                else {
-                    const state = {
-                        name: 'paragraph',
-                        text: '',
-                    };
-                    const newNode = ScrollPage.loadBlock(state.name).create(
-                        this.muya,
-                        state,
-                    );
-                    this.append(newNode, 'user');
-                    const cursorBlock = newNode.lastContentInDescendant();
-                    cursorBlock.setCursor(0, 0, true);
-                }
-            }
+            const bottom = lastChild?.domNode?.getBoundingClientRect().bottom ?? 0;
+            if (clientY > bottom)
+                this._focusOrCreateParagraph(lastChild, null);
         }
     }
 }

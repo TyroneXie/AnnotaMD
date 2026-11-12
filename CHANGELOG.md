@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.19.0 - 2026-11-12
+
+### Added
+
+- Double-click blank space between blocks, around images and tables, or at document boundaries to create an editable line with a visible cursor.
+- Double-click the blank area below an image in a table cell to continue typing or insert another image.
+
+### Changed
+
+- Enter and Shift+Enter insert a line break within a table cell; Cmd/Ctrl+Enter inserts a table row.
+
+### Fixed
+
+- Keep the cursor visible on empty lines created inside table cells.
+- Remove table-cell line breaks cleanly with Backspace or Delete, without exposing partial HTML tags.
+- Save pasted clipboard images using the selected image storage strategy instead of embedding large base64 strings in Markdown.
+
 ## 2.18.0 - 2026-11-06
 
 ### Added

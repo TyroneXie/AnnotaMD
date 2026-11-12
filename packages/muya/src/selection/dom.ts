@@ -31,9 +31,19 @@ export function compareParagraphsOrder(paragraph1: HTMLElement, paragraph2: HTML
     );
 }
 
+function isTableCellLineEnd(node: Node): boolean {
+    const element = node instanceof Element ? node : node.parentElement;
+    return element?.classList.contains('mu-table-cell-line-end') ?? false;
+}
+
 export function getTextContent(node: Node, blackList: string[] = []) {
-    if (node.nodeType === Node.TEXT_NODE || blackList.length === 0)
+    if (isTableCellLineEnd(node))
+        return node.textContent!.replace(/\u200B/g, '');
+
+    if (node.nodeType === Node.TEXT_NODE || (blackList.length === 0
+        && !(node instanceof Element && node.querySelector('.mu-table-cell-line-end')))) {
         return node.textContent!;
+    }
 
     let text = '';
     if (
@@ -81,8 +91,10 @@ export function getTextContent(node: Node, blackList: string[] = []) {
     return text;
 }
 
-export function getOffsetOfParagraph(node: Node, paragraph: HTMLElement): number {
-    let offset = 0;
+export function getOffsetOfParagraph(node: Node, paragraph: HTMLElement, nodeOffset = 0): number {
+    let offset = nodeOffset;
+    if (node.nodeType === Node.TEXT_NODE && isTableCellLineEnd(node))
+        offset = node.textContent!.slice(0, nodeOffset).replace(/\u200B/g, '').length;
     let preSibling: Node | null = node;
 
     if (node === paragraph)
@@ -133,6 +145,13 @@ export function getNodeAndOffset(
                 ? count + textLength > offset
                 : count + textLength >= offset
         ) {
+            // The cell's final <br> source marker is hidden. Its following
+            // placeholder is the visible, editable end of the same text.
+            if (count + textLength === offset
+                && child instanceof HTMLElement
+                && child.nextElementSibling?.classList.contains('mu-table-cell-line-end')) {
+                return { node: child.nextElementSibling.firstChild!, offset: 0 };
+            }
             if (
                 isElement(child)
                 && child.classList

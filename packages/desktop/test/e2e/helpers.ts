@@ -71,7 +71,21 @@ export const launchElectron = async(
   // Development launches pass the project root so Electron reads package.json.
   // Passing out/main/index.js directly bypasses package.json and breaks __static path resolution.
   const userDataDir = trackTempDir(getTempPath())
-  const args = [...(packagedExecutable ? [] : [projectRoot]), '--user-data-dir', userDataDir].concat(userArgs)
+  let entry = projectRoot
+  if (!packagedExecutable && process.env.ANNOTAMD_TEST_BACKGROUND === '1') {
+    fs.mkdirSync(userDataDir, { recursive: true })
+    entry = path.join(userDataDir, 'background-launch.cjs')
+    fs.writeFileSync(entry, `
+      const { app, BrowserWindow } = require('electron')
+      app.setAppPath(${JSON.stringify(projectRoot)})
+      if (process.platform === 'darwin') app.setActivationPolicy('accessory')
+      for (const method of ['show', 'showInactive', 'focus', 'moveTop']) {
+        BrowserWindow.prototype[method] = function () {}
+      }
+      require(${JSON.stringify(path.join(projectRoot, 'out/main/index.js'))})
+    `)
+  }
+  const args = [...(packagedExecutable ? [] : [entry]), '--user-data-dir', userDataDir].concat(userArgs)
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v
   env.PERF_TESTING = 'true'

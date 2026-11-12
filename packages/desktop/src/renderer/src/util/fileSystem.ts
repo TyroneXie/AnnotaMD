@@ -60,6 +60,18 @@ export const getHash = async(
 export const getContentHash = (content: string | Uint8Array | ArrayBuffer): Promise<string> =>
   getHash(content, 'utf8', 'sha1')
 
+export const imageDataUrlToFile = (src: string): File => {
+  const comma = src.indexOf(',')
+  const metadata = src.slice(5, comma)
+  const type = metadata.split(';')[0]
+  const payload = src.slice(comma + 1)
+  const bytes = /;base64$/i.test(metadata)
+    ? Uint8Array.from(atob(payload), char => char.charCodeAt(0))
+    : new TextEncoder().encode(decodeURIComponent(payload))
+  const extension = type.split('/')[1].split('+')[0]
+  return new File([bytes], `pasted-image-${window.crypto.randomUUID()}.${extension}`, { type })
+}
+
 export const moveImageToFolder = async(
   pathname: string,
   image: string | File,

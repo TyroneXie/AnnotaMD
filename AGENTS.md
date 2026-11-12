@@ -92,8 +92,14 @@
 - 统一使用 `npm run verify:*` 调用仓库内已经安装的测试工具，避免验证过程中意外重新安装依赖。
 - 小改动优先运行对应的定向验证包；只有跨模块改动才运行 `verify:feature`，发布前才运行全量构建和打包。
 - 现象：执行 `npm --prefix packages/desktop run test:e2e -- <单文件>` 仍会同时运行整个 `test/e2e` 目录。根因：`test:e2e` 脚本已经固定包含该目录，后附参数只会追加目标。推荐做法：单文件验证直接在 `packages/desktop` 下执行 `./node_modules/.bin/playwright test <单文件> --config test/e2e/playwright.config.ts --workers=1`。验证方式：启动日志应显示 `Running 1 test using 1 worker`。
+- 不依赖系统窗口焦点的开发版 E2E 可设置 `ANNOTAMD_TEST_BACKGROUND=1`：测试启动器会隐藏窗口并屏蔽激活操作，避免反复抢占用户前台。该开关只修改临时测试进程，不进入产品逻辑；需要验证原生光标绘制或窗口焦点的场景仍须使用可见窗口。已用该模式验证系统剪贴板图片粘贴、保存和源码往返。
 
 ### 界面验证结论
+
+- 块间空白的双击插入应按顶层块的实际边界定位，并复用相邻空段落；图片下沿的容器留白需按内容矩形识别。不要把文字右侧、代码块内部或批注控件当作块间空白。新增段落后应主动聚焦编辑器并定位光标，回归同时检查重复双击、输入和撤销。光标验收不能只检查内部选区：Electron 中用测试专用 `caret-animation: manual` 固定闪烁，再比较 `caret: 'initial'` 与 `caret: 'hide'` 截图，确认编辑区域内实际绘制了光标；源码模式的 CodeMirror 自绘光标单独检查。
+- 现象：截图粘贴后 Markdown 表格行包含大段 base64，文档体积异常增大。根因：Muya 将内存图片交给 `imageAction` 时使用 data URL，桌面端却把所有字符串都当作本地路径，无法识别后原样返回。推荐做法：在图片保存策略分支前将 image data URL 解码为具有唯一文件名的二进制 File，再复用目录、上传或路径策略；使用本地解码，不依赖可能被 CSP 拦截的 fetch。验证方式：`verify:table` 覆盖转换及保存；Electron 使用系统剪贴板粘贴超过 1.5 MB 的 data URL 对应位图，确认实际 PNG 落盘、Markdown 仅保留短路径，保存与源码往返后表格仍完整。
+- 现象：表格单元格末尾插入 `<br/>` 后，光标可能落在隐藏标记内，或虽能输入但看不到光标。根因：隐藏标记和空元素占位均可能得到零尺寸的折叠 Range，Chromium 无法绘制光标。推荐做法：仅在单元格以真实 br token 结束时渲染带零宽字符的末尾行占位，光标锚到其文本节点；正文提取与偏移映射必须排除占位字符，不能写入 Markdown。验证方式：单测检查原始偏移与占位锚点；Electron 换行后、输入前断言光标 Range 有正常字高且位于新行，截图显式使用 `caret: 'initial'`（Playwright 默认隐藏光标），再验证输入、退格、图片、保存和源码往返。
+- 表格单元格中 Enter 和 Shift+Enter 均在当前光标处换行，Cmd/Ctrl+Enter 新增整行表格。删除换行时必须根据真实 br token 整体删除：通用格式退格逻辑只删一个字符，会把隐藏的 `<br/>` 暴露为 `<br/`。Backspace 在新行开头、Delete 在上一行末尾均删除整个换行并保留两侧文本；不要用正则误删行内代码中的字面标签。验证方式：`verify:table` 覆盖三种 br 写法、格式嵌套、连续回车与表格边界；Electron 真实执行“回车 → 新行输入 → 退格合并”，检查保存和源码往返均无残留标记。
 
 - 块操作按钮统一保持 24px 紧凑高度，并直接锚定块的上沿，不随行高拉伸，也不按文字或表头高度垂直居中。表格使用可见 table 边框的上沿，排除 figure 的外部留白；段落、标题、列表项和图片使用块上沿。Electron 回归断言按钮高度为 24px、按钮 top 与目标块 top 一致、菜单可点击，且列表标记槽不被覆盖。
 
@@ -243,6 +249,7 @@
 - 根因：`package.json` 或 workspace 的 overrides 等依赖配置已变化，但 `pnpm-lock.yaml` 的 settings 没有同步更新；CI 使用 frozen lockfile，不会代为修复。
 - 推荐做法：任何依赖声明、overrides、patchedDependencies 或 workspace 配置变更，都必须同步提交重新生成的 `pnpm-lock.yaml`；不要用关闭 frozen lockfile 掩盖不一致。
 - 验证方式：发布候选提交执行 `pnpm install --frozen-lockfile --ignore-scripts` 必须通过，并由 tag 前五平台预检再次验证。
+- `packages/*` 下未跟踪的新项目也会被 pnpm 纳入工作区；即使使用负向 `--filter`，冻结检查仍会核对其依赖。若该项目不属于本次发布，保留原目录，从暂存区导出只含发布文件的快照进行冻结锁文件校验（可追加 `--lockfile-only` 仅核对依赖声明），再由候选提交的 CI 完成实际安装；不要为排除无关工作而更新发布锁文件。
 
 ### Linux 多格式打包缓存竞争
 
