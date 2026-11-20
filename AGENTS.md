@@ -239,6 +239,7 @@
 - 根因：打包验收启动的 `dist/mac-*/AnnotaMD.app` 与 `/Applications/AnnotaMD.app` 共用 bundle ID、用户数据目录和单实例锁；测试产物未退出时，正式安装版会把打开请求交给它并立即结束自身进程。
 - 推荐做法：打包产物冒烟完成后必须退出该产物的主进程和 Helper，再启动正式安装版；不要同时保留 `dist`、DMG 与 `/Applications` 三处 AnnotaMD 运行实例。
 - 验证方式：用 `ps` 和 `lsappinfo` 确认唯一前台 AnnotaMD 的 bundle path 是预期路径，再从 Finder 或 `open -a /Applications/AnnotaMD.app <file.md>` 打开真实文档，并等待确认主进程持续存活。
+- 现象：开发版能启动 Pi，安装包却缺少 Pi 入口。根因：electron-builder 跳过资源复制源根级的 `node_modules`。推荐做法：将暂存的 `resources/pi/node_modules` 直接映射到包内 `pi/node_modules`。验证方式：在 `afterPack` 检查 CLI、jiti 和适配器文件，再用打包后的 Electron 启动 Pi RPC 验证适配器握手。
 
 ### Electron 大版本与 Linux 原生模块工具链
 

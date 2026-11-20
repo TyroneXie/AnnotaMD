@@ -7,6 +7,7 @@ publish:
   provider: github
   owner: TyroneXie
   repo: AnnotaMD
+afterPack: ./build/verifyPackedPiRuntime.mjs
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -62,10 +63,13 @@ extraResources:
       - '**/*'
   # Pi runtime staged by scripts/stagePiRuntime.mjs: the app ships its own
   # agent runtime, so no user installation of Pi or Node.js is required.
-  - from: resources/pi
-    to: pi
+  # Map node_modules directly because electron-builder skips it when walking
+  # an extraResources source directory.
+  - from: resources/pi/node_modules
+    to: pi/node_modules
     filter:
-      - '**/*'
+      - '@earendil-works/pi-coding-agent/**/*'
+      - 'jiti/**/*'
   - from: build/icons
     to: icons # ends up at resources/icons/
     filter:
