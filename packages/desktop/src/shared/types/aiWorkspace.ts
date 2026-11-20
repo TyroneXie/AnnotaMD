@@ -175,6 +175,7 @@ export interface AiReadiness {
   configId?: string
   modelId?: string
   modelIds?: string[]
+  modelProviders?: Record<string, { name: string; icon?: string }>
   setupIssue?: 'provider' | 'key' | 'model'
   version?: string
   message?: string

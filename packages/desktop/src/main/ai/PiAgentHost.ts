@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import type { AiApprovalDecision, AiPermissionMode, AiReadiness } from '@shared/types/aiWorkspace'
+import { piProviderIcon } from '@shared/types/piProviderPresets'
 import {
   AiRunStoppedError,
   aiHostError,
@@ -16,6 +17,7 @@ import {
   defaultModelFor,
   defaultProviderFor,
   enabledModels,
+  isDeepSeekThinkingModel,
   providerEnvKey,
   readPiProviderKeys,
   readPiSettings,
@@ -293,7 +295,14 @@ export class PiAgentHost implements PiHostAdapter {
       enabledModels(provider).map(model => `${provider.id}/${model.id}`)
     ))
     const readiness: AiReadiness = primary && defaultModel
-      ? { status: 'ready', modelId: `${primary.id}/${defaultModel}`, modelIds }
+      ? {
+          status: 'ready',
+          modelId: `${primary.id}/${defaultModel}`,
+          modelIds,
+          modelProviders: Object.fromEntries(providers.map(provider => [
+            provider.id, { name: provider.name, icon: piProviderIcon(provider) }
+          ]))
+        }
       : !enabled.length
         ? { status: 'missing', setupIssue: 'provider', modelIds }
         : !keyed.length
@@ -323,18 +332,13 @@ export class PiAgentHost implements PiHostAdapter {
         seen.add(model.id)
         models.push(model)
       }
-      add({
-        id: 'default',
-        displayName: readiness.model ? `Default (${readiness.model})` : 'Default',
-        effortLevels
-      })
       for (const model of available) {
         const id = `${model.provider}/${model.id}`
         if (!modelIds.includes(id)) continue
         add({
           id,
           displayName: model.name ?? `${model.provider}/${model.id}`,
-          effortLevels
+          effortLevels: model.effortLevels ?? (id === readiness.model ? effortLevels : undefined)
         })
       }
       return models
@@ -517,6 +521,13 @@ export class PiAgentHost implements PiHostAdapter {
         throw new Error('The selected model is unavailable. Choose an enabled model.')
       }
     }
+    const separator = modelRef.indexOf('/')
+    const provider = providers.find(item => item.id === modelRef.slice(0, separator))
+    const modelId = modelRef.slice(separator + 1)
+    const model = provider?.models.find(item => item.id === modelId)
+    const deepSeekDefault = provider && isDeepSeekThinkingModel(provider, modelId) &&
+      (!model?.effortLevels || model.effortLevels.includes('high')) ? 'high' : undefined
+    const thinkingLevel = applySelection ? reasoningLevel(config) ?? deepSeekDefault : undefined
     const agentDirectory = this.agentDirectory()
     await writePiAgentDirectory(agentDirectory, { providers })
     const environment = await this.createEnvironment(readiness.executablePath, resolverOptions)
@@ -536,7 +547,7 @@ export class PiAgentHost implements PiHostAdapter {
       noSession: true,
       ...(noTools ? { noTools } : {}),
       model: modelRef,
-      ...(applySelection && reasoningLevel(config) ? { thinkingLevel: reasoningLevel(config) } : {})
+      ...(thinkingLevel ? { thinkingLevel } : {})
     })
     return { runtime, modelIds }
   }

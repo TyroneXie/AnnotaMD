@@ -102,7 +102,7 @@ export const useAiSettingsStore = defineStore('aiSettings', {
       const { modelId } = state.selections.agent
       return modelId && modelId !== 'default'
         ? modelId
-        : state.agentReadiness?.modelId ?? modelId ?? this.selectedConfig('agent')?.defaultModelId
+        : state.agentReadiness?.modelId ?? this.selectedConfig('agent')?.defaultModelId
     }
   },
 

@@ -140,10 +140,17 @@ export const registerPiProviderHandlers = (): void => {
     'annotamd::pi::models:update',
     (_event, request: PiModelsUpdateRequest) => mutate(async() => {
       const settings = await readPiSettings(settingsPath())
+      if (!settings.providers.some(provider => provider.id === request.providerId)) {
+        throw new Error('This provider no longer exists.')
+      }
       const providers = settings.providers.map((provider) => {
         if (provider.id !== request.providerId) return provider
-        const models = normalizeModelList(request.models)
-        const defaultModel = defaultModelFor(models, request.defaultModel?.trim() || provider.defaultModel)
+        const added = 'addModels' in request
+        const models = normalizeModelList(added
+          ? [...provider.models, ...request.addModels.map(model => ({ ...model, enabled: true }))]
+          : request.models)
+        const preferred = added ? provider.defaultModel : request.defaultModel?.trim() || provider.defaultModel
+        const defaultModel = defaultModelFor(models, preferred)
         return { ...provider, models, defaultModel }
       })
       await writePiSettings(settingsPath(), { ...settings, providers })

@@ -9,8 +9,15 @@ export type PiProviderKind = 'openai' | 'anthropic'
 export type PiApiFormat = 'chat' | 'responses'
 export type PiAuthStyle = 'api-key' | 'bearer'
 
-export interface PiModelEntry {
+export const PI_THINKING_LEVELS = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const
+export type PiThinkingLevel = typeof PI_THINKING_LEVELS[number]
+
+export interface PiDiscoveredModel {
   id: string
+  effortLevels?: PiThinkingLevel[]
+}
+
+export interface PiModelEntry extends PiDiscoveredModel {
   enabled: boolean
 }
 
@@ -64,8 +71,7 @@ export interface PiProviderModelsRequest {
   apiKey?: string
 }
 
-export interface PiModelsUpdateRequest {
-  providerId: string
-  models: PiModelEntry[]
-  defaultModel?: string
-}
+export type PiModelsUpdateRequest = { providerId: string } & (
+  | { models: PiModelEntry[]; defaultModel?: string }
+  | { addModels: PiDiscoveredModel[] }
+)

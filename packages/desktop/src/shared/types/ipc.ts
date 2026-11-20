@@ -20,6 +20,7 @@
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type {
   PiModelsUpdateRequest,
+  PiDiscoveredModel,
   PiProviderModelsRequest,
   PiProviderSaveRequest,
   PiSettingsState
@@ -116,7 +117,7 @@ export interface IpcInvokeChannels {
   'annotamd::pi::provider:delete': { args: [providerId: string]; ret: PiSettingsState }
   'annotamd::pi::provider:models': {
     args: [request: PiProviderModelsRequest]
-    ret: string[]
+    ret: PiDiscoveredModel[]
   }
   'annotamd::pi::models:update': {
     args: [request: PiModelsUpdateRequest]

@@ -1,4 +1,4 @@
-import type { PiProviderKind } from './piProvider'
+import type { PiProviderEntry, PiProviderKind } from './piProvider'
 
 /**
  * Ready-made endpoints, mirroring the provider picker in Motty. Every field
@@ -77,3 +77,9 @@ export const matchPiProviderPreset = (
 ): PiProviderPreset | undefined => PI_PROVIDER_PRESETS.find(
   preset => preset.kind === kind && preset.baseUrl === baseUrl
 )
+
+export const piProviderIcon = (provider: Pick<PiProviderEntry, 'id' | 'kind' | 'baseUrl'>): string | undefined => {
+  const preset = matchPiProviderPreset(provider.kind, provider.baseUrl)
+    ?? PI_PROVIDER_PRESETS.find(item => item.id === provider.id || item.iconProvider === provider.id)
+  return preset?.iconProvider ?? preset?.id
+}

@@ -17,12 +17,11 @@
         :aria-label="triggerTitle"
       >
         <AiProviderLogo
-          v-if="selectedConfig"
-          :provider="selectedConfig.provider"
-          :label="providerLabel(selectedConfig.provider)"
-          :class="{ 'is-pi': selectedConfig.provider === 'pi' }"
+          v-if="providerBrand?.icon"
+          :provider="providerBrand.icon"
+          :label="providerBrand.name"
         />
-        <el-icon v-else><Setting /></el-icon>
+        <el-icon v-else-if="!selectedConfig"><Setting /></el-icon>
         <span class="annotamd-agent-model-label">{{ triggerLabel }}</span>
         <el-icon aria-hidden="true"><ArrowDown /></el-icon>
       </button>
@@ -43,7 +42,7 @@
           <span>{{ t('annotamd.agentWorkspace.modelId') }}</span>
           <el-select
             ref="modelSelect"
-            :model-value="selection.modelId || selectedConfig.defaultModelId || 'default'"
+            :model-value="selectedModelId || undefined"
             size="small"
             filterable
             :teleported="false"
@@ -56,7 +55,7 @@
           <small v-if="loadingModels">{{ t('annotamd.agentWorkspace.loadingModels') }}</small>
           <small v-else-if="modelError" class="is-error">{{ modelError }}</small>
         </label>
-        <label>
+        <label v-if="effortLevels.some(level => level !== 'off')">
           <span>{{ t('annotamd.agentWorkspace.effort') }}</span>
           <el-select
             ref="effortSelect"
@@ -83,7 +82,7 @@
 import { computed, ref, watch } from 'vue'
 import { ArrowDown, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import type { AiModelInfo, AiProviderId } from '@shared/types/aiWorkspace'
+import type { AiModelInfo } from '@shared/types/aiWorkspace'
 import { aiProviderOption } from '@shared/types/aiProviderPresets'
 import { useAiSettingsStore } from '@/store/aiSettings'
 import AiProviderLogo from './AiProviderLogo.vue'
@@ -104,6 +103,16 @@ const selectedConfig = computed(() => settings.selectedConfig('agent'))
 const selectedModelId = computed(() => (
   settings.selectedAgentModel || props.runtimeModel || ''
 ))
+const providerBrand = computed(() => {
+  const provider = selectedConfig.value?.provider
+  if (!provider) return undefined
+  if (provider === 'pi') {
+    const [providerId = ''] = selectedModelId.value.split('/', 1)
+    return settings.agentReadiness?.modelProviders?.[providerId]
+  }
+  const option = aiProviderOption(provider)
+  return { name: option.label, icon: option.iconSlug ? provider : undefined }
+})
 const selectedModel = computed(() => {
   return models.value.find(model => model.id === selectedModelId.value)
 })
@@ -122,14 +131,11 @@ const effortId = computed(() => (
     ? selection.value.effort.id
     : 'provider-default'
 ))
-const providerLabel = (provider: AiProviderId): string => aiProviderOption(provider).label
 const effortLabel = (level: string): string => {
   const normalized = level.trim().toLocaleLowerCase()
-  const known: Record<string, string> = {
-    none: 'None', minimal: 'Minimal', low: 'Low', medium: 'Medium', high: 'High',
-    xhigh: 'Xhigh', max: 'Max', ultra: 'Ultra', off: 'Off'
-  }
-  return known[normalized] ?? normalized.replace(/(^|[-_\s]+)(\w)/g, (_match, _separator, char) => (
+  const key = `annotamd.agentWorkspace.effortLevels.${normalized}`
+  const label = t(key)
+  return label !== key ? label : normalized.replace(/(^|[-_\s]+)(\w)/g, (_match, _separator, char) => (
     String(char).toLocaleUpperCase()
   ))
 }
@@ -182,7 +188,6 @@ const openSettings = (): void => {
 .annotamd-agent-model-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-model-trigger > .el-icon { flex: none; }
 .annotamd-agent-model-trigger :deep(svg) { width: 13px; height: 13px; }
-:global(body.dark .annotamd-agent-model-trigger .is-pi img) { filter: invert(1); }
 .annotamd-agent-model-menu { display: grid; min-width: 0; }
 .annotamd-agent-model-menu > header { display: grid; gap: 2px; padding: 1px 2px 10px; border-bottom: 1px solid var(--annotamd-border-soft); }
 .annotamd-agent-model-menu > header strong { color: var(--annotamd-text); font-size: 13px; line-height: 1.35; }

@@ -4,11 +4,13 @@ import writeFileAtomic from 'write-file-atomic'
 import type {
   PiApiFormat,
   PiAuthStyle,
+  PiDiscoveredModel,
   PiModelEntry,
   PiProviderEntry,
   PiProviderKind,
   PiSettings
 } from '@shared/types/piProvider'
+import { PI_THINKING_LEVELS } from '@shared/types/piProvider'
 import type { AiSecretStore } from './AiSecretStore'
 
 export type {
@@ -75,6 +77,15 @@ const apiName = (provider: PiProviderEntry): string => {
   return provider.apiFormat === 'responses' ? 'openai-responses' : 'openai-completions'
 }
 
+export const isDeepSeekThinkingModel = (provider: PiProviderEntry, id: string): boolean => (
+  provider.kind === 'openai' && new URL(provider.baseUrl).hostname === 'api.deepseek.com' &&
+  ['deepseek-flash', 'deepseek-v4-flash', 'deepseek-v4-pro'].includes(id)
+)
+
+const normalizeEffortLevels = (levels: unknown) => (
+  Array.isArray(levels) ? PI_THINKING_LEVELS.filter(level => levels.includes(level)) : []
+)
+
 /** Stable, readable provider ids; they appear in model references. */
 export const slugifyProviderId = (name: string): string => {
   const slug = name
@@ -139,7 +150,25 @@ export const buildModelsConfig = (settings: PiSettings): Record<string, unknown>
       baseUrl: normalizeBaseUrl(provider.kind, provider.baseUrl),
       api: apiName(provider),
       apiKey: '$' + '{' + providerEnvKey(provider.id) + '}',
-      models: models.map(model => ({ id: model.id }))
+      models: models.map(model => {
+        const deepseek = isDeepSeekThinkingModel(provider, model.id)
+        const efforts = model.effortLevels ?? (deepseek ? ['low', 'high', 'max'] : [])
+        if (!efforts.length) return { id: model.id }
+        return {
+          id: model.id,
+          reasoning: true,
+          thinkingLevelMap: Object.fromEntries(
+            PI_THINKING_LEVELS.map(level => [level, efforts.includes(level) ? level : null])
+          ),
+          ...(deepseek && apiName(provider) === 'openai-completions' ? {
+            compat: {
+              thinkingFormat: 'deepseek',
+              supportsReasoningEffort: true,
+              requiresReasoningContentOnAssistantMessages: true
+            }
+          } : {})
+        }
+      })
     }
     if (provider.kind === 'anthropic' && provider.authStyle === 'bearer') {
       entry.headers = { Authorization: 'Bearer $' + '{' + providerEnvKey(provider.id) + '}' }
@@ -156,7 +185,8 @@ export const normalizeModelList = (models: PiModelEntry[] | undefined): PiModelE
     const id = model?.id?.trim()
     if (!id || seen.has(id)) continue
     seen.add(id)
-    result.push({ id, enabled: model.enabled !== false })
+    const effortLevels = normalizeEffortLevels(model.effortLevels)
+    result.push({ id, enabled: model.enabled !== false, ...(effortLevels.length ? { effortLevels } : {}) })
   }
   return result
 }
@@ -243,7 +273,7 @@ export const fetchPiModels = async(
   provider: PiProviderEntry,
   apiKey: string,
   fetchImpl: typeof fetch = fetch
-): Promise<string[]> => {
+): Promise<PiDiscoveredModel[]> => {
   if (!apiKey.trim()) throw new Error('Enter an API key before fetching models.')
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (provider.kind === 'anthropic') {
@@ -259,10 +289,15 @@ export const fetchPiModels = async(
   }
   const payload = await response.json() as { data?: unknown }
   const entries = Array.isArray(payload.data) ? payload.data : []
-  const ids = entries
-    .map(entry => (entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : undefined))
-    .filter((id): id is string => typeof id === 'string' && id.length > 0)
-  return [...new Set(ids)].sort((left, right) => left.localeCompare(right))
+  const models = new Map<string, PiDiscoveredModel>()
+  for (const entry of entries) {
+    if (!entry || typeof entry.id !== 'string') continue
+    const id = entry.id.trim()
+    if (!id || models.has(id)) continue
+    const effortLevels = normalizeEffortLevels(entry.effort?.supported_levels)
+    models.set(id, { id, ...(effortLevels.length ? { effortLevels } : {}) })
+  }
+  return [...models.values()].sort((left, right) => left.id.localeCompare(right.id))
 }
 
 /** Writes the agent directory Pi reads: every enabled provider. */

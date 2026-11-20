@@ -10,7 +10,7 @@ import {
 } from '../../../src/main/ai/PiAgentHost'
 import { AiRunStoppedError, type AiHostEvent, type AiHostRunRequest } from '../../../src/main/ai/AiHost'
 import { hashAgentDocument } from '../../../src/main/agentDocumentBridge/AgentDocumentScopeService'
-import { fetchPiModels, readPiSettings, writePiSettings } from '../../../src/main/ai/PiProviderSettings'
+import { buildModelsConfig, fetchPiModels, readPiSettings, writePiSettings } from '../../../src/main/ai/PiProviderSettings'
 import {
   decodePiBridgeEnvelope,
   encodePiBridgeEnvelope,
@@ -200,7 +200,6 @@ describe('PiAgentHost', () => {
     const { host, runtimes, runtimeOptions } = createHarness()
 
     await expect(host.listModels({ id: 'pi', provider: 'pi' })).resolves.toEqual([
-      { id: 'default', displayName: 'Default (test-endpoint/test-model)', effortLevels: ['off', 'high', 'xhigh'] },
       { id: 'test-endpoint/test-model', displayName: 'Test model', effortLevels: ['off', 'high', 'xhigh'] }
     ])
     expect(runtimeOptions[0]).toMatchObject({ noSession: true })
@@ -241,9 +240,23 @@ describe('PiAgentHost', () => {
     await expect(host.getReadiness()).resolves.toMatchObject({ status: 'missing', setupIssue: 'provider' })
   })
 
+  it('reports the provider brand separately from the Pi runtime for the model picker', async() => {
+    const { host, settingsPath } = createHarness()
+    const settings = await readPiSettings(settingsPath)
+    await writePiSettings(settingsPath, {
+      ...settings,
+      providers: settings.providers.map(provider => ({
+        ...provider, name: 'My DeepSeek', baseUrl: 'https://api.deepseek.com/v1'
+      }))
+    })
+    await expect(host.getReadiness()).resolves.toMatchObject({
+      modelProviders: { 'test-endpoint': { name: 'My DeepSeek', icon: 'deepseek' } }
+    })
+  })
+
   it('uses the explicitly configured model-list path and query string', async() => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({
-      data: [{ id: 'model-a' }]
+      data: [{ id: 'model-a', effort: { supported_levels: ['low', 'high', 'max', 'none', false] } }]
     }))
     await expect(fetchPiModels({
       id: 'test',
@@ -253,9 +266,52 @@ describe('PiAgentHost', () => {
       modelsUrl: 'https://api.example.com/catalog?scope=team',
       enabled: true,
       models: []
-    }, 'test-key', fetch)).resolves.toEqual(['model-a'])
+    }, 'test-key', fetch)).resolves.toEqual([{ id: 'model-a', effortLevels: ['low', 'high', 'max'] }])
     expect(fetch).toHaveBeenCalledExactlyOnceWith('https://api.example.com/catalog?scope=team', {
       headers: { Accept: 'application/json', Authorization: 'Bearer test-key' }
+    })
+  })
+
+  it('configures thinking for existing official DeepSeek models and imported model capabilities', () => {
+    const deepseek = {
+      id: 'renamed-deepseek',
+      name: 'DeepSeek account',
+      kind: 'openai' as const,
+      baseUrl: 'https://api.deepseek.com/v1',
+      enabled: true,
+      models: [{ id: 'deepseek-flash', enabled: true }, { id: 'deepseek-v4-pro', enabled: true }]
+    }
+    expect(buildModelsConfig({ providers: [deepseek] })).toMatchObject({
+      providers: {
+        'renamed-deepseek': {
+          models: [
+            {
+              id: 'deepseek-flash',
+              reasoning: true,
+              thinkingLevelMap: { low: 'low', medium: null, high: 'high', max: 'max' },
+              compat: { thinkingFormat: 'deepseek', supportsReasoningEffort: true }
+            },
+            { id: 'deepseek-v4-pro', reasoning: true }
+          ]
+        }
+      }
+    })
+    expect(buildModelsConfig({ providers: [{
+      ...deepseek,
+      baseUrl: 'https://proxy.example.com/v1',
+      models: [
+        { id: 'deepseek-flash', enabled: true },
+        { id: 'custom', enabled: true, effortLevels: ['low'] }
+      ]
+    }] })).toMatchObject({
+      providers: {
+        'renamed-deepseek': {
+          models: [
+            { id: 'deepseek-flash' },
+            { id: 'custom', reasoning: true, thinkingLevelMap: { low: 'low', high: null } }
+          ]
+        }
+      }
     })
   })
 

@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { PI_THINKING_LEVELS } from '@shared/types/piProvider'
 import type { PiRuntimeReadiness, PiRuntimeSession } from './PiRuntimeTypes'
 import { PiJsonlTransport } from './PiJsonlTransport'
 
@@ -48,6 +49,7 @@ export interface PiRpcAvailableModel {
   provider: string
   id: string
   name?: string
+  effortLevels?: string[]
 }
 
 export interface PiRpcProcessOptions {
@@ -370,10 +372,20 @@ export class PiRpcProcessManager {
       if (!isRecord(model) || typeof model.provider !== 'string' || typeof model.id !== 'string') {
         return []
       }
+      const mapping = isRecord(model.thinkingLevelMap) ? model.thinkingLevelMap : {}
+      // Pi exposes the model's capability and maps unsupported levels to null.
+      const effortLevels = typeof model.reasoning === 'boolean'
+        ? model.reasoning
+          ? ['off', ...PI_THINKING_LEVELS].filter(level => (
+            mapping[level] !== null && (!['xhigh', 'max'].includes(level) || typeof mapping[level] === 'string')
+          ))
+          : ['off']
+        : undefined
       return [{
         provider: model.provider,
         id: model.id,
-        ...(typeof model.name === 'string' ? { name: model.name } : {})
+        ...(typeof model.name === 'string' ? { name: model.name } : {}),
+        ...(effortLevels ? { effortLevels } : {})
       }]
     })
   }

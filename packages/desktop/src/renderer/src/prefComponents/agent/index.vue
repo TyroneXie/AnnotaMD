@@ -165,6 +165,44 @@
     </span>
 
     <el-dialog
+      v-model="modelPickerVisible"
+      :title="t('preferences.agent.provider.chooseModels')"
+      class="pref-pi-provider-dialog"
+      width="min(440px, calc(100vw - 32px))"
+      append-to-body
+    >
+      <div class="pref-model-picker">
+        <el-input
+          v-model="modelQuery"
+          clearable
+          :placeholder="t('preferences.agent.provider.searchModels')"
+          :aria-label="t('preferences.agent.provider.searchModels')"
+        />
+        <div class="pref-model-candidates" role="group" :aria-label="t('preferences.agent.provider.chooseModels')">
+          <label v-for="model in filteredDiscoveredModels" :key="model.id">
+            <input v-model="selectedModelIds" type="checkbox" :value="model.id">
+            <span>{{ model.id }}</span>
+          </label>
+        </div>
+        <p v-if="!filteredDiscoveredModels.length" class="pref-ai-summary">
+          {{ t('preferences.agent.provider.noMatchingModels') }}
+        </p>
+        <p v-if="modelPickerError" class="pref-ai-status is-failure" role="alert">{{ modelPickerError }}</p>
+      </div>
+      <template #footer>
+        <el-button @click="modelPickerVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button
+          type="primary"
+          :loading="addingDiscoveredModels"
+          :disabled="selectedModelIds.length === 0"
+          @click="addDiscoveredModels"
+        >
+          {{ t('preferences.agent.provider.addSelectedModels', { count: selectedModelIds.length }) }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
       v-model="dialogVisible"
       :title="editingId
         ? t('preferences.agent.provider.editProvider')
@@ -254,6 +292,7 @@ import { useI18n } from 'vue-i18n'
 import type {
   PiApiFormat,
   PiAuthStyle,
+  PiDiscoveredModel,
   PiModelEntry,
   PiProviderEntry,
   PiProviderKind,
@@ -261,7 +300,7 @@ import type {
   PiSettingsState
 } from '@shared/types/piProvider'
 import {
-  matchPiProviderPreset,
+  piProviderIcon,
   PI_CUSTOM_PRESET_ID,
   PI_PROVIDER_PRESETS
 } from '@shared/types/piProviderPresets'
@@ -281,6 +320,12 @@ const editingHasKey = ref(false)
 const draftPreset = ref(PI_CUSTOM_PRESET_ID)
 const saving = ref(false)
 const fetchingModels = ref(false)
+const addingDiscoveredModels = ref(false)
+const modelPickerVisible = ref(false)
+const modelPickerError = ref('')
+const modelDiscovery = ref<{ providerId: string; candidates: PiDiscoveredModel[] }>()
+const modelQuery = ref('')
+const selectedModelIds = ref<string[]>([])
 const newModelId = ref('')
 const status = ref('')
 const statusKind = ref<'success' | 'failure'>('success')
@@ -307,6 +352,10 @@ const activeProvider = computed<PiProviderEntry | undefined>(() => (
 const activeModels = computed(() => (
   activeProvider.value?.models.filter(model => model.enabled) ?? []
 ))
+const filteredDiscoveredModels = computed(() => {
+  const query = modelQuery.value.trim().toLowerCase()
+  return modelDiscovery.value?.candidates.filter(model => model.id.toLowerCase().includes(query)) ?? []
+})
 const presetOptions = computed(() => [
   {
     value: PI_CUSTOM_PRESET_ID,
@@ -323,11 +372,7 @@ const baseUrlPlaceholder = computed(() => (
   draft.kind === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'
 ))
 
-const iconFor = (provider: PiProviderEntry): string => {
-  const preset = matchPiProviderPreset(provider.kind, provider.baseUrl)
-    ?? PI_PROVIDER_PRESETS.find(item => item.id === provider.id)
-  return preset?.iconProvider ?? preset?.id ?? provider.id
-}
+const iconFor = (provider: PiProviderEntry): string => piProviderIcon(provider) ?? provider.id
 const kindLabel = (kind: PiProviderKind): string => (
   kind === 'anthropic' ? 'Anthropic' : t('preferences.agent.provider.openaiCompatible')
 )
@@ -486,7 +531,8 @@ const updateModels = async(
   // when crossing the IPC boundary; send plain records instead.
   const plainModels = models.map(model => ({
     id: String(model.id),
-    enabled: model.enabled !== false
+    enabled: model.enabled !== false,
+    ...(model.effortLevels ? { effortLevels: [...model.effortLevels] } : {})
   }))
   applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::models:update', {
     providerId: provider.id,
@@ -529,22 +575,55 @@ const addModel = async(provider: PiProviderEntry): Promise<void> => {
 }
 
 const fetchModels = async(provider: PiProviderEntry): Promise<void> => {
+  if (fetchingModels.value) return
   fetchingModels.value = true
   await run(async() => {
-    const ids = await window.electron.ipcRenderer.invoke('annotamd::pi::provider:models', {
+    const found = await window.electron.ipcRenderer.invoke('annotamd::pi::provider:models', {
       providerId: provider.id
     })
-    const existing = new Map(provider.models.map(model => [
-      model.id,
-      { id: model.id, enabled: model.enabled !== false }
-    ]))
-    const models: PiModelEntry[] = ids.map(id => existing.get(id) ?? { id, enabled: true })
-    const missing = provider.models.filter(model => !ids.includes(model.id))
-    await updateModels(provider, [...models, ...missing], provider.defaultModel ?? ids[0])
-    statusKind.value = 'success'
-    status.value = t('preferences.agent.provider.modelsLoaded', { count: ids.length })
+    const current = providers.value.find(item => item.id === provider.id)
+    if (!current) return
+    const existing = new Set(current.models.map(model => model.id))
+    const candidates = found.filter(model => !existing.has(model.id))
+    if (!candidates.length) {
+      statusKind.value = 'success'
+      status.value = t(found.length
+        ? 'preferences.agent.provider.modelsAlreadyAdded'
+        : 'preferences.agent.provider.modelsNotReturned')
+      return
+    }
+    modelDiscovery.value = { providerId: provider.id, candidates }
+    modelQuery.value = ''
+    selectedModelIds.value = []
+    modelPickerError.value = ''
+    modelPickerVisible.value = true
   })
   fetchingModels.value = false
+}
+
+const addDiscoveredModels = async(): Promise<void> => {
+  const discovery = modelDiscovery.value
+  if (!discovery || addingDiscoveredModels.value || !selectedModelIds.value.length) return
+  const chosen = new Set(selectedModelIds.value)
+  const addModels = discovery.candidates.filter(model => chosen.has(model.id)).map(model => ({
+    id: model.id,
+    ...(model.effortLevels ? { effortLevels: [...model.effortLevels] } : {})
+  }))
+  addingDiscoveredModels.value = true
+  modelPickerError.value = ''
+  try {
+    applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::models:update', {
+      providerId: discovery.providerId,
+      addModels
+    }))
+    modelPickerVisible.value = false
+    statusKind.value = 'success'
+    status.value = t('preferences.agent.provider.modelsAdded', { count: addModels.length })
+  } catch (error) {
+    modelPickerError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    addingDiscoveredModels.value = false
+  }
 }
 
 onMounted(async() => {
@@ -1024,6 +1103,11 @@ onMounted(async() => {
   align-items: center;
   gap: 8px;
 }
+
+.pref-model-picker { display: grid; gap: 10px; }
+.pref-model-candidates { display: grid; max-height: 45vh; overflow-y: auto; }
+.pref-model-candidates label { display: flex; min-height: 34px; align-items: center; gap: 8px; overflow-wrap: anywhere; cursor: pointer; }
+.pref-model-candidates input { flex: none; margin: 0; accent-color: var(--pi-accent); }
 
 @container (max-width: 390px) {
   .pref-ai-provider {

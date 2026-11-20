@@ -103,8 +103,11 @@ const createRuntime = (
           success: true,
           data: {
             models: [
-              { provider: 'test', id: 'model', name: 'Test model' },
-              { provider: 'test', id: 'second' }
+              {
+                provider: 'test', id: 'model', name: 'Test model', reasoning: true,
+                thinkingLevelMap: { minimal: null, medium: null, max: 'max' }
+              },
+              { provider: 'test', id: 'second', reasoning: false }
             ]
           }
         })}\n`)
@@ -252,8 +255,8 @@ describe('PiRpcProcessManager', () => {
     await runtime.start()
 
     await expect(runtime.getAvailableModels()).resolves.toEqual([
-      { provider: 'test', id: 'model', name: 'Test model' },
-      { provider: 'test', id: 'second' }
+      { provider: 'test', id: 'model', name: 'Test model', effortLevels: ['off', 'low', 'high', 'max'] },
+      { provider: 'test', id: 'second', effortLevels: ['off'] }
     ])
     await expect(runtime.getAvailableThinkingLevels()).resolves.toEqual(['off', 'high', 'xhigh'])
   })
