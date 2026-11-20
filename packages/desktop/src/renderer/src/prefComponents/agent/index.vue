@@ -184,7 +184,7 @@
               :value="option.value"
             >
               <span class="pref-provider-option">
-                <AiProviderLogo :provider="presetIconId(String(option.value))" :label="option.label" />
+                <AiProviderLogo :provider="option.iconProvider" :label="option.label" />
                 <span>{{ option.label }}</span>
               </span>
             </el-option>
@@ -251,7 +251,6 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { Delete, MoreFilled, Plus, Refresh } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import type { AiProviderId } from '@shared/types/aiWorkspace'
 import type {
   PiApiFormat,
   PiAuthStyle,
@@ -262,6 +261,7 @@ import type {
   PiSettingsState
 } from '@shared/types/piProvider'
 import {
+  matchPiProviderPreset,
   PI_CUSTOM_PRESET_ID,
   PI_PROVIDER_PRESETS
 } from '@shared/types/piProviderPresets'
@@ -308,20 +308,26 @@ const activeModels = computed(() => (
   activeProvider.value?.models.filter(model => model.enabled) ?? []
 ))
 const presetOptions = computed(() => [
-  { value: PI_CUSTOM_PRESET_ID, label: t('preferences.agent.provider.custom') },
-  ...PI_PROVIDER_PRESETS.map(preset => ({ value: preset.id, label: preset.label }))
+  {
+    value: PI_CUSTOM_PRESET_ID,
+    label: t('preferences.agent.provider.custom'),
+    iconProvider: PI_CUSTOM_PRESET_ID
+  },
+  ...PI_PROVIDER_PRESETS.map(preset => ({
+    value: preset.id,
+    label: preset.label,
+    iconProvider: preset.iconProvider ?? preset.id
+  }))
 ])
 const baseUrlPlaceholder = computed(() => (
   draft.kind === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'
 ))
 
-const iconFor = (provider: PiProviderEntry): AiProviderId => {
-  const preset = PI_PROVIDER_PRESETS.find(item => item.id === provider.id)
-  return (preset?.iconProvider ?? provider.id) as unknown as AiProviderId
+const iconFor = (provider: PiProviderEntry): string => {
+  const preset = matchPiProviderPreset(provider.kind, provider.baseUrl)
+    ?? PI_PROVIDER_PRESETS.find(item => item.id === provider.id)
+  return preset?.iconProvider ?? preset?.id ?? provider.id
 }
-const presetIconId = (value: string): AiProviderId => (
-  (value === PI_CUSTOM_PRESET_ID ? 'custom' : value) as unknown as AiProviderId
-)
 const kindLabel = (kind: PiProviderKind): string => (
   kind === 'anthropic' ? 'Anthropic' : t('preferences.agent.provider.openaiCompatible')
 )
@@ -1013,7 +1019,8 @@ onMounted(async() => {
 }
 
 .pref-provider-option {
-  display: inline-flex;
+  display: flex;
+  height: 100%;
   align-items: center;
   gap: 8px;
 }

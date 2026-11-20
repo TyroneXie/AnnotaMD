@@ -17,12 +17,18 @@ to integrate AnnotaMD's document-scoped MCP, Muya buffer transactions, Diff,
 and whole-turn rollback. A copy of the Apache License 2.0 is available at
 https://www.apache.org/licenses/LICENSE-2.0.
 
-## Upstream desktop editor
+## MIT-licensed components
 
-MIT License
-
+Upstream desktop editor
 Copyright (c) 2017-present Luo Ran
 Copyright (c) 2018-present MarkText Contributors
+
+Lobe Icons (@lobehub/icons-static-svg 1.95.1)
+Claude, Kimi, Qwen and Zhipu SVGs
+https://github.com/lobehub/lobe-icons
+Copyright (c) 2023 LobeHub
+
+MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

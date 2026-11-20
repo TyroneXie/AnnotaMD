@@ -27,7 +27,7 @@ export const AI_API_PROVIDER_PRESETS: Record<AiApiProviderId, AiApiProviderPrese
   claude: {
     id: 'claude',
     label: 'Claude',
-    iconSlug: 'anthropic',
+    iconSlug: 'claude',
     baseUrl: 'https://api.anthropic.com/v1/messages',
     defaultModelId: 'claude-sonnet-4-20250514',
     apiStyle: 'anthropic-messages',
@@ -68,7 +68,7 @@ export const AI_API_PROVIDER_PRESETS: Record<AiApiProviderId, AiApiProviderPrese
   qwen: {
     id: 'qwen',
     label: 'Qwen',
-    iconSlug: 'alibabacloud',
+    iconSlug: 'qwen',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     defaultModelId: 'qwen-plus',
     apiStyle: 'chat-completions',
