@@ -139,6 +139,7 @@ export const ja = {
         'Move Up': '上へ移動',
         'Move Down': '下へ移動',
         'Comment': 'コメント',
+        'Ask AI': 'AIに聞く',
         'Delete Selection': '選択範囲を削除',
         'Delete': '段落を削除する',
         // imageToolbar

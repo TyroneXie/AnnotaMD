@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AiWorkspaceEvent } from '@shared/types/aiWorkspace'
+import type { AiReadiness, AiWorkspaceEvent } from '@shared/types/aiWorkspace'
 import type {
   AiHost,
   AiHostConfig,
@@ -49,7 +49,11 @@ class FakeHost implements AiHost {
 }
 
 const directories: string[] = []
-const setup = (options: { now?: () => number; agentWorkspacePath?: string } = {}) => {
+const setup = (options: {
+  now?: () => number
+  agentWorkspacePath?: string
+  piReadiness?: () => Promise<AiReadiness>
+} = {}) => {
   const directory = mkdtempSync(join(tmpdir(), 'annotamd-ai-service-'))
   directories.push(directory)
   const apiHost = new FakeHost('api')
@@ -88,8 +92,7 @@ const setup = (options: { now?: () => number; agentWorkspacePath?: string } = {}
   const service = new AiWorkspaceService({
     store: new AiStore({ databasePath: join(directory, 'ai.sqlite'), secrets: new Secrets() }),
     apiHost,
-    cliHost,
-    piHost: cliHost,
+    piHost: Object.assign(cliHost, { getReadiness: options.piReadiness }),
     documentScopes: scopes,
     createMcpLaunchSpec: token => ({
       command: '/annotamd', args: ['/mcp'], env: { ANNOTAMD_AGENT_SCOPE_TOKEN: token }
@@ -111,6 +114,82 @@ afterEach(() => {
 })
 
 describe('AnnotaMD AI workspace service', () => {
+  it('runs isolated selection requests and sends regular Pi turns through direct document scope', async() => {
+    const { service, owner, cliHost, scopes } = setup({
+      piReadiness: async() => ({
+        status: 'ready', modelId: 'endpoint/model', modelIds: ['endpoint/model', 'endpoint/other']
+      })
+    })
+    const request = {
+      requestId: 'selection-1',
+      instruction: 'Rewrite the excerpt',
+      modelId: 'endpoint/other',
+      context: {
+        documentName: 'draft.md', blockPath: '2/0', startOffset: 4, endOffset: 7,
+        selectedText: 'old', selectedMarkdown: 'old', before: 'The ', after: ' draft.'
+      }
+    }
+    vi.spyOn(cliHost, 'run').mockImplementationOnce(async(input) => {
+      cliHost.requests.push(input)
+      expect(service.stopSelection(owner.id + 1, request.requestId)).toBe(false)
+      return '```json\n{"kind":"replacement","text":"Updated the wording.","replacementMarkdown":"new"}\n```'
+    })
+
+    await expect(service.runSelection(owner.id, request)).resolves.toEqual({
+      kind: 'replacement', text: 'Updated the wording.', replacementMarkdown: 'new'
+    })
+    await expect(service.runSelection(owner.id, {
+      ...request, requestId: 'selection-2', instruction: 'What does this mean?'
+    })).resolves.toEqual({ kind: 'answer', text: 'Done' })
+    expect(service.listConversations(owner)).toEqual([])
+    expect(scopes.issued).toEqual([])
+    expect(cliHost.requests[0]).toMatchObject({ mode: 'selection', config: { model: 'endpoint/other' } })
+    expect(cliHost.requests[0]?.messages[0]?.content).toContain(JSON.stringify(request.context))
+    expect(cliHost.requests[1]?.messages).toHaveLength(1)
+    expect(cliHost.requests[1]?.messages[0]?.content).not.toContain(request.instruction)
+
+    await service.sendAndWait(owner, {
+      text: 'Review the draft',
+      selection: { mode: 'agent', templateIds: [] },
+      documentHandleId: 'handle-1',
+      documentId: 'doc-1',
+      documentUri: 'untitled://doc-1',
+      markdown: 'old',
+      documentRevision: 1,
+      selectionText: 'old'
+    })
+    expect(cliHost.requests[2]).toMatchObject({ documentScopeToken: 'scope-1', selectionText: 'old' })
+    expect(cliHost.requests[2]?.mcp).toBeUndefined()
+    service.dispose()
+  })
+
+  it('keeps legacy history while publishing only the usable Pi configuration', async() => {
+    let readiness: AiReadiness = { status: 'missing', setupIssue: 'provider', modelIds: [] }
+    const { service, events, owner } = setup({ piReadiness: async() => readiness })
+    const legacy = await service.saveConfig(owner, {
+      input: { name: 'Codex', kind: 'cli', provider: 'codex' },
+      isDefault: true
+    })
+    const conversation = service.createConversation(owner, {
+      title: 'Old conversation', mode: 'agent', configId: legacy.id, templateIds: []
+    })
+    expect(await service.listConfigs(owner)).toEqual([])
+    readiness = { status: 'ready', modelId: 'endpoint/model', modelIds: ['endpoint/model'] }
+    await service.notifyPiSettingsChanged()
+    const snapshot = await service.getSnapshot(owner)
+    expect(snapshot.configs).toMatchObject([{ id: snapshot.readiness.configId, provider: 'pi' }])
+    expect(snapshot.conversations).toContainEqual(conversation)
+    await expect(service.send(owner, {
+      text: 'Try the old config',
+      selection: { mode: 'agent', configId: legacy.id, templateIds: [] }
+    })).rejects.toThrow('This Agent configuration is unavailable')
+    readiness = { status: 'missing', setupIssue: 'provider', modelIds: [] }
+    await service.notifyPiSettingsChanged()
+    expect(events.at(-1)).toEqual({ type: 'readiness', readiness, configs: [] })
+    expect((await service.getSnapshot(owner)).conversations).toContainEqual(conversation)
+    service.dispose()
+  })
+
   it('renames a conversation and emits the persisted update', async() => {
     const { service, events, owner } = setup()
     const conversation = service.createConversation(owner, {

@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
 import type {
   AiApiProviderId,
-  AiCliDetectionRequest,
-  AiCliDetectionResult,
   AiCliProviderId,
   AiConfigInput,
   AiConfigSummary,
@@ -10,6 +8,7 @@ import type {
   AiEffortSelection,
   AiModelInfo,
   AiPermissionMode,
+  AiReadiness,
   AiWorkspacePreferences,
   AiWorkspaceMode
 } from '@shared/types/aiWorkspace'
@@ -86,7 +85,8 @@ export const useAiSettingsStore = defineStore('aiSettings', {
     workspacePreferencesLoaded: false,
     modelsByConfig: {} as Record<string, AiModelInfo[]>,
     modelsLoadedAt: {} as Record<string, number>,
-    modelsLoading: {} as Record<string, boolean>
+    modelsLoading: {} as Record<string, boolean>,
+    agentReadiness: undefined as AiReadiness | undefined
   }),
 
   getters: {
@@ -97,10 +97,33 @@ export const useAiSettingsStore = defineStore('aiSettings', {
     ),
     selectedConfig: (state) => (mode: AiWorkspaceMode): AiConfigSummary | undefined => (
       state.configs.find(config => config.id === state.selections[mode].configId)
-    )
+    ),
+    selectedAgentModel(state): string | undefined {
+      const { modelId } = state.selections.agent
+      return modelId && modelId !== 'default'
+        ? modelId
+        : state.agentReadiness?.modelId ?? modelId ?? this.selectedConfig('agent')?.defaultModelId
+    }
   },
 
   actions: {
+    applyAgentReadiness(readiness: AiReadiness, configs: AiConfigSummary[], changed = false): void {
+      if (!readiness.modelIds) return
+      if (changed) {
+        const ids = new Set([this.agentReadiness?.configId, readiness.configId])
+        for (const id of ids) {
+          if (!id) continue
+          delete this.modelsByConfig[id]
+          delete this.modelsLoadedAt[id]
+          delete this.modelsLoading[id]
+          modelRequests.delete(id)
+        }
+      }
+      this.agentReadiness = readiness
+      this.configs = configs
+      this.reconcileSelections()
+    },
+
     persistPreferences(): void {
       window.localStorage.setItem(PREFERENCE_KEY, JSON.stringify({
         selections: this.selections
@@ -115,6 +138,12 @@ export const useAiSettingsStore = defineStore('aiSettings', {
           this.selections[mode].configId = preferred?.id
           this.selections[mode].modelId = preferred?.defaultModelId
         }
+      }
+      const agent = this.selections.agent
+      if (this.agentReadiness?.modelIds && agent.modelId && agent.modelId !== 'default' &&
+        !this.agentReadiness.modelIds.includes(agent.modelId)) {
+        agent.modelId = undefined
+        agent.effort = { kind: 'provider-default' }
       }
       this.persistPreferences()
     },
@@ -134,7 +163,9 @@ export const useAiSettingsStore = defineStore('aiSettings', {
         this.reconcileSelections()
         this.initialized = true
         const selectedAgentId = this.selections.agent.configId
-        if (selectedAgentId) void this.listModels(selectedAgentId).catch(() => undefined)
+        if (selectedAgentId && this.selectedConfig('agent')?.provider !== 'pi') {
+          void this.listModels(selectedAgentId).catch(() => undefined)
+        }
       } catch (error) {
         this.error = error instanceof Error ? error.message : String(error)
       } finally {
@@ -252,20 +283,20 @@ export const useAiSettingsStore = defineStore('aiSettings', {
       const request = window.electron.ipcRenderer
         .invoke('annotamd::ai::configs:models', id)
         .then((models: AiModelInfo[]) => {
-          this.modelsByConfig[id] = models
-          this.modelsLoadedAt[id] = Date.now()
+          if (modelRequests.get(id) === request) {
+            this.modelsByConfig[id] = models
+            this.modelsLoadedAt[id] = Date.now()
+          }
           return models
         })
         .finally(() => {
-          delete this.modelsLoading[id]
-          if (modelRequests.get(id) === request) modelRequests.delete(id)
+          if (modelRequests.get(id) === request) {
+            delete this.modelsLoading[id]
+            modelRequests.delete(id)
+          }
         })
       modelRequests.set(id, request)
       return request
-    },
-
-    async detectCli(request: AiCliDetectionRequest): Promise<AiCliDetectionResult> {
-      return window.electron.ipcRenderer.invoke('annotamd::ai::configs:detect-cli', request)
     },
 
     async saveWorkspacePreferences(

@@ -4,7 +4,8 @@ import type {
   AiApiStyle,
   AiAttachment,
   AiApprovalDecision,
-  AiPermissionMode
+  AiPermissionMode,
+  AiReadiness
 } from '@shared/types/aiWorkspace'
 
 export type AiHostProvider =
@@ -62,7 +63,7 @@ export interface AiHostRunRequest {
   conversationId: string
   config: AiHostConfig
   messages: AiHostMessage[]
-  mode?: 'ask' | 'agent'
+  mode?: 'ask' | 'agent' | 'selection'
   workspacePath?: string
   additionalWorkspacePaths?: string[]
   workspaceProject?: {
@@ -75,6 +76,9 @@ export interface AiHostRunRequest {
     filePath?: string
   }
   permissionMode?: AiPermissionMode
+  documentScopeToken?: string
+  signal?: AbortSignal
+  selectionText?: string
   mcp?: AiMcpLaunchSpec
   attachments?: readonly AiAttachment[]
 }
@@ -124,6 +128,7 @@ export type AiHostEvent =
 export interface AiHost {
   readonly kind: AiHostKind
   readonly providers: readonly AiHostProvider[]
+  getReadiness?(): Promise<AiReadiness>
   listModels(config: AiHostConfig): Promise<AiHostModel[]>
   testConnection(config: AiHostConfig): Promise<AiHostConnectionResult>
   run(request: AiHostRunRequest, emit: (event: AiHostEvent) => void): Promise<string>

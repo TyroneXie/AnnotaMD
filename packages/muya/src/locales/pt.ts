@@ -139,6 +139,7 @@ export const pt = {
         'Move Up': 'Mover para cima',
         'Move Down': 'Mover para baixo',
         'Comment': 'Comentário',
+        'Ask AI': 'Perguntar à IA',
         'Delete Selection': 'Excluir seleção',
         'Delete': 'Excluir',
         // imageToolbar

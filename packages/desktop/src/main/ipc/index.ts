@@ -12,6 +12,7 @@ import { registerCommentHandlers } from './comments'
 import { registerMcpClientHandlers } from './mcpClients'
 import { registerAgentTurnHandlers } from './agentTurns'
 import { registerAiWorkspaceHandlers } from './aiWorkspace'
+import { registerPiProviderHandlers } from './piProvider'
 import { registerAppUpdater } from '../updater'
 
 export const registerSandboxIpcHandlers = (): void => {
@@ -29,5 +30,6 @@ export const registerSandboxIpcHandlers = (): void => {
   registerMcpClientHandlers()
   registerAgentTurnHandlers()
   registerAiWorkspaceHandlers()
+  registerPiProviderHandlers()
   registerAppUpdater()
 }

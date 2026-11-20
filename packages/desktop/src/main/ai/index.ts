@@ -3,14 +3,11 @@ import { dirname, join, resolve } from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import { AgentDocumentRendererBridge } from '../agentDocumentBridge/AgentDocumentRendererBridge'
 import { AgentDocumentScopeService } from '../agentDocumentBridge/AgentDocumentScopeService'
-import { setAgentDocumentGateway } from '../comments/AgentBridgeServer'
 import { AiStore } from './AiStore'
 import { KeytarAiSecretStore } from './AiSecretStore'
 import { ApiAskHost } from './ApiAskHost'
-import { CliAgentHost } from './CliAgentHost'
 import { PiAgentHost } from './PiAgentHost'
 import { AiWorkspaceService } from './AiWorkspaceService'
-import type { AiMcpLaunchSpec } from './AiHost'
 
 let service: AiWorkspaceService | null = null
 let rendererBridge: AgentDocumentRendererBridge | null = null
@@ -28,30 +25,15 @@ const createRendererBridge = (): AgentDocumentRendererBridge => new AgentDocumen
   }
 )
 
-const createAgentMcpSpec = (
-  scopeToken: string,
-  provider: string
-): AiMcpLaunchSpec => {
-  const script = app.isPackaged
-    ? join(process.resourcesPath, 'annotamd-mcp', 'index.mjs')
-    : resolve(app.getAppPath(), '..', '..', 'tools', 'annotamd-mcp', 'dist', 'index.js')
-  return {
-    command: process.execPath,
-    args: [script],
-    env: {
-      ELECTRON_RUN_AS_NODE: '1',
-      ANNOTAMD_CLIENT_NAME: `annotamd-${provider}`,
-      ANNOTAMD_AGENT_SCOPE_TOKEN: scopeToken,
-      ANNOTAMD_AGENT_MUTATIONS: '0'
-    },
-    enabledTools: [
-      'annotamd_list_comments',
-      'annotamd_get_comment',
-      'annotamd_reply_comment',
-      'annotamd_get_context',
-      'annotamd_read_document'
-    ]
-  }
+/**
+ * Pi ships inside the application so no user installation of Pi or Node.js is
+ * required. Development runs read the workspace dependency instead.
+ */
+const bundledPiCliPaths = (): string[] => {
+  const root = app.isPackaged
+    ? join(process.resourcesPath, 'pi')
+    : resolve(app.getAppPath(), 'resources', 'pi')
+  return [join(root, 'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js')]
 }
 
 const piAdapterPath = (): string => (
@@ -71,22 +53,22 @@ export const getAiWorkspaceService = (): AiWorkspaceService => {
     candidate => rendererBridge!.applyCandidate(candidate),
     candidate => rendererBridge!.readSnapshot(candidate)
   )
+  const secrets = new KeytarAiSecretStore()
   service = new AiWorkspaceService({
     store: new AiStore({
       databasePath,
-      secrets: new KeytarAiSecretStore()
+      secrets
     }),
     apiHost: new ApiAskHost(),
-    cliHost: new CliAgentHost(),
     piHost: new PiAgentHost({
       documentScopes: scopeService,
-      adapterPath: piAdapterPath
+      adapterPath: piAdapterPath,
+      bundledCliPaths: bundledPiCliPaths,
+      providerSettingsPath: () => join(app.getPath('userData'), 'pi-provider.json'),
+      agentDirectory: () => join(app.getPath('userData'), 'pi-agent'),
+      secretStore: secrets
     }),
     documentScopes: scopeService,
-    createMcpLaunchSpec: createAgentMcpSpec,
-    prepareAgentRun: async() => {
-      await setAgentDocumentGateway(scopeService)
-    },
     documentTransactions: rendererBridge,
     agentWorkspacePath
   })
@@ -110,5 +92,4 @@ export const disposeAiWorkspace = async(): Promise<void> => {
   scopeService = null
   currentService?.dispose()
   currentBridge?.dispose()
-  await setAgentDocumentGateway(null)
 }

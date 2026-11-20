@@ -60,7 +60,7 @@ const createRuntime = (
   handshake = readyHandshake(),
   launch: Pick<PiRpcProcessOptions, 'executablePath'> & Partial<Pick<
     PiRpcProcessOptions,
-    'executableArgs' | 'model' | 'thinkingLevel' | 'noSession'
+    'executableArgs' | 'model' | 'thinkingLevel' | 'noSession' | 'noTools'
   >> = {
     executablePath: '/opt/bin/pi'
   }
@@ -135,7 +135,7 @@ const createRuntime = (
     spawnProcess: spawnProcess as never
   })
   runtimes.push(runtime)
-  queueMicrotask(() => writeReady(process, handshake))
+  if (!launch.noTools) queueMicrotask(() => writeReady(process, handshake))
   return { runtime, process, spawnProcess, commands }
 }
 
@@ -144,6 +144,20 @@ afterEach(() => {
 })
 
 describe('PiRpcProcessManager', () => {
+  it('starts a one-shot runtime without tools or an adapter handshake', async() => {
+    const { runtime, spawnProcess, commands } = createRuntime(undefined, {
+      executablePath: '/opt/bin/pi', noSession: true, noTools: true
+    })
+    await expect(runtime.start()).resolves.toMatchObject({
+      readiness: { status: 'ready', model: 'test/model' }
+    })
+    const args = spawnProcess.mock.calls[0]![1] as string[]
+    expect(args).toContain('--no-tools')
+    expect(args).toContain('--no-session')
+    expect(args).not.toContain('--extension')
+    expect(commands.map(command => command.type)).toEqual(['get_state'])
+  })
+
   it('starts an external Pi in safe RPC mode and verifies the adapter', async() => {
     const { runtime, spawnProcess } = createRuntime()
 
@@ -168,6 +182,7 @@ describe('PiRpcProcessManager', () => {
         '--no-skills',
         '--no-prompt-templates',
         '--no-context-files',
+        '--tools', 'read,edit,write',
         '--extension', '/app/resources/pi-adapter/adapter.mjs',
         '--no-approve'
       ],
@@ -197,6 +212,7 @@ describe('PiRpcProcessManager', () => {
         '--no-skills',
         '--no-prompt-templates',
         '--no-context-files',
+        '--tools', 'read,edit,write',
         '--extension', '/app/resources/pi-adapter/adapter.mjs',
         '--no-approve'
       ],
@@ -221,6 +237,7 @@ describe('PiRpcProcessManager', () => {
       '--no-skills',
       '--no-prompt-templates',
       '--no-context-files',
+      '--tools', 'read,edit,write',
       '--extension', adapterPath,
       '--no-approve',
       '--provider', 'openai-codex',

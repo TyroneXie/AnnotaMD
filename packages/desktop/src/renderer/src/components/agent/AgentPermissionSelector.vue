@@ -3,13 +3,14 @@
     <button
       ref="trigger"
       type="button"
-      :class="{ 'is-unsupported': mode === 'request' && !requestSupported }"
+      :class="{ 'is-unsupported': provider && mode === 'request' && !requestSupported }"
       class="annotamd-agent-permission-trigger"
       data-testid="ai-permission-trigger"
-      :title="t('annotamd.agentWorkspace.permissionMode')"
-      :aria-label="t('annotamd.agentWorkspace.permissionMode')"
+      :title="modeLabel"
+      :aria-label="`${t('annotamd.agentWorkspace.permissionMode')} · ${modeLabel}`"
       :aria-expanded="visible"
       @click="emit('update:visible', !visible)"
+      @keydown.esc.stop="emit('update:visible', false)"
     >
       <el-icon><Lock v-if="mode === 'request'" /><Unlock v-else /></el-icon>
       <span>{{ modeLabel }}</span>
@@ -23,6 +24,7 @@
         :style="menuStyle"
         class="annotamd-agent-permission-menu"
         data-testid="ai-permission-menu"
+        @keydown.esc.stop="emit('update:visible', false)"
       >
         <header>
           <strong>{{ t('annotamd.agentWorkspace.permissionMode') }}</strong>
@@ -127,10 +129,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .annotamd-agent-permission-control { min-width: 0; }
-.annotamd-agent-permission-trigger { display: inline-flex; width: 100%; min-width: 0; height: 30px; align-items: center; gap: 5px; padding: 0 8px; color: var(--annotamd-muted); border: 1px solid var(--annotamd-border); border-radius: 7px; background: var(--annotamd-surface); cursor: pointer; font: inherit; font-size: 11px; }
-.annotamd-agent-permission-trigger:hover { color: var(--annotamd-text); background: var(--annotamd-fill-soft); }
+.annotamd-agent-permission-trigger { display: inline-flex; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); cursor: pointer; font: inherit; font-size: 11px; font-weight: 550; }
+.annotamd-agent-permission-trigger:hover, .annotamd-agent-permission-trigger[aria-expanded="true"] { border-color: var(--annotamd-border); }
 .annotamd-agent-permission-trigger.is-unsupported { color: #b54708; border-color: color-mix(in srgb, #f79009 32%, var(--annotamd-border)); }
-.annotamd-agent-permission-trigger > span { overflow: hidden; max-width: 76px; text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-permission-trigger > span { white-space: nowrap; }
+.annotamd-agent-permission-trigger:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 .annotamd-agent-permission-trigger svg { width: 14px; height: 14px; }
 .annotamd-agent-permission-trigger .is-chevron { margin-left: auto; }
 .annotamd-agent-permission-menu { position: fixed; z-index: 3000; box-sizing: border-box; display: grid; gap: 6px; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); box-shadow: 0 10px 30px color-mix(in srgb, #000 13%, transparent); }

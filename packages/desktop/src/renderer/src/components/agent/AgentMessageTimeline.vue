@@ -1,8 +1,12 @@
 <template>
   <div class="annotamd-agent-message-stream">
     <div v-if="messages.length === 0" class="annotamd-agent-empty" data-testid="ai-empty-state">
+      <div class="annotamd-agent-empty-intro">
+        <span class="annotamd-agent-empty-mark" aria-hidden="true"><el-icon><Cpu /></el-icon></span>
+        <strong>{{ t('annotamd.agentWorkspace.emptyTitle') }}</strong>
+        <p>{{ t('annotamd.agentWorkspace.emptyDescription') }}</p>
+      </div>
       <section class="annotamd-agent-suggestions" :aria-label="t('annotamd.agentWorkspace.suggestionsTitle')">
-        <span>{{ t('annotamd.agentWorkspace.suggestionsTitle') }}</span>
         <button
           v-for="suggestion in suggestions"
           :key="suggestion"
@@ -10,14 +14,10 @@
           data-testid="ai-suggested-prompt"
           @click="emit('selectSuggestion', suggestion)"
         >
-          {{ suggestion }}
+          <span>{{ suggestion }}</span>
+          <el-icon aria-hidden="true"><ArrowRight /></el-icon>
         </button>
       </section>
-      <div class="annotamd-agent-empty-intro">
-        <span class="annotamd-agent-empty-mark" aria-hidden="true"><el-icon><Cpu /></el-icon></span>
-        <strong>{{ t('annotamd.agentWorkspace.emptyTitle') }}</strong>
-        <p>{{ t('annotamd.agentWorkspace.emptyDescription') }}</p>
-      </div>
     </div>
     <template v-else>
       <template v-for="entry in timelineEntries" :key="entry.id">
@@ -499,26 +499,31 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .annotamd-agent-message-stream { display: flex; min-width: 0; width: 100%; flex-direction: column; gap: 12px; }
-.annotamd-agent-empty { display: grid; min-height: 320px; flex: 1; grid-template-rows: auto minmax(190px, 1fr); gap: 12px; color: var(--annotamd-muted); }
-.annotamd-agent-suggestions { display: grid; gap: 7px; }
-.annotamd-agent-suggestions > span { color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 600; }
-.annotamd-agent-suggestions button { width: 100%; padding: 8px 10px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border-soft); border-radius: 8px; background: var(--annotamd-surface); cursor: pointer; font: inherit; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.45; text-align: left; transition: border-color .15s ease, background .15s ease; }
-.annotamd-agent-suggestions button:hover { border-color: color-mix(in srgb, var(--annotamd-blue) 35%, var(--annotamd-border)); background: color-mix(in srgb, var(--annotamd-blue) 5%, var(--annotamd-surface)); }
-.annotamd-agent-suggestions button:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 2px; }
-.annotamd-agent-empty-intro { display: grid; align-content: center; justify-items: center; gap: 7px; padding: 20px 10px 28px; text-align: center; }
-.annotamd-agent-empty-mark { display: grid; width: 42px; height: 42px; margin-bottom: 4px; place-items: center; color: var(--annotamd-blue); border-radius: 13px; background: color-mix(in srgb, var(--annotamd-blue) 10%, transparent); font-size: 13px; font-weight: 700; }
-.annotamd-agent-empty-mark :deep(svg) { width: 20px; height: 20px; }
-.annotamd-agent-empty-intro strong { color: var(--annotamd-text); font-size: var(--annotamd-agent-font-size, 12px); }
-.annotamd-agent-empty-intro p { max-width: 280px; margin: 0; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.5; }
+.annotamd-agent-message-stream:has(> .annotamd-agent-empty) { flex: 1 0 auto; justify-content: center; }
+.annotamd-agent-empty { display: grid; width: min(100%, 400px); align-self: center; gap: 20px; padding: 18px 0; }
+.annotamd-agent-empty-intro { display: grid; justify-items: center; gap: 7px; text-align: center; }
+.annotamd-agent-empty-mark { display: grid; width: 36px; height: 36px; margin-bottom: 3px; place-items: center; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); color: var(--annotamd-text); }
+.annotamd-agent-empty-mark :deep(svg) { width: 19px; height: 19px; }
+.annotamd-agent-empty-intro strong { color: var(--annotamd-ink); font-size: calc(var(--annotamd-agent-font-size, 12px) + 3px); line-height: 1.4; }
+.annotamd-agent-empty-intro p { max-width: 28em; margin: 0; color: var(--annotamd-muted); font-size: var(--annotamd-agent-font-size, 12px); line-height: 1.5; }
+.annotamd-agent-suggestions { display: grid; border: 1px solid var(--annotamd-border); border-radius: 9px; background: var(--annotamd-surface); }
+.annotamd-agent-suggestions button { display: grid; grid-template-columns: minmax(0, 1fr) 14px; min-height: 36px; align-items: center; gap: 8px; padding: 8px 10px; color: var(--annotamd-text); border: 0; background: transparent; cursor: pointer; font: inherit; font-size: var(--annotamd-agent-font-size, 12px); line-height: 1.45; text-align: left; }
+.annotamd-agent-suggestions button + button { border-top: 1px solid var(--annotamd-border-soft); }
+.annotamd-agent-suggestions button:first-child { border-radius: 8px 8px 0 0; }
+.annotamd-agent-suggestions button:last-child { border-radius: 0 0 8px 8px; }
+.annotamd-agent-suggestions button > .el-icon { color: var(--annotamd-muted); }
+.annotamd-agent-suggestions button:hover { background: var(--annotamd-fill-soft); }
+.annotamd-agent-suggestions button:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: -2px; }
 .annotamd-agent-message { display: grid; width: fit-content; max-width: 92%; box-sizing: border-box; align-self: flex-start; gap: 3px; }
-.annotamd-agent-message.is-user { max-width: 82%; align-self: flex-end; justify-items: end; }
-.annotamd-agent-message-bubble { min-width: 0; width: 100%; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: color-mix(in srgb, var(--annotamd-surface-soft) 76%, var(--annotamd-surface)); }
-.annotamd-agent-message.is-user .annotamd-agent-message-bubble { border-color: color-mix(in srgb, var(--annotamd-green) 26%, var(--annotamd-border)); background: color-mix(in srgb, var(--annotamd-green) 10%, var(--annotamd-surface)); }
+.annotamd-agent-message.is-user { max-width: 86%; align-self: flex-end; justify-items: end; }
+.annotamd-agent-message.is-assistant { width: 100%; max-width: 100%; }
+.annotamd-agent-message-bubble { min-width: 0; width: 100%; box-sizing: border-box; padding: 3px 0; }
+.annotamd-agent-message.is-user .annotamd-agent-message-bubble { padding: 9px 11px; border-radius: 10px; background: color-mix(in srgb, var(--annotamd-agent-accent) 9%, var(--annotamd-surface)); }
 .annotamd-agent-message-meta { display: flex; min-height: 20px; width: 100%; align-items: center; justify-content: flex-end; gap: 2px; color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
 .annotamd-agent-message-meta time { padding: 0 2px; line-height: 1.4; white-space: nowrap; }
-.annotamd-agent-process-group { width: 100%; min-width: 0; }
-.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 30px; align-items: baseline; gap: 7px; padding: 3px 4px; color: var(--annotamd-muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; font: inherit; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.4; text-align: left; }
-.annotamd-agent-process-group-toggle:hover { background: color-mix(in srgb, var(--annotamd-surface-soft) 84%, transparent); }
+.annotamd-agent-process-group { width: 100%; min-width: 0; border-radius: 7px; background: var(--annotamd-surface); }
+.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 29px; align-items: center; gap: 7px; padding: 3px 8px; color: var(--annotamd-muted); border: 0; border-radius: 7px; background: transparent; cursor: pointer; font: inherit; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.4; text-align: left; }
+.annotamd-agent-process-group-toggle:hover { background: var(--annotamd-fill-soft); }
 .annotamd-agent-process-group-toggle > .annotamd-agent-tool-state { align-self: baseline; }
 .annotamd-agent-process-group-toggle strong { color: var(--annotamd-text); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 650; }
 .annotamd-agent-process-group-chevron { flex: none; margin-left: auto; transition: transform .15s ease; }
@@ -559,6 +564,7 @@ onBeforeUnmount(() => {
 .annotamd-agent-markdown :deep(h4) { font-size: 1.05em; }
 .annotamd-agent-markdown :deep(ul),
 .annotamd-agent-markdown :deep(ol) { margin: .35em 0; padding-left: 1.5em; }
+.annotamd-agent-markdown :deep(li + li) { margin-top: .25em; }
 .annotamd-agent-markdown :deep(blockquote) { margin: .45em 0; padding-left: .75em; color: var(--annotamd-muted); border-left: 2px solid var(--annotamd-border); }
 .annotamd-agent-markdown :deep(a) { color: var(--annotamd-blue); text-decoration: underline; }
 .annotamd-agent-markdown :deep(code) { padding: .1em .3em; border-radius: 3px; background: var(--annotamd-surface-soft); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .92em; }

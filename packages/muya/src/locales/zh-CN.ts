@@ -86,6 +86,7 @@ export const zhCN = {
         'Image': '图片',
         'Eliminate': '清除样式',
         'Comment': '批注',
+        'Ask AI': '询问 AI',
         'Delete Selection': '删除所选文字',
         // Code block
         'Copy': '复制',

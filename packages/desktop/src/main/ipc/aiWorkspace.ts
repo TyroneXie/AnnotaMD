@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain, type WebContents } from 'electron'
 import type {
   AiChangeSetResolveRequest,
   AiApprovalResolveRequest,
-  AiCliDetectionRequest,
   AiConfigSaveRequest,
   AiConversationCreateRequest,
   AiConversationRenameRequest,
@@ -13,6 +12,7 @@ import type {
   AiWorkspacePreferences
 } from '@shared/types/aiWorkspace'
 import type { AgentDocumentTransactionBridgeResponse } from '@shared/types/agentDocumentTransactions'
+import type { AiSelectionRequest } from '@shared/types/aiSelection'
 import {
   disposeAiWorkspace,
   getAiDocumentRendererBridge,
@@ -63,12 +63,6 @@ export const registerAiWorkspaceHandlers = (): void => {
   ipcMain.handle('annotamd::ai::configs:models', (event, configId: string) => (
     getAiWorkspaceService().listModels(asOwner(event.sender), configId)
   ))
-  ipcMain.handle(
-    'annotamd::ai::configs:detect-cli',
-    (event, request: AiCliDetectionRequest) => (
-      getAiWorkspaceService().detectCli(asOwner(event.sender), request)
-    )
-  )
 
   ipcMain.handle('annotamd::ai::conversations:list', event => (
     getAiWorkspaceService().listConversations(asOwner(event.sender))
@@ -128,6 +122,21 @@ export const registerAiWorkspaceHandlers = (): void => {
 
   ipcMain.handle('annotamd::ai::send', (event, request: AiSendRequest) => (
     getAiWorkspaceService().send(asOwner(event.sender), request, windowIdFor(event.sender))
+  ))
+  ipcMain.handle('annotamd::ai::selection:run', async(event, request: AiSelectionRequest) => {
+    const service = getAiWorkspaceService()
+    const sender = event.sender
+    const ownerId = sender.id
+    const stop = (): void => { service.stopSelection(ownerId, request.requestId) }
+    sender.once('destroyed', stop)
+    try {
+      return await service.runSelection(ownerId, request)
+    } finally {
+      sender.removeListener('destroyed', stop)
+    }
+  })
+  ipcMain.handle('annotamd::ai::selection:stop', (event, requestId: string) => (
+    getAiWorkspaceService().stopSelection(event.sender.id, requestId)
   ))
   ipcMain.handle('annotamd::ai::stop', (event, request: AiStopRequest) => (
     getAiWorkspaceService().stop(asOwner(event.sender), request)

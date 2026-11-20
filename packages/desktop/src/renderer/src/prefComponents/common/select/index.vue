@@ -21,14 +21,23 @@
     <el-select
       v-model="selectValue"
       :disabled="disable"
+      :filterable="filterable"
+      :allow-create="allowCreate"
+      :default-first-option="allowCreate"
+      :placeholder="placeholder"
       @change="select"
     >
+      <template v-if="$slots.prefix" #prefix>
+        <slot name="prefix" />
+      </template>
       <el-option
         v-for="item in options"
         :key="item.value"
         :label="item.label"
         :value="item.value"
-      />
+      >
+        <slot name="option" :item="item">{{ item.label }}</slot>
+      </el-option>
     </el-select>
     <div
       v-if="!description && notes"
@@ -48,6 +57,11 @@ type SelectValue = string | number | boolean
 
 interface SelectProps extends PrefControlBaseProps {
   notes?: string
+  /** Lets the user type to narrow the list. */
+  filterable?: boolean
+  /** Accepts a typed value that is not in `options` (e.g. a custom model id). */
+  allowCreate?: boolean
+  placeholder?: string
   value: SelectValue
   options: ReadonlyArray<PrefSelectOption<SelectValue>>
   onChange: (value: SelectValue) => void
@@ -57,7 +71,10 @@ const props = withDefaults(defineProps<SelectProps>(), {
   description: '',
   notes: '',
   more: '',
-  disable: false
+  disable: false,
+  filterable: false,
+  allowCreate: false,
+  placeholder: 'Select'
 })
 
 const selectValue = ref<SelectValue>(props.value)

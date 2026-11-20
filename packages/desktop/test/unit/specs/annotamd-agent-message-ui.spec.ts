@@ -13,7 +13,7 @@ describe('Agent message presentation', () => {
     const defaults = read('packages/desktop/static/preference.json')
     const store = read('packages/desktop/src/renderer/src/store/preferences.ts')
     const preference = read(
-      'packages/desktop/src/renderer/src/prefComponents/agent/index.vue'
+      'packages/desktop/src/renderer/src/prefComponents/theme/index.vue'
     )
     const workspace = read(
       'packages/desktop/src/renderer/src/components/agent/AgentWorkspacePanel.vue'
@@ -82,7 +82,7 @@ describe('Agent message presentation', () => {
     expect(timeline).toContain('entry.message.content.trim().length > 0')
   })
 
-  it('uses compact opposing bubbles without visible role-label rows', () => {
+  it('uses a right-aligned user bubble and a full-width response without visible role labels', () => {
     const timeline = read(
       'packages/desktop/src/renderer/src/components/agent/AgentMessageTimeline.vue'
     )
@@ -93,13 +93,13 @@ describe('Agent message presentation', () => {
       /\.annotamd-agent-message\s*\{[^}]*width:\s*fit-content;[^}]*max-width:\s*92%;[^}]*align-self:\s*flex-start;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-message\.is-user\s*\{[^}]*max-width:\s*82%;[^}]*align-self:\s*flex-end;/s
+      /\.annotamd-agent-message\.is-user\s*\{[^}]*max-width:\s*86%;[^}]*align-self:\s*flex-end;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-message-bubble\s*\{[^}]*border:\s*1px solid var\(--annotamd-border\);[^}]*border-radius:\s*10px;/s
+      /\.annotamd-agent-message\.is-assistant\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-message\.is-user \.annotamd-agent-message-bubble\s*\{[^}]*var\(--annotamd-green\)[^}]*background:\s*color-mix\(in srgb, var\(--annotamd-green\) 10%, var\(--annotamd-surface\)\);/s
+      /\.annotamd-agent-message\.is-user \.annotamd-agent-message-bubble\s*\{[^}]*border-radius:\s*10px;[^}]*background:\s*color-mix\(in srgb, var\(--annotamd-agent-accent\) 9%, var\(--annotamd-surface\)\);/s
     )
     expect(timeline).toMatch(/\.annotamd-agent-message-meta\s*\{[^}]*justify-content:\s*flex-end;/s)
   })
@@ -141,7 +141,7 @@ describe('Agent message presentation', () => {
     expect(timeline).not.toContain('toggleToolGroup')
     expect(timeline).not.toContain('toggleTool(')
     expect(timeline).toMatch(
-      /\.annotamd-agent-process-group-toggle\s*\{[^}]*min-height:\s*30px;[^}]*align-items:\s*baseline;/s
+      /\.annotamd-agent-process-group-toggle\s*\{[^}]*min-height:\s*29px;[^}]*align-items:\s*center;/s
     )
     expect(timeline).toMatch(
       /\.annotamd-agent-process-group-body\s*\{[^}]*gap:\s*7px;[^}]*margin:\s*3px 4px 6px 24px;/s

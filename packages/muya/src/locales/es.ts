@@ -139,6 +139,7 @@ export const es = {
         'Move Up': 'Mover arriba',
         'Move Down': 'Mover abajo',
         'Comment': 'Comentario',
+        'Ask AI': 'Preguntar a la IA',
         'Delete Selection': 'Eliminar selección',
         'Delete': 'Eliminar',
         // imageToolbar

@@ -72,7 +72,7 @@ describe('AnnotaMD comment toggle placement', () => {
       /\.annotamd-agent-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;[^}]*background:\s*var\(--annotamd-surface-soft\);/s
     )
     expect(agentHeader).toMatch(
-      /\.annotamd-agent-title strong\s*\{[^}]*font-size:\s*14px;[^}]*font-weight:\s*650;[^}]*line-height:\s*20px;/s
+      /\.annotamd-agent-title strong\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*650;[^}]*line-height:\s*20px;/s
     )
   })
 

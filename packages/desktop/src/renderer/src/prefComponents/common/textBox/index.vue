@@ -27,6 +27,8 @@
       :placeholder="defaultValue"
       size="small"
       clearable
+      :type="password ? 'password' : 'text'"
+      :show-password="password"
       @input="handleInput"
     />
   </section>
@@ -39,6 +41,7 @@ import type { PrefControlBaseProps } from '../types'
 
 interface TextBoxProps extends PrefControlBaseProps {
   notes?: string
+  password?: boolean
   input: string
   onChange: (value: string) => void
   defaultValue?: string
@@ -49,6 +52,7 @@ interface TextBoxProps extends PrefControlBaseProps {
 const props = withDefaults(defineProps<TextBoxProps>(), {
   description: '',
   notes: '',
+  password: false,
   more: '',
   disable: false,
   defaultValue: '',

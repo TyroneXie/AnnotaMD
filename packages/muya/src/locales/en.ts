@@ -88,6 +88,7 @@ export const en = {
         'Image': 'Image',
         'Eliminate': 'Eliminate',
         'Comment': 'Comment',
+        'Ask AI': 'Ask AI',
         'Delete Selection': 'Delete Selection',
         // Code block
         'Copy': 'Copy',

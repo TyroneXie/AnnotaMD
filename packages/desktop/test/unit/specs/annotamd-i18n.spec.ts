@@ -30,6 +30,14 @@ const annotaMDKeys = [
   'annotamd.comments.replyPlaceholder',
   'annotamd.comments.send',
   'annotamd.comments.emptyTitle',
+  'annotamd.agentSelection.title',
+  'annotamd.agentSelection.placeholder',
+  'annotamd.agentSelection.send',
+  'annotamd.agentSelection.running',
+  'annotamd.agentSelection.reply',
+  'annotamd.agentSelection.remove',
+  'annotamd.agentSelection.applied',
+  'annotamd.agentSelection.stale',
   'annotamd.agentWorkspace.open',
   'annotamd.agentWorkspace.newSession',
   'annotamd.agentWorkspace.emptyTitle',
@@ -69,11 +77,11 @@ describe('AnnotaMD UI localization', () => {
     }
   })
 
-  it('uses the same reply and consult labels in comment composers and threads', () => {
-    expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.send')).toBe('回复')
+  it('uses distinct labels for posting a comment, replying and consulting', () => {
+    expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.send')).toBe('评论')
     expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.reply')).toBe('回复')
     expect(getMessage(zhCN as Record<string, unknown>, 'annotamd.comments.sendAgent')).toBe('咨询')
-    expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.send')).toBe('Reply')
+    expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.send')).toBe('Comment')
     expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.reply')).toBe('Reply')
     expect(getMessage(en as Record<string, unknown>, 'annotamd.comments.sendAgent')).toBe('Consult')
   })
@@ -82,6 +90,7 @@ describe('AnnotaMD UI localization', () => {
     const componentPaths = [
       resolve(renderer, 'components/annotamd/CommentPane.vue'),
       resolve(renderer, 'components/annotamd/DocumentCommentFooter.vue'),
+      resolve(renderer, 'components/agent/AgentSelectionPrompt.vue'),
       resolve(renderer, 'components/agent/AgentWorkspacePanel.vue'),
       resolve(renderer, 'components/titleBar/index.vue')
     ]

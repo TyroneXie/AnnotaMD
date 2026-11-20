@@ -195,7 +195,7 @@ const stop = (id: string): void => {
 .annotamd-agent-history-toggle { display: grid; width: 26px; height: 26px; padding: 0; appearance: none; place-items: center; color: var(--annotamd-muted); border: 0; border-radius: 5px; background: transparent; cursor: pointer; }
 .annotamd-agent-history-reference { display: inline-flex; }
 .annotamd-agent-history-toggle:hover, .annotamd-agent-history-toggle.is-open { color: var(--annotamd-text); background: var(--annotamd-fill-soft); }
-.annotamd-agent-history-toggle:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 1px; }
+.annotamd-agent-history-toggle:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 .annotamd-agent-history-toggle :deep(svg) { width: 15px; height: 15px; }
 .annotamd-agent-history { display: grid; gap: 8px; }
 .annotamd-agent-history header { display: flex; align-items: center; justify-content: space-between; }

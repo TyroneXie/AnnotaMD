@@ -19,6 +19,12 @@
 
 import type { IKeyboardLayoutInfo, IKeyboardMapping } from 'native-keymap'
 import type {
+  PiModelsUpdateRequest,
+  PiProviderModelsRequest,
+  PiProviderSaveRequest,
+  PiSettingsState
+} from './piProvider'
+import type {
   MarkdownDocument,
   TabOptions,
   BootstrapEditorConfig,
@@ -58,8 +64,6 @@ import type {
   AiChangeSetResolveRequest,
   AiApprovalResolveRequest,
   AiChangeSetResolveResult,
-  AiCliDetectionRequest,
-  AiCliDetectionResult,
   AiConfigSaveRequest,
   AiConfigSummary,
   AiConnectionTestResult,
@@ -104,9 +108,19 @@ export interface IpcInvokeChannels {
   'annotamd::ai::configs:delete': { args: [configId: string]; ret: boolean }
   'annotamd::ai::configs:test': { args: [configId: string]; ret: AiConnectionTestResult }
   'annotamd::ai::configs:models': { args: [configId: string]; ret: AiModelInfo[] }
-  'annotamd::ai::configs:detect-cli': {
-    args: [request: AiCliDetectionRequest]
-    ret: AiCliDetectionResult
+  'annotamd::pi::settings:get': { args: []; ret: PiSettingsState }
+  'annotamd::pi::provider:save': {
+    args: [request: PiProviderSaveRequest]
+    ret: PiSettingsState
+  }
+  'annotamd::pi::provider:delete': { args: [providerId: string]; ret: PiSettingsState }
+  'annotamd::pi::provider:models': {
+    args: [request: PiProviderModelsRequest]
+    ret: string[]
+  }
+  'annotamd::pi::models:update': {
+    args: [request: PiModelsUpdateRequest]
+    ret: PiSettingsState
   }
   'annotamd::ai::conversations:list': { args: []; ret: AiConversation[] }
   'annotamd::ai::conversations:create': {
@@ -131,6 +145,11 @@ export interface IpcInvokeChannels {
     ret: AiChangeSetResolveResult
   }
   'annotamd::ai::send': { args: [request: AiSendRequest]; ret: AiSendResult }
+  'annotamd::ai::selection:run': {
+    args: [request: import('./aiSelection').AiSelectionRequest]
+    ret: import('./aiSelection').AiSelectionResult
+  }
+  'annotamd::ai::selection:stop': { args: [requestId: string]; ret: boolean }
   'annotamd::ai::stop': { args: [request: AiStopRequest]; ret: boolean }
   'annotamd::ai::approvals:resolve': { args: [request: AiApprovalResolveRequest]; ret: boolean }
   'annotamd::ai::retry': { args: [request: AiRetryRequest]; ret: AiSendResult }

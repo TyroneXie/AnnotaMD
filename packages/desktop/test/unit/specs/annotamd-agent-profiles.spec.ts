@@ -1,50 +1,37 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const repoRoot = resolve(__dirname, '../../../../..')
 const read = (path: string): string => readFileSync(resolve(repoRoot, path), 'utf8')
 
-describe('AnnotaMD CLI Agent configurations', () => {
-  it('uses the DBX-style configuration cards for local CLI Agents only', () => {
+describe('AnnotaMD agent settings', () => {
+  it('manages providers and their models instead of local CLI Agents', () => {
     const source = read('packages/desktop/src/renderer/src/prefComponents/agent/index.vue')
 
-    expect(source).toContain('@click="openConfigDialog"')
-    expect(source).toContain('settings.saveConfig(configInput()')
-    expect(source).toContain("config.kind === 'cli'")
-    expect(source).toContain('config.executablePath')
-    expect(source).toContain('config.isDefault')
-    expect(source).toContain('settings.testConfig(config.id)')
-    expect(source).not.toContain("kind: 'api'")
-    expect(source).not.toContain('apiKey')
-    expect(source).not.toContain('baseUrl')
-    expect(source).not.toContain('<direct-agent-setup')
-    expect(source).not.toContain('<cli-agent-profiles')
-    expect(source).not.toContain('agentReadiness')
+    expect(source).toContain("annotamd::pi::provider:save")
+    expect(source).toContain("annotamd::pi::provider:delete")
+    expect(source).toContain("annotamd::pi::provider:models")
+    expect(source).toContain("annotamd::pi::models:update")
+    expect(source).toContain('preferences.agent.provider.interfaceType')
+    expect(source).toContain('preferences.agent.provider.baseUrl')
+    expect(source).toContain('preferences.agent.provider.modelsUrl')
+    expect(source).toContain('preferences.agent.provider.requestFormat')
+    expect(source).toContain('preferences.agent.provider.authStyle')
+    expect(source).toContain('preferences.agent.provider.addProvider')
+    expect(source).toContain('preferences.agent.provider.addModel')
+    expect(source).toContain('<AiProviderLogo')
+    expect(source).not.toContain('detect-cli')
+    expect(source).not.toContain('executablePath')
   })
 
-  it('keeps dormant API credentials out of renderer persistence', () => {
-    const settings = read('packages/desktop/src/renderer/src/store/aiSettings.ts')
-    const page = read('packages/desktop/src/renderer/src/prefComponents/agent/index.vue')
+  it('no longer ships the multi-CLI host or its detection layer', () => {
+    expect(existsSync(resolve(repoRoot, 'packages/desktop/src/main/ai/CliAgentHost.ts'))).toBe(false)
+    expect(existsSync(resolve(repoRoot, 'packages/desktop/src/main/ai/CliExecutableDetector.ts'))).toBe(false)
+    expect(existsSync(resolve(repoRoot, 'packages/desktop/src/renderer/src/prefComponents/agent/AgentIntegrationGuide.vue'))).toBe(false)
 
-    expect(page).not.toContain('apiKey')
-    expect(settings).toContain('apiKey: undefined')
-    expect(settings).not.toContain('apiKeyConfigured: config.apiKey')
-    expect(settings).not.toContain('JSON.stringify(this.configs')
-  })
-
-  it('shows manual Skill and MCP setup without inspecting external Agent apps', () => {
-    const page = read('packages/desktop/src/renderer/src/prefComponents/agent/index.vue')
-    const guide = read(
-      'packages/desktop/src/renderer/src/prefComponents/agent/AgentIntegrationGuide.vue'
-    )
-
-    expect(page).toContain('<AgentIntegrationGuide />')
-    expect(guide).toContain("invoke('annotamd::mcp-clients::manual-guide')")
-    expect(guide).toContain('data-testid="copy-agent-mcp-config"')
-    expect(guide).toContain('data-testid="copy-agent-skill-content"')
-    expect(guide).toContain("t('preferences.agent.aiWorkspace.commentAgentLink')")
-    expect(guide).not.toContain("invoke('annotamd::mcp-clients::inspect')")
-    expect(guide).not.toContain("invoke('annotamd::mcp-clients::configure')")
+    const service = read('packages/desktop/src/main/ai/AiWorkspaceService.ts')
+    expect(service).not.toContain('cliHost')
+    expect(service).not.toContain('detectCliExecutable')
   })
 })

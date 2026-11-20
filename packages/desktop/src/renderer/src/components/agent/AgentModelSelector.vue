@@ -4,19 +4,27 @@
     placement="top-end"
     :width="280"
     trigger="click"
+    popper-class="annotamd-agent-model-popover"
     @update:visible="emit('update:visible', $event)"
     @show="loadModels"
   >
     <template #reference>
-      <button type="button" class="annotamd-agent-model-trigger" data-testid="ai-model-selector">
+      <button
+        type="button"
+        class="annotamd-agent-model-trigger"
+        data-testid="ai-model-selector"
+        :title="triggerTitle"
+        :aria-label="triggerTitle"
+      >
         <AiProviderLogo
           v-if="selectedConfig"
           :provider="selectedConfig.provider"
           :label="providerLabel(selectedConfig.provider)"
+          :class="{ 'is-pi': selectedConfig.provider === 'pi' }"
         />
         <el-icon v-else><Setting /></el-icon>
         <span class="annotamd-agent-model-label">{{ triggerLabel }}</span>
-        <el-icon><ArrowDown /></el-icon>
+        <el-icon aria-hidden="true"><ArrowDown /></el-icon>
       </button>
     </template>
     <div class="annotamd-agent-model-menu">
@@ -30,32 +38,15 @@
           {{ t('annotamd.agentWorkspace.openSettings') }}
         </button>
       </div>
-      <div v-else class="annotamd-agent-provider-list">
-        <button
-          v-for="config in configs"
-          :key="config.id"
-          type="button"
-          :class="{ 'is-active': config.id === selection.configId }"
-          :aria-pressed="config.id === selection.configId"
-          @click="selectConfig(config.id)"
-        >
-          <AiProviderLogo :provider="config.provider" :label="providerLabel(config.provider)" />
-          <span class="annotamd-agent-model-config-copy">
-            <b>{{ config.name }}</b><small>{{ providerLabel(config.provider) }}</small>
-          </span>
-          <el-icon v-if="config.id === selection.configId"><Check /></el-icon>
-        </button>
-      </div>
       <div v-if="selectedConfig" class="annotamd-agent-model-options">
         <label>
           <span>{{ t('annotamd.agentWorkspace.modelId') }}</span>
           <el-select
             ref="modelSelect"
-            :model-value="selection.modelId || selectedConfig.defaultModelId || runtimeModel"
+            :model-value="selection.modelId || selectedConfig.defaultModelId || 'default'"
             size="small"
-            :teleported="false"
             filterable
-            allow-create
+            :teleported="false"
             default-first-option
             :placeholder="runtimeModel || t('annotamd.agentWorkspace.modelId')"
             @change="selectModel"
@@ -89,8 +80,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ArrowDown, Check, Setting } from '@element-plus/icons-vue'
+import { computed, ref, watch } from 'vue'
+import { ArrowDown, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { AiModelInfo, AiProviderId } from '@shared/types/aiWorkspace'
 import { aiProviderOption } from '@shared/types/aiProviderPresets'
@@ -106,22 +97,25 @@ const modelSelect = ref<{ blur: () => void } | null>(null)
 const effortSelect = ref<{ blur: () => void } | null>(null)
 const loadingModels = ref(false)
 const modelError = ref('')
+let loadVersion = 0
 const configs = computed(() => settings.configsForMode('agent'))
 const selection = computed(() => settings.selections.agent)
 const selectedConfig = computed(() => settings.selectedConfig('agent'))
 const selectedModelId = computed(() => (
-  selection.value.modelId || selectedConfig.value?.defaultModelId || props.runtimeModel || ''
+  settings.selectedAgentModel || props.runtimeModel || ''
 ))
 const selectedModel = computed(() => {
-  const modelId = selectedModelId.value === 'default' && props.runtimeModel
-    ? props.runtimeModel
-    : selectedModelId.value
-  return models.value.find(model => model.id === modelId)
+  return models.value.find(model => model.id === selectedModelId.value)
 })
 const effortLevels = computed(() => Array.from(new Set(selectedModel.value?.effortLevels ?? [])))
-const triggerLabel = computed(() => (
+const triggerTitle = computed(() => (
   selectedModelId.value ||
   selectedConfig.value?.name || t('annotamd.agentWorkspace.selectModel')
+))
+const triggerLabel = computed(() => (
+  selectedConfig.value?.provider === 'pi' && selectedModelId.value
+    ? selectedModelId.value.slice(selectedModelId.value.indexOf('/') + 1)
+    : triggerTitle.value
 ))
 const effortId = computed(() => (
   selection.value.effort.kind === 'preset'
@@ -156,36 +150,39 @@ const selectModel = (value: unknown): void => {
   window.setTimeout(() => modelSelect.value?.blur(), 0)
 }
 const loadModels = async(): Promise<void> => {
-  if (!selectedConfig.value) return
-  const configId = selectedConfig.value.id
-  const cached = settings.cachedModels(configId)
+  const version = ++loadVersion
+  const configId = selectedConfig.value?.id
+  const cached = configId ? settings.cachedModels(configId) : []
   models.value = cached
-  loadingModels.value = cached.length === 0
   modelError.value = ''
+  loadingModels.value = Boolean(configId && cached.length === 0)
+  if (!configId) return
   try {
-    models.value = await settings.listModels(configId)
+    const available = await settings.listModels(configId)
+    if (version !== loadVersion) return
+    models.value = available
     resetUnsupportedEffort()
   } catch (error) {
-    if (models.value.length === 0) models.value = []
-    modelError.value = error instanceof Error ? error.message : String(error)
+    if (version === loadVersion) modelError.value = error instanceof Error ? error.message : String(error)
   } finally {
-    loadingModels.value = false
+    if (version === loadVersion) loadingModels.value = false
   }
 }
-const selectConfig = (id: string): void => {
-  settings.selectConfig('agent', id)
-  settings.selectEffort('agent', { kind: 'provider-default' })
-  void loadModels()
-}
+watch(() => settings.agentReadiness, () => {
+  if (props.visible) void loadModels()
+})
 const openSettings = (): void => {
   window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
 }
 </script>
 
 <style scoped>
-.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; max-width: 180px; height: 25px; align-items: center; gap: 5px; padding: 0 8px; color: var(--annotamd-muted); border: 1px solid var(--annotamd-border); border-radius: 6px; background: var(--annotamd-surface); font-size: 11px; cursor: pointer; }
+.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); font-size: 11px; font-weight: 550; cursor: pointer; }
+.annotamd-agent-model-trigger:hover, .annotamd-agent-model-trigger[aria-expanded="true"] { border-color: var(--annotamd-border); }
 .annotamd-agent-model-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-model-trigger > .el-icon { flex: none; }
 .annotamd-agent-model-trigger :deep(svg) { width: 13px; height: 13px; }
+:global(body.dark .annotamd-agent-model-trigger .is-pi img) { filter: invert(1); }
 .annotamd-agent-model-menu { display: grid; min-width: 0; }
 .annotamd-agent-model-menu > header { display: grid; gap: 2px; padding: 1px 2px 10px; border-bottom: 1px solid var(--annotamd-border-soft); }
 .annotamd-agent-model-menu > header strong { color: var(--annotamd-text); font-size: 13px; line-height: 1.35; }
@@ -193,15 +190,6 @@ const openSettings = (): void => {
 .annotamd-agent-model-empty { display: grid; justify-items: center; gap: 8px; padding: 12px 0 2px; }
 .annotamd-agent-model-empty p { margin: 0; color: var(--annotamd-muted); font-size: 11px; text-align: center; }
 .annotamd-agent-model-empty button { min-height: 28px; padding: 0 10px; color: #fff; border: 0; border-radius: 6px; background: var(--annotamd-blue); font-size: 11px; cursor: pointer; }
-.annotamd-agent-provider-list { display: grid; gap: 5px; padding: 9px 0; }
-.annotamd-agent-provider-list > button { display: grid; min-height: 48px; grid-template-columns: 30px minmax(0, 1fr) 18px; align-items: center; gap: 9px; padding: 6px 9px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border); border-radius: 8px; background: var(--annotamd-surface); text-align: left; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
-.annotamd-agent-provider-list > button:hover { border-color: color-mix(in srgb, var(--annotamd-green) 18%, var(--annotamd-border)); background: var(--annotamd-fill-soft); }
-.annotamd-agent-provider-list > button.is-active { border-color: color-mix(in srgb, var(--annotamd-green) 28%, var(--annotamd-border)); background: color-mix(in srgb, var(--annotamd-green) 8%, var(--annotamd-surface)); }
-.annotamd-agent-provider-list > button > :deep(.annotamd-ai-provider-logo) { width: 26px; height: 26px; }
-.annotamd-agent-provider-list > button > svg { width: 15px; height: 15px; color: var(--annotamd-green); }
-.annotamd-agent-model-config-copy { display: grid; min-width: 0; flex: 1; }
-.annotamd-agent-model-config-copy b { overflow: hidden; font-size: 12px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
-.annotamd-agent-model-config-copy small { overflow: hidden; color: var(--annotamd-muted); font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-model-options { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--annotamd-border-soft); }
 .annotamd-agent-model-menu small, .annotamd-agent-model-menu label > span { color: var(--annotamd-muted); font-size: 10px; }
 .annotamd-agent-model-menu small.is-error { color: #ef4444; }
@@ -209,5 +197,5 @@ const openSettings = (): void => {
 .annotamd-agent-model-menu label > span { font-weight: 500; }
 .annotamd-agent-model-menu label :deep(.el-select__wrapper) { min-height: 32px; border-radius: 7px; box-shadow: 0 0 0 1px var(--annotamd-border) inset; }
 .annotamd-agent-model-menu label :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--annotamd-green) inset; }
-.annotamd-agent-model-trigger:focus-visible, .annotamd-agent-model-menu button:focus-visible { outline: 2px solid var(--annotamd-green); outline-offset: 1px; }
+.annotamd-agent-model-trigger:focus-visible, .annotamd-agent-model-menu button:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 </style>

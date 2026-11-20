@@ -139,6 +139,7 @@ export const ko = {
         'Move Up': '위로 이동',
         'Move Down': '아래로 이동',
         'Comment': '댓글',
+        'Ask AI': 'AI에게 묻기',
         'Delete Selection': '선택 영역 삭제',
         'Delete': '단락 삭제',
         // imageToolbar

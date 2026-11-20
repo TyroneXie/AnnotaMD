@@ -438,8 +438,9 @@ export default function annotaMDPiAdapter(pi) {
 
   pi.on('session_start', (_event, ctx) => {
     if (ctx.mode !== 'rpc') return
-    const allTools = ctx.getAllTools()
-    const activeTools = ctx.getActiveTools()
+    // Pi 1.5 moved these from the extension context to the extension API.
+    const allTools = pi.getAllTools()
+    const activeTools = pi.getActiveTools()
     const tools = Object.fromEntries(REQUIRED_TOOL_NAMES.map((name) => {
       const tool = allTools.find((candidate) => candidate.name === name)
       return [name, {

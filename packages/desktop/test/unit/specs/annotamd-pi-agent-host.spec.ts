@@ -1,5 +1,8 @@
 // @vitest-environment node
 
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   PiAgentHost,
@@ -7,6 +10,7 @@ import {
 } from '../../../src/main/ai/PiAgentHost'
 import { AiRunStoppedError, type AiHostEvent, type AiHostRunRequest } from '../../../src/main/ai/AiHost'
 import { hashAgentDocument } from '../../../src/main/agentDocumentBridge/AgentDocumentScopeService'
+import { fetchPiModels, readPiSettings, writePiSettings } from '../../../src/main/ai/PiProviderSettings'
 import {
   decodePiBridgeEnvelope,
   encodePiBridgeEnvelope,
@@ -18,7 +22,7 @@ type RuntimeExitListener = (error: Error) => void
 
 class FakePiRuntime {
   currentState = {
-    model: { provider: 'test', id: 'model' },
+    model: { provider: 'test-endpoint', id: 'test-model' },
     isStreaming: false,
     sessionId: 'session-1'
   }
@@ -31,13 +35,13 @@ class FakePiRuntime {
   private readonly exitListeners = new Set<RuntimeExitListener>()
 
   async start(): Promise<{ readiness: { status: 'ready'; model: string } }> {
-    return { readiness: { status: 'ready', model: 'test/model' } }
+    return { readiness: { status: 'ready', model: 'test-endpoint/test-model' } }
   }
 
   async getAvailableModels(): Promise<Array<{ provider: string; id: string; name?: string }>> {
     return [
-      { provider: 'test', id: 'model', name: 'Test model' },
-      { provider: 'test', id: 'second' }
+      { provider: 'test-endpoint', id: 'test-model', name: 'Test model' },
+      { provider: 'outside-settings', id: 'second' }
     ]
   }
 
@@ -105,18 +109,14 @@ const runRequest = (overrides: Partial<AiHostRunRequest> = {}): AiHostRunRequest
   config: {
     id: 'pi-config',
     provider: 'pi',
-    model: 'test/model',
+    model: 'test-endpoint/test-model',
     reasoningEffort: 'high'
   },
   messages: [{ role: 'user', content: 'Update the heading.' }],
   mode: 'agent',
   permissionMode: 'full-access',
   workspacePath: '/workspace',
-  mcp: {
-    command: 'unused-for-pi',
-    args: [],
-    env: { ANNOTAMD_AGENT_SCOPE_TOKEN: 'scope-token' }
-  },
+  documentScopeToken: 'scope-token',
   ...overrides
 })
 
@@ -125,6 +125,8 @@ const createHarness = (document = snapshot()): {
   scopes: PiAgentDocumentScopes
   runtimes: FakePiRuntime[]
   runtimeOptions: PiRpcProcessOptions[]
+  settingsPath: string
+  keychain: Map<string, string>
 } => {
   const runtimes: FakePiRuntime[] = []
   const runtimeOptions: PiRpcProcessOptions[] = []
@@ -141,9 +143,25 @@ const createHarness = (document = snapshot()): {
       contentHash: hashAgentDocument(proposedMarkdown)
     }))
   }
+  const settingsRoot = mkdtempSync(join(tmpdir(), 'annotamd-pi-host-'))
+  const settingsPath = join(settingsRoot, 'pi-provider.json')
+  const keychain = new Map([['pi-provider:test-endpoint', 'test-key']])
+  writeFileSync(settingsPath, JSON.stringify({
+    name: 'Test endpoint',
+    kind: 'openai',
+    baseUrl: 'https://api.example.com/v1',
+    model: 'test-model'
+  }))
   const host = new PiAgentHost({
     documentScopes: scopes,
     adapterPath: '/app/resources/pi-adapter/adapter.mjs',
+    providerSettingsPath: () => settingsPath,
+    agentDirectory: () => join(settingsRoot, 'agent'),
+    secretStore: {
+      get: async(id) => keychain.get(id) ?? null,
+      set: async() => {},
+      delete: async() => {}
+    },
     inspectPi: async() => ({
       status: 'ready',
       executablePath: '/opt/bin/pi',
@@ -160,7 +178,7 @@ const createHarness = (document = snapshot()): {
       return runtime
     }
   })
-  return { host, scopes, runtimes, runtimeOptions }
+  return { host, scopes, runtimes, runtimeOptions, settingsPath, keychain }
 }
 
 const extensionRequest = (id: string, envelope: Record<string, unknown>): Record<string, unknown> => ({
@@ -182,13 +200,75 @@ describe('PiAgentHost', () => {
     const { host, runtimes, runtimeOptions } = createHarness()
 
     await expect(host.listModels({ id: 'pi', provider: 'pi' })).resolves.toEqual([
-      { id: 'default', displayName: 'Pi default (test/model)', effortLevels: ['off', 'high', 'xhigh'] },
-      { id: 'test/model', displayName: 'Test model', effortLevels: ['off', 'high', 'xhigh'] },
-      { id: 'test/second', displayName: 'test/second', effortLevels: ['off', 'high', 'xhigh'] }
+      { id: 'default', displayName: 'Default (test-endpoint/test-model)', effortLevels: ['off', 'high', 'xhigh'] },
+      { id: 'test-endpoint/test-model', displayName: 'Test model', effortLevels: ['off', 'high', 'xhigh'] }
     ])
     expect(runtimeOptions[0]).toMatchObject({ noSession: true })
     expect(runtimeOptions[0]?.environment).not.toHaveProperty('ANNOTAMD_AGENT_SCOPE_TOKEN')
     expect(runtimes[0]?.disposeCalls).toBe(1)
+  })
+
+  it('requires an enabled provider, its key, and an enabled model to report readiness', async() => {
+    const { host, settingsPath, keychain, runtimeOptions } = createHarness()
+    const provider = {
+      id: 'test-endpoint',
+      name: 'Test endpoint',
+      kind: 'openai',
+      baseUrl: 'https://api.example.com/v1',
+      enabled: true,
+      defaultModel: 'old',
+      models: [{ id: 'old', enabled: false }, { id: 'org/model', enabled: true }]
+    }
+    const save = (...providers: typeof provider[]) => {
+      writeFileSync(settingsPath, JSON.stringify({ providers, defaultProviderId: provider.id }))
+    }
+    save(provider)
+    await expect(host.getReadiness()).resolves.toMatchObject({
+      status: 'ready', modelId: 'test-endpoint/org/model', modelIds: ['test-endpoint/org/model']
+    })
+    await expect(host.run(runRequest({
+      config: { id: 'pi', provider: 'pi', model: 'test-endpoint/old' }
+    }), () => {})).rejects.toThrow('The selected model is unavailable')
+    expect(runtimeOptions).toHaveLength(0)
+    save({ ...provider, models: [{ id: 'old', enabled: false }] })
+    await expect(host.getReadiness()).resolves.toMatchObject({
+      status: 'missing', setupIssue: 'model', modelIds: []
+    })
+    keychain.clear()
+    save(provider)
+    await expect(host.getReadiness()).resolves.toMatchObject({ status: 'needs-auth', setupIssue: 'key' })
+    save({ ...provider, enabled: false })
+    await expect(host.getReadiness()).resolves.toMatchObject({ status: 'missing', setupIssue: 'provider' })
+  })
+
+  it('uses the explicitly configured model-list path and query string', async() => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json({
+      data: [{ id: 'model-a' }]
+    }))
+    await expect(fetchPiModels({
+      id: 'test',
+      name: 'Test',
+      kind: 'openai',
+      baseUrl: 'https://api.example.com/v1',
+      modelsUrl: 'https://api.example.com/catalog?scope=team',
+      enabled: true,
+      models: []
+    }, 'test-key', fetch)).resolves.toEqual(['model-a'])
+    expect(fetch).toHaveBeenCalledExactlyOnceWith('https://api.example.com/catalog?scope=team', {
+      headers: { Accept: 'application/json', Authorization: 'Bearer test-key' }
+    })
+  })
+
+  it('keeps a legacy shared key tied to its original provider when a second provider is added', async() => {
+    const { host, keychain, settingsPath } = createHarness()
+    keychain.clear()
+    keychain.set('pi-provider', 'legacy-key')
+    const settings = await readPiSettings(settingsPath)
+    const other = { ...settings.providers[0]!, id: 'other', name: 'Other', baseUrl: 'https://other.example.com/v1' }
+    await writePiSettings(settingsPath, { ...settings, providers: [...settings.providers, other] })
+    await expect(host.getReadiness()).resolves.toMatchObject({
+      status: 'ready', modelIds: ['test-endpoint/test-model']
+    })
   })
 
   it('routes read/edit through the live Muya scope and accepts the applied proposal immediately', async() => {
@@ -200,11 +280,12 @@ describe('PiAgentHost', () => {
     await vi.waitFor(() => expect(runtime.prompts).toHaveLength(1))
 
     expect(runtimeOptions[0]).toMatchObject({
-      model: 'test/model',
+      // The runtime now always targets the endpoint configured in AnnotaMD.
+      model: 'test-endpoint/test-model',
       thinkingLevel: 'high',
       noSession: true
     })
-    expect(runtime.prompts[0]).toContain('Do not use shell, grep, find, ls, or direct filesystem writes.')
+    expect(runtime.prompts[0]).toContain('Shell, grep, find, ls, and direct filesystem writes are unavailable.')
     runtime.emitMessage(extensionRequest('snapshot-1', {
       v: 1,
       kind: 'snapshot',
@@ -485,7 +566,25 @@ describe('PiAgentHost', () => {
     expect(events).toContainEqual({ type: 'run-stopped', runId: 'run-1' })
   })
 
-  it('maps Pi process failures to run-error and requires the scoped MCP token', async() => {
+  it('runs a selection without a document scope and aborts with the request', async() => {
+    const { host, scopes, runtimes, runtimeOptions } = createHarness()
+    const controller = new AbortController()
+    const result = host.run(runRequest({
+      mode: 'selection',
+      documentScopeToken: undefined,
+      signal: controller.signal
+    }), () => {})
+    const stopped = expect(result).rejects.toBeInstanceOf(AiRunStoppedError)
+    await vi.waitFor(() => expect(runtimes[0]?.prompts).toEqual(['Update the heading.']))
+    expect(runtimeOptions[0]).toMatchObject({ noSession: true, noTools: true })
+    expect(scopes.readDocument).not.toHaveBeenCalled()
+    controller.abort()
+    await stopped
+    expect(runtimes[0]?.abortCalls).toBe(1)
+    expect(runtimes[0]?.disposeCalls).toBe(1)
+  })
+
+  it('maps Pi process failures to run-error and requires document scope for conversations', async() => {
     const { host, runtimes } = createHarness()
     const events: AiHostEvent[] = []
     const result = host.run(runRequest(), event => events.push(event))
@@ -500,7 +599,7 @@ describe('PiAgentHost', () => {
       message: 'Pi exited unexpectedly'
     })
 
-    await expect(host.run(runRequest({ mcp: undefined }), () => {})).rejects.toThrow(
+    await expect(host.run(runRequest({ documentScopeToken: undefined }), () => {})).rejects.toThrow(
       'Pi Agent requires an AnnotaMD document scope token.'
     )
     expect(runtimes).toHaveLength(1)

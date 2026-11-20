@@ -8,6 +8,14 @@
       ref="editorRef"
       class="editor-component"
     />
+    <AgentSelectionPrompt
+      v-if="agentSelection"
+      :key="agentSelection.rangeId"
+      :range="agentSelection.range"
+      :context="agentSelection.context"
+      :apply-replacement="agentSelection.applyReplacement"
+      @close="agentSelection = null"
+    />
     <Teleport
       v-if="documentCommentFooterReady && hasDocumentContent"
       :to="documentCommentFooterTarget"
@@ -73,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive, watch, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
+import { computed, ref, shallowRef, reactive, watch, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
 import log from 'electron-log'
 import {
   Muya,
@@ -152,6 +160,8 @@ import {
   type AgentDocumentTransactionEvent
 } from './agentDocumentTransaction'
 import { useAutoHideScrollbar } from '@/composables/useAutoHideScrollbar'
+import AgentSelectionPrompt from '@/components/agent/AgentSelectionPrompt.vue'
+import type { AiSelectionContext } from '@shared/types/aiSelection'
 
 // Importing the engine entrypoint auto-injects its editor CSS (the muya.ts
 // module imports its stylesheets at load time). Desktop themes still target the
@@ -311,6 +321,15 @@ const resolveEditorFont = (family: string): string =>
 const resolveCodeFont = (family: string): string => `${family}, ${DEFAULT_CODE_FONT_FAMILY}`
 const selectionChange = ref<unknown>(null)
 const editor = ref<MuyaInstance>(null)
+const agentSelection = shallowRef<{
+  rangeId: number
+  range: Range
+  context: AiSelectionContext
+  applyReplacement: (replacement: string) => boolean
+} | null>(null)
+watch([() => currentFile.value?.id, sourceCode], () => {
+  agentSelection.value = null
+})
 const isShowClose = ref(false)
 const dialogTableVisible = ref(false)
 const imageViewerVisible = ref<boolean | null>(null)
@@ -570,6 +589,56 @@ const parsePersistedPath = (key: string): Array<string | number> => key.split('/
   const numeric = Number(part)
   return Number.isInteger(numeric) && String(numeric) === part ? numeric : part
 })
+
+const openAgentSelection = (selection?: AnnotaMDSelection): void => {
+  const muya = editor.value
+  const file = currentFile.value
+  const browserSelection = document.getSelection()
+  if (!muya || !file || !selection?.anchor.key || selection.isCrossBlock ||
+    !browserSelection?.rangeCount || browserSelection.isCollapsed) return
+
+  const range = browserSelection.getRangeAt(0).cloneRange()
+  if (!muya.domNode.contains(range.commonAncestorContainer)) return
+
+  const path = selection.anchor.path ?? parsePersistedPath(selection.anchor.key)
+  const start = Math.min(selection.anchor.offset, selection.focus.offset)
+  const end = Math.max(selection.anchor.offset, selection.focus.offset)
+  muya.flush()
+  const page = muya.editor.scrollPage
+  const block = page?.queryBlock([...path])
+  if (!block?.isContent() || start < 0 || end > block.text.length || start === end) return
+
+  const selectedMarkdown = block.text.slice(start, end)
+  const originalMarkdown = muya.getMarkdown()
+  const topLevelIndex = Number(path[0])
+  const previous = page.find(topLevelIndex - 1)?.domNode?.textContent?.slice(-800) ?? ''
+  const next = page.find(topLevelIndex + 1)?.domNode?.textContent?.slice(0, 800) ?? ''
+  const cursor = { path, start: { offset: start }, end: { offset: end } }
+
+  agentSelection.value = {
+    rangeId: selection.capturedAt,
+    range,
+    context: {
+      documentName: file.filename,
+      blockPath: path.join('/'),
+      startOffset: start,
+      endOffset: end,
+      selectedText: browserSelection.toString() || selection.quote,
+      selectedMarkdown,
+      before: [previous, block.text.slice(0, start)].filter(Boolean).join('\n\n').slice(-800),
+      after: [block.text.slice(end), next].filter(Boolean).join('\n\n').slice(0, 800)
+    },
+    applyReplacement(replacement) {
+      if (currentFile.value?.id !== file.id || editor.value !== muya || sourceCode.value) return false
+      muya.flush()
+      if (muya.getMarkdown() !== originalMarkdown) return false
+      muya.domNode.focus()
+      const applied = muya.replaceTextRangeExact(cursor, selectedMarkdown, replacement)
+      if (applied) muya.flush()
+      return applied
+    }
+  }
+}
 
 // Build a JSON-serializable cursor from the engine selection (drop the live
 // block references so it survives the buffered-state round-trip). `setCursor`
@@ -2421,18 +2490,7 @@ onMounted(() => {
     annotaMDCommentsStore.requestComposer('selection')
   })
 
-  editor.value.on('annotamd-agent-selection', (selection?: AnnotaMDSelection) => {
-    const text = (selection?.exactQuote ?? selection?.quote ?? '').replace(/\s+/g, ' ').trim()
-    if (!text) return
-
-    window.dispatchEvent(new CustomEvent('annotamd:agent-selection-changed', {
-      detail: {
-        documentId: currentFile.value?.id ?? '',
-        text
-      }
-    }))
-    window.dispatchEvent(new CustomEvent('annotamd:open-agent-with-selection'))
-  })
+  editor.value.on('annotamd-agent-selection', openAgentSelection)
 
   editor.value.on('selection-change', (changes: MuyaChange) => {
     const y = (changes.cursorCoords?.y ?? null) as number | null

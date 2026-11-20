@@ -60,6 +60,7 @@ export interface PiRpcProcessOptions {
   model?: string
   thinkingLevel?: string
   noSession?: boolean
+  noTools?: boolean
   spawnProcess?: typeof spawn
 }
 
@@ -242,19 +243,22 @@ export class PiRpcProcessManager {
   private readonly transport: PiJsonlTransport
   private readonly messageListeners = new Set<(message: unknown) => void>()
   private readonly exitListeners = new Set<(error: Error) => void>()
-  private readonly handshakePromise: Promise<PiAdapterHandshake>
-  private resolveHandshake!: (handshake: PiAdapterHandshake) => void
-  private rejectHandshake!: (error: Error) => void
+  private readonly handshakePromise?: Promise<PiAdapterHandshake>
+  private resolveHandshake?: (handshake: PiAdapterHandshake) => void
+  private rejectHandshake?: (error: Error) => void
   private stderr = ''
   private disposed = false
   private exitNotified = false
   private sessionState?: PiRpcSessionState
 
   constructor(private readonly options: PiRpcProcessOptions) {
-    this.handshakePromise = new Promise<PiAdapterHandshake>((resolve, reject) => {
-      this.resolveHandshake = resolve
-      this.rejectHandshake = reject
-    })
+    if (!options.noTools) {
+      this.handshakePromise = new Promise<PiAdapterHandshake>((resolve, reject) => {
+        this.resolveHandshake = resolve
+        this.rejectHandshake = reject
+      })
+      void this.handshakePromise.catch(() => {})
+    }
     const spawnProcess = options.spawnProcess ?? spawn
     this.process = spawnProcess(options.executablePath, [
       ...(options.executableArgs ?? []),
@@ -264,7 +268,11 @@ export class PiRpcProcessManager {
       '--no-skills',
       '--no-prompt-templates',
       '--no-context-files',
-      '--extension', options.adapterPath,
+      // AnnotaMD exposes only its document tools. A shell would let the model
+      // bypass the editor buffer and the per-turn change-set review.
+      ...(options.noTools
+        ? ['--no-tools']
+        : ['--tools', 'read,edit,write', '--extension', options.adapterPath]),
       '--no-approve',
       ...selectionArguments(options)
     ], {
@@ -317,7 +325,7 @@ export class PiRpcProcessManager {
       STARTUP_TIMEOUT_MS,
       'Pi RPC or the AnnotaMD adapter did not become ready in time.'
     )
-    validateHandshake(handshake, this.options.piVersion, this.options.adapterPath)
+    if (handshake) validateHandshake(handshake, this.options.piVersion, this.options.adapterPath)
     const state = responseData<PiRpcSessionState>(stateResponse, 'get_state')
     this.sessionState = state
     const model = state.model?.provider && state.model.id
@@ -331,7 +339,7 @@ export class PiRpcProcessManager {
           ? { executableArgs: this.options.executableArgs }
           : {}),
         version: this.options.piVersion,
-        adapterProtocol: handshake.adapterProtocol,
+        ...(handshake ? { adapterProtocol: handshake.adapterProtocol } : {}),
         model,
         ...(!model ? { message: 'Pi has no active model. Configure or authenticate Pi first.' } : {})
       },
@@ -406,7 +414,7 @@ export class PiRpcProcessManager {
     if (this.disposed) return
     this.disposed = true
     const error = new Error('Pi RPC process disposed')
-    this.rejectHandshake(error)
+    this.rejectHandshake?.(error)
     this.transport.dispose()
     this.process.stderr.off('data', this.handleStderr)
     this.process.off('error', this.handleProcessError)
@@ -418,7 +426,7 @@ export class PiRpcProcessManager {
 
   private readonly handleMessage = (message: unknown): void => {
     const handshake = parseReadyHandshake(message)
-    if (handshake) this.resolveHandshake(handshake)
+    if (handshake) this.resolveHandshake?.(handshake)
     for (const listener of this.messageListeners) listener(message)
   }
 
@@ -429,13 +437,13 @@ export class PiRpcProcessManager {
   }
 
   private readonly handleTransportError = (error: Error): void => {
-    this.rejectHandshake(error)
+    this.rejectHandshake?.(error)
     this.notifyExit(error)
     if (!this.process.killed) this.process.kill('SIGTERM')
   }
 
   private readonly handleProcessError = (error: Error): void => {
-    this.rejectHandshake(error)
+    this.rejectHandshake?.(error)
     this.transport.close(error)
     this.notifyExit(error)
   }
@@ -446,7 +454,7 @@ export class PiRpcProcessManager {
     const error = new Error(
       `Pi RPC exited (${signal ?? code ?? 'unknown'})${detail ? `: ${detail}` : ''}`
     )
-    this.rejectHandshake(error)
+    this.rejectHandshake?.(error)
     this.transport.close(error)
     this.notifyExit(error)
   }

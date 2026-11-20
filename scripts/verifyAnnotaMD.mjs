@@ -86,8 +86,7 @@ const testPacks = {
       'test/unit/specs/annotamd-agent-profiles.spec.ts',
       'test/unit/specs/annotamd-agent-turns.spec.ts',
       'test/unit/specs/annotamd-right-pane.spec.ts',
-      'test/unit/specs/annotamd-comment-skill.spec.ts',
-      'test/unit/specs/mcp-client-initial-render.spec.ts'
+      'test/unit/specs/annotamd-comment-skill.spec.ts'
     ]
   },
   agent: {
@@ -98,11 +97,9 @@ const testPacks = {
       'test/unit/specs/annotamd-pi-rpc-process.spec.ts',
       'test/unit/specs/annotamd-pi-adapter-contract.spec.ts',
       'test/unit/specs/annotamd-pi-agent-host.spec.ts',
-      'test/unit/specs/annotamd-agent-cli-detection.spec.ts',
       'test/unit/specs/annotamd-agent-workspace.spec.ts',
       'test/unit/specs/annotamd-ai-shared-contract.spec.ts',
       'test/unit/specs/annotamd-ai-store.spec.ts',
-      'test/unit/specs/annotamd-ai-hosts.spec.ts',
       'test/unit/specs/annotamd-ai-settings-store.spec.ts',
       'test/unit/specs/annotamd-ai-workspace-service.spec.ts',
       'test/unit/specs/annotamd-agent-document-mcp.spec.ts',

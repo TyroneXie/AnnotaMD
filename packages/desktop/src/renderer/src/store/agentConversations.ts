@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useAiSettingsStore } from './aiSettings'
 import type {
   AiApprovalDecision,
   AiApprovalRequest,
@@ -56,6 +57,7 @@ export const useAgentConversationsStore = defineStore('agentConversations', {
 
     applySnapshot(snapshot: AiWorkspaceSnapshot): void {
       this.readiness = snapshot.readiness
+      useAiSettingsStore().applyAgentReadiness(snapshot.readiness, snapshot.configs)
       this.items = sortConversations(snapshot.conversations)
       this.activeId = snapshot.activeConversationId ?? ''
       this.messages = snapshot.messages
@@ -81,6 +83,9 @@ export const useAgentConversationsStore = defineStore('agentConversations', {
           this.applySnapshot(event.snapshot)
           return
         case 'readiness':
+          if (event.configs) {
+            useAiSettingsStore().applyAgentReadiness(event.readiness, event.configs, true)
+          }
           this.readiness = event.readiness
           return
         case 'conversation-created':

@@ -166,7 +166,9 @@ export const AI_CLI_PROVIDER_PRESETS: Record<AiCliProviderId, AiCliProviderPrese
   },
   'qoder-cli': { id: 'qoder-cli', label: 'Qoder CLI', command: 'qodercli' },
   'grok-cli': { id: 'grok-cli', label: 'Grok CLI', command: 'grok', iconSlug: 'grok' },
-  pi: { id: 'pi', label: 'Pi Coding Agent', command: 'pi', iconSlug: 'pi' }
+  // The runtime is bundled and owned by AnnotaMD; the product name never
+  // appears in the interface.
+  pi: { id: 'pi', label: 'AnnotaMD Agent', command: 'pi', iconSlug: 'pi' }
 }
 
 export interface AiProviderOption {

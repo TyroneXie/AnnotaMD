@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
-import { access, readdir, stat } from 'node:fs/promises'
+import { access, readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { posix, win32 } from 'node:path'
 import { promisify } from 'node:util'
@@ -17,6 +17,12 @@ export interface PiExecutableResolverOptions {
   nodeVersionProbe?: PiNodeVersionProbe
   executableProbe?: PiPathProbe
   fileProbe?: PiPathProbe
+  /**
+   * Pi CLI entry points shipped inside the application. The first one that
+   * exists wins over any installation discovered on the machine, so a user
+   * never has to install Node.js or Pi separately.
+   */
+  bundledCliPaths?: string[]
 }
 
 export interface PiVersionProbeRequest {
@@ -44,6 +50,7 @@ export type PiPathProbe = (pathname: string) => Promise<boolean>
 export interface PiLaunchCommand {
   command: string
   argsPrefix: string[]
+  environment?: Record<string, string>
 }
 
 const execFileAsync = promisify(execFile)
@@ -422,6 +429,55 @@ export const buildManagedPiCliCandidates = (
   return [pathApi.normalize(pathApi.join(packageRoot, ...PI_BUNDLED_CLI_PATH))]
 }
 
+const readPackageVersion = async (filePath: string): Promise<string | undefined> => {
+  try {
+    const parsed = JSON.parse(await readFile(filePath, 'utf8')) as { version?: unknown }
+    return typeof parsed.version === 'string' ? parsePiVersion(parsed.version) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Resolves the Pi runtime shipped inside the application. It is started
+ * through Electron's own binary, so the result never depends on a user
+ * installation of Node.js or Pi.
+ */
+export const inspectBundledPi = async(
+  options: PiExecutableResolverOptions = {}
+): Promise<PiRuntimeReadiness | undefined> => {
+  const platform = options.platform ?? process.platform
+  const pathApi = platform === 'win32' ? win32 : posix
+  const probe = executableProbe(options, platform)
+  for (const candidate of options.bundledCliPaths ?? []) {
+    const cliPath = pathApi.normalize(candidate)
+    if (!await probe(cliPath)) continue
+    // Packaged builds ship package.json beside cli.js; a workspace install
+    // keeps cli.js under dist/bundle inside the package root.
+    const cliDirectory = pathApi.dirname(cliPath)
+    let version = await readPackageVersion(pathApi.join(cliDirectory, 'package.json'))
+    version ??= await readPackageVersion(pathApi.join(cliDirectory, '..', '..', 'package.json'))
+    if (!version || !isMinimumVersion(version)) {
+      return {
+        status: 'incompatible',
+        executablePath: cliPath,
+        ...(version ? { version } : {}),
+        message: version
+          ? `The bundled Pi runtime ${version} is older than the minimum supported version.`
+          : 'The bundled Pi runtime does not report a version.'
+      }
+    }
+    return {
+      status: 'ready',
+      version,
+      executablePath: process.execPath,
+      executableArgs: [cliPath],
+      launchEnvironment: { ELECTRON_RUN_AS_NODE: '1' }
+    }
+  }
+  return undefined
+}
+
 export const resolvePiLaunchCommand = async(
   piExecutablePath: string,
   options: PiExecutableResolverOptions = {}
@@ -453,6 +509,9 @@ export const inspectPiExecutable = async(
 ): Promise<PiRuntimeReadiness> => {
   const platform = options.platform ?? process.platform
   const pathApi = platform === 'win32' ? win32 : posix
+  const bundled = await inspectBundledPi(options)
+  if (bundled) return bundled
+
   const explicitPath = (options.environment ?? process.env).ANNOTAMD_PI_PATH?.trim()
   if (explicitPath && !pathApi.isAbsolute(explicitPath)) {
     return {

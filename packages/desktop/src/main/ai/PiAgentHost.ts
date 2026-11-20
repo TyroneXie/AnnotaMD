@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import type { AiApprovalDecision, AiPermissionMode } from '@shared/types/aiWorkspace'
+import type { AiApprovalDecision, AiPermissionMode, AiReadiness } from '@shared/types/aiWorkspace'
 import {
   AiRunStoppedError,
   aiHostError,
@@ -11,6 +11,16 @@ import {
   type AiHostModel,
   type AiHostRunRequest
 } from './AiHost'
+import type { AiSecretStore } from './AiSecretStore'
+import {
+  defaultModelFor,
+  defaultProviderFor,
+  enabledModels,
+  providerEnvKey,
+  readPiProviderKeys,
+  readPiSettings,
+  writePiAgentDirectory
+} from './PiProviderSettings'
 import { hashAgentDocument } from '../agentDocumentBridge/AgentDocumentScopeService'
 import {
   createPiProcessEnvironment,
@@ -66,6 +76,16 @@ type PiInspector = (
 export interface PiAgentHostOptions {
   documentScopes: PiAgentDocumentScopes
   adapterPath: string | (() => string)
+  /** Where the user's endpoint configuration lives. */
+  providerSettingsPath: () => string
+  /** Pi's agent directory; AnnotaMD owns it so the user's own ~/.pi is untouched. */
+  agentDirectory: () => string
+  secretStore: AiSecretStore
+  /**
+   * Pi CLI entry points shipped with the application. Resolved lazily because
+   * the packaged location only exists once Electron is ready.
+   */
+  bundledCliPaths?: string[] | (() => string[])
   inspectPi?: PiInspector
   createEnvironment?: typeof createPiProcessEnvironment
   createRuntime?: (options: PiRpcProcessOptions) => PiAgentRuntime
@@ -194,12 +214,24 @@ const addTokenCount = (current: number | undefined, next: number | undefined): n
   next === undefined ? current : Math.min((current ?? 0) + next, Number.MAX_SAFE_INTEGER)
 )
 
-const promptForMessages = (messages: readonly AiHostMessage[]): string => {
+const promptForMessages = (
+  messages: readonly AiHostMessage[],
+  activeDocument?: AiHostRunRequest['activeDocument'],
+  selectionText?: string
+): string => {
   const conversation = messages.map(message => `${message.role.toUpperCase()}:\n${message.content}`).join('\n\n')
+  const documentPath = activeDocument?.filePath?.trim()
   return [
     'You are running inside AnnotaMD.',
-    'Use only the active read, edit, and write tools for document access.',
-    'Do not use shell, grep, find, ls, or direct filesystem writes.',
+    ...(documentPath
+      ? [
+        `The active document is ${documentPath}.`,
+        'Read it with the read tool using that exact path, and use edit or write with the same path.'
+      ]
+      : []),
+    'Use only the read, edit, and write tools for document access.',
+    'Shell, grep, find, ls, and direct filesystem writes are unavailable.',
+    ...(selectionText ? [`Current editor selection (document text):\n${selectionText}`] : []),
     conversation
   ].filter(Boolean).join('\n\n')
 }
@@ -212,9 +244,6 @@ const reasoningLevel = (config: AiHostConfig): string | undefined => {
 const configuredEnvironment = (config: AiHostConfig): NodeJS.ProcessEnv => {
   const environment: NodeJS.ProcessEnv = { ...process.env, ...config.environment }
   delete environment[SCOPE_ENVIRONMENT_KEY]
-  if (config.executablePath?.trim()) {
-    environment.ANNOTAMD_PI_PATH = config.executablePath.trim()
-  }
   return environment
 }
 
@@ -226,6 +255,10 @@ export class PiAgentHost implements PiHostAdapter {
 
   private readonly documentScopes: PiAgentDocumentScopes
   private readonly adapterPath: () => string
+  private readonly providerSettingsPath: () => string
+  private readonly agentDirectory: () => string
+  private readonly secretStore: AiSecretStore
+  private readonly bundledCliPaths: () => string[]
   private readonly inspectPi: PiInspector
   private readonly createEnvironment: typeof createPiProcessEnvironment
   private readonly createRuntime: (options: PiRpcProcessOptions) => PiAgentRuntime
@@ -236,15 +269,47 @@ export class PiAgentHost implements PiHostAdapter {
     this.documentScopes = options.documentScopes
     const adapterPath = options.adapterPath
     this.adapterPath = typeof adapterPath === 'function' ? adapterPath : () => adapterPath
+    this.providerSettingsPath = options.providerSettingsPath
+    this.agentDirectory = options.agentDirectory
+    this.secretStore = options.secretStore
+    const bundledCliPaths = options.bundledCliPaths ?? []
+    this.bundledCliPaths = typeof bundledCliPaths === 'function'
+      ? bundledCliPaths
+      : () => bundledCliPaths
     this.inspectPi = options.inspectPi ?? inspectInstalledPi
     this.createEnvironment = options.createEnvironment ?? createPiProcessEnvironment
     this.createRuntime = options.createRuntime ?? (runtimeOptions => new PiRpcProcessManager(runtimeOptions))
   }
 
+  private async loadProviders() {
+    const settings = await readPiSettings(this.providerSettingsPath())
+    const keys = await readPiProviderKeys(settings, this.secretStore)
+    const enabled = settings.providers.filter(provider => provider.enabled)
+    const keyed = enabled.filter(provider => keys.has(provider.id))
+    const providers = keyed.filter(provider => enabledModels(provider).length > 0)
+    const primary = defaultProviderFor(providers, settings.defaultProviderId)
+    const defaultModel = primary && defaultModelFor(primary.models, primary.defaultModel)
+    const modelIds = providers.flatMap(provider => (
+      enabledModels(provider).map(model => `${provider.id}/${model.id}`)
+    ))
+    const readiness: AiReadiness = primary && defaultModel
+      ? { status: 'ready', modelId: `${primary.id}/${defaultModel}`, modelIds }
+      : !enabled.length
+        ? { status: 'missing', setupIssue: 'provider', modelIds }
+        : !keyed.length
+          ? { status: 'needs-auth', setupIssue: 'key', modelIds }
+          : { status: 'missing', setupIssue: 'model', modelIds }
+    return { providers, keys, primary, readiness }
+  }
+
+  async getReadiness(): Promise<AiReadiness> {
+    return (await this.loadProviders()).readiness
+  }
+
   async listModels(config: AiHostConfig): Promise<AiHostModel[]> {
     this.assertProvider(config)
     const workspacePath = process.cwd()
-    const runtime = await this.prepareRuntime(config, workspacePath, false)
+    const { runtime, modelIds } = await this.prepareRuntime(config, workspacePath, false)
     try {
       const { readiness } = await runtime.start()
       const [available, effortLevels] = await Promise.all([
@@ -260,12 +325,14 @@ export class PiAgentHost implements PiHostAdapter {
       }
       add({
         id: 'default',
-        displayName: readiness.model ? `Pi default (${readiness.model})` : 'Pi default',
+        displayName: readiness.model ? `Default (${readiness.model})` : 'Default',
         effortLevels
       })
       for (const model of available) {
+        const id = `${model.provider}/${model.id}`
+        if (!modelIds.includes(id)) continue
         add({
-          id: `${model.provider}/${model.id}`,
+          id,
           displayName: model.name ?? `${model.provider}/${model.id}`,
           effortLevels
         })
@@ -299,8 +366,9 @@ export class PiAgentHost implements PiHostAdapter {
     if (this.active.has(request.runId)) {
       throw new Error(`Pi run ${request.runId} is already active.`)
     }
-    const scopeToken = request.mcp?.env?.[SCOPE_ENVIRONMENT_KEY]?.trim()
-    if (!scopeToken) {
+    const selectionRun = request.mode === 'selection'
+    const scopeToken = request.documentScopeToken?.trim() ?? ''
+    if (!selectionRun && !scopeToken) {
       throw new Error('Pi Agent requires an AnnotaMD document scope token.')
     }
     const workspacePath = request.workspacePath?.trim() || process.cwd()
@@ -308,8 +376,12 @@ export class PiAgentHost implements PiHostAdapter {
     let removeMessageListener: (() => void) | undefined
     let removeExitListener: (() => void) | undefined
     let active: ActivePiRun | undefined
+    const stopOnAbort = (): void => { void this.stop(request.runId) }
     try {
-      runtime = await this.prepareRuntime(request.config, workspacePath, true)
+      request.signal?.throwIfAborted()
+      const prepared = await this.prepareRuntime(request.config, workspacePath, true, selectionRun)
+      runtime = prepared.runtime
+      request.signal?.throwIfAborted()
       const completion = new Promise<void>((resolveCompletion, rejectCompletion) => {
         active = {
           runId: request.runId,
@@ -326,7 +398,9 @@ export class PiAgentHost implements PiHostAdapter {
           reject: rejectCompletion
         }
       })
+      void completion.catch(() => {})
       this.active.set(request.runId, active!)
+      request.signal?.addEventListener('abort', stopOnAbort, { once: true })
       removeMessageListener = runtime.onMessage((message) => {
         void this.handleRuntimeMessage(request.runId, active!, message).catch(error => {
           this.failRun(active!, error)
@@ -338,7 +412,10 @@ export class PiAgentHost implements PiHostAdapter {
       if (readiness.status !== 'ready') {
         throw new Error(readiness.message ?? 'Pi has no active model.')
       }
-      await runtime.prompt(promptForMessages(request.messages))
+      request.signal?.throwIfAborted()
+      await runtime.prompt(selectionRun
+        ? request.messages.map(message => message.content).join('\n\n')
+        : promptForMessages(request.messages, request.activeDocument, request.selectionText))
       await completion
       if (active!.stopped) throw new AiRunStoppedError()
       emit({ type: 'response-complete', runId: request.runId })
@@ -357,6 +434,7 @@ export class PiAgentHost implements PiHostAdapter {
       emit(aiHostError(request.runId, 'PI_AGENT_ERROR', error))
       throw error
     } finally {
+      request.signal?.removeEventListener('abort', stopOnAbort)
       this.rejectApprovalsForRun(request.runId)
       removeMessageListener?.()
       removeExitListener?.()
@@ -410,19 +488,45 @@ export class PiAgentHost implements PiHostAdapter {
   private async prepareRuntime(
     config: AiHostConfig,
     workspacePath: string,
-    applySelection: boolean
-  ): Promise<PiAgentRuntime> {
+    applySelection: boolean,
+    noTools = false
+  ): Promise<{ runtime: PiAgentRuntime; modelIds: string[] }> {
+    const { providers, keys, primary, readiness: configured } = await this.loadProviders()
+    if (!primary || !configured.modelId) {
+      throw new Error(configured.setupIssue === 'key'
+        ? 'Save an API key for an enabled provider in AnnotaMD settings.'
+        : configured.setupIssue === 'model'
+          ? 'Fetch or enable a model for a provider in AnnotaMD settings.'
+          : 'Add or enable an AI provider in AnnotaMD settings.')
+    }
     const resolverOptions: PiExecutableResolverOptions = {
       environment: configuredEnvironment(config),
-      currentDirectory: workspacePath
+      currentDirectory: workspacePath,
+      bundledCliPaths: this.bundledCliPaths()
     }
     const readiness = await this.inspectPi(true, resolverOptions)
     if (readiness.status !== 'ready' || !readiness.executablePath || !readiness.version) {
-      throw new Error(readiness.message ?? 'Pi is not installed or is incompatible with AnnotaMD.')
+      throw new Error(readiness.message ?? 'The built-in agent runtime is missing or incomplete.')
     }
+    const modelIds = configured.modelIds ?? []
+    const pickedModel = applySelection ? config.model?.trim() : undefined
+    let modelRef = configured.modelId
+    if (pickedModel && pickedModel !== 'default') {
+      modelRef = modelIds.includes(pickedModel) ? pickedModel : `${primary.id}/${pickedModel}`
+      if (!modelIds.includes(modelRef)) {
+        throw new Error('The selected model is unavailable. Choose an enabled model.')
+      }
+    }
+    const agentDirectory = this.agentDirectory()
+    await writePiAgentDirectory(agentDirectory, { providers })
     const environment = await this.createEnvironment(readiness.executablePath, resolverOptions)
     delete environment[SCOPE_ENVIRONMENT_KEY]
-    return this.createRuntime({
+    Object.assign(environment, readiness.launchEnvironment)
+    environment.PI_CODING_AGENT_DIR = agentDirectory
+    for (const provider of providers) {
+      environment[providerEnvKey(provider.id)] = keys.get(provider.id)
+    }
+    const runtime = this.createRuntime({
       executablePath: readiness.executablePath,
       ...(readiness.executableArgs?.length ? { executableArgs: readiness.executableArgs } : {}),
       piVersion: readiness.version,
@@ -430,9 +534,11 @@ export class PiAgentHost implements PiHostAdapter {
       adapterPath: this.adapterPath(),
       environment,
       noSession: true,
-      ...(applySelection && config.model ? { model: config.model } : {}),
+      ...(noTools ? { noTools } : {}),
+      model: modelRef,
       ...(applySelection && reasoningLevel(config) ? { thinkingLevel: reasoningLevel(config) } : {})
     })
+    return { runtime, modelIds }
   }
 
   private async handleRuntimeMessage(

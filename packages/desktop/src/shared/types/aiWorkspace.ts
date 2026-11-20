@@ -174,6 +174,8 @@ export interface AiReadiness {
   status: AiReadinessStatus
   configId?: string
   modelId?: string
+  modelIds?: string[]
+  setupIssue?: 'provider' | 'key' | 'model'
   version?: string
   message?: string
 }
@@ -412,7 +414,7 @@ export interface AiRetryRequest {
 
 export type AiWorkspaceEvent =
   | { type: 'snapshot'; snapshot: AiWorkspaceSnapshot }
-  | { type: 'readiness'; readiness: AiReadiness }
+  | { type: 'readiness'; readiness: AiReadiness; configs?: AiConfigSummary[] }
   | { type: 'conversation-created'; conversation: AiConversation }
   | { type: 'conversation-updated'; conversation: AiConversation }
   | { type: 'conversation-deleted'; conversationId: string }

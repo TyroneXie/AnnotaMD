@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { AiSelectionRequest } from '../../src/shared/types/aiSelection'
 import {
   clearRendererErrors,
   expectNoRendererErrors,
@@ -6,15 +7,16 @@ import {
   sendIpcToRenderer
 } from './helpers'
 
-const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: string) => {
-  await page.evaluate((selectedPhrase) => {
+const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: string, occurrence = 0) => {
+  await page.evaluate(({ selectedPhrase, occurrence }) => {
     const root = document.querySelector('.editor-component') as HTMLElement | null
     if (!root) throw new Error('editor unavailable')
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-    let textNode = walker.nextNode() as Text | null
-    while (textNode && !textNode.data.includes(selectedPhrase)) {
-      textNode = walker.nextNode() as Text | null
+    const matches: Text[] = []
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      if (node.data.includes(selectedPhrase)) matches.push(node)
     }
+    const textNode = matches[occurrence]
     if (!textNode) throw new Error('selection target unavailable')
     const start = textNode.data.indexOf(selectedPhrase)
     const range = document.createRange()
@@ -29,33 +31,61 @@ const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: 
       bubbles: true,
       cancelable: true
     }))
-  }, phrase)
+  }, { selectedPhrase: phrase, occurrence })
   await page.waitForTimeout(150)
 }
 
-test('opens Agent from the selection toolbar, carries context, and adds text attachments', async() => {
-  const phrase = 'Select this exact phrase for Agent.'
+test('answers and edits the exact selection in place without opening Agent chat', async() => {
+  const phrase = 'the old wording'
+  const replacement = 'the revised wording'
   const { app, page } = await launchWithMarkdown(
-    `# Agent context\n\n${phrase}\n`,
+    `# Agent context\n\nFirst has ${phrase}.\n\nSecond has ${phrase}.\n`,
     { suppressErrorDialog: true }
   )
 
   try {
+    await app.evaluate(({ ipcMain }, replacement) => {
+      ipcMain.removeHandler('annotamd::ai::selection:run')
+      ipcMain.handle('annotamd::ai::selection:run', (_event, request: AiSelectionRequest) => {
+        const { instruction, context } = request
+        if (instruction === 'Where is this?') return { kind: 'answer', text: context.before }
+        if (context.selectedMarkdown !== 'the old wording' || context.blockPath !== '2/text') {
+          throw new Error(`Unexpected selection position ${context.blockPath}`)
+        }
+        return { kind: 'replacement', text: 'Updated the wording.', replacementMarkdown: replacement }
+      })
+    }, replacement)
     await clearRendererErrors(app)
-    await selectEditorPhrase(page, phrase)
+    await selectEditorPhrase(page, phrase, 1)
     const agentAction = page.locator('.mu-format-picker li.annotamd_agent')
+    const prompt = page.locator('.agent-selection-prompt')
+    const editor = page.locator('.editor-component')
     await expect(agentAction).toBeVisible()
     await agentAction.click()
+    await expect(prompt).toBeVisible()
+    await expect(prompt.locator('textarea')).toBeFocused()
+    await expect(prompt.locator('blockquote')).toHaveText(phrase)
+    await expect(page.locator('.annotamd-agent-workspace')).toHaveCount(0)
 
-    const pane = page.locator('.annotamd-agent-workspace')
-    await expect(pane.getByTestId('ai-selection-context')).toContainText(phrase)
+    await prompt.locator('textarea').fill('Where is this?')
+    await prompt.locator('textarea').press('Enter')
+    await expect(prompt.locator('.result-text')).toContainText('Second has')
+    await expect(prompt.locator('.result-status')).toHaveCount(0)
+    await prompt.locator('textarea').press('Escape')
+    await expect(prompt).toHaveCount(0)
 
-    await pane.getByTestId('ai-attachment-input').setInputFiles({
-      name: 'reference.md',
-      mimeType: 'text/markdown',
-      buffer: Buffer.from('# Reference\nSupporting material.')
-    })
-    await expect(pane.getByTestId('ai-attachments')).toContainText('reference.md')
+    await selectEditorPhrase(page, phrase, 1)
+    await agentAction.click()
+    await prompt.locator('textarea').fill('Rewrite this')
+    await prompt.locator('textarea').press('Enter')
+    await expect(prompt.locator('.result-text')).toHaveText('Updated the wording.')
+    await expect(prompt.locator('.result-status')).toBeVisible()
+    await expect(editor).toContainText(`First has ${phrase}.`)
+    await expect(editor).toContainText(`Second has ${replacement}.`)
+    await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
+    await expect(editor).toContainText(`Second has ${phrase}.`)
+    await page.keyboard.press('Escape')
+    await expect(prompt).toHaveCount(0)
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

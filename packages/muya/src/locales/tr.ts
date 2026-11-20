@@ -122,6 +122,7 @@ export const tr = {
         'Move Up': 'Yukarı taşı',
         'Move Down': 'Aşağı taşı',
         'Comment': 'Yorum',
+        'Ask AI': 'Yapay zekâya sor',
         'Delete Selection': 'Seçimi sil',
         'Delete': 'Sil',
         // imageToolbar

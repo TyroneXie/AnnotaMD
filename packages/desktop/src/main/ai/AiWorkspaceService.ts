@@ -34,6 +34,8 @@ import type {
 } from '@shared/types/aiWorkspace'
 import { aiApiProviderPreset } from '@shared/types/aiProviderPresets'
 import { matchesAiConversationIdentity } from '@shared/types/aiConversationIdentity'
+import type { AiSelectionRequest, AiSelectionResult } from '@shared/types/aiSelection'
+import { parseSelectionResult, selectionPrompt } from './selectionPrompt'
 import {
   AiRunStoppedError,
   type AiHost,
@@ -53,7 +55,6 @@ import type {
   AgentDocumentTurnSnapshot
 } from '@shared/types/agentDocumentTransactions'
 import type { AiStore, AiRuntimeConfig } from './AiStore'
-import { detectCliExecutable } from './CliExecutableDetector'
 
 export interface AiWorkspaceOwner {
   id: number
@@ -84,7 +85,6 @@ export interface AiDocumentTransactionProvider {
 export interface AiWorkspaceServiceOptions {
   store: AiStore
   apiHost: AiHost
-  cliHost: AiHost
   piHost: AiHost
   now?: () => number
   createId?: () => string
@@ -110,6 +110,7 @@ interface ActiveRun {
   host: AiHost
   filePath?: string
   scopeToken?: string
+  selectionText?: string
   activeDocument?: {
     documentId: string
     documentUri: string
@@ -227,7 +228,6 @@ const safeText = (value: unknown): string => {
 export class AiWorkspaceService {
   private readonly store: AiStore
   private readonly apiHost: AiHost
-  private readonly cliHost: AiHost
   private readonly piHost: AiHost
   private readonly now: () => number
   private readonly createId: () => string
@@ -238,11 +238,11 @@ export class AiWorkspaceService {
   private documentTransactions?: AiDocumentTransactionProvider
   private readonly owners = new Map<number, AiWorkspaceOwner>()
   private readonly active = new Map<string, ActiveRun>()
+  private readonly selectionRuns = new Map<string, { ownerId: number; controller: AbortController }>()
 
   constructor(options: AiWorkspaceServiceOptions) {
     this.store = options.store
     this.apiHost = options.apiHost
-    this.cliHost = options.cliHost
     this.piHost = options.piHost
     this.now = options.now ?? Date.now
     this.createId = options.createId ?? randomUUID
@@ -268,9 +268,10 @@ export class AiWorkspaceService {
   async getSnapshot(owner: AiWorkspaceOwner): Promise<AiWorkspaceSnapshot> {
     this.track(owner)
     const activeConversationId = this.store.getActiveConversationId()
-    const configs = await this.store.listConfigSummaries()
+    const readiness = await this.getReadiness()
+    const configs = await this.visibleConfigs(readiness)
     return {
-      readiness: await this.getReadiness(),
+      readiness,
       configs,
       conversations: this.store.listConversations(),
       ...(activeConversationId ? { activeConversationId } : {}),
@@ -285,7 +286,8 @@ export class AiWorkspaceService {
 
   async listConfigs(owner: AiWorkspaceOwner): Promise<AiConfigSummary[]> {
     this.track(owner)
-    return await this.store.listConfigSummaries()
+    const readiness = this.piHost.getReadiness ? await this.getReadiness() : undefined
+    return await this.visibleConfigs(readiness)
   }
 
   getPreferences(owner: AiWorkspaceOwner): AiWorkspacePreferences {
@@ -308,19 +310,41 @@ export class AiWorkspaceService {
     return summary
   }
 
+  private async ensurePiConfig(): Promise<string> {
+    const configs = await this.store.listConfigSummaries()
+    const existing = configs.find(config => config.kind === 'cli' && config.provider === 'pi')
+    if (existing?.enabled) return existing.id
+    const saved = await this.store.saveConfig({
+      id: existing?.id ?? 'pi-agent-default',
+      enabled: true,
+      input: {
+        kind: 'cli',
+        name: 'AnnotaMD Agent',
+        provider: 'pi',
+        supportsNativeResume: true
+      }
+    })
+    return saved.id
+  }
+
+  async notifyPiSettingsChanged(): Promise<void> {
+    const readiness = await this.getReadiness()
+    this.emit({ type: 'readiness', readiness, configs: await this.visibleConfigs(readiness) })
+  }
+
+  private async visibleConfigs(readiness?: AiReadiness): Promise<AiConfigSummary[]> {
+    const configs = await this.store.listConfigSummaries()
+    return this.piHost.getReadiness
+      ? configs.filter(config => config.kind === 'api' || config.id === readiness?.configId)
+        .map(config => config.kind === 'cli' ? { ...config, defaultModelId: undefined } : config)
+      : configs
+  }
+
   async deleteConfig(owner: AiWorkspaceOwner, id: string): Promise<boolean> {
     this.track(owner)
     const deleted = await this.store.deleteConfig(id)
     if (deleted) this.emit({ type: 'readiness', readiness: await this.getReadiness() })
     return deleted
-  }
-
-  async detectCli(
-    owner: AiWorkspaceOwner,
-    request: AiCliDetectionRequest
-  ): Promise<AiCliDetectionResult> {
-    this.track(owner)
-    return detectCliExecutable(request)
   }
 
   async listModels(owner: AiWorkspaceOwner, configId: string): Promise<AiModelInfo[]> {
@@ -514,6 +538,51 @@ export class AiWorkspaceService {
     return this.store.deleteTemplate(id)
   }
 
+  async runSelection(ownerId: number, request: AiSelectionRequest): Promise<AiSelectionResult> {
+    const instruction = request.instruction?.trim()
+    if (!request.requestId || !instruction || !request.context?.selectedMarkdown) {
+      throw new Error('Select text and enter an instruction.')
+    }
+    if (this.selectionRuns.has(request.requestId)) {
+      throw new Error('This selection request is already running.')
+    }
+    const controller = new AbortController()
+    this.selectionRuns.set(request.requestId, { ownerId, controller })
+    try {
+      const readiness = await this.getReadiness()
+      if (readiness.status !== 'ready' || !readiness.configId) {
+        throw new Error('Finish configuring an enabled AI provider, API key and model in Agent settings.')
+      }
+      const config = await this.requireConfig(readiness.configId, 'cli')
+      if (config.provider !== 'pi') throw new Error('Selection requests require the built-in Agent.')
+      const modelId = request.modelId && readiness.modelIds?.includes(request.modelId)
+        ? request.modelId
+        : readiness.modelId
+      const runId = this.createId()
+      controller.signal.throwIfAborted()
+      const output = await this.piHost.run({
+        runId,
+        conversationId: runId,
+        config: this.toHostConfig(config, modelId),
+        mode: 'selection',
+        workspacePath: this.agentWorkspacePath,
+        messages: [{ role: 'user', content: selectionPrompt({ ...request, instruction }) }],
+        signal: controller.signal
+      }, () => {})
+      controller.signal.throwIfAborted()
+      return parseSelectionResult(output)
+    } finally {
+      this.selectionRuns.delete(request.requestId)
+    }
+  }
+
+  stopSelection(ownerId: number, requestId: string): boolean {
+    const run = this.selectionRuns.get(requestId)
+    if (!run || run.ownerId !== ownerId) return false
+    run.controller.abort()
+    return true
+  }
+
   async send(
     owner: AiWorkspaceOwner,
     request: AiSendRequest,
@@ -524,8 +593,17 @@ export class AiWorkspaceService {
     this.track(owner)
     const text = request.text.trim()
     if (!text) throw new Error('Message text is required.')
+    const readiness = request.selection.mode === 'agent' && this.piHost.getReadiness
+      ? await this.getReadiness()
+      : undefined
+    if (readiness && readiness.status !== 'ready') {
+      throw new Error('Finish configuring an enabled AI provider, API key and model in Agent settings.')
+    }
+    if (readiness && request.selection.configId && request.selection.configId !== readiness.configId) {
+      throw new Error('This Agent configuration is unavailable. Select a model from the built-in Agent.')
+    }
     const config = await this.requireConfig(
-      request.selection.configId,
+      readiness?.configId ?? request.selection.configId,
       request.selection.mode === 'ask' ? 'api' : 'cli'
     )
     if (request.selection.mode === 'ask' && config.kind !== 'api') {
@@ -560,7 +638,9 @@ export class AiWorkspaceService {
       mode: request.selection.mode,
       configId: config.id,
       provider: config.provider,
-      modelId: request.selection.modelId ?? config.defaultModelId,
+      modelId: request.selection.modelId === 'default' || !request.selection.modelId
+        ? readiness?.modelId ?? request.selection.modelId ?? config.defaultModelId
+        : request.selection.modelId,
       effort: request.selection.effort,
       permissionMode: request.selection.permissionMode ?? 'request',
       templateIds: request.selection.templateIds,
@@ -608,8 +688,8 @@ export class AiWorkspaceService {
     let runRequest = request
     try {
       if (conversation.mode === 'agent') {
-        if (!this.prepareAgentRun) throw new Error('AnnotaMD document Agent bridge is not ready.')
-        await this.prepareAgentRun()
+        if (!this.documentScopes) throw new Error('AnnotaMD document Agent bridge is not ready.')
+        if (config.provider !== 'pi') await this.prepareAgentRun?.()
         if (
           request.filePath &&
           request.documentId &&
@@ -645,7 +725,9 @@ export class AiWorkspaceService {
         }
         scopeToken = this.issueDocumentScope(windowId, conversation.id, turnId, runRequest)
       }
-      const mcp = scopeToken ? this.createMcpLaunchSpec!(scopeToken, config.provider) : undefined
+      const mcp = scopeToken && config.provider !== 'pi'
+        ? this.createMcpLaunchSpec?.(scopeToken, config.provider)
+        : undefined
       const userMessage = this.store.addMessage({
         conversationId: conversation.id,
         role: 'user',
@@ -684,6 +766,7 @@ export class AiWorkspaceService {
         host,
         ...(runRequest.filePath ? { filePath: runRequest.filePath } : {}),
         ...(scopeToken ? { scopeToken } : {}),
+        ...(runRequest.selectionText ? { selectionText: runRequest.selectionText } : {}),
         ...(runRequest.documentId && runRequest.documentUri
           ? {
               activeDocument: {
@@ -850,13 +933,14 @@ export class AiWorkspaceService {
   }
 
   dispose(): void {
+    for (const run of this.selectionRuns.values()) run.controller.abort()
+    this.selectionRuns.clear()
     for (const run of this.active.values()) {
       if (run.scopeToken) this.documentScopes?.revokeScope(run.scopeToken)
       void run.host.stop(run.turnId)
     }
     this.active.clear()
     this.apiHost.dispose()
-    this.cliHost.dispose()
     this.piHost.dispose()
     this.store.close()
     this.owners.clear()
@@ -902,6 +986,9 @@ export class AiWorkspaceService {
           : {}),
         ...(active.activeDocument ? { activeDocument: active.activeDocument } : {}),
         permissionMode: conversation.permissionMode,
+        ...(config.provider === 'pi' && active.scopeToken
+          ? { documentScopeToken: active.scopeToken, selectionText: active.selectionText }
+          : {}),
         ...(mcp ? { mcp } : {}),
         ...(attachments.length ? { attachments } : {})
       }, event => this.onHostEvent(active, event))
@@ -1279,7 +1366,7 @@ export class AiWorkspaceService {
     turnId: string,
     request: AiSendRequest
   ): string {
-    if (!this.documentScopes || !this.createMcpLaunchSpec) {
+    if (!this.documentScopes) {
       throw new Error('AnnotaMD document Agent bridge is not ready.')
     }
     let document: AgentDocumentSnapshot | undefined
@@ -1337,7 +1424,7 @@ export class AiWorkspaceService {
 
   private hostFor(config: AiRuntimeConfig): AiHost {
     if (config.provider === 'pi') return this.piHost
-    return config.kind === 'api' ? this.apiHost : this.cliHost
+    return config.kind === 'api' ? this.apiHost : this.piHost
   }
 
   private toHostConfig(
@@ -1371,6 +1458,12 @@ export class AiWorkspaceService {
   }
 
   private async getReadiness(): Promise<AiReadiness> {
+    if (this.piHost.getReadiness) {
+      const readiness = await this.piHost.getReadiness()
+      return readiness.status === 'ready'
+        ? { ...readiness, configId: await this.ensurePiConfig() }
+        : readiness
+    }
     const configs = await this.store.listConfigSummaries()
     const usable = configs.find(config => (
       config.enabled && (

@@ -29,7 +29,7 @@
         <span aria-hidden="true"><el-icon><Setting /></el-icon></span>
         <div>
           <strong>{{ t('annotamd.agentWorkspace.setupTitle') }}</strong>
-          <p>{{ t('annotamd.agentWorkspace.setupDescription.agent') }}</p>
+          <p>{{ t(`annotamd.agentWorkspace.setupDescription.${conversations.readiness.setupIssue ?? 'agent'}`) }}</p>
         </div>
         <button type="button" data-testid="ai-open-settings" @click="openAgentSettings">
           {{ t('annotamd.agentWorkspace.openSettings') }}
@@ -153,13 +153,15 @@ const suggestedPrompts = computed(() => suggestedPromptKeys.value.map(key => (
 )))
 
 const selectedConfig = computed(() => settings.selectedConfig('agent'))
-const selectedModel = computed(() => (
-  settings.selections.agent.modelId || selectedConfig.value?.defaultModelId
-))
+const selectedModel = computed(() => settings.selectedAgentModel)
 const canSend = computed(() => Boolean(
-  selectedConfig.value && !conversations.loading && !conversations.running
+  selectedConfig.value && conversations.readiness.status === 'ready' &&
+  !conversations.loading && !conversations.running
 ))
-const setupRequired = computed(() => !settings.loading && !selectedConfig.value)
+const setupRequired = computed(() => (
+  !settings.loading && !conversations.loading &&
+  (!selectedConfig.value || Boolean(conversations.readiness.setupIssue))
+))
 const deleteCurrentDisabled = computed(() => Boolean(
   !conversations.activeId || conversations.running ||
   conversations.changeSets.some(changeSet => changeSet.status === 'applied-unreviewed')
@@ -168,10 +170,8 @@ const displayedStatus = computed(() => {
   if (conversations.running) return 'running'
   if (conversations.loading || settings.loading) return 'initializing'
   if (conversations.error || settings.error) return 'error'
-  if (!selectedConfig.value) return 'missing'
-  return conversations.readiness.status === 'needs-auth' && selectedConfig.value.kind === 'api'
-    ? 'needs-auth'
-    : 'ready'
+  if (conversations.readiness.status === 'ready' && !selectedConfig.value) return 'missing'
+  return conversations.readiness.status
 })
 const conversationTitle = computed(() => (
   conversations.activeConversation?.title || t('annotamd.agentWorkspace.newConversationTitle')
@@ -190,7 +190,7 @@ const plainEffort = (effort: AiEffortSelection): AiEffortSelection => {
 const selection = computed<AiWorkspaceSelection>(() => ({
   mode: 'agent',
   configId: settings.selections.agent.configId,
-  modelId: settings.selections.agent.modelId,
+  modelId: selectedModel.value,
   effort: plainEffort(settings.selections.agent.effort),
   permissionMode: settings.selections.agent.permissionMode,
   templateIds: []
@@ -241,8 +241,12 @@ const selectConversation = async(id: string): Promise<void> => {
   await conversations.select(id)
   const conversation = conversations.activeConversation
   if (!conversation || conversation.mode !== 'agent') return
+  if (!settings.configsForMode('agent').some(config => config.id === conversation.configId)) return
   settings.selectConfig('agent', conversation.configId)
-  settings.selectModel('agent', conversation.modelId)
+  const modelIds = settings.agentReadiness?.modelIds
+  settings.selectModel('agent', !modelIds || modelIds.includes(conversation.modelId ?? '')
+    ? conversation.modelId
+    : undefined)
   if (conversation.effort) settings.selectEffort('agent', conversation.effort)
 }
 
@@ -333,16 +337,69 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.annotamd-agent-workspace { display: flex; box-sizing: border-box; width: 100%; height: 100%; min-width: 0; padding-top: var(--titleBarHeight); flex-direction: column; color: var(--annotamd-text); background: var(--annotamd-surface); user-select: text; }
-.annotamd-agent-timeline { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 12px; padding: 14px; overflow: auto; background: var(--annotamd-surface-soft); }
+.annotamd-agent-workspace,
+:global(.annotamd-agent-permission-menu),
+:global(.annotamd-agent-model-popover),
+:global(.annotamd-agent-history-popover) {
+  --annotamd-surface: var(--editorBgColor);
+  --annotamd-text: var(--editorColor);
+  --annotamd-ink: var(--editorColor);
+  --annotamd-muted: color-mix(in srgb, var(--editorColor) 78%, var(--editorBgColor));
+  --annotamd-surface-soft: color-mix(in srgb, var(--editorColor) 3%, var(--editorBgColor));
+  --annotamd-fill-soft: color-mix(in srgb, var(--editorColor) 7%, var(--editorBgColor));
+  --annotamd-border: color-mix(in srgb, var(--editorColor) 19%, var(--editorBgColor));
+  --annotamd-border-soft: color-mix(in srgb, var(--editorColor) 12%, var(--editorBgColor));
+  --annotamd-agent-accent: var(--highlightThemeColor);
+}
+
+.annotamd-agent-workspace {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding-top: var(--titleBarHeight);
+  flex-direction: column;
+  color: var(--annotamd-text);
+  background: var(--annotamd-surface-soft);
+  user-select: text;
+}
+
+.annotamd-agent-timeline {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--annotamd-border) transparent;
+}
+
+:global(.annotamd-agent-model-popover.el-popper),
+:global(.annotamd-agent-history-popover.el-popper) {
+  --el-bg-color-overlay: var(--annotamd-surface);
+  --el-border-color-light: var(--annotamd-border);
+  --el-text-color-regular: var(--annotamd-text);
+  --el-text-color-primary: var(--annotamd-text);
+  border-color: var(--annotamd-border);
+  border-radius: 9px;
+}
+
+:global(.annotamd-agent-model-popover .el-popper__arrow::before),
+:global(.annotamd-agent-history-popover .el-popper__arrow::before) {
+  border-color: var(--annotamd-border);
+  background: var(--annotamd-surface);
+}
 .annotamd-agent-error { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 8px 9px; color: #b42318; border: 1px solid color-mix(in srgb, #ef4444 25%, var(--annotamd-border)); border-radius: 7px; background: color-mix(in srgb, #ef4444 7%, var(--annotamd-surface)); font-size: 10px; line-height: 1.45; }
 .annotamd-agent-error button { flex: none; padding: 2px 5px; color: inherit; border: 0; background: transparent; cursor: pointer; text-decoration: underline; }
-.annotamd-agent-setup { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 8px 10px; padding: 11px; border: 1px solid color-mix(in srgb, var(--annotamd-blue) 22%, var(--annotamd-border)); border-radius: 9px; background: var(--annotamd-surface); box-shadow: 0 1px 3px color-mix(in srgb, #000 4%, transparent); }
-.annotamd-agent-setup > span { display: grid; width: 34px; height: 34px; grid-row: 1 / span 2; place-items: center; color: var(--annotamd-blue); border-radius: 9px; background: color-mix(in srgb, var(--annotamd-blue) 9%, transparent); }
+.annotamd-agent-setup { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 8px 10px; padding: 11px; border: 1px solid var(--annotamd-border); border-radius: 9px; background: var(--annotamd-surface); }
+.annotamd-agent-setup > span { display: grid; width: 34px; height: 34px; grid-row: 1 / span 2; place-items: center; color: var(--annotamd-text); border-radius: 8px; background: var(--annotamd-fill-soft); }
 .annotamd-agent-setup > span :deep(svg) { width: 17px; height: 17px; }
 .annotamd-agent-setup > div { min-width: 0; }
 .annotamd-agent-setup strong { font-size: 12px; }
 .annotamd-agent-setup p { margin: 3px 0 0; color: var(--annotamd-muted); font-size: 10px; line-height: 1.45; }
-.annotamd-agent-setup button { grid-column: 2; justify-self: start; min-height: 28px; padding: 0 10px; color: #fff; border: 0; border-radius: 6px; background: var(--annotamd-blue); font-size: 11px; cursor: pointer; }
-.annotamd-agent-setup button:focus-visible, .annotamd-agent-error button:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 2px; }
+.annotamd-agent-setup button { grid-column: 2; justify-self: start; min-height: 28px; padding: 0 10px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border); border-radius: 6px; background: var(--annotamd-fill-soft); font-size: 11px; cursor: pointer; }
+.annotamd-agent-setup button:focus-visible, .annotamd-agent-error button:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 2px; }
 </style>

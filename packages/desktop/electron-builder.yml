@@ -60,6 +60,12 @@ extraResources:
     to: pi-adapter
     filter:
       - '**/*'
+  # Pi runtime staged by scripts/stagePiRuntime.mjs: the app ships its own
+  # agent runtime, so no user installation of Pi or Node.js is required.
+  - from: resources/pi
+    to: pi
+    filter:
+      - '**/*'
   - from: build/icons
     to: icons # ends up at resources/icons/
     filter:

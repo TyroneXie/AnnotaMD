@@ -79,6 +79,22 @@
 
     <compound>
       <template #head>
+        <h6 class="title">{{ t('preferences.agent.provider.appearanceTitle') }}</h6>
+      </template>
+      <template #children>
+        <range
+          :description="t('preferences.agent.provider.agentFontSize')"
+          :value="agentFontSize"
+          :min="10"
+          :max="18"
+          :step="1"
+          :on-change="(value) => onSelectChange('agentFontSize', value)"
+        />
+      </template>
+    </compound>
+
+    <compound>
+      <template #head>
         <h6 class="title">{{ t('preferences.editor.textEditor.iconTheme') }}</h6>
       </template>
       <template #children>
@@ -214,7 +230,8 @@ const {
   codeFontFamily,
   codeBlockLineNumbers,
   wrapCodeBlocks,
-  trimUnnecessaryCodeBlockEmptyLines
+  trimUnnecessaryCodeBlockEmptyLines,
+  agentFontSize
 } = storeToRefs(preferenceStore)
 
 const hoveredTheme = computed(() =>

@@ -57,23 +57,6 @@ describe('AnnotaMD preference styling', () => {
     expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--highlightThemeColor\);/s)
   })
 
-  it('uses a flat DBX-style AI configuration list', () => {
-    const agent = readRepoFile(
-      'packages/desktop/src/renderer/src/prefComponents/agent/index.vue'
-    )
-    const guide = readRepoFile(
-      'packages/desktop/src/renderer/src/prefComponents/agent/AgentIntegrationGuide.vue'
-    )
-
-    expect(agent).toContain("'is-default': config.isDefault")
-    expect(agent).toMatch(/\.pref-ai-section\s*\{[^}]*gap:\s*18px;[^}]*\}/s)
-    expect(agent).toMatch(/\.pref-ai-config-list\s*\{[^}]*gap:\s*8px;[^}]*\}/s)
-    expect(agent).toContain('grid-template-areas: "icon title actions" "icon summary result";')
-    expect(agent).toMatch(/\.pref-ai-test-result\s*\{[^}]*grid-area:\s*result;[^}]*text-align:\s*right;/s)
-    expect(agent).toMatch(/\.pref-ai-config-card\.is-default\s*\{[^}]*box-shadow:\s*inset 0 0 0 1px var\(--highlightThemeColor\);/s)
-    expect(guide).toMatch(/\.pref-agent-guide\s*\{[^}]*border-top:\s*1px solid var\(--editorColor10\);/s)
-  })
-
   it('uses compact shared control spacing', () => {
     const controls = ['bool', 'range', 'select', 'textBox', 'fontTextBox'].map((name) =>
       readRepoFile(`packages/desktop/src/renderer/src/prefComponents/common/${name}/index.vue`)

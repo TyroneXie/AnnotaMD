@@ -112,7 +112,7 @@ describe('AnnotaMD unified AI comment turns', () => {
     expect(turnStore).toContain('await conversations.select(result.conversationId, true)')
     expect(turnStore).toContain("useLayoutStore().SET_LAYOUT({ rightColumn: 'agent', showSideBar: true })")
     expect(turnStore).toContain("settings.selectedConfig('agent')")
-    expect(turnStore).toContain('modelId: settings.selections.agent.modelId')
+    expect(turnStore).toContain('modelId: settings.selectedAgentModel')
     for (const relativePath of [
       'packages/desktop/src/renderer/src/components/annotamd/CommentPane.vue',
       'packages/desktop/src/renderer/src/components/annotamd/DocumentCommentFooter.vue'

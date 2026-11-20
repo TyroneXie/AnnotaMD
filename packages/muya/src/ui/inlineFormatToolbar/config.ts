@@ -83,7 +83,7 @@ const icons = [
     },
     {
         type: 'annotamd_agent',
-        tooltip: 'Agent',
+        tooltip: 'Ask AI',
         shortcut: '',
         label: '',
     },

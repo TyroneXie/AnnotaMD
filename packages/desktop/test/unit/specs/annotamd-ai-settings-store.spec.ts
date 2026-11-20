@@ -85,17 +85,17 @@ describe('AnnotaMD AI renderer settings', () => {
     expect(store.selections.ask.configId).toBe(selected.id)
   })
 
-  it('exposes config tests in every DBX-style card and badges the persisted default', () => {
+  it('offers model management per provider independently of the persisted default', () => {
     const source = readFileSync(resolve(
       __dirname,
       '../../../src/renderer/src/prefComponents/agent/index.vue'
     ), 'utf8')
 
-    expect(source).toContain('v-if="config.isDefault"')
-    expect(source).not.toContain('isSelectedDefault(config)')
-    expect(source.match(/@click="testConfig\(config\)"/g)).toHaveLength(1)
-    expect(source).toContain("settings.testConfig(config.id)")
-    expect(source).toContain('v-for="config in agentConfigs"')
+    expect(source).toContain('v-for="provider in providers"')
+    expect(source).toContain('v-if="provider.id === settings.defaultProviderId"')
+    expect(source).toContain('@click="manageModels(provider)"')
+    expect(source).toContain('provider.id === managedProviderId.value')
+    expect(source).toContain('@click="fetchModels(activeProvider)"')
   })
 
   it('offers every CLI provider from the current DBX migration baseline', () => {
@@ -123,15 +123,12 @@ describe('AnnotaMD AI renderer settings', () => {
       __dirname,
       '../../../src/renderer/src/prefComponents/agent/index.vue'
     ), 'utf8')
-    expect(settingsSource).toContain('applyProviderPreset')
-    expect(settingsSource).toContain('<AiProviderLogo')
-    expect(settingsSource).toContain('data-testid="ai-cli-one-click-configure"')
+    expect(settingsSource).toContain("annotamd::pi::provider:save")
     expect(settingsSource).not.toContain('AI_MAX_API_RETRIES_MIN')
     expect(settingsSource).not.toContain('saveMaxApiRetries')
     expect(settingsSource).not.toContain("settings.setDefaultMode('ask')")
-    expect(settingsSource).not.toContain("kind: 'api'")
     expect(settingsSource).not.toContain('AgentTemplateSelector')
-    expect(settingsSource).toContain('<AgentIntegrationGuide />')
+    expect(settingsSource).not.toContain('detect-cli')
   })
 
   it('deduplicates model discovery and serves the cached list on later opens', async() => {

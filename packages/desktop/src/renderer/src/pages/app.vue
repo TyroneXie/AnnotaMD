@@ -81,7 +81,7 @@ import AnnotaMDCommentPane from '@/components/annotamd/CommentPane.vue'
 import { subscribeAgentDocumentTransactionIpc } from '@/components/agent/agentDocumentTransactionIpc'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
-import { DUAL_SIDE_PANE_MIN_WIDTH, useLayoutStore } from '@/store/layout'
+import { useLayoutStore } from '@/store/layout'
 import { useListenForMainStore } from '@/store/listenForMain'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
@@ -241,14 +241,6 @@ const captureAgentSelection = (event: Event): void => {
   agentSelectionText.value = detail.text
 }
 
-const openAgentWithSelection = (): void => {
-  if (window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH) {
-    annotaMDCommentsStore.setPaneVisible(false)
-    rightPaneStore.closeIf('comments')
-  }
-  layoutStore.SET_LAYOUT({ rightColumn: 'agent', showSideBar: true })
-}
-
 watch(commentPaneVisible, (visible) => {
   if (visible) {
     rightPaneStore.openComments()
@@ -330,7 +322,6 @@ const setupDragDropHandler = (): void => {
 }
 onMounted(async () => {
   window.addEventListener('annotamd:agent-selection-changed', captureAgentSelection)
-  window.addEventListener('annotamd:open-agent-with-selection', openAgentWithSelection)
   stopAgentDocumentTransactionIpc = subscribeAgentDocumentTransactionIpc({
     editorAvailable: () => hasCurrentFile.value && !sourceCode.value
   })
@@ -396,7 +387,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('annotamd:agent-selection-changed', captureAgentSelection)
-  window.removeEventListener('annotamd:open-agent-with-selection', openAgentWithSelection)
   stopCommentPaneResize?.()
   stopAgentDocumentTransactionIpc?.()
   stopAgentDocumentTransactionIpc = null

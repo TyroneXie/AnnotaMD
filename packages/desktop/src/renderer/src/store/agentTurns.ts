@@ -121,6 +121,9 @@ export const useAgentTurnsStore = defineStore('agentTurns', {
       readinessListening = true
       void this.refreshReadiness()
       window.electron.ipcRenderer.on('annotamd::ai::event', (_event, event: AiWorkspaceEvent) => {
+        if (event.type === 'readiness' && event.configs) {
+          useAiSettingsStore().applyAgentReadiness(event.readiness, event.configs)
+        }
         if (event.type === 'readiness' || event.type === 'snapshot') {
           void this.refreshReadiness()
         }
@@ -190,7 +193,7 @@ export const useAgentTurnsStore = defineStore('agentTurns', {
       if (!selectedConfig) {
         this.errorByComment = {
           ...this.errorByComment,
-          [commentId]: '请先在 Agent 设置中添加并选择 CLI Agent'
+          [commentId]: '请先在 Agent 设置中启用供应商并配置 API Key 和模型'
         }
         return null
       }
@@ -215,7 +218,7 @@ export const useAgentTurnsStore = defineStore('agentTurns', {
         },
         selection: {
           configId: selectedConfig.id,
-          modelId: settings.selections.agent.modelId,
+          modelId: settings.selectedAgentModel,
           effort: settings.selections.agent.effort,
           permissionMode: settings.selections.agent.permissionMode
         },

@@ -1,6 +1,11 @@
 <template>
   <footer class="annotamd-agent-composer">
     <div class="annotamd-agent-compose-box">
+      <div class="annotamd-agent-context" :title="workspacePath || undefined">
+        <el-icon aria-hidden="true"><FolderOpened /></el-icon>
+        <span>{{ t('annotamd.agentWorkspace.workspace') }}</span>
+        <code>{{ workspaceLabel }}</code>
+      </div>
       <div v-if="selectionText" class="annotamd-agent-selection" data-testid="ai-selection-context">
         <span>{{ t('annotamd.agentWorkspace.selectionContext') }}</span>
         <strong :title="selectionText">{{ selectionText }}</strong>
@@ -33,7 +38,7 @@
       <textarea
         :value="modelValue"
         data-testid="ai-composer"
-        rows="3"
+        rows="2"
         :placeholder="t('annotamd.agentWorkspace.placeholder')"
         :disabled="inputDisabled"
         @input="onInput"
@@ -51,6 +56,16 @@
           accept="image/png,image/jpeg,image/gif,image/webp,.txt,.text,.md,.markdown,.csv,.tsv,.json,.yaml,.yml,.xml,.log"
           @change="onFilesSelected"
         >
+        <AgentModelSelector
+          :runtime-model="runtimeModel"
+          :visible="activePopup === 'model'"
+          @update:visible="setPopupVisible('model', $event)"
+        />
+        <AgentPermissionSelector
+          :provider="provider"
+          :visible="activePopup === 'permission'"
+          @update:visible="setPopupVisible('permission', $event)"
+        />
         <button
           type="button"
           class="annotamd-agent-attach-action"
@@ -60,19 +75,8 @@
           :disabled="inputDisabled || running"
           @click="fileInput?.click()"
         >
-          <el-icon><Plus /></el-icon>
+          <el-icon><Paperclip /></el-icon>
         </button>
-        <span class="is-spacer" />
-        <AgentPermissionSelector
-          :provider="provider"
-          :visible="activePopup === 'permission'"
-          @update:visible="setPopupVisible('permission', $event)"
-        />
-        <AgentModelSelector
-          :runtime-model="runtimeModel"
-          :visible="activePopup === 'model'"
-          @update:visible="setPopupVisible('model', $event)"
-        />
         <button
           v-if="running"
           type="button"
@@ -96,17 +100,11 @@
         </button>
       </div>
     </div>
-    <div class="annotamd-agent-context">
-      <span>{{ t('annotamd.agentWorkspace.workspace') }}</span>
-      <code :title="workspacePath || undefined">
-        {{ workspaceLabel }}
-      </code>
-    </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { Close, Document, Picture, Plus, Top, VideoPause } from '@element-plus/icons-vue'
+import { Close, Document, FolderOpened, Paperclip, Picture, Top, VideoPause } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AiAttachment, AiProviderId } from '@shared/types/aiWorkspace'
@@ -241,9 +239,9 @@ const onKeydown = (event: KeyboardEvent): void => {
 </script>
 
 <style scoped>
-.annotamd-agent-composer { display: grid; flex: none; gap: 7px; padding: 10px 11px; border-top: 1px solid var(--annotamd-border-soft); background: var(--annotamd-surface); }
-.annotamd-agent-compose-box { overflow: hidden; border: 1px solid var(--annotamd-border); border-radius: 8px; background: var(--annotamd-surface); box-shadow: 0 1px 3px color-mix(in srgb, #000 4%, transparent); }
-.annotamd-agent-compose-box:focus-within { border-color: color-mix(in srgb, var(--annotamd-blue) 55%, var(--annotamd-border)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--annotamd-blue) 12%, transparent); }
+.annotamd-agent-composer { flex: none; padding: 4px 12px 12px; }
+.annotamd-agent-compose-box { display: grid; min-width: 0; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); }
+.annotamd-agent-compose-box:focus-within { border-color: var(--annotamd-agent-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--annotamd-agent-accent) 22%, transparent); }
 .annotamd-agent-selection { display: grid; grid-template-columns: auto minmax(0, 1fr) 22px; align-items: center; gap: 6px; margin: 8px 8px 0; padding: 5px 6px 5px 8px; color: var(--annotamd-blue); border-left: 3px solid var(--annotamd-blue); border-radius: 4px; background: color-mix(in srgb, var(--annotamd-blue) 8%, var(--annotamd-surface)); font-size: 10px; }
 .annotamd-agent-selection strong { overflow: hidden; color: var(--annotamd-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-selection button, .annotamd-agent-attachments button { display: grid; width: 22px; height: 22px; padding: 0; place-items: center; color: var(--annotamd-muted); border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
@@ -254,21 +252,22 @@ const onKeydown = (event: KeyboardEvent): void => {
 .annotamd-agent-attachments > span > svg { width: 13px; height: 13px; flex: none; }
 .annotamd-agent-attachments strong { overflow: hidden; max-width: 150px; color: var(--annotamd-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-attachment-error { margin: 6px 9px 0; color: #b42318; font-size: 10px; line-height: 1.4; }
-.annotamd-agent-compose-box textarea { box-sizing: border-box; width: 100%; min-height: 72px; padding: 10px 11px 6px; resize: none; color: var(--annotamd-text); border: 0; outline: none; background: transparent; font: inherit; font-size: 12px; line-height: 1.55; }
+.annotamd-agent-compose-box textarea { box-sizing: border-box; width: 100%; min-width: 0; min-height: 60px; padding: 7px 11px; resize: none; color: var(--annotamd-text); border: 0; outline: none; background: transparent; font: inherit; font-size: var(--annotamd-agent-font-size, 12px); line-height: 1.5; }
 .annotamd-agent-compose-box textarea::placeholder { color: var(--annotamd-muted); }
-.annotamd-agent-compose-toolbar { display: grid; min-width: 0; grid-template-columns: 30px minmax(4px, 1fr) minmax(92px, .9fr) minmax(86px, 1.1fr) 30px; align-items: center; gap: 5px; padding: 4px 6px 6px; }
+.annotamd-agent-compose-toolbar { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) max-content 28px 30px; align-items: center; gap: 5px; padding: 4px 7px 7px; }
 .annotamd-agent-file-input { display: none; }
-.annotamd-agent-attach-action { display: grid; width: 30px; height: 30px; padding: 0; place-items: center; color: var(--annotamd-text); border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
+.annotamd-agent-attach-action { display: grid; width: 28px; height: 28px; padding: 0; place-items: center; color: var(--annotamd-muted); border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
 .annotamd-agent-attach-action:hover { background: var(--annotamd-fill-soft); }
 .annotamd-agent-attach-action:disabled { opacity: .35; cursor: not-allowed; }
 .annotamd-agent-attach-action svg { width: 16px; height: 16px; }
-.annotamd-agent-compose-toolbar :deep(.annotamd-agent-model-trigger) { width: 100%; max-width: none; justify-content: flex-start; }
+.annotamd-agent-compose-toolbar :deep(.annotamd-agent-model-trigger) { width: 100%; justify-content: flex-start; }
 .annotamd-agent-compose-toolbar :deep(.annotamd-agent-model-label) { flex: 1; text-align: left; }
-.annotamd-agent-primary-action { display: grid; width: 30px; height: 30px; flex: none; padding: 0; place-items: center; color: #fff; border: 0; border-radius: 50%; background: var(--annotamd-blue); cursor: pointer; }
+.annotamd-agent-primary-action { display: grid; width: 30px; height: 30px; padding: 0; place-items: center; color: #fff; border: 0; border-radius: 8px; background: color-mix(in srgb, var(--annotamd-agent-accent) 74%, #000); cursor: pointer; }
 .annotamd-agent-primary-action.is-stop { background: #ef4444; }
-.annotamd-agent-primary-action:disabled { opacity: .35; cursor: not-allowed; }
-.annotamd-agent-primary-action:focus-visible { outline: 2px solid var(--annotamd-blue); outline-offset: 2px; }
+.annotamd-agent-primary-action:disabled { color: var(--annotamd-muted); background: var(--annotamd-fill-soft); cursor: not-allowed; }
+.annotamd-agent-primary-action:focus-visible, .annotamd-agent-attach-action:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 .annotamd-agent-primary-action :deep(svg) { width: 14px; height: 14px; }
-.annotamd-agent-context { display: flex; min-width: 0; align-items: center; gap: 6px; padding: 0 2px; color: var(--annotamd-muted); font-size: 10px; }
-.annotamd-agent-context code { overflow: hidden; flex: 1; font: inherit; text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-context { display: flex; min-width: 0; align-items: center; gap: 5px; padding: 8px 11px 4px; color: var(--annotamd-muted); font-size: 11px; }
+.annotamd-agent-context > span { flex: none; }
+.annotamd-agent-context code { min-width: 0; overflow: hidden; color: var(--annotamd-text); font: inherit; text-overflow: ellipsis; white-space: nowrap; }
 </style>
