@@ -24,7 +24,7 @@ describe('bundled external Pi adapter contract', () => {
       minimumPiVersion: '0.84.3',
       verifiedPiVersions: ['0.84.3'],
       maxDocumentBytes: 8 * 1024 * 1024,
-      capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input'],
+      capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input', 'comments-v1'],
       toolOwners: {
         read: 'annotamd-pi-adapter/v1',
         edit: 'annotamd-pi-adapter/v1',
@@ -36,10 +36,10 @@ describe('bundled external Pi adapter contract', () => {
     expect(adapterSource).not.toMatch(/Documents\/work\/github\/pi|node_modules\/.*pi-coding-agent/)
   })
 
-  it('is valid JavaScript and overrides the three document tools', () => {
+  it('is valid JavaScript and registers the document and comment tools', () => {
     const syntaxCheck = spawnSync(process.execPath, ['--check', adapterPath], { encoding: 'utf8' })
     expect(syntaxCheck.status, syntaxCheck.stderr).toBe(0)
-    expect(adapterSource.match(/pi\.registerTool\(\{/g)).toHaveLength(3)
+    expect(adapterSource.match(/pi\.registerTool\(\{/g)).toHaveLength(4)
     expect(adapterSource).toContain('createReadTool')
     expect(adapterSource).toContain('createEditTool')
     expect(adapterSource).toContain('createWriteTool')
@@ -63,7 +63,7 @@ describe('bundled external Pi adapter contract', () => {
     expect(adapterSource).toContain("pi.on('session_start'")
     expect(adapterSource).toContain("const READY_PREFIX = 'ANNOTAMD_ADAPTER_READY:'")
     expect(adapterSource).toContain('adapterProtocol: PROTOCOL_VERSION')
-    expect(adapterSource).toContain("capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input']")
+    expect(adapterSource).toContain("capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input', 'comments-v1']")
     expect(adapterSource).toContain("pi.on('tool_call'")
     expect(adapterSource).toContain('const allTools = pi.getAllTools()')
     expect(adapterSource).toContain('const activeTools = pi.getActiveTools()')

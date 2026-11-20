@@ -36,6 +36,7 @@
         {{ attachmentError }}
       </p>
       <textarea
+        ref="input"
         :value="modelValue"
         data-testid="ai-composer"
         rows="2"
@@ -105,7 +106,7 @@
 
 <script setup lang="ts">
 import { Close, Document, FolderOpened, Paperclip, Picture, Top, VideoPause } from '@element-plus/icons-vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AiAttachment, AiProviderId } from '@shared/types/aiWorkspace'
 import AgentModelSelector from './AgentModelSelector.vue'
@@ -131,6 +132,8 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 const composing = ref(false)
+const input = ref<HTMLTextAreaElement | null>(null)
+let pendingFocus = false
 const fileInput = ref<HTMLInputElement | null>(null)
 const attachmentError = ref('')
 const activePopup = ref<'model' | 'permission' | null>(null)
@@ -144,6 +147,15 @@ const MAX_TOTAL_IMAGE_BYTES = 12 * 1024 * 1024
 const MAX_TEXT_FILES = 8
 const MAX_TEXT_CHARACTERS = 12_000
 const MAX_TOTAL_TEXT_CHARACTERS = 32_000
+const focusInput = (): void => {
+  pendingFocus = props.inputDisabled
+  if (!pendingFocus) input.value?.focus({ preventScroll: true })
+}
+watch(() => props.inputDisabled, disabled => {
+  if (!disabled && pendingFocus) focusInput()
+}, { flush: 'post' })
+defineExpose({ focusInput })
+
 const setPopupVisible = (
   popup: Exclude<typeof activePopup.value, null>,
   visible: boolean

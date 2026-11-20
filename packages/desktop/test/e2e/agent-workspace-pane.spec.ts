@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { AiSelectionRequest } from '../../src/shared/types/aiSelection'
+import type { AiSendRequest } from '../../src/shared/types/aiWorkspace'
 import {
   clearRendererErrors,
   expectNoRendererErrors,
@@ -92,6 +93,70 @@ test('answers and edits the exact selection in place without opening Agent chat'
   }
 })
 
+test('quotes text in the Agent draft only through the selection toolbar', async() => {
+  const phrase = 'the text to quote'
+  const other = 'unrelated selected text'
+  const { app, page } = await launchWithMarkdown(
+    `# Explicit quote\n\nHere is ${phrase}.\n\nHere is ${other}.\n`,
+    { suppressErrorDialog: true }
+  )
+
+  try {
+    await app.evaluate(({ ipcMain }) => {
+      const config = { id: 'quote-pi', name: 'Pi', kind: 'cli', provider: 'pi', enabled: true, defaultModelId: 'model' }
+      for (const channel of ['annotamd::ai::snapshot', 'annotamd::ai::configs:list', 'annotamd::ai::send']) {
+        ipcMain.removeHandler(channel)
+      }
+      ipcMain.handle('annotamd::ai::configs:list', () => [config])
+      ipcMain.handle('annotamd::ai::snapshot', () => ({
+        readiness: { status: 'ready', configId: config.id, modelId: 'model', modelIds: ['model'] },
+        configs: [config], conversations: [], messages: [], changeSets: [], running: false
+      }))
+      const sends: AiSendRequest[] = []
+      Object.assign(globalThis, { quoteTestSends: sends })
+      ipcMain.handle('annotamd::ai::send', (_event, request: AiSendRequest) => {
+        sends.push(request)
+        if (sends.length === 1) throw new Error('Test send rejected')
+        return { conversationId: 'quote-conversation', turnId: 'quote-turn' }
+      })
+    })
+    const pane = page.locator('.annotamd-agent-workspace')
+    const composer = pane.getByTestId('ai-composer')
+    const quote = pane.getByTestId('ai-selection-context')
+    const quoteAction = page.locator('.mu-format-picker li.annotamd_quote_agent')
+
+    await selectEditorPhrase(page, phrase)
+    await expect(pane).toHaveCount(0)
+    await expect(quoteAction.locator('.mu-action-icon-paperclip svg')).toBeVisible()
+    await quoteAction.click()
+    await expect(composer).toBeFocused()
+    await expect(quote).toContainText(phrase)
+
+    await selectEditorPhrase(page, other)
+    await expect(quote).toContainText(phrase)
+    await quote.getByRole('button').click()
+    await expect(quote).toHaveCount(0)
+    await selectEditorPhrase(page, other)
+    await expect(quote).toHaveCount(0)
+
+    await selectEditorPhrase(page, phrase)
+    await quoteAction.click()
+    await expect(composer).toBeFocused()
+    await composer.fill('Explain this quote.')
+    await expect(quote).toContainText(phrase)
+    await pane.getByTestId('ai-send').click()
+    await expect(composer).toHaveValue('Explain this quote.')
+    await expect(quote).toContainText(phrase)
+    await pane.getByTestId('ai-send').click()
+    await expect(quote).toHaveCount(0)
+    const sends = await app.evaluate(() => (globalThis as unknown as { quoteTestSends: AiSendRequest[] }).quoteTestSends)
+    expect(sends).toHaveLength(2)
+    for (const send of sends) expect(send).toMatchObject({ text: 'Explain this quote.', selectionText: phrase })
+  } finally {
+    await app.close()
+  }
+})
+
 test('keeps the model card open while selecting model and reasoning effort', async() => {
   const { app, page } = await launchWithMarkdown(
     '# Model picker\n\nKeep the card open between selections.\n',
@@ -107,70 +172,77 @@ test('keeps the model card open while selecting model and reasoning effort', asy
         'annotamd::ai::preferences:get'
       ]) ipcMain.removeHandler(channel)
       const config = {
-        id: 'picker-cli',
-        name: 'Codex CLI',
+        id: 'picker-pi',
+        name: 'Pi',
         kind: 'cli',
-        provider: 'codex',
+        provider: 'pi',
         isDefault: true,
         enabled: true,
-        defaultModelId: 'model-a'
+        defaultModelId: 'deepseek/deepseek-flash'
       }
-      const claudeConfig = {
-        id: 'picker-claude',
-        name: 'Claude Code CLI',
-        kind: 'cli',
-        provider: 'claude-code',
-        isDefault: false,
-        enabled: true,
-        defaultModelId: 'claude-default'
-      }
+      const models = [
+        { id: config.defaultModelId, name: 'deepseek-flash', effortLevels: ['off', 'low', 'high', 'max'] },
+        { id: 'deepseek/deepseek-v4-pro', name: 'deepseek-v4-pro', effortLevels: ['off', 'high', 'max'] }
+      ]
       ipcMain.handle('annotamd::ai::snapshot', () => ({
-        readiness: { status: 'ready', configId: config.id, modelId: config.defaultModelId },
-        configs: [config, claudeConfig],
+        readiness: {
+          status: 'ready',
+          configId: config.id,
+          modelId: config.defaultModelId,
+          modelIds: models.map(model => model.id)
+        },
+        configs: [config],
         conversations: [],
         messages: [],
         changeSets: [],
         running: false
       }))
-      ipcMain.handle('annotamd::ai::configs:list', () => [config, claudeConfig])
-      ipcMain.handle('annotamd::ai::configs:models', (_event, configId) => (
-        configId === claudeConfig.id
-          ? [{ id: 'claude-default', name: 'Claude Default', effortLevels: ['low', 'medium', 'high'] }]
-          : [
-              { id: 'model-a', name: 'Model A', effortLevels: ['low', 'high'] },
-              { id: 'model-b', name: 'Model B', effortLevels: ['medium', 'high'] }
-            ]
-      ))
+      ipcMain.handle('annotamd::ai::configs:list', () => [config])
+      ipcMain.handle('annotamd::ai::configs:models', () => models)
       ipcMain.handle('annotamd::ai::preferences:get', () => ({ maxApiRetries: 2 }))
     })
     await clearRendererErrors(app)
     await page.locator('.sidebar-agent-toggle').click()
 
     const pane = page.locator('.annotamd-agent-workspace')
-    await pane.getByTestId('ai-model-selector').click()
+    const trigger = pane.getByTestId('ai-model-selector')
+    await expect(trigger).toHaveText('deepseek-flash')
+    await trigger.click()
     const modelMenu = page.locator('.annotamd-agent-model-menu:visible')
-    await expect(modelMenu).toBeVisible()
-    const providerButtons = modelMenu.locator('.annotamd-agent-provider-list > button')
-    await expect(providerButtons).toHaveCount(2)
-    expect(await providerButtons.evaluateAll(buttons => buttons.every((button) => {
-      const style = getComputedStyle(button)
-      return style.borderTopStyle === 'solid' && style.borderTopWidth === '1px'
-    }))).toBe(true)
-    await providerButtons.nth(1).click()
-    await expect(providerButtons.nth(1)).toHaveAttribute('aria-pressed', 'true')
-    await page.waitForTimeout(500)
-    await expect(modelMenu).toBeVisible()
-    await providerButtons.nth(0).click()
-    await expect(providerButtons.nth(0)).toHaveAttribute('aria-pressed', 'true')
-    await expect(modelMenu).toBeVisible()
-    await modelMenu.locator('label').nth(0).locator('.el-select__wrapper').click()
-    await page.locator('.el-select-dropdown:visible').getByText('Model B', { exact: true }).click()
-    await expect(modelMenu).toBeVisible()
-    await expect(page.locator('.el-select-dropdown:visible')).toHaveCount(0)
+    const modelPicker = modelMenu.getByRole('combobox', { name: 'Model ID' })
+    const effortPicker = page.getByRole('combobox', { name: 'Reasoning effort' })
+    const effortControl = modelMenu.locator('.el-select__wrapper').filter({ has: effortPicker })
+    const dropdown = page.locator('.el-select-dropdown:visible')
 
-    await modelMenu.locator('label').nth(1).locator('.el-select__wrapper').click()
-    await page.locator('.el-select-dropdown:visible').getByText('High', { exact: true }).click()
+    await modelPicker.click()
+    await dropdown.getByRole('option', { name: 'deepseek-flash', exact: true }).click()
+    await expect(modelPicker).toHaveAttribute('aria-expanded', 'false')
+    await expect(dropdown).toHaveCount(0)
     await expect(modelMenu).toBeVisible()
+    await expect(trigger).toHaveText('deepseek-flash')
+
+    await modelPicker.click()
+    await dropdown.getByRole('option', { name: 'deepseek-v4-pro', exact: true }).click()
+    await expect(dropdown).toHaveCount(0)
+    await expect(trigger).toHaveText('deepseek-v4-pro')
+    await expect(modelMenu).toBeVisible()
+
+    await effortControl.click()
+    await dropdown.getByRole('option', { name: 'High', exact: true }).click()
+    await expect(dropdown).toHaveCount(0)
+    await effortControl.click()
+    await dropdown.getByRole('option', { name: 'High', exact: true }).click()
+    await expect(effortPicker).toHaveAttribute('aria-expanded', 'false')
+    await expect(dropdown).toHaveCount(0)
+    await expect(modelMenu).toBeVisible()
+
+    await modelPicker.click()
+    await modelPicker.fill('deepseek-v4-pro')
+    await expect(dropdown.getByRole('option', { name: 'deepseek-v4-pro', exact: true })).toBeVisible()
+    await modelPicker.press('Enter')
+    await expect(modelPicker).toHaveAttribute('aria-expanded', 'false')
+    await expect(dropdown).toHaveCount(0)
+    await expect(trigger).toHaveText('deepseek-v4-pro')
 
     await pane.locator('.annotamd-agent-timeline').click({ position: { x: 8, y: 8 } })
     await expect(modelMenu).toHaveCount(0)

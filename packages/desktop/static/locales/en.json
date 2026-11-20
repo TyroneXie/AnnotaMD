@@ -1319,6 +1319,7 @@
       "reasoningSummary": "Reasoning summary",
       "missingFinalAnswer": "No final answer was generated.",
       "toolKinds": {
+        "readComments": "Read document comments",
         "request": "Working",
         "command": "Run command",
         "fileChange": "Edit files",

@@ -140,6 +140,7 @@ export const zhTW = {
         'Move Down': '下移',
         'Comment': '批註',
         'Ask AI': '詢問 AI',
+        'Quote in Agent': '引用到 Agent',
         'Delete Selection': '刪除所選文字',
         'Delete': '刪除段落',
         // imageToolbar

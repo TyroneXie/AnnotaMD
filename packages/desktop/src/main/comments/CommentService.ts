@@ -88,12 +88,16 @@ export class CommentService {
     return this.toDocument(document)
   }
 
-  listComments(filePath: string): AnnotaMDCommentIndex | null {
+  readDocumentComments(filePath: string): AnnotaMDCommentDocument | null {
     this.refreshMissingDocuments()
     const row = this.findExistingDocument(filePath)
-    if (!row) return null
-    const comments = this.toDocument(row).comments
-    const items = comments.map((comment) => {
+    return row ? this.toDocument(row) : null
+  }
+
+  listComments(filePath: string): AnnotaMDCommentIndex | null {
+    const document = this.readDocumentComments(filePath)
+    if (!document) return null
+    const items = document.comments.map((comment) => {
       const lastReply = comment.replies.at(-1)
       const lastAuthor = lastReply?.author ?? 'user'
       const lastMessage = lastReply?.body ?? comment.body
@@ -111,8 +115,8 @@ export class CommentService {
       }
     })
     return {
-      filePath: row.path,
-      revision: row.revision,
+      filePath: document.filePath,
+      revision: document.revision,
       commentCount: items.length,
       localEndingCommentCount: items.filter((comment) => comment.lastAuthor === 'user').length,
       comments: items

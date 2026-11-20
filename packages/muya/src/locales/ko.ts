@@ -140,6 +140,7 @@ export const ko = {
         'Move Down': '아래로 이동',
         'Comment': '댓글',
         'Ask AI': 'AI에게 묻기',
+        'Quote in Agent': 'Agent에 인용',
         'Delete Selection': '선택 영역 삭제',
         'Delete': '단락 삭제',
         // imageToolbar

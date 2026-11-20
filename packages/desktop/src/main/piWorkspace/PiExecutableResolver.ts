@@ -440,7 +440,7 @@ const readPackageVersion = async (filePath: string): Promise<string | undefined>
 
 /**
  * Resolves the Pi runtime shipped inside the application. It is started
- * through Electron's own binary, so the result never depends on a user
+ * through Electron's Node runtime, so the result never depends on a user
  * installation of Node.js or Pi.
  */
 export const inspectBundledPi = async(
@@ -467,10 +467,12 @@ export const inspectBundledPi = async(
           : 'The bundled Pi runtime does not report a version.'
       }
     }
+    // Electron also uses its background helper for forked Node scripts on macOS.
+    const { helperExecPath } = process as NodeJS.Process & { helperExecPath?: string }
     return {
       status: 'ready',
       version,
-      executablePath: process.execPath,
+      executablePath: (platform === 'darwin' && helperExecPath) || process.execPath,
       executableArgs: [cliPath],
       launchEnvironment: { ELECTRON_RUN_AS_NODE: '1' }
     }

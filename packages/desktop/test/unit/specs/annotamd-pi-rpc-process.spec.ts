@@ -31,8 +31,8 @@ const readyHandshake = (overrides: Partial<PiAdapterHandshake> = {}): PiAdapterH
   adapterProtocol: 1,
   adapterVersion: '1.0.0',
   piVersion: '0.84.3',
-  capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input'],
-  activeTools: ['read', 'edit', 'write'],
+  capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input', 'comments-v1'],
+  activeTools: ['read', 'edit', 'write', 'read_comments'],
   tools: {
     read: { sourceInfo: { path: adapterPath } },
     edit: { sourceInfo: { path: adapterPath } },
@@ -185,7 +185,7 @@ describe('PiRpcProcessManager', () => {
         '--no-skills',
         '--no-prompt-templates',
         '--no-context-files',
-        '--tools', 'read,edit,write',
+        '--tools', 'read,edit,write,read_comments',
         '--extension', '/app/resources/pi-adapter/adapter.mjs',
         '--no-approve'
       ],
@@ -215,7 +215,7 @@ describe('PiRpcProcessManager', () => {
         '--no-skills',
         '--no-prompt-templates',
         '--no-context-files',
-        '--tools', 'read,edit,write',
+        '--tools', 'read,edit,write,read_comments',
         '--extension', '/app/resources/pi-adapter/adapter.mjs',
         '--no-approve'
       ],
@@ -240,7 +240,7 @@ describe('PiRpcProcessManager', () => {
       '--no-skills',
       '--no-prompt-templates',
       '--no-context-files',
-      '--tools', 'read,edit,write',
+      '--tools', 'read,edit,write,read_comments',
       '--extension', adapterPath,
       '--no-approve',
       '--provider', 'openai-codex',
@@ -289,7 +289,7 @@ describe('PiRpcProcessManager', () => {
 
   it('fails closed when a required adapter tool is not active', async() => {
     const { runtime } = createRuntime(readyHandshake({
-      activeTools: ['read', 'write']
+      activeTools: ['read', 'write', 'read_comments']
     }))
 
     await expect(runtime.start()).rejects.toThrow(

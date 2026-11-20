@@ -147,6 +147,7 @@ describe('inlineFormatToolbar self-syncs its highlight on selection-change', () 
             'color_palette',
             'annotamd_comment',
             'annotamd_agent',
+            'annotamd_quote_agent',
             'annotamd_delete_selection',
         ]) {
             expect(toolbar.container!.querySelector(`li.item.${type}`), type).toBeTruthy();

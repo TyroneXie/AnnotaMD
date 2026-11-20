@@ -140,6 +140,7 @@ export const ja = {
         'Move Down': '下へ移動',
         'Comment': 'コメント',
         'Ask AI': 'AIに聞く',
+        'Quote in Agent': 'Agent に引用',
         'Delete Selection': '選択範囲を削除',
         'Delete': '段落を削除する',
         // imageToolbar

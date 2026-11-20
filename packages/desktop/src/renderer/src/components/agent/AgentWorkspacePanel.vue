@@ -63,18 +63,19 @@
     </section>
 
     <AgentComposer
+      ref="composer"
       v-model="draft"
       v-model:attachments="attachments"
       :workspace-path="workspacePath"
       :runtime-model="selectedModel"
       :provider="selectedConfig?.provider"
-      :selection-text="documentContext?.selectionText"
+      :selection-text="quote?.text"
       :running="conversations.running"
       :input-disabled="conversations.loading || settings.loading"
       :send-disabled="!canSend"
       @send="send"
       @stop="conversations.stop()"
-      @clear-selection="emit('clearSelection')"
+      @clear-selection="quote && emit('clearSelection', quote)"
     />
   </aside>
 </template>
@@ -87,6 +88,7 @@ import { useI18n } from 'vue-i18n'
 import type {
   AiAttachment,
   AiDocumentContext,
+  AiDraftQuote,
   AiEffortSelection,
   AiRetryRequest,
   AiSendRequest,
@@ -106,10 +108,11 @@ import { isAgentTimelineNearBottom } from './agentTimelineScroll'
 const props = defineProps<{
   workspacePath: string
   documentContext?: AiDocumentContext | null
+  quote?: AiDraftQuote
 }>()
 const emit = defineEmits<{
   close: []
-  clearSelection: []
+  clearSelection: [quote: AiDraftQuote]
 }>()
 
 const { t } = useI18n()
@@ -121,6 +124,8 @@ const agentWorkspaceStyle = computed<Record<string, string>>(() => ({
   '--annotamd-agent-font-size': `${agentFontSize.value}px`
 }))
 const draft = ref('')
+const composer = ref<InstanceType<typeof AgentComposer> | null>(null)
+defineExpose({ focusComposer: () => composer.value?.focusInput() })
 const attachments = ref<AiAttachment[]>([])
 const timeline = ref<HTMLElement | null>(null)
 const SUGGESTION_KEYS = [
@@ -221,15 +226,16 @@ const documentFields = (): Partial<AiSendRequest> => {
     markdown: document.markdown,
     documentRevision: document.revision,
     documentContentHash: document.contentHash,
-    documentDirty: document.dirty,
-    selectionText: document.selectionText
+    documentDirty: document.dirty
   }
 }
 
 const newConversation = async(): Promise<void> => {
+  const quote = props.quote
   await conversations.create({ ...selection.value, title: t('annotamd.agentWorkspace.newConversationTitle') })
   draft.value = ''
   attachments.value = []
+  if (quote) emit('clearSelection', quote)
   refreshSuggestedPrompts()
 }
 
@@ -260,6 +266,7 @@ const send = async(): Promise<void> => {
   const text = draft.value.trim()
   if (!text || !canSend.value) return
   const pendingAttachments = attachments.value
+  const quote = props.quote
   draft.value = ''
   attachments.value = []
   try {
@@ -269,8 +276,10 @@ const send = async(): Promise<void> => {
       selection: selection.value,
       workspacePath: props.workspacePath,
       ...(pendingAttachments.length ? { attachments: pendingAttachments } : {}),
-      ...documentFields()
+      ...documentFields(),
+      ...(quote ? { selectionText: quote.text } : {})
     })
+    if (quote) emit('clearSelection', quote)
   } catch {
     if (!draft.value) draft.value = text
     if (!attachments.value.length) attachments.value = pendingAttachments

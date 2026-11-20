@@ -55,6 +55,28 @@ afterEach(async() => {
 })
 
 describe('PiExecutableResolver', () => {
+  it('uses the Electron helper for bundled Pi on macOS', async() => {
+    const root = await createTemporaryRoot()
+    const cliPath = join(root, 'cli.js')
+    const helperExecPath = join(root, 'AnnotaMD Helper')
+    await createExecutable(cliPath)
+    await writeFile(join(root, 'package.json'), JSON.stringify({ version: '1.5.2' }))
+    vi.stubGlobal('process', Object.create(process, { helperExecPath: { value: helperExecPath } }))
+    try {
+      const options = { ...linuxOptions(root, ''), bundledCliPaths: [cliPath] }
+      await expect(inspectPiExecutable({ ...options, platform: 'darwin' })).resolves.toEqual({
+        status: 'ready',
+        executablePath: helperExecPath,
+        executableArgs: [cliPath],
+        launchEnvironment: { ELECTRON_RUN_AS_NODE: '1' },
+        version: '1.5.2'
+      })
+      await expect(inspectPiExecutable(options)).resolves.toMatchObject({ executablePath: process.execPath })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('finds an independently installed Pi and verifies its version', async() => {
     const root = await createTemporaryRoot()
     const executablePath = join(root, 'bin', 'pi')

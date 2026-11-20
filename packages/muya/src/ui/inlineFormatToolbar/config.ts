@@ -88,6 +88,12 @@ const icons = [
         label: '',
     },
     {
+        type: 'annotamd_quote_agent',
+        tooltip: 'Quote in Agent',
+        shortcut: '',
+        label: '',
+    },
+    {
         type: 'annotamd_delete_selection',
         tooltip: 'Delete Selection',
         shortcut: '',

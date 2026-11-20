@@ -322,7 +322,11 @@ export interface AiDocumentContext {
   revision: number
   dirty: boolean
   contentHash?: string
-  selectionText?: string
+}
+
+export interface AiDraftQuote {
+  documentId: string
+  text: string
 }
 
 export interface AiTextAttachment {

@@ -50,10 +50,12 @@
       <toc v-else-if="rightColumn === 'toc'" />
       <AgentWorkspacePanel
         v-else-if="rightColumn === 'agent'"
+        ref="agentWorkspace"
         :workspace-path="agentWorkspacePath"
         :document-context="agentDocumentContext"
+        :quote="agentQuote"
         @close="closeAgentWorkspace"
-        @clear-selection="emit('clearAgentSelection')"
+        @clear-selection="clearAgentQuote"
       />
     </div>
     <div
@@ -65,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, shallowRef, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { DUAL_SIDE_PANE_MIN_WIDTH, useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
@@ -78,17 +80,13 @@ import SideBarSearch from './search.vue'
 import Toc from './toc.vue'
 import { storeToRefs } from 'pinia'
 import type { TabDescriptor } from './types'
-import type { AiDocumentContext } from '@shared/types/aiWorkspace'
+import type { AiDocumentContext, AiDraftQuote } from '@shared/types/aiWorkspace'
 import AppUpdateControl from '../appUpdate/AppUpdateControl.vue'
 import AgentWorkspacePanel from '../agent/AgentWorkspacePanel.vue'
 
-defineProps<{
+const props = defineProps<{
   agentWorkspacePath: string
   agentDocumentContext?: AiDocumentContext | null
-}>()
-
-const emit = defineEmits<{
-  clearAgentSelection: []
 }>()
 
 const layoutStore = useLayoutStore()
@@ -99,6 +97,8 @@ const rightPaneStore = useRightPaneStore()
 
 const sideBar = ref<HTMLDivElement | null>(null)
 const dragBar = ref<HTMLDivElement | null>(null)
+const agentWorkspace = ref<InstanceType<typeof AgentWorkspacePanel> | null>(null)
+const agentQuote = shallowRef<AiDraftQuote>()
 
 const openedFiles = ref<TabDescriptor[]>([])
 const sideBarViewWidth = ref(280)
@@ -191,6 +191,24 @@ const handleLeftIconClick = (name: string): void => {
 const closeAgentWorkspace = (): void => {
   if (rightColumn.value === 'agent') layoutStore.SET_LAYOUT({ rightColumn: '' })
 }
+
+const clearAgentQuote = (quote: AiDraftQuote): void => {
+  if (agentQuote.value === quote) agentQuote.value = undefined
+}
+
+const quoteSelectionInAgent = async(event: Event): Promise<void> => {
+  const quote = (event as CustomEvent<AiDraftQuote>).detail
+  if (!quote?.text || quote.documentId !== props.agentDocumentContext?.documentId) return
+  agentQuote.value = quote
+  if (!showSideBar.value) layoutStore.SET_LAYOUT({ showSideBar: true })
+  if (rightColumn.value !== 'agent') handleLeftIconClick('agent')
+  await nextTick()
+  if (agentQuote.value === quote) agentWorkspace.value?.focusComposer()
+}
+
+watch(() => props.agentDocumentContext?.documentId, () => { agentQuote.value = undefined })
+onMounted(() => window.addEventListener('annotamd:agent-quote-requested', quoteSelectionInAgent))
+onBeforeUnmount(() => window.removeEventListener('annotamd:agent-quote-requested', quoteSelectionInAgent))
 
 const handleLeftBottomClick = (name: string): void => {
   if (name === 'settings') {

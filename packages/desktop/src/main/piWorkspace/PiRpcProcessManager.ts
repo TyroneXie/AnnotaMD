@@ -9,7 +9,8 @@ const REQUIRED_ADAPTER_CAPABILITIES = [
   'proposal-v1',
   'approval-v1',
   'feedback-v1',
-  'abortable-input'
+  'abortable-input',
+  'comments-v1'
 ] as const
 const ADAPTER_OWNER = 'annotamd-pi-adapter/v1'
 const STARTUP_TIMEOUT_MS = 8_000
@@ -181,7 +182,7 @@ const validateHandshake = (
       `Pi resolved ${wrongSources.join(', ')} from a different extension than the AnnotaMD adapter.`
     )
   }
-  const inactiveTools = (['read', 'edit', 'write'] as const).filter(
+  const inactiveTools = ['read', 'edit', 'write', 'read_comments'].filter(
     name => !handshake.activeTools.includes(name)
   )
   if (inactiveTools.length > 0) {
@@ -274,7 +275,7 @@ export class PiRpcProcessManager {
       // bypass the editor buffer and the per-turn change-set review.
       ...(options.noTools
         ? ['--no-tools']
-        : ['--tools', 'read,edit,write', '--extension', options.adapterPath]),
+        : ['--tools', 'read,edit,write,read_comments', '--extension', options.adapterPath]),
       '--no-approve',
       ...selectionArguments(options)
     ], {

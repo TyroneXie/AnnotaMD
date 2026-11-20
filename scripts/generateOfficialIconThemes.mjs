@@ -28,6 +28,7 @@ const ICON_CANDIDATES = {
   color: ['highlighter', 'text-color', 'format-color-text', 'palette', 'paint-brush'],
   comment: ['message-square', 'message', 'comment', 'chat', 'chat-square'],
   agent: ['cpu', 'bot', 'sparkles', 'microchip', 'robot'],
+  paperclip: ['paperclip', 'paper-clip', 'attach-file', 'attachment', 'attachment-01', 'attachment-2'],
   delete: ['trash-2', 'trash', 'delete', 'bin'],
   'move-up': ['arrow-up'],
   'move-down': ['arrow-down'],
@@ -270,6 +271,7 @@ function findIcon(collection, theme, semantic) {
 
 const generated = {}
 const missing = []
+const viewBoxOverrides = { 'bootstrap:paperclip': '0 0 16 16' }
 
 for (const theme of THEMES) {
   const collection = require(`@iconify-json/${theme.collection}/icons.json`)
@@ -283,7 +285,7 @@ for (const theme of THEMES) {
     const icon = getIconData(collection, name)
     icons[semantic] = {
       source: name,
-      viewBox: `0 0 ${icon.width} ${icon.height}`,
+      viewBox: viewBoxOverrides[`${theme.name}:${semantic}`] ?? `0 0 ${icon.width} ${icon.height}`,
       body: icon.body
     }
   }

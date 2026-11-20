@@ -87,6 +87,7 @@ export const zhCN = {
         'Eliminate': '清除样式',
         'Comment': '批注',
         'Ask AI': '询问 AI',
+        'Quote in Agent': '引用到 Agent',
         'Delete Selection': '删除所选文字',
         // Code block
         'Copy': '复制',

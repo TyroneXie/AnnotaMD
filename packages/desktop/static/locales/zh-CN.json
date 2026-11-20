@@ -1319,6 +1319,7 @@
       "reasoningSummary": "思考摘要",
       "missingFinalAnswer": "未生成最终回答",
       "toolKinds": {
+        "readComments": "读取文档评论",
         "request": "处理请求",
         "command": "执行命令",
         "fileChange": "修改文件",

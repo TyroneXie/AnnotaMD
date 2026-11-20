@@ -123,6 +123,7 @@ export const tr = {
         'Move Down': 'Aşağı taşı',
         'Comment': 'Yorum',
         'Ask AI': 'Yapay zekâya sor',
+        'Quote in Agent': 'Agent’da alıntıla',
         'Delete Selection': 'Seçimi sil',
         'Delete': 'Sil',
         // imageToolbar

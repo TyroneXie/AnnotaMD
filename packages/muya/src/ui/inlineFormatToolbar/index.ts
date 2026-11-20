@@ -11,7 +11,7 @@ import { SelectionDirection } from '../../selection/types';
 import { isAtxHeadingState } from '../../state/types';
 import { isKeyboardEvent } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
-import { formatActionIcon, renderActionIcon } from '../actionIcons';
+import { formatActionIcon, renderActionIcon, type ActionIconName } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import icons, { COLOR_PALETTES, TEXT_STYLE_OPTIONS } from './config';
 import '../actionIcons.css';
@@ -54,12 +54,21 @@ const NON_EDITING_KEYS = new Set([
     'Tab',
 ]);
 
-type AnnotaMDSelectionAction = 'annotamd_comment' | 'annotamd_agent' | 'annotamd_delete_selection';
+type AnnotaMDSelectionAction = 'annotamd_comment' | 'annotamd_agent' | 'annotamd_quote_agent' | 'annotamd_delete_selection';
 const ANNOTAMD_SELECTION_ACTIONS = new Set<string>([
     'annotamd_comment',
     'annotamd_agent',
+    'annotamd_quote_agent',
     'annotamd_delete_selection',
 ]);
+const TOOLBAR_ACTION_ICONS: Partial<Record<FormatToolIcon['type'], ActionIconName>> = {
+    text_style: 'text-style',
+    color_palette: 'color',
+    annotamd_comment: 'comment',
+    annotamd_agent: 'agent',
+    annotamd_quote_agent: 'paperclip',
+    annotamd_delete_selection: 'delete',
+};
 
 function pathPrecedesOrEquals(anchorPath: Array<number | string>, focusPath: Array<number | string>): boolean {
     const length = Math.max(anchorPath.length, focusPath.length);
@@ -392,17 +401,7 @@ export class InlineFormatToolbar extends BaseFloat {
      */
     private _createIconItem(icon: FormatToolIcon, formats: Token[], i18n: typeof this.muya.i18n) {
         const textStyle = this._currentTextStyle();
-        const actionIcon = icon.type === 'text_style'
-            ? renderActionIcon('text-style')
-            : icon.type === 'color_palette'
-                ? renderActionIcon('color')
-                : icon.type === 'annotamd_comment'
-                    ? renderActionIcon('comment')
-                    : icon.type === 'annotamd_agent'
-                        ? renderActionIcon('agent')
-                        : icon.type === 'annotamd_delete_selection'
-                            ? renderActionIcon('delete')
-                            : renderActionIcon(formatActionIcon(icon.type)!);
+        const actionIcon = renderActionIcon(TOOLBAR_ACTION_ICONS[icon.type] ?? formatActionIcon(icon.type)!);
 
         const iconWrapper = h('div.icon-wrapper', icon.type === 'text_style'
             ? [actionIcon, h('span.mu-text-style-chevron', '⌄')]
@@ -670,7 +669,7 @@ export class InlineFormatToolbar extends BaseFloat {
         if (!anchor || !focus || !anchorBlock || !focusBlock)
             return;
 
-        if (type === 'annotamd_comment' || type === 'annotamd_agent') {
+        if (type !== 'annotamd_delete_selection') {
             const anchorKey = Array.isArray(anchorPath) ? anchorPath.join('/') : '';
             const focusKey = Array.isArray(focusPath) ? focusPath.join('/') : anchorKey;
             const anchorOffset = anchor.offset ?? 0;
@@ -682,6 +681,13 @@ export class InlineFormatToolbar extends BaseFloat {
                 const start = Math.min(anchorOffset, focusOffset);
                 const end = Math.max(anchorOffset, focusOffset);
                 quote = anchorBlock.text.slice(start, end);
+            }
+
+            if (type === 'annotamd_quote_agent') {
+                if (quote.trim())
+                    this.muya.eventCenter.emit('annotamd-agent-quote', quote);
+                this.hide();
+                return;
             }
 
             quote = quote.replace(/\s+/g, ' ').trim();

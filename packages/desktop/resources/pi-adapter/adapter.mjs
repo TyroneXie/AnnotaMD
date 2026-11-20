@@ -6,6 +6,7 @@ import {
   createReadTool,
   createWriteTool
 } from '@earendil-works/pi-coding-agent'
+import { Type } from 'typebox'
 
 const PROTOCOL_VERSION = 1
 const ADAPTER_VERSION = '1.0.0'
@@ -19,7 +20,8 @@ const MAX_PATH_BYTES = 32 * 1024
 const MAX_ID_BYTES = 1024
 const MAX_FEEDBACK_BYTES = 64 * 1024
 const REQUIRED_TOOL_NAMES = ['read', 'edit', 'write']
-const READ_ONLY_TOOL_NAMES = new Set(['read', 'grep', 'find', 'ls'])
+const READ_COMMENTS_TOOL = 'read_comments'
+const READ_ONLY_TOOL_NAMES = new Set(['read', 'grep', 'find', 'ls', READ_COMMENTS_TOOL])
 
 class BridgeProtocolError extends Error {
   constructor(message) {
@@ -309,6 +311,29 @@ export default function annotaMDPiAdapter(pi) {
   const baseWriteTool = createWriteTool(initialCwd)
 
   pi.registerTool({
+    name: READ_COMMENTS_TOOL,
+    label: 'Read document comments',
+    description: 'Read a page of comments on the current AnnotaMD document, including quoted text, anchors, and all replies. Start without arguments. If nextOffset is not null, pass it as offset along with the returned revision to read the next page.',
+    parameters: Type.Object({
+      offset: Type.Optional(Type.Integer({ minimum: 0, description: 'The previous page’s nextOffset.' })),
+      revision: Type.Optional(Type.Integer({ minimum: 0, description: 'The revision returned by the previous page.' }))
+    }),
+    async execute(toolCallId, params, signal, _onUpdate, ctx) {
+      const response = await requestFromHost(ctx, signal, {
+        v: PROTOCOL_VERSION,
+        kind: 'read-comments',
+        sessionId: currentSessionId(ctx),
+        toolCallId,
+        offset: params.offset ?? 0,
+        revision: params.revision
+      })
+      assertEnvelope(response, 'comments')
+      if (!isRecord(response.result)) throw new BridgeProtocolError('comment response must be an object')
+      return { content: [{ type: 'text', text: JSON.stringify(response.result) }] }
+    }
+  })
+
+  pi.registerTool({
     ...baseReadTool,
     async execute(toolCallId, params, signal, onUpdate, ctx) {
       const initialPath = params.path
@@ -453,7 +478,7 @@ export default function annotaMDPiAdapter(pi) {
       adapterProtocol: PROTOCOL_VERSION,
       adapterVersion: ADAPTER_VERSION,
       piVersion: PI_VERSION,
-      capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input'],
+      capabilities: ['snapshot-v1', 'proposal-v1', 'approval-v1', 'feedback-v1', 'abortable-input', 'comments-v1'],
       activeTools,
       tools,
       toolOwners: {

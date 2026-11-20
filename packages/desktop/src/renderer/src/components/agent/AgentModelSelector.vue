@@ -38,10 +38,10 @@
         </button>
       </div>
       <div v-if="selectedConfig" class="annotamd-agent-model-options">
-        <label>
-          <span>{{ t('annotamd.agentWorkspace.modelId') }}</span>
+        <div class="annotamd-agent-model-field">
+          <label :for="modelPickerId">{{ t('annotamd.agentWorkspace.modelId') }}</label>
           <el-select
-            ref="modelSelect"
+            :id="modelPickerId"
             :model-value="selectedModelId || undefined"
             size="small"
             filterable
@@ -54,11 +54,11 @@
           </el-select>
           <small v-if="loadingModels">{{ t('annotamd.agentWorkspace.loadingModels') }}</small>
           <small v-else-if="modelError" class="is-error">{{ modelError }}</small>
-        </label>
-        <label v-if="effortLevels.some(level => level !== 'off')">
-          <span>{{ t('annotamd.agentWorkspace.effort') }}</span>
+        </div>
+        <div v-if="effortLevels.some(level => level !== 'off')" class="annotamd-agent-model-field">
+          <label :for="effortPickerId">{{ t('annotamd.agentWorkspace.effort') }}</label>
           <el-select
-            ref="effortSelect"
+            :id="effortPickerId"
             :model-value="effortId"
             size="small"
             :teleported="false"
@@ -72,14 +72,14 @@
               :label="effortLabel(level)"
             />
           </el-select>
-        </label>
+        </div>
       </div>
     </div>
   </el-popover>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import { ArrowDown, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import type { AiModelInfo } from '@shared/types/aiWorkspace'
@@ -92,8 +92,8 @@ const emit = defineEmits<{ 'update:visible': [visible: boolean] }>()
 const { t } = useI18n()
 const settings = useAiSettingsStore()
 const models = ref<AiModelInfo[]>([])
-const modelSelect = ref<{ blur: () => void } | null>(null)
-const effortSelect = ref<{ blur: () => void } | null>(null)
+const modelPickerId = useId()
+const effortPickerId = useId()
 const loadingModels = ref(false)
 const modelError = ref('')
 let loadVersion = 0
@@ -148,12 +148,10 @@ const selectEffort = (value: string): void => {
   settings.selectEffort('agent', value === 'provider-default'
     ? { kind: 'provider-default' }
     : { kind: 'preset', id: value })
-  window.setTimeout(() => effortSelect.value?.blur(), 0)
 }
 const selectModel = (value: unknown): void => {
   settings.selectModel('agent', typeof value === 'string' ? value : undefined)
   resetUnsupportedEffort()
-  window.setTimeout(() => modelSelect.value?.blur(), 0)
 }
 const loadModels = async(): Promise<void> => {
   const version = ++loadVersion
@@ -196,11 +194,11 @@ const openSettings = (): void => {
 .annotamd-agent-model-empty p { margin: 0; color: var(--annotamd-muted); font-size: 11px; text-align: center; }
 .annotamd-agent-model-empty button { min-height: 28px; padding: 0 10px; color: #fff; border: 0; border-radius: 6px; background: var(--annotamd-blue); font-size: 11px; cursor: pointer; }
 .annotamd-agent-model-options { display: grid; gap: 10px; padding-top: 10px; border-top: 1px solid var(--annotamd-border-soft); }
-.annotamd-agent-model-menu small, .annotamd-agent-model-menu label > span { color: var(--annotamd-muted); font-size: 10px; }
+.annotamd-agent-model-menu small, .annotamd-agent-model-field > label { color: var(--annotamd-muted); font-size: 10px; }
 .annotamd-agent-model-menu small.is-error { color: #ef4444; }
-.annotamd-agent-model-menu label { display: grid; gap: 5px; }
-.annotamd-agent-model-menu label > span { font-weight: 500; }
-.annotamd-agent-model-menu label :deep(.el-select__wrapper) { min-height: 32px; border-radius: 7px; box-shadow: 0 0 0 1px var(--annotamd-border) inset; }
-.annotamd-agent-model-menu label :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--annotamd-green) inset; }
+.annotamd-agent-model-field { display: grid; gap: 5px; }
+.annotamd-agent-model-field > label { font-weight: 500; }
+.annotamd-agent-model-field :deep(.el-select__wrapper) { min-height: 32px; border-radius: 7px; box-shadow: 0 0 0 1px var(--annotamd-border) inset; }
+.annotamd-agent-model-field :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--annotamd-green) inset; }
 .annotamd-agent-model-trigger:focus-visible, .annotamd-agent-model-menu button:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 </style>

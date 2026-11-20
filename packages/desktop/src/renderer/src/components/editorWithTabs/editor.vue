@@ -2491,6 +2491,11 @@ onMounted(() => {
   })
 
   editor.value.on('annotamd-agent-selection', openAgentSelection)
+  editor.value.on('annotamd-agent-quote', (text: string) => {
+    const documentId = currentFile.value?.id
+    if (!documentId) return
+    window.dispatchEvent(new CustomEvent('annotamd:agent-quote-requested', { detail: { documentId, text } }))
+  })
 
   editor.value.on('selection-change', (changes: MuyaChange) => {
     const y = (changes.cursorCoords?.y ?? null) as number | null
@@ -2521,12 +2526,6 @@ onMounted(() => {
     const annotaMDSelection = getAnnotaMDSelection(changes)
     if (annotaMDSelection) {
       annotaMDCommentsStore.setActiveSelection(annotaMDSelection)
-      window.dispatchEvent(new CustomEvent('annotamd:agent-selection-changed', {
-        detail: {
-          documentId: currentFile.value?.id ?? '',
-          text: annotaMDSelection.exactQuote || annotaMDSelection.quote
-        }
-      }))
     }
     // Persist the caret so a click/arrow-key move (which never fires
     // `json-change`) survives an in-session tab switch — `tab.cursor` is what

@@ -232,6 +232,10 @@ export class AgentDocumentScopeService implements AnnotaMDAgentDocumentGateway {
     }
   }
 
+  getScopedFilePath(scopeToken: string): string | undefined {
+    return this.requireScope(scopeToken).document?.filePath
+  }
+
   async readDocument(scopeToken: string, params: Record<string, unknown>): Promise<unknown> {
     const scope = this.requireScope(scopeToken)
     const document = this.requireDocument(scope)

@@ -10,7 +10,6 @@
       v-if="init"
       :agent-workspace-path="agentWorkspacePath"
       :agent-document-context="agentDocumentContext"
-      @clear-agent-selection="agentSelectionText = ''"
     />
 
     <div class="editor-middle">
@@ -113,7 +112,6 @@ const rightPaneStore = useRightPaneStore()
 
 const timer = ref<ReturnType<typeof setTimeout> | null>(null)
 const rightPaneWidth = ref(readRightPaneWidth(window.localStorage, window.innerWidth))
-const agentSelectionText = ref('')
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
@@ -209,8 +207,7 @@ const agentDocumentContext = computed<AiDocumentContext | null>(() => {
     filePath,
     markdown: file.markdown ?? '',
     revision: 0,
-    dirty: !file.isSaved,
-    ...(agentSelectionText.value ? { selectionText: agentSelectionText.value } : {})
+    dirty: !file.isSaved
   }
 })
 const currentProject = computed(() => {
@@ -235,12 +232,6 @@ const muyaIndexCursor = computed<Record<string, unknown> | undefined>(
   () => currentFile.value?.muyaIndexCursor as Record<string, unknown> | undefined
 )
 
-const captureAgentSelection = (event: Event): void => {
-  const detail = (event as CustomEvent<{ documentId?: string; text?: string }>).detail
-  if (!detail?.text || detail.documentId !== currentFile.value?.id) return
-  agentSelectionText.value = detail.text
-}
-
 watch(commentPaneVisible, (visible) => {
   if (visible) {
     rightPaneStore.openComments()
@@ -259,10 +250,6 @@ watch([init, hasCurrentFile], ([isInitialized, hasFile]) => {
       annotaMDCommentsStore.setPaneVisible(false)
     }
   }
-})
-
-watch(() => currentFile.value?.id, () => {
-  agentSelectionText.value = ''
 })
 
 // Watchers
@@ -321,7 +308,6 @@ const setupDragDropHandler = (): void => {
   )
 }
 onMounted(async () => {
-  window.addEventListener('annotamd:agent-selection-changed', captureAgentSelection)
   stopAgentDocumentTransactionIpc = subscribeAgentDocumentTransactionIpc({
     editorAvailable: () => hasCurrentFile.value && !sourceCode.value
   })
@@ -386,7 +372,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('annotamd:agent-selection-changed', captureAgentSelection)
   stopCommentPaneResize?.()
   stopAgentDocumentTransactionIpc?.()
   stopAgentDocumentTransactionIpc = null

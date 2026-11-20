@@ -466,6 +466,7 @@ const processLabel = (message: AiMessage): string => (
 )
 
 const toolDisplayName = (name?: string): string => {
+  if (name === 'read_comments') return t('annotamd.agentWorkspace.toolKinds.readComments')
   if (name === 'commandExecution') return t('annotamd.agentWorkspace.toolKinds.command')
   if (name === 'fileChange') return t('annotamd.agentWorkspace.toolKinds.fileChange')
   if (name === 'mcpToolCall') return t('annotamd.agentWorkspace.toolKinds.mcp')

@@ -418,7 +418,7 @@ const HEADING_NUMBER_ICONS = {
 };
 
 for (const icons of [TABLER_ICONS, LUCIDE_ICONS, HEROICONS_ICONS, FEATHER_ICONS, SVG_ICONS])
-    Object.assign(icons, COMPLETE_MENU_ICONS, HEADING_NUMBER_ICONS);
+    Object.assign(icons, COMPLETE_MENU_ICONS, HEADING_NUMBER_ICONS, { paperclip: OFFICIAL_ICON_THEMES.lucide.icons.paperclip });
 
 /* ========== Theme configs ========== */
 const ICON_THEMES: Record<IconThemeName, IconThemeConfig> = {

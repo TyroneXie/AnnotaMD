@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path'
 import { app, BrowserWindow } from 'electron'
 import { AgentDocumentRendererBridge } from '../agentDocumentBridge/AgentDocumentRendererBridge'
 import { AgentDocumentScopeService } from '../agentDocumentBridge/AgentDocumentScopeService'
+import { getCommentService } from '../comments'
 import { AiStore } from './AiStore'
 import { KeytarAiSecretStore } from './AiSecretStore'
 import { ApiAskHost } from './ApiAskHost'
@@ -62,6 +63,7 @@ export const getAiWorkspaceService = (): AiWorkspaceService => {
     apiHost: new ApiAskHost(),
     piHost: new PiAgentHost({
       documentScopes: scopeService,
+      readDocumentComments: filePath => getCommentService().readDocumentComments(filePath),
       adapterPath: piAdapterPath,
       bundledCliPaths: bundledPiCliPaths,
       providerSettingsPath: () => join(app.getPath('userData'), 'pi-provider.json'),

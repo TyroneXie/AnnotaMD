@@ -98,6 +98,8 @@
 
 - 现象：内置 Pi 配置缺 Key、缺模型或已删除，侧栏仍显示就绪，升级后还可能选中旧 CLI。根因：界面把数据库里存在 CLI 配置当成运行就绪。推荐做法：从已启用服务商、该服务商的密钥和已启用模型推导就绪状态，设置变更后推送状态并刷新模型选项，保留旧会话供查看。验证方式：运行 `npm run verify:agent`，在 Electron 中用本地模拟接口核对就绪状态、停用默认模型后的请求模型和删除服务商后的发送按钮。
 - 服务商模型发现只读，用户确认添加时由主进程从最新设置追加所选项，保留既有模型及其状态。Pi 的思考档位按各个模型的能力映射显示，当前模型的 RPC 档位只作为该模型的回退。用几十个候选验证取消和选择性添加，再用模拟接口检查 DeepSeek 的思考档位确实写入请求。
+- 侧栏引用由选区工具栏显式加入。普通划选与取消选中只更新编辑器状态，引用属于当前文档草稿，提交失败保留，提交成功仅清除本次发送的引用。Electron 回归覆盖显式加入、焦点、改选、移除和提交，并检查「询问 AI」仍在原地打开。
+- 下拉列表挂载在选择器内部时，使用独立的 `label[for]` 关联输入框。用 `label` 包住整个选择器会在点击选项后再次激活输入框，重开刚收起的列表。Electron 回归应点选当前值和其他值，并验证列表收起、外层浮层仍打开。
 
 - 块间空白的双击插入应按顶层块的实际边界定位，并复用相邻空段落；图片下沿的容器留白需按内容矩形识别。不要把文字右侧、代码块内部或批注控件当作块间空白。新增段落后应主动聚焦编辑器并定位光标，回归同时检查重复双击、输入和撤销。光标验收不能只检查内部选区：Electron 中用测试专用 `caret-animation: manual` 固定闪烁，再比较 `caret: 'initial'` 与 `caret: 'hide'` 截图，确认编辑区域内实际绘制了光标；源码模式的 CodeMirror 自绘光标单独检查。
 - 现象：截图粘贴后 Markdown 表格行包含大段 base64，文档体积异常增大。根因：Muya 将内存图片交给 `imageAction` 时使用 data URL，桌面端却把所有字符串都当作本地路径，无法识别后原样返回。推荐做法：在图片保存策略分支前将 image data URL 解码为具有唯一文件名的二进制 File，再复用目录、上传或路径策略；使用本地解码，不依赖可能被 CSP 拦截的 fetch。验证方式：`verify:table` 覆盖转换及保存；Electron 使用系统剪贴板粘贴超过 1.5 MB 的 data URL 对应位图，确认实际 PNG 落盘、Markdown 仅保留短路径，保存与源码往返后表格仍完整。
@@ -242,6 +244,8 @@
 - 推荐做法：打包产物冒烟完成后必须退出该产物的主进程和 Helper，再启动正式安装版；不要同时保留 `dist`、DMG 与 `/Applications` 三处 AnnotaMD 运行实例。
 - 验证方式：用 `ps` 和 `lsappinfo` 确认唯一前台 AnnotaMD 的 bundle path 是预期路径，再从 Finder 或 `open -a /Applications/AnnotaMD.app <file.md>` 打开真实文档，并等待确认主进程持续存活。
 - 现象：开发版能启动 Pi，安装包却缺少 Pi 入口。根因：electron-builder 跳过资源复制源根级的 `node_modules`。推荐做法：将暂存的 `resources/pi/node_modules` 直接映射到包内 `pi/node_modules`。验证方式：在 `afterPack` 检查 CLI、jiti 和适配器文件，再用打包后的 Electron 启动 Pi RPC 验证适配器握手。
+- 现象：macOS 提交「询问 AI」后，程序坞短暂出现 `exec` 图标。根因：用 Electron 主程序启动 Pi 时，Launch Services 会把子进程登记为 `Foreground`。推荐做法：用 Electron 提供的 `process.helperExecPath` 启动内置 Pi，沿用 `ELECTRON_RUN_AS_NODE` 和 RPC 管道。验证方式：在选区询问和侧栏对话请求期间按 Pi 进程 PID 检查 `lsappinfo`，确认登记为 `UIElement`，并检查两处都能收到回复。
+- 内置 Pi 的新工具必须同时注册到适配器和 RPC 启动的 `--tools` 列表。只注册适配器时，Pi 的工具允许列表会过滤它。评论读取按本轮文档作用域取数。用实际 Pi 握手检查 `activeTools`，再在关闭 MCP 的 Electron 中验证评论分页、完整回复和选区询问隔离。
 
 ### Electron 大版本与 Linux 原生模块工具链
 

@@ -4,6 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import type { AnnotaMDCommentDocument } from '../../../src/shared/types/comments'
 import {
   PiAgentHost,
   type PiAgentDocumentScopes
@@ -120,17 +121,11 @@ const runRequest = (overrides: Partial<AiHostRunRequest> = {}): AiHostRunRequest
   ...overrides
 })
 
-const createHarness = (document = snapshot()): {
-  host: PiAgentHost
-  scopes: PiAgentDocumentScopes
-  runtimes: FakePiRuntime[]
-  runtimeOptions: PiRpcProcessOptions[]
-  settingsPath: string
-  keychain: Map<string, string>
-} => {
+const createHarness = (document = snapshot()) => {
   const runtimes: FakePiRuntime[] = []
   const runtimeOptions: PiRpcProcessOptions[] = []
   const scopes: PiAgentDocumentScopes = {
+    getScopedFilePath: vi.fn(() => typeof document.filePath === 'string' ? document.filePath : undefined),
     readDocument: vi.fn(async() => document),
     editDocument: vi.fn(async() => ({
       ...document,
@@ -152,8 +147,10 @@ const createHarness = (document = snapshot()): {
     baseUrl: 'https://api.example.com/v1',
     model: 'test-model'
   }))
+  const readDocumentComments = vi.fn<(path: string) => AnnotaMDCommentDocument | null>(() => null)
   const host = new PiAgentHost({
     documentScopes: scopes,
+    readDocumentComments,
     adapterPath: '/app/resources/pi-adapter/adapter.mjs',
     providerSettingsPath: () => settingsPath,
     agentDirectory: () => join(settingsRoot, 'agent'),
@@ -178,7 +175,7 @@ const createHarness = (document = snapshot()): {
       return runtime
     }
   })
-  return { host, scopes, runtimes, runtimeOptions, settingsPath, keychain }
+  return { host, scopes, readDocumentComments, runtimes, runtimeOptions, settingsPath, keychain }
 }
 
 const extensionRequest = (id: string, envelope: Record<string, unknown>): Record<string, unknown> => ({
@@ -196,6 +193,49 @@ const decodedResponse = (runtime: FakePiRuntime, index: number): unknown => {
 }
 
 describe('PiAgentHost', () => {
+  it('pages complete comment threads from the scoped document without using the supplied path', async() => {
+    const { host, scopes, readDocumentComments, runtimes } = createHarness()
+    const comments = Array.from({ length: 11 }, (_entry, index) => ({
+      id: `comment-${index}`,
+      filePath: documentPath,
+      scope: 'selection' as const,
+      quote: 'Body',
+      body: `Local comment ${index}`,
+      resolved: index === 10,
+      createdAt: index,
+      updatedAt: index + 1,
+      replies: [{ id: `reply-${index}`, author: 'agent' as const, body: `Agent reply ${index}`, createdAt: index + 1 }]
+    }))
+    const document = { documentId: 'comment-document', filePath: documentPath, revision: 7, comments }
+    readDocumentComments.mockReturnValue(document)
+    const events: AiHostEvent[] = []
+    const result = host.run(runRequest({ permissionMode: 'request' }), event => events.push(event))
+    await vi.waitFor(() => expect(runtimes[0]?.prompts).toHaveLength(1))
+    const runtime = runtimes[0]!
+    const requestPage = (offset: number, revision?: number) => runtime.emitMessage(extensionRequest(
+      'comment-page',
+      { v: 1, kind: 'read-comments', sessionId: 'session-1', offset, revision, path: '/other.md' }
+    ))
+
+    requestPage(0)
+    expect(decodedResponse(runtime, 0)).toEqual({
+      v: 1, kind: 'comments', result: { revision: 7, total: 11, comments: comments.slice(0, 10), nextOffset: 10 }
+    })
+    requestPage(10, 7)
+    expect(decodedResponse(runtime, 1)).toMatchObject({ result: { comments: comments.slice(10), nextOffset: null } })
+
+    readDocumentComments.mockReturnValue({ ...document, revision: 8 })
+    requestPage(10, 7)
+    expect(decodedResponse(runtime, 2)).toEqual({
+      v: 1, kind: 'comments', result: { message: 'The comment revision changed or is missing. Read again from offset 0.' }
+    })
+    expect(scopes.getScopedFilePath).toHaveBeenCalledWith('scope-token')
+    expect(readDocumentComments.mock.calls).toEqual([[documentPath], [documentPath], [documentPath]])
+    expect(events.some(event => event.type === 'approval-requested')).toBe(false)
+    runtime.emitMessage({ type: 'agent_settled' })
+    await result
+  })
+
   it('discovers Pi models without leaking the document scope token to the child', async() => {
     const { host, runtimes, runtimeOptions } = createHarness()
 

@@ -336,6 +336,8 @@ test('keeps Agent open when clicking and selecting annotated text', async() => {
     await expect(page.locator('.annotamd-comment-pane')).toHaveCount(0)
 
     await selectParagraphText(page, 0)
+    await expect(agentPane.getByTestId('ai-selection-context')).toHaveCount(0)
+    await page.locator('.mu-format-picker li.annotamd_quote_agent').click()
     await expect(agentPane.getByTestId('ai-selection-context')).toContainText(text)
     await expect(page.locator('.annotamd-comment-pane')).toHaveCount(0)
   } finally {

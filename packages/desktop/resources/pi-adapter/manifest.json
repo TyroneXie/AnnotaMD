@@ -15,7 +15,8 @@
     "proposal-v1",
     "approval-v1",
     "feedback-v1",
-    "abortable-input"
+    "abortable-input",
+    "comments-v1"
   ],
   "toolOwners": {
     "read": "annotamd-pi-adapter/v1",

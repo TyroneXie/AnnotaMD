@@ -1,134 +1,114 @@
 <h1 align="center">AnnotaMD</h1>
 
 <p align="center">
-  <strong>本地优先、具有飞书文档体验的所见即所得 Markdown 编辑器</strong><br/>
-  <sub>保留 Markdown 的开放与可迁移，加入批注联动与 Agent 协作能力</sub>
+  <strong>本地优先的所见即所得 Markdown 编辑器</strong><br/>
+  在同一份 Markdown 文档里写作、批注、画图，并用内置 Agent 审阅和修改正文。
 </p>
 
 <p align="center">
-  <a href="https://github.com/TyroneXie/AnnotaMD/releases"><img src="https://img.shields.io/github/v/release/TyroneXie/AnnotaMD?style=flat-square&label=Release&color=1b9e6b" alt="Latest Release" /></a>
-  <a href="https://github.com/TyroneXie/AnnotaMD/blob/main/LICENSE"><img src="https://img.shields.io/github/license/TyroneXie/AnnotaMD?style=flat-square&label=License&color=6b7a71" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/Electron-42-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron" />
-  <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS" />
-  <img src="https://img.shields.io/badge/Windows-x64%20%7C%20arm64-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows" />
-  <img src="https://img.shields.io/badge/Linux-x64-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux" />
+  <a href="https://github.com/TyroneXie/AnnotaMD/releases"><img src="https://img.shields.io/github/v/release/TyroneXie/AnnotaMD?style=flat-square&amp;label=Release&amp;color=1b9e6b" alt="GitHub Release" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/TyroneXie/AnnotaMD?style=flat-square&amp;label=License&amp;color=6b7a71" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-000000?style=flat-square&amp;logo=apple&amp;logoColor=white" alt="macOS arm64 / x64" />
+  <img src="https://img.shields.io/badge/Windows-x64%20%7C%20arm64-0078D4?style=flat-square&amp;logo=windows&amp;logoColor=white" alt="Windows x64 / arm64" />
+  <img src="https://img.shields.io/badge/Linux-x64-FCC624?style=flat-square&amp;logo=linux&amp;logoColor=black" alt="Linux x64" />
 </p>
-
----
 
 <p align="center">
-  <img src="docs/assets/annotamd-readme-showcase.png" alt="AnnotaMD — 本地优先的所见即所得 Markdown 编辑器" width="100%" />
+  <a href="#下载安装">下载安装</a> ·
+  <a href="#评论与审阅">评论与审阅</a> ·
+  <a href="#内置-pi-agent">内置 Agent</a> ·
+  <a href="#选区询问-ai">询问 AI</a> ·
+  <a href="#markdown-编辑与图表">Markdown 编辑与图表</a>
 </p>
 
-## ✨ 主要特性
+![AnnotaMD 当前界面。左侧是 Agent 对话，中间是所见即所得的 Markdown、Mermaid 图和表格，右侧是与正文关联的评论。](docs/assets/annotamd-readme-showcase.png)
 
-<table>
-  <tr>
-    <td width="50%">
-      <h3>📝 所见即所得快编辑</h3>
-      <p>默认直接编辑渲染后的 Markdown，不需要在阅读与源码模式之间反复切换。表格、代码块、Mermaid 图表、任务列表——一切都在文档中即时呈现。</p>
-    </td>
-    <td width="50%">
-      <h3>🎨 飞书式交互体验</h3>
-      <p>现代三栏布局、块菜单、选区浮动工具栏、紧凑代码块和图表工具栏。熟悉的现代文档编辑器交互方式，零学习成本。</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>💬 面向 Agent 的批注</h3>
-      <p>支持选区批注与全文批注，批注独立存储、不污染 Markdown 正文。可从评论栏把新批注或线程回复直接发送给本地 Agent，并在同一线程继续沟通；Agent 也可定位原文、回复或修改文档。</p>
-    </td>
-    <td width="50%">
-      <h3>🏠 本地优先</h3>
-      <p>直接打开本地文件和文件夹，同时管理多个工作区、文件标签页和文档大纲。文件始终是开放的 Markdown，随时可用其他工具打开或迁移。</p>
-    </td>
-  </tr>
-</table>
+截图使用[演示 Markdown](docs/assets/annotamd-readme-showcase.md)和本地模拟模型服务。下文展示当前源码中的功能，安装包功能以对应版本的发布说明为准。
 
-<details>
-<summary><strong>更多能力</strong></summary>
+## 下载安装
 
-- **完整 Markdown 支持** — 表格、任务列表、代码高亮、行号、自动换行、Mermaid 图表、图片预览与四角缩放等。
-- **源码模式** — 需要精确修改 Markdown 时，可从"视图"菜单切换源码模式，编辑宽度与所见即所得模式一致。
-- **图片编辑** — 飞书式图片块菜单，支持四角等比缩放、磁吸全宽、对齐方式切换。
-- **表格增强** — 列拖拽调整宽度、标题行吸顶、横向滚动、紧凑列布局。
-- **链接编辑** — 飞书式链接编辑器，支持复制链接地址和原始 URL。
-- **多语言界面** — 中文 / English 双语支持，跟随系统语言自动切换。
+从 [GitHub Releases](https://github.com/TyroneXie/AnnotaMD/releases) 下载对应平台的安装包。支持 macOS（Apple 芯片 / Intel）、Windows（x64 / arm64）和 Linux（x64）。macOS 首次打开时的提示和升级方式见[对应版本的发布说明](docs/releases/)。
 
-</details>
+打开已有 Markdown 文件或文件夹，即可编辑、搜索和批注。要使用 AI，在「设置 → Agent」添加服务商、填写 API 密钥，并启用至少一个模型。可以从服务商获取模型列表后勾选需要的模型，也可以手动填写模型 ID。
 
-## 📥 下载
+## 评论与审阅
 
-前往 [GitHub Releases](https://github.com/TyroneXie/AnnotaMD/releases) 下载最新版本，支持 macOS（arm64 / x64）、Windows（x64 / arm64）和 Linux（x64）。
+- **选区评论和全文评论**。划选文字后点工具栏里的评论按钮，或在评论栏添加对整篇文档的意见。选区可以跨段落和列表，评论会保留对应的原文引用。
+- **正文与卡片双向定位**。点带批注的文字或右侧卡片，可定位对应的另一端，也可在上一条和下一条评论之间跳转。长文档滚动时，评论随正文锚点移动，重叠的卡片会错开。
+- **线程回复与处理**。在同一条评论下继续讨论，查看原评论以及 Local、Agent 的历史回复。可在处理后将评论标记为已解决。评论和回复独立保存在本机 SQLite，Markdown 文件保留正文和图片引用。
+- **外部 Agent 接入**。可选的 AnnotaMD MCP 支持按文档列出评论、读取完整线程和添加回复。[外部接入说明](tools/annotamd-mcp/README.md)
 
-### macOS 用户提示
+## 内置 Pi Agent
 
-当前使用免费 ad-hoc 签名，未经过 Apple 公证。首次打开时如被系统阻止：
+从左侧活动栏打开 **AI 助手**。它适合跨多轮审阅整篇文档，例如「根据这篇文档的所有评论列出待修改项」，也可以继续要求按审阅意见修改正文。
 
-> **系统设置 → 隐私与安全性 → 安全性 → 找到 AnnotaMD → 点击"仍要打开"**
->
-> 确认一次后，后续可正常双击启动。
+- **文档上下文**。内置 Pi 按当前文档读取全文、评论和完整回复，应用内部直接提供这些数据。划选后点击工具栏里的回形针「引用到 Agent」，可以把文字加入侧栏草稿，随下一条消息发送。
+- **模型与服务商**。支持 OpenAI 兼容接口和 Anthropic Messages，可选择 DeepSeek、OpenAI、Claude、Gemini、Ollama 等预设或填写自定义地址。侧栏可切换已启用的模型，并选择模型支持的思考强度。
+- **对话与执行过程**。支持流式回复、常用文档任务、文本附件、新建和搜索历史会话。可以查看工具执行过程、复制回复、停止运行或重试。
+- **修改审阅**。使用「请求批准」控制文档写入，查看改动差异，并选择保留或回退本轮文档修改。
 
-## 🔄 批注与 Agent 协作
+Pi 随应用安装并在后台运行。使用 AI 时，任务所需的上下文会发送到所配置的模型服务。
 
-AnnotaMD 不是在线协作文档，而是**连接本地 Markdown 与 AI Agent 的直接协作界面**：
+## 选区询问 AI
 
-```
-选中正文或添加全文批注 → 发送给 Agent → 在线程中继续沟通 → Agent 回复或修改原文件
-```
+划选正文，点击浮动工具栏上的 **询问 AI**，直接在选区旁输入问题或改写要求。
 
-1. 在“设置 → Agent”中启用评论访问，配置并选中本地 Agent CLI。当前评论栏直接发送支持 Claude Code CLI；Codex、Claude Code 和其他兼容 Agent 也可通过 MCP 访问批注
-2. 选中文字添加批注，或在文末添加全文批注；新建批注和已有线程回复均可点击“发送 Agent”
-3. 执行状态、Agent 回复和错误提示都会显示在原评论线程中；同一线程的后续发送会延续会话，支持多轮沟通
-4. Agent 会结合被批注原文、上下文和当前评论线程处理任务：问题与建议直接在线程回复，明确的修改要求可直接写入当前 Markdown 文件
-5. 批注与回复保存在本地 SQLite 元数据中，不写入 Markdown 渲染正文
+每次询问独立使用选中文字、前后文和位置作为上下文。问答结果会显示在浮层内，明确要求改写时可将结果应用到对应选区，并通过编辑器撤销。
 
-## 🛠 开发
+![选区询问 AI 浮层，显示所选原文、问题和回答。](docs/assets/annotamd-readme-ask-ai.png)
 
-环境要求：**Node.js 20.19+**、**pnpm 10+**。
+## Markdown 编辑与图表
+
+| 功能 | 可以做什么 |
+| --- | --- |
+| **所见即所得和源码模式** | 直接编辑渲染后的标题、列表、引用和表格。通过「视图 → 源码模式」编辑原始 Markdown，使用连续行号、查找和替换。 |
+| **块编辑与文字格式** | 用块菜单、快捷插入和选区工具栏调整段落、标题、代码块、引用、待办和高亮块。支持加粗、斜体、下划线、删除线、链接和文字颜色，可将块内容复制为 Markdown 或纯文本。 |
+| **标题与长文档导航** | 支持 H1–H6 自动层级编号、继续或重设编号、章节折叠和大纲定位。 |
+| **表格** | 增删行列、设置对齐、拖动列宽、横向滚动和吸顶表头。单元格支持换行、图片、链接及常用格式。 |
+| **图片与链接** | 支持拖放和粘贴图片、四角缩放、对齐、复制、下载和行内图片，可设置图片保存目录或上传方式。粘贴独立 URL 可切换原始链接与网页标题，普通行内链接可直接编辑。 |
+| **代码、公式与 HTML** | 代码块支持语言选择、语法高亮、行号、换行和复制。支持数学公式、脚注、Emoji、YAML Front Matter 和 HTML 块预览。 |
+| **Mermaid 与其他图表** | 文档内渲染 Mermaid，支持图表、源码与并排视图，并可全屏查看和缩放。也支持 Vega-Lite、PlantUML、Flowchart.js 和 Sequence Diagram。 |
+
+## 桌面工作流
+
+- **多文件与多工作区**。同时打开多个文件夹和文档标签页，在文件树、大纲和文件夹全文搜索之间切换。文件树可按名称、创建时间或修改时间排序。
+- **保存与外部变更**。支持自动保存、磁盘文件变更自动重载和会话恢复。正文可继续用其他 Markdown 工具编辑。
+- **导入、导出与打印**。安装 Pandoc 后可导入 Word、HTML、LaTeX 等文档。支持导出 HTML、PDF，以及直接打印。
+- **可调的阅读与编辑界面**。支持浅色和深色主题、自定义主题、图标主题、多语言、字体与留白设置、可配置的快捷键、专注模式和打字机模式。
+- **应用内更新**。支持检查更新，macOS 可在应用内下载并重启安装更新。
+
+## 开发
+
+需要 Node.js 20.19+ 和 pnpm 10。仓库的 `packageManager` 字段记录了对应的 pnpm 版本。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-自动打开指定文档进行调试：
+### 用指定文档启动开发版
 
 ```bash
-cd packages/desktop
-ANNOTAMD_OPEN_FILE=/absolute/path/to/document.md \
-  ./node_modules/.bin/electron-vite --remoteDebuggingPort 9222 dev -- \
-  '--remote-allow-origins=*'
+ANNOTAMD_OPEN_FILE=/absolute/path/to/document.md pnpm dev
 ```
 
-运行验证：
+### 验证与构建
 
 ```bash
-npm run verify:quick     # 核心模块快速冒烟
-npm run verify:feature   # 跨模块功能验证
-npm run build            # Electron production build
+npm run verify:quick
+npm run verify:feature
+npm run verify:agent
+pnpm build
 ```
 
-## 📂 项目结构
+| 目录 | 内容 |
+| --- | --- |
+| [`packages/desktop/`](packages/desktop/) | Electron 桌面应用、评论存储、Pi 集成 |
+| [`packages/muya/`](packages/muya/) | Muya 所见即所得编辑器 |
+| [`tools/annotamd-mcp/`](tools/annotamd-mcp/) | 可选的外部 Agent 评论接入 |
+| [`docs/`](docs/) | 开发资料、演示文档和发布说明 |
+| [`scripts/`](scripts/) | 验证与构建脚本 |
 
-```
-AnnotaMD/
-├── packages/
-│   ├── desktop/          # Electron 桌面应用
-│   ├── muyajs/           # Muya 编辑器引擎
-│   └── ...
-├── docs/                 # 开发与发布资料
-├── scripts/              # 验证与构建脚本
-└── web/                  # 视觉原型
-```
+## 致谢与许可
 
-## 📖 项目资料
-
-- 开发与发布资料：[`docs/`](docs/)
-
-## 🙏 致谢与许可
-
-AnnotaMD 使用 Muya 开源编辑器内核，并在此基础上持续发展本地写作、批注与 Agent 协作能力。
-
-本项目采用 [MIT License](LICENSE)。上游代码与依赖的版权和许可声明见
-[`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt)。
+AnnotaMD 使用 Muya 开源编辑器内核，并集成了 Pi。项目采用 [MIT License](LICENSE)，依赖版权和许可见[第三方声明](THIRD-PARTY-NOTICES.txt)。
