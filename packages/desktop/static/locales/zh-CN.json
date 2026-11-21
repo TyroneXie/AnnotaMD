@@ -408,6 +408,7 @@
         "apiKeyKeep": "密钥已保存在本机，留空表示不修改。",
         "modelsTitle": "模型",
         "manageModels": "管理模型",
+        "managingModels": "管理中",
         "providerActions": "{name} 的操作",
         "modelsSummary": "{name} · 已启用 {enabled} / {total}",
         "addProvider": "添加服务商",

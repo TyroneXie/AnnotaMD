@@ -17,6 +17,13 @@ to integrate AnnotaMD's document-scoped MCP, Muya buffer transactions, Diff,
 and whole-turn rollback. A copy of the Apache License 2.0 is available at
 https://www.apache.org/licenses/LICENSE-2.0.
 
+## Language icons
+
+Material Design Icons by Pictogrammers
+https://github.com/Templarian/MaterialDesign
+Language logos and symbols are licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0.
+
 ## MIT-licensed components
 
 Upstream desktop editor

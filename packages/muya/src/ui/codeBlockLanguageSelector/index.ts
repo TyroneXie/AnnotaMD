@@ -4,17 +4,21 @@ import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
 import { ScrollPage } from '../../block/scrollPage';
 import { firstWordOfInfo } from '../../utils';
-import { languageDisplayName, search } from '../../utils/prism';
+import { languageDisplayName, search, transformAliasToOrigin } from '../../utils/prism';
 
 import { h, patch } from '../../utils/snabbdom';
 import BaseScrollFloat from '../baseScrollFloat';
+import { renderActionIcon } from '../actionIcons';
+import type { ActionIconName } from '../actionIcons';
+import { LANGUAGE_ICONS } from './generatedLanguageIcons';
 import {
     buildLanguagePickerItems,
     languageCategory,
     MORE_LANGUAGES_ITEM_NAME,
 } from './languageItems';
-import type { LanguagePickerItem } from './languageItems';
+import type { LanguageCategory, LanguagePickerItem } from './languageItems';
 
+import '../actionIcons.css';
 import './index.css';
 
 const defaultOptions = {
@@ -28,6 +32,14 @@ const defaultOptions = {
 };
 
 const DIAGRAM_LANGS = new Set(['mermaid', 'vega-lite', 'plantuml', 'flowchart', 'sequence']);
+
+const CATEGORY_ICONS: Record<LanguageCategory, ActionIconName> = {
+    plain: 'copy-plain-text',
+    markup: 'html',
+    query: 'table',
+    config: 'frontmatter',
+    code: 'code',
+};
 
 type LanguageItem = LanguagePickerItem;
 
@@ -186,23 +198,21 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             const itemContent = [text];
 
             if (isMoreItem) {
-                itemContent.push(h('span.mu-language-more-chevron', item.expanded ? '⌃' : '⌄'));
+                itemContent.push(h('span.mu-language-more-chevron',
+                    renderActionIcon(item.expanded ? 'move-up' : 'move-down')));
             }
             else {
-                const category = languageCategory(item.name);
-                const glyph = {
-                    plain: 'T',
-                    markup: '<>',
-                    query: 'Q',
-                    config: '{}',
-                    code: '</>',
-                }[category];
-                itemContent.push(
-                    h(
-                        'div.icon-wrapper',
-                        h(`span.mu-language-generic-icon.${category}`, glyph),
-                    ),
-                );
+                const language = transformAliasToOrigin([item.name.toLowerCase()])[0];
+                const icon = LANGUAGE_ICONS[language];
+                itemContent.push(h('div.icon-wrapper', icon
+                    ? h('span.mu-language-icon', {
+                            dataset: { language },
+                            style: { color: icon.color },
+                        }, h('svg', {
+                            attrs: { 'viewBox': icon.viewBox, 'aria-hidden': 'true' },
+                            props: { innerHTML: icon.body },
+                        }))
+                    : renderActionIcon(CATEGORY_ICONS[languageCategory(language)])));
             }
 
             return {

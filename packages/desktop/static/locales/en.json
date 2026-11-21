@@ -408,6 +408,7 @@
         "apiKeyKeep": "Saved on this computer. Leave empty to keep it.",
         "modelsTitle": "Models",
         "manageModels": "Manage models",
+        "managingModels": "Managing",
         "providerActions": "{name} actions",
         "modelsSummary": "Models for {name} · {enabled} of {total} enabled",
         "addProvider": "Add provider",

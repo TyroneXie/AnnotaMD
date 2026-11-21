@@ -39,11 +39,15 @@
           </div>
           <div class="pref-ai-provider-actions">
             <button
+              v-if="providers.length > 1"
               type="button"
               :aria-pressed="provider.id === activeProvider?.id"
+              :disabled="provider.id === activeProvider?.id"
               @click="manageModels(provider)"
             >
-              {{ t('preferences.agent.provider.manageModels') }}
+              {{ t(provider.id === activeProvider?.id
+                ? 'preferences.agent.provider.managingModels'
+                : 'preferences.agent.provider.manageModels') }}
             </button>
             <button type="button" @click="openEdit(provider)">
               {{ t('preferences.agent.provider.edit') }}
@@ -826,11 +830,15 @@ onMounted(async() => {
   cursor: pointer;
 }
 
-.pref-ai-provider-actions button:hover,
+.pref-ai-provider-actions button:not(:disabled):hover,
 .pref-ai-provider-actions button[aria-pressed="true"],
 .pref-ai-model-actions button:hover {
   background: var(--pi-hover);
   color: var(--pi-text);
+}
+
+.pref-ai-provider-actions button:disabled {
+  cursor: default;
 }
 
 .pref-ai :deep(button:focus-visible) {

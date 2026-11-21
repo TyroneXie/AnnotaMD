@@ -56,6 +56,8 @@ const annotaMDKeys = [
   'annotamd.agentWorkspace.status.running',
   'annotamd.agentWorkspace.status.error',
   'preferences.agent.aiWorkspace.integrationTitle',
+  'preferences.agent.provider.manageModels',
+  'preferences.agent.provider.managingModels',
   'preferences.agent.aiWorkspace.integrationDescription',
   'preferences.agent.aiWorkspace.manualSetup',
   'preferences.agent.aiWorkspace.commentAgentLink',
