@@ -36,7 +36,7 @@ export class AnnotaMDStickyTableHeader {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['class', 'style']
+      attributeFilter: ['class', 'style', 'hidden']
     })
 
     this.resizeObserver = typeof ResizeObserver === 'undefined'
@@ -111,6 +111,7 @@ export class AnnotaMDStickyTableHeader {
       if (!table || !headerRow) continue
       const tableRect = table.getBoundingClientRect()
       const headerRect = headerRow.getBoundingClientRect()
+      if (tableRect.width <= 0 || headerRect.height <= 0) continue
       candidates.push({
         figure,
         table,

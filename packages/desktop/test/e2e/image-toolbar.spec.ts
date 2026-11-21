@@ -311,6 +311,8 @@ test('copies a local image from both image action menus to the system clipboard'
     await frontButton.click()
     const frontMenu = page.locator('.mu-front-menu')
     await expect(frontMenu.locator('.image-copy')).toHaveAttribute('aria-label', /Copy Image|复制图片/)
+    await expect(frontMenu.locator('.copy-plain-text')).toHaveCount(0)
+    await expect(frontMenu.locator('.copy-markdown')).toBeVisible()
     await frontMenu.locator('.image-copy').click()
     await expect.poll(() => app.evaluate(({ clipboard }) => {
       const copied = clipboard.readImage()

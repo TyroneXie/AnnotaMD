@@ -197,35 +197,32 @@ export const buildAnnotaMDCommentRangeLayout = (
 ): CommentRangeLayout => {
   const blocks = contentBlocksByPath(root)
   const entries: CommentRangeEntry[] = []
-  const anchorRects: CommentAnchorRect[] = []
+  const anchors: Array<{ id: string; range: Range }> = []
 
   comments.forEach((comment) => {
     const range = rangeForComment(blocks, comment)
     if (!range) return
     entries.push({ comment, range, lineRanges: lineRangesForComment(blocks, comment) })
-    if (comment.id) {
-      // happy-dom/jsdom do not implement Range geometry; production Chromium
-      // does. Keep range lookup testable without changing browser behavior.
-      const rect = typeof range.getBoundingClientRect === 'function'
-        ? range.getBoundingClientRect()
-        : { top: 0, bottom: 0 }
-      anchorRects.push({ id: comment.id, top: rect.top, bottom: rect.bottom })
-    }
+    if (comment.id) anchors.push({ id: comment.id, range })
   })
 
   anchorOnlySources.forEach((source) => {
     const range = rangeForComment(blocks, source)
-    if (!range || !source.id) return
-    const rect = typeof range.getBoundingClientRect === 'function'
-      ? range.getBoundingClientRect()
-      : { top: 0, bottom: 0 }
-    anchorRects.push({ id: source.id, top: rect.top, bottom: rect.bottom })
+    if (range && source.id) anchors.push({ id: source.id, range })
   })
 
   return {
     entries,
     ranges: entries.map(({ range }) => range),
-    anchorRects
+    anchorRects: anchors
+      .sort((first, second) => first.range.compareBoundaryPoints(Range.START_TO_START, second.range))
+      .map(({ id, range }) => {
+        // happy-dom/jsdom do not implement Range geometry.
+        const { top, bottom } = typeof range.getBoundingClientRect === 'function'
+          ? range.getBoundingClientRect()
+          : { top: 0, bottom: 0 }
+        return { id, top, bottom }
+      })
   }
 }
 

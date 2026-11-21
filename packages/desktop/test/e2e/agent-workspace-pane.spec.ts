@@ -8,6 +8,11 @@ import {
   sendIpcToRenderer
 } from './helpers'
 
+const commentPrompts = [
+  'Address all comments on the current document, revise the text, and explain the changes.',
+  'Use the document to answer all its comments one by one in this chat.'
+]
+
 const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: string, occurrence = 0) => {
   await page.evaluate(({ selectedPhrase, occurrence }) => {
     const root = document.querySelector('.editor-component') as HTMLElement | null
@@ -252,7 +257,7 @@ test('keeps the model card open while selecting model and reasoning effort', asy
   }
 })
 
-test('shows two or three suggested document tasks and fills the composer without sending', async() => {
+test('suggests addressing or answering all document comments and fills the draft without sending', async() => {
   const { app, page } = await launchWithMarkdown(
     '# Suggested tasks\n\nA document for Agent prompt suggestions.\n',
     { suppressErrorDialog: true }
@@ -264,15 +269,19 @@ test('shows two or three suggested document tasks and fills the composer without
 
     const agentPane = page.locator('.annotamd-agent-workspace')
     const suggestions = agentPane.getByTestId('ai-suggested-prompt')
-    await expect(suggestions.first()).toBeVisible()
-    const count = await suggestions.count()
-    expect(count).toBeGreaterThanOrEqual(2)
-    expect(count).toBeLessThanOrEqual(3)
-
-    const firstSuggestion = (await suggestions.first().textContent())?.trim() ?? ''
-    await suggestions.first().click()
-    await expect(agentPane.getByTestId('ai-composer')).toHaveValue(firstSuggestion)
+    await expect(suggestions).toHaveText(commentPrompts)
+    for (const [index, prompt] of commentPrompts.entries()) {
+      await suggestions.nth(index).click()
+      await expect(agentPane.getByTestId('ai-composer')).toHaveValue(prompt)
+    }
     await expect(agentPane.locator('.annotamd-agent-message')).toHaveCount(0)
+    await agentPane.getByTestId('ai-new-session').click()
+    await expect(agentPane.getByTestId('ai-composer')).toHaveValue('')
+    await expect(suggestions).toHaveText(commentPrompts)
+
+    await page.locator('.tabs-container > li.active .close-icon').click()
+    await expect(agentPane.getByTestId('ai-empty-state')).toBeVisible()
+    await expect(suggestions).toHaveCount(0)
     await expectNoRendererErrors(app)
   } finally {
     await app.close()
@@ -674,7 +683,7 @@ test('copies the DBX provider picker and one-click CLI configuration flow', asyn
 })
 
 test('provides unified AI conversations and keeps Agent available without a document', async() => {
-  const { app, page } = await launchWithMarkdown(
+  const { app, page, filePath } = await launchWithMarkdown(
     '# AI workspace\n\nRight pane switching smoke test.\n',
     { suppressErrorDialog: true }
   )
@@ -920,13 +929,9 @@ test('provides unified AI conversations and keeps Agent available without a docu
     await expect(agentPane.getByTestId('ai-composer')).toBeEnabled()
     await expect(agentPane.getByTestId('ai-new-session')).toBeEnabled()
     const suggestions = agentPane.getByTestId('ai-suggested-prompt')
-    await expect(suggestions.first()).toBeVisible()
-    const suggestionCount = await suggestions.count()
-    expect(suggestionCount).toBeGreaterThanOrEqual(2)
-    expect(suggestionCount).toBeLessThanOrEqual(3)
-    const suggestedText = (await suggestions.first().textContent())?.trim() ?? ''
+    await expect(suggestions).toHaveText(commentPrompts)
     await suggestions.first().click()
-    await expect(agentPane.getByTestId('ai-composer')).toHaveValue(suggestedText)
+    await expect(agentPane.getByTestId('ai-composer')).toHaveValue(commentPrompts[0])
     expect(await app.evaluate(() => (
       (global as unknown as { __annotamd_ai_e2e__?: { sends: unknown[] } })
         .__annotamd_ai_e2e__?.sends.length ?? 0
@@ -975,14 +980,13 @@ test('provides unified AI conversations and keeps Agent available without a docu
     ))).toBe(1)
     await expect(agentPane).toContainText('New conversation')
     await expect(agentPane.getByTestId('ai-composer')).toHaveValue('')
-    expect(await suggestions.count()).toBeGreaterThanOrEqual(2)
-    expect(await suggestions.count()).toBeLessThanOrEqual(3)
-    await agentPane.getByTestId('ai-composer').fill('Revise this document')
+    await expect(suggestions).toHaveText(commentPrompts)
+    await suggestions.first().click()
     await agentPane.getByTestId('ai-send').click()
     const userMessage = agentPane.locator('.annotamd-agent-message.is-user')
     const assistantMessage = agentPane.locator('.annotamd-agent-message.is-assistant')
     const streamingProcessMessage = agentPane.getByTestId('ai-process-message')
-    await expect(userMessage).toContainText('Revise this document')
+    await expect(userMessage).toContainText(commentPrompts[0])
     await expect(streamingProcessMessage).toContainText('Mocked unified response')
     await expect(assistantMessage).toHaveCount(0)
     await expect(agentPane.locator('.annotamd-agent-message-labels')).toHaveCount(0)
@@ -993,9 +997,10 @@ test('provides unified AI conversations and keeps Agent available without a docu
       (global as unknown as { __annotamd_ai_e2e__?: { sends: Array<Record<string, unknown>> } })
         .__annotamd_ai_e2e__?.sends[0] ?? null
     ))).toMatchObject({
-      text: 'Revise this document',
+      text: commentPrompts[0],
       selection: { mode: 'agent', configId: 'cli-e2e' },
       documentId: expect.any(String),
+      filePath,
       markdown: expect.stringContaining('# AI workspace')
     })
 
@@ -1153,7 +1158,6 @@ test('provides unified AI conversations and keeps Agent available without a docu
         .__annotamd_ai_e2e__?.deletes.length ?? 0
     ))).toBe(1)
     await expect(agentPane.locator('.annotamd-agent-message')).toHaveCount(0)
-
     await page.waitForTimeout(100)
     await expectNoRendererErrors(app)
   } finally {

@@ -76,9 +76,11 @@ const addComment = async(
   paragraphIndex: number,
   body: string,
   expectedCount = 1,
-  expectedQuote = '重复文字：需要修正。'
+  expectedQuote = '重复文字：需要修正。',
+  start = 0,
+  end?: number
 ) => {
-  await selectParagraphText(page, paragraphIndex)
+  await selectParagraphText(page, paragraphIndex, start, end)
   await page.locator('.mu-format-picker li.annotamd_comment').click()
   const composer = page.locator('.annotamd-composer-card')
     await expect(composer).toBeVisible()
@@ -474,6 +476,9 @@ test('scrolls only the selected long thread when the pointer is inside its card'
       return card.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom
     })
     expect(Math.abs(actionRowBottomBeforeScroll)).toBeLessThan(3)
+    await card.evaluate((element) => {
+      element.scrollTop = 0
+    })
     const cardHeightBeforeFirstWheel = await card.evaluate(
       (element) => element.getBoundingClientRect().height
     )
@@ -612,6 +617,24 @@ test('keeps every reply separate and lets every Local message edit or delete', a
     await expect(replies.nth(1).locator('.annotamd-message-author')).toHaveText('Local')
     await expect(replies.nth(1).locator('p')).toHaveText('Local 第二轮回复')
     await expect(card.locator('.annotamd-replies')).toHaveCSS('border-left-width', '0px')
+    const messages = await card.locator('.annotamd-thread-message').evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, y, height } = element.getBoundingClientRect()
+        const { backgroundColor, borderTopWidth } = getComputedStyle(element)
+        return { x, y, height, backgroundColor, borderTopWidth }
+      })
+    )
+    expect(messages).toHaveLength(3)
+    for (const [index, message] of messages.entries()) {
+      expect(message.borderTopWidth).toBe('0px')
+      expect(message.backgroundColor).toBe('rgba(0, 0, 0, 0)')
+      expect(message.x).toBeCloseTo(messages[0].x)
+      expect(message.height).toBeLessThan(52)
+      if (index > 0) {
+        const previous = messages[index - 1]
+        expect(message.y - (previous.y + previous.height)).toBeCloseTo(8)
+      }
+    }
     await replyEditor.focus()
     const actionRow = card.locator('.annotamd-comment-action-row')
     await expect(actionRow.locator('.annotamd-thread-toggle')).toBeVisible()
@@ -1088,6 +1111,49 @@ test('keeps the text anchor visible while expanding threads and navigating comme
         (anchorRect.top - viewport.top) / viewport.height - 0.28
       )
     })).toBeLessThan(0.03)
+  } finally {
+    await app.close()
+  }
+})
+
+test('jumps to the first comment in document order from the bottom of the pane', async() => {
+  const paragraphs = Array.from({ length: 80 }, (_, index) => `Comment jump paragraph ${index + 1}.`)
+  const anchorIndex = 30
+  const firstQuote = 'First anchor.'
+  const secondQuote = 'Second anchor.'
+  paragraphs[anchorIndex] = `${firstQuote} ${secondQuote}`
+  const { app, page } = await launchWithMarkdown(paragraphs.join('\n\n'))
+  try {
+    const editor = page.locator('.editor-component')
+    const anchor = editor.locator('.mu-paragraph-content').nth(anchorIndex)
+    await anchor.scrollIntoViewIfNeeded()
+    await addComment(page, anchorIndex, 'Created first', 1, secondQuote, firstQuote.length + 1)
+    await addComment(page, anchorIndex, 'First in the document', 2, firstQuote, 0, firstQuote.length)
+
+    const pane = page.locator('.annotamd-comment-pane')
+    const jump = pane.getByRole('button', { name: /Jump to the first comment|跳转到第一条批注/ })
+    const firstCard = pane.locator('.annotamd-comment-card').filter({ hasText: 'First in the document' })
+    const secondCard = pane.locator('.annotamd-comment-card').filter({ hasText: 'Created first' })
+
+    for (const edge of ['top', 'bottom'] as const) {
+      await editor.evaluate((element, target) => {
+        element.scrollTop = target === 'top' ? 0 : element.scrollHeight
+      }, edge)
+      await expect(anchor).not.toBeInViewport()
+      await expect(firstCard).not.toBeInViewport()
+      await expect(jump).toBeInViewport()
+      await expect.poll(async() => {
+        const [paneBox, buttonBox] = await Promise.all([pane.boundingBox(), jump.boundingBox()])
+        return paneBox!.y + paneBox!.height - buttonBox!.y - buttonBox!.height
+      }).toBeCloseTo(14, 0)
+
+      if (edge === 'top') await jump.click()
+      else await jump.press('Enter')
+      await expect(firstCard).toHaveClass(/\bselected\b/)
+      await expect(secondCard).not.toHaveClass(/\bselected\b/)
+      await expect(anchor).toBeInViewport()
+      await expect(firstCard).toBeInViewport()
+    }
   } finally {
     await app.close()
   }

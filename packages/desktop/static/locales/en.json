@@ -1117,6 +1117,7 @@
       "listLabel": "Comments",
       "previousComment": "Previous comment",
       "nextComment": "Next comment",
+      "jumpToFirstComment": "Jump to the first comment",
       "expandThread": "Show all {count} messages",
       "collapseThread": "Collapse",
       "selectionScope": "Selection",
@@ -1195,15 +1196,8 @@
       "emptyDescription": "Ask a question, refine the writing, or reorganize a draft.",
       "suggestionsTitle": "Try asking",
       "suggestions": {
-        "reviewComments": "Revise the document using all its comments.",
-        "improveStructure": "Reorder sections for a clearer flow.",
-        "checkLogic": "Fix contradictions and repeated points.",
-        "polishWriting": "Polish the writing for clarity and brevity.",
-        "proofread": "Fix typos, grammar, and formatting.",
-        "createSummary": "Summarize this document.",
-        "reviewHeadings": "Review headings and propose a better outline.",
-        "findGaps": "Flag unclear or unsupported claims.",
-        "standardizeTerms": "Standardize terms, names, and formatting."
+        "resolveComments": "Address all comments on the current document, revise the text, and explain the changes.",
+        "answerComments": "Use the document to answer all its comments one by one in this chat."
       },
       "placeholder": "Type a message…",
       "selectionContext": "Selected text attached",

@@ -457,6 +457,17 @@
         </button>
       </div>
     </section>
+    <button
+      v-if="firstCommentAnchor && !composerOpen && !focusReadingCommentId && !detachedTrayOpen"
+      class="annotamd-comment-jump-first"
+      type="button"
+      :title="t('annotamd.comments.jumpToFirstComment')"
+      :aria-label="t('annotamd.comments.jumpToFirstComment')"
+      @click="jumpToFirstComment"
+    >
+      <ArrowDown v-if="firstCommentBelowViewport" aria-hidden="true" />
+      <ArrowUp v-else aria-hidden="true" />
+    </button>
   </aside>
 </template>
 
@@ -561,9 +572,16 @@ const hasRunningModifiedComment = computed(() => modifiedComments.value.some((co
 const orderedAnchoredCommentIds = computed(() => {
   const selectionIds = new Set(anchoredSelectionComments.value.map((comment) => comment.id))
   return commentAnchors.value
-    .filter((anchor) => selectionIds.has(anchor.id))
-    .sort((first, second) => first.top - second.top)
+    .filter((anchor) => selectionIds.has(anchor.id) && anchor.bottom > anchor.top)
     .map((anchor) => anchor.id)
+})
+const firstCommentAnchor = computed(() => commentAnchors.value.find(
+  (anchor) => anchor.id === orderedAnchoredCommentIds.value[0]
+))
+const firstCommentBelowViewport = computed(() => {
+  const list = commentList.value
+  const anchor = firstCommentAnchor.value
+  return !!anchor && !!list && anchor.top >= list.getBoundingClientRect().bottom
 })
 const anchoredLayoutEnabled = computed(() =>
   Object.keys(commentLayout.value.positions).length > 0 || hiddenCommentCardIds.value.size > 0
@@ -960,6 +978,11 @@ const navigateComment = (commentId: string, offset: -1 | 1): void => {
   const index = orderedAnchoredCommentIds.value.indexOf(commentId)
   const targetId = orderedAnchoredCommentIds.value[index + offset]
   if (targetId) void selectComment(targetId, true)
+}
+
+const jumpToFirstComment = (): void => {
+  const anchor = firstCommentAnchor.value
+  if (anchor) void selectComment(anchor.id, true)
 }
 
 const syncSharedScrollFromEditor = (): void => {
@@ -1549,6 +1572,42 @@ onBeforeUnmount(() => {
   outline-offset: 1px;
 }
 
+.annotamd-comment-jump-first {
+  position: absolute;
+  z-index: 3;
+  right: 18px;
+  bottom: 14px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--annotamd-border);
+  border-radius: 50%;
+  background: var(--annotamd-surface);
+  color: var(--annotamd-muted);
+  box-shadow: 0 1px 4px rgb(31 35 41 / 10%);
+  cursor: pointer;
+}
+
+.annotamd-detached-tray + .annotamd-comment-jump-first {
+  bottom: 56px;
+}
+
+.annotamd-comment-jump-first:hover {
+  color: var(--annotamd-blue);
+}
+
+.annotamd-comment-jump-first:focus-visible {
+  outline: 2px solid var(--annotamd-blue);
+  outline-offset: 1px;
+}
+
+.annotamd-comment-jump-first svg {
+  width: 15px;
+  height: 15px;
+}
+
 .annotamd-comment-list {
   position: relative;
   flex: 1;
@@ -1967,6 +2026,10 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.annotamd-comment-card[data-comment-id]:not(.annotamd-composer-card) blockquote {
+  padding-block: 4px;
+}
+
 .annotamd-comment-card p {
   margin: 0;
   padding: 9px 10px 11px;
@@ -1975,21 +2038,14 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.annotamd-thread-message {
-  box-sizing: border-box;
-  padding: 9px 10px;
-  border: 1px solid var(--annotamd-border);
-  border-radius: 7px;
-  background: #fafbfc;
-}
-
-.annotamd-root-message {
-  margin: 0 10px 10px;
-  background: var(--annotamd-surface);
+.annotamd-root-message,
+.annotamd-replies {
+  margin: 8px 10px;
 }
 
 .annotamd-thread-message p {
-  padding: 6px 0 7px;
+  padding: 1px 0 0;
+  overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
@@ -2039,7 +2095,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 24px;
+  min-height: 22px;
 }
 
 .annotamd-message-meta {
@@ -2047,17 +2103,26 @@ onBeforeUnmount(() => {
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
+  gap: 6px;
 }
 
 .annotamd-message-overflow summary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
+  height: 22px;
   padding: 0;
+  border-radius: 5px;
   color: var(--annotamd-muted);
   cursor: pointer;
   list-style: none;
+}
+
+.annotamd-message-overflow summary:hover,
+.annotamd-message-overflow[open] summary {
+  background: var(--annotamd-surface-blue);
+  color: var(--annotamd-blue);
 }
 
 .annotamd-message-overflow summary::-webkit-details-marker {
@@ -2105,18 +2170,17 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-message-author {
-  display: inline-flex;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--annotamd-surface-blue);
-  color: var(--annotamd-blue);
-  font-size: 11px;
-  font-weight: 600;
+  color: var(--annotamd-ink);
+  font-size: 12px;
+  font-weight: 650;
   line-height: 1.5;
 }
 
+.author-agent .annotamd-message-author {
+  color: var(--annotamd-blue);
+}
+
 .annotamd-message-time {
-  margin-left: 5px;
   color: var(--annotamd-muted);
   font-size: 11px;
   line-height: 1.5;
@@ -2127,16 +2191,6 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 0 10px 10px;
-}
-
-.annotamd-reply-message.author-agent {
-  background: #f7f9ff;
-}
-
-.annotamd-reply-message p {
-  color: var(--annotamd-text);
-  font-size: 13px;
 }
 
 .annotamd-reply-editor {

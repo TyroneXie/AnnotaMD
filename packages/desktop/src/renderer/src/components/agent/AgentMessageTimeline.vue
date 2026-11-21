@@ -6,7 +6,11 @@
         <strong>{{ t('annotamd.agentWorkspace.emptyTitle') }}</strong>
         <p>{{ t('annotamd.agentWorkspace.emptyDescription') }}</p>
       </div>
-      <section class="annotamd-agent-suggestions" :aria-label="t('annotamd.agentWorkspace.suggestionsTitle')">
+      <section
+        v-if="suggestions.length"
+        class="annotamd-agent-suggestions"
+        :aria-label="t('annotamd.agentWorkspace.suggestionsTitle')"
+      >
         <button
           v-for="suggestion in suggestions"
           :key="suggestion"

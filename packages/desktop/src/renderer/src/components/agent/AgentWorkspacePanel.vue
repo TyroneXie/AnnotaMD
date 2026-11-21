@@ -128,34 +128,12 @@ const composer = ref<InstanceType<typeof AgentComposer> | null>(null)
 defineExpose({ focusComposer: () => composer.value?.focusInput() })
 const attachments = ref<AiAttachment[]>([])
 const timeline = ref<HTMLElement | null>(null)
-const SUGGESTION_KEYS = [
-  'reviewComments',
-  'improveStructure',
-  'checkLogic',
-  'polishWriting',
-  'proofread',
-  'createSummary',
-  'reviewHeadings',
-  'findGaps',
-  'standardizeTerms'
-] as const
-const suggestedPromptKeys = ref<string[]>([])
-
-const refreshSuggestedPrompts = (): void => {
-  const shuffled = [...SUGGESTION_KEYS]
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
-    ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
-  }
-  const count = Math.random() < 0.5 ? 2 : 3
-  suggestedPromptKeys.value = shuffled.slice(0, count)
-}
-
-refreshSuggestedPrompts()
-
-const suggestedPrompts = computed(() => suggestedPromptKeys.value.map(key => (
-  t(`annotamd.agentWorkspace.suggestions.${key}`)
-)))
+const suggestedPrompts = computed(() => props.documentContext?.filePath
+  ? [
+    t('annotamd.agentWorkspace.suggestions.resolveComments'),
+    t('annotamd.agentWorkspace.suggestions.answerComments')
+  ]
+  : [])
 
 const selectedConfig = computed(() => settings.selectedConfig('agent'))
 const selectedModel = computed(() => settings.selectedAgentModel)
@@ -236,7 +214,6 @@ const newConversation = async(): Promise<void> => {
   draft.value = ''
   attachments.value = []
   if (quote) emit('clearSelection', quote)
-  refreshSuggestedPrompts()
 }
 
 const applySuggestedPrompt = (prompt: string): void => {

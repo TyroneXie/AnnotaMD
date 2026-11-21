@@ -119,7 +119,7 @@ export const zhTW = {
         // frontMenu
         'Copy Plain Text': '複製純文字',
         'Copy Markdown': '複製 Markdown',
-        'Copy Section': '複製章節內容',
+        'Copy Section': '複製本章節',
         'Duplicate Section': '建立章節副本',
         'Cut Section': '剪下本章節',
         'Promote Section Headings': '整節提升標題層級',

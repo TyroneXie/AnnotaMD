@@ -69,23 +69,24 @@ function hasNextPeerHeading(block: Parent): boolean {
 export const FRONT_MENU = [
     {
         label: 'copy-plain-text',
-        text: 'Copy Plain Text',
+        text: 'Copy',
         shortCut: '',
         group: 1,
-        visible: exceptBlocks('thematic-break'),
+        visible: (block: Parent) => exceptHeadings(block) && block.blockName !== 'thematic-break',
     },
     {
         label: 'copy-markdown',
         text: 'Copy Markdown',
         shortCut: '',
         group: 1,
+        visible: exceptHeadings,
     },
     {
         label: 'copy-section',
         text: 'Copy Section',
         shortCut: '',
         group: 1,
-        visible: (block: Parent) => /^(?:atx|setext)-heading$/.test(block.blockName),
+        visible: isHeading,
     },
     {
         label: 'duplicate-section',

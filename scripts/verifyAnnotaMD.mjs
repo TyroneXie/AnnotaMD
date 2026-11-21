@@ -218,13 +218,14 @@ if (selectedPacks.includes('menu')) {
 
 if (selectedPacks.includes('table')) {
   checks.push({
-    label: 'desktop pasted image persistence tests',
+    label: 'desktop table and pasted image tests',
     command: path.join(root, 'packages/desktop/node_modules/.bin/vitest'),
     args: [
       'run',
       'test/unit/specs/image-data-url.spec.ts',
       'test/unit/specs/move-image-to-folder.spec.ts',
-      'test/unit/specs/upload-image.spec.ts'
+      'test/unit/specs/upload-image.spec.ts',
+      'test/unit/specs/annotamd-sticky-table-header.spec.ts'
     ],
     cwd: path.join(root, 'packages/desktop'),
     env: { ...process.env, CI: '1' }

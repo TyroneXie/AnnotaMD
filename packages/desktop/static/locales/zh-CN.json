@@ -1117,6 +1117,7 @@
       "listLabel": "批注列表",
       "previousComment": "上一条批注",
       "nextComment": "下一条批注",
+      "jumpToFirstComment": "跳转到第一条批注",
       "expandThread": "展开全部 {count} 条消息",
       "collapseThread": "收起",
       "selectionScope": "选区批注",
@@ -1195,15 +1196,8 @@
       "emptyDescription": "可以提问、校对文字，或整理文档结构。",
       "suggestionsTitle": "你可以试试",
       "suggestions": {
-        "reviewComments": "根据所有批注，逐项完善文档。",
-        "improveStructure": "梳理结构，调整章节顺序。",
-        "checkLogic": "检查逻辑，修正矛盾和重复表述。",
-        "polishWriting": "润色文字，让表达更清晰简洁。",
-        "proofread": "修正错别字、病句和格式问题。",
-        "createSummary": "为这份文档写一份简明摘要。",
-        "reviewHeadings": "检查标题层级，给出结构建议。",
-        "findGaps": "找出含糊或缺少依据的表述。",
-        "standardizeTerms": "统一术语、名称和格式。"
+        "resolveComments": "逐条处理当前文档的所有评论，修改正文并说明改了什么。",
+        "answerComments": "结合正文，在对话中逐条回答当前文档的所有评论。"
       },
       "placeholder": "输入消息…",
       "selectionContext": "已引用选中内容",

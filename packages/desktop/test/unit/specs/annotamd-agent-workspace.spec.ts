@@ -37,8 +37,6 @@ describe('AI workspace panel', () => {
     expect(panel).toContain('data-testid="ai-retry-snapshot"')
     expect(panel).toContain(':suggestions="suggestedPrompts"')
     expect(panel).toContain('@select-suggestion="applySuggestedPrompt"')
-    expect(panel).toContain('const count = Math.random() < 0.5 ? 2 : 3')
-    expect(panel).toContain('refreshSuggestedPrompts()')
     expect(header).toContain('data-testid="ai-new-session"')
     expect(header).toContain('data-testid="ai-delete-current"')
     expect(header).toContain(':disabled="deleteDisabled"')

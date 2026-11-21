@@ -141,6 +141,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
         expect(menu.container!.querySelector('li.item:last-child')?.classList)
             .toContain('image-delete');
         expect(menu.container!.querySelector('.copy-markdown')).not.toBeNull();
+        expect(menu.container!.querySelector('.copy-plain-text')).toBeNull();
         expect(menu.container!.querySelector('.image-copy .mu-action-icon-copy')).not.toBeNull();
         expect(menu.container!.querySelector('.move-up')).not.toBeNull();
     });
@@ -182,6 +183,42 @@ describe('AnnotaMD paragraph front menu configuration', () => {
 });
 
 describe('AnnotaMD paragraph front menu actions', () => {
+    it.each([
+        ['plain paragraph', 'Plain text.\n', ['copy-plain-text']],
+        ['formatted paragraph', '**Formatted** text.\n', ['copy-plain-text', 'copy-markdown']],
+        ['quote', '> Quoted text.\n', ['copy-plain-text', 'copy-markdown']],
+        ['highlight', '> [!HIGHLIGHT]\n> Highlighted text.\n', ['copy-plain-text', 'copy-markdown']],
+        ['bullet list', '- First\n- Second\n', ['copy-plain-text', 'copy-markdown']],
+        ['task list', '- [ ] First\n- [x] Second\n', ['copy-plain-text', 'copy-markdown']],
+        ['code', '```js\nconst answer = 42;\n```\n', ['copy-plain-text', 'copy-markdown']],
+        ['diagram', '```mermaid\ngraph TD\nA --> B\n```\n', ['copy-plain-text', 'copy-markdown']],
+        ['formula', '$$\na^2 + b^2\n$$\n', ['copy-plain-text', 'copy-markdown']],
+        ['HTML', '<section>hello</section>\n', ['copy-plain-text']],
+        ['front matter', '---\ntitle: test\n---\n\nbody\n', ['copy-plain-text', 'copy-markdown']],
+        ['table', '| Name | Value |\n| --- | --- |\n| Alpha | 1 |\n', ['copy-plain-text', 'copy-markdown']],
+        ['divider', '---\n', ['copy-markdown']],
+        ['empty paragraph', '\n', []],
+    ] as const)('shows distinct clipboard formats for a %s', (_name, markdown, expected) => {
+        const writeText = vi.fn();
+        const muya = bootMuya(markdown, { clipboardWriteText: writeText });
+        const menu = new ParagraphFrontMenu(muya, {});
+        const block = blocks(muya)[0];
+        openOn(menu, block);
+        menu.render();
+        expect(Array.from(menu.container!.querySelectorAll('li.item[class*="copy-"]'))
+            .map(item => item.className.split(' ').find(name => name.startsWith('copy-'))))
+            .toEqual(expected);
+
+        const copied: string[] = [];
+        for (const label of expected) {
+            openOn(menu, block);
+            menu.selectItem(new Event('click'), { label });
+            copied.push(writeText.mock.lastCall![0]);
+        }
+        expect(new Set(copied).size).toBe(expected.length);
+        expect(copied.every(text => text.length > 0)).toBe(true);
+    });
+
     it('copies an image as a native clipboard image without changing the document', () => {
         const writeImage = vi.fn();
         const muya = bootMuya('![alt](https://example.com/image.png)\n', {
@@ -224,6 +261,29 @@ describe('AnnotaMD paragraph front menu actions', () => {
         menu.selectItem(new Event('click'), { label: 'copy-plain-text' });
 
         expect(writeText).toHaveBeenCalledWith('Name\tValue\nAlpha\t1\nBeta\t2');
+    });
+
+    it.each([
+        ['- First\n- **Second**\n', '- **Second**'],
+        ['7) First\n8) **Second**\n', '8) **Second**'],
+        ['- [ ] First\n- [x] **Second**\n', '- [x] **Second**'],
+    ])('copies and cuts one list item with its marker and content', async (source, expected) => {
+        const writeText = vi.fn();
+        const muya = bootMuya(source, { clipboardWriteText: writeText });
+        const item = blocks(muya)[0].children.tail as Parent;
+        const menu = new ParagraphFrontMenu(muya, {});
+        openOn(menu, item);
+        expect(() => menu.render()).not.toThrow();
+        menu.container!.querySelector<HTMLElement>('.copy-markdown')!.click();
+        expect(writeText).toHaveBeenLastCalledWith(expected);
+        openOn(menu, item);
+        menu.container!.querySelector<HTMLElement>('.copy-plain-text')!.click();
+        expect(writeText).toHaveBeenLastCalledWith('Second');
+        expect(muya.getMarkdown()).toBe(source);
+        openOn(menu, item);
+        menu.selectItem(new Event('click'), { label: 'cut' });
+        expect(writeText).toHaveBeenLastCalledWith(expected);
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe(source.split('\n')[0] + '\n'));
     });
 
     it('copies source-oriented special blocks without their Markdown fences', () => {
@@ -699,6 +759,11 @@ describe('AnnotaMD paragraph front menu actions', () => {
         const muya = bootMuya('# Heading\n\nparagraph\n');
         const [heading, paragraph] = blocks(muya);
 
+        expect(visibleActions(heading).filter(label => label.startsWith('copy-'))).toEqual(['copy-section']);
+        expect(visibleActions(paragraph).filter(label => label.startsWith('copy-'))).toEqual([
+            'copy-plain-text',
+            'copy-markdown',
+        ]);
         expect(visibleActions(heading)).toEqual(expect.arrayContaining([
             'copy-section',
             'duplicate-section',

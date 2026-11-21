@@ -123,7 +123,7 @@ export const zhCN = {
         // frontMenu
         'Copy Plain Text': '复制纯文本',
         'Copy Markdown': '复制 Markdown',
-        'Copy Section': '复制章节内容',
+        'Copy Section': '复制本章节',
         'Duplicate Section': '创建章节副本',
         'Cut Section': '剪切本章节',
         'Promote Section Headings': '整节提升标题层级',

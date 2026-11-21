@@ -13,7 +13,7 @@ import type {
 import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import type { ActionIconName } from '../actionIcons';
 import { replaceBlockByLabel, replaceTextContainerByLabel } from '../../block/blockTransforms';
-import { convertListItem, isListItemBlock, mergeAdjacentCompatibleLists } from '../../block/listItemTransforms';
+import { convertListItem, isListItemBlock, listStateWithItems, mergeAdjacentCompatibleLists } from '../../block/listItemTransforms';
 import {
     collectSelectedTextTargets,
     convertSelectedTextTargets,
@@ -45,7 +45,7 @@ function renderMenuIcon({ label, icon }: { label: string; icon?: ActionIconName 
         return renderIcon({ label, icon });
 
     const sharedActions: Partial<Record<string, ActionIconName>> = {
-        'copy-plain-text': 'copy-plain-text',
+        'copy-plain-text': 'copy',
         'copy-markdown': 'copy-markdown',
         'copy-section': 'copy',
         'duplicate-section': 'duplicate',
@@ -354,7 +354,13 @@ export class ParagraphFrontMenu extends BaseFloat {
 
     render() {
         const { _oldVNode: oldVNode, _frontMenuContainer: frontMenuContainer, _block: block } = this;
+        if (!block)
+            return;
+
         const { i18n } = this.muya;
+        const state = block.getState();
+        const plainText = this._plainText(block, state);
+        const markdown = this._markdown(block, state);
         let previousGroup: number | null = null;
         const children: VNode[] = [];
         const pushImageAction = (menuItem: typeof IMAGE_COPY_MENU | typeof IMAGE_DELETE_MENU, group: number) => {
@@ -395,6 +401,13 @@ export class ParagraphFrontMenu extends BaseFloat {
             const { label, text, shortCut, group, disabled, visible } = menuItem;
             if (this._kind === 'image' && label === 'delete')
                 return;
+            if (label === 'copy-plain-text' && (this._kind === 'image' || !plainText))
+                return;
+            if (label === 'copy-markdown' && this._kind !== 'image'
+                && block.blockName !== 'thematic-break' && plainText === markdown)
+                return;
+            if (label === 'copy-markdown' && !markdown)
+                return;
             const icon = 'icon' in menuItem && typeof menuItem.icon === 'string'
                 ? menuItem.icon as ActionIconName
                 : undefined;
@@ -407,7 +420,8 @@ export class ParagraphFrontMenu extends BaseFloat {
             const isDisabled = disabled?.(block!) ?? false;
             const iconWrapperSelector = 'div.icon-wrapper';
             const iconWrapper = h(iconWrapperSelector, renderMenuIcon({ icon, label }));
-            const textWrapper = h('span.text', i18n.t(text));
+            const menuText = label === 'copy-markdown' && block.blockName === 'thematic-break' ? 'Copy' : text;
+            const textWrapper = h('span.text', i18n.t(menuText));
             const shortCutWrapper = shortCut
                 ? h('div.short-cut', [h('span', shortCut)])
                 : null;
@@ -420,7 +434,7 @@ export class ParagraphFrontMenu extends BaseFloat {
                     attrs: {
                         role: 'button',
                         tabindex: isDisabled ? '-1' : '0',
-                        'aria-label': i18n.t(text),
+                        'aria-label': i18n.t(menuText),
                         'aria-disabled': String(isDisabled),
                     },
                     on: {
@@ -563,7 +577,7 @@ export class ParagraphFrontMenu extends BaseFloat {
                 return null;
 
             case 'copy-markdown':
-                this._writeClipboardText(this._markdown(oldState));
+                this._writeClipboardText(this._markdown(block, oldState));
                 return null;
 
             case 'copy-section':
@@ -616,7 +630,7 @@ export class ParagraphFrontMenu extends BaseFloat {
                 return this._moveHeadingSection(block, label === 'move-section-up' ? 'up' : 'down');
 
             case 'cut':
-                this._writeClipboardText(this._markdown(oldState));
+                this._writeClipboardText(this._markdown(block, oldState));
                 return this._applyMetaAction('delete', block, oldState);
 
             case 'cut-section':
@@ -703,7 +717,16 @@ export class ParagraphFrontMenu extends BaseFloat {
         target.format.deleteImage(target.imageInfo);
     }
 
-    private _markdown(state: TState): string {
+    private _markdown(block: Parent, state: TState): string {
+        if (state.name === 'list-item' || state.name === 'task-list-item') {
+            const parent = block.parent!;
+            const list = parent.getState();
+            if (isAnyListState(list)) {
+                state = listStateWithItems(list, [state]);
+                if (state.name === 'order-list')
+                    state.meta.start += parent.offset(block);
+            }
+        }
         return this._markdownStates([state]);
     }
 
@@ -924,7 +947,7 @@ export class ParagraphFrontMenu extends BaseFloat {
                 .join('\n');
         }
 
-        return this._markdown(state)
+        return this._markdown(block, state)
             .split('\n')
             .filter(line => !/^\s*(?:(?:>\s*)?\[!HIGHLIGHT(?:\s+collapsed)?\]|```|~~~)/.test(line))
             .map(line => line

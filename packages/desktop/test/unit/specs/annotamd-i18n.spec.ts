@@ -42,6 +42,8 @@ const annotaMDKeys = [
   'annotamd.agentWorkspace.newSession',
   'annotamd.agentWorkspace.emptyTitle',
   'annotamd.agentWorkspace.emptyDescription',
+  'annotamd.agentWorkspace.suggestions.resolveComments',
+  'annotamd.agentWorkspace.suggestions.answerComments',
   'annotamd.agentWorkspace.placeholder',
   'annotamd.agentWorkspace.send',
   'annotamd.agentWorkspace.stop',

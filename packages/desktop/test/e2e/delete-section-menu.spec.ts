@@ -30,7 +30,7 @@ async function openHeadingMenu(page: Page) {
   await page.locator('.mu-front-button-wrapper button.heading').click()
   const menu = page.locator('.mu-front-menu')
   await expect(menu.locator('..')).toHaveCSS('opacity', '1')
-  return menu.locator('li.item.delete-section')
+  return menu
 }
 
 const engineMarkdown = (page: Page) => page.evaluate(() => {
@@ -51,7 +51,7 @@ for (const [name, markdown, remaining] of [
     const { app, page } = await launchWithMarkdown(markdown, { suppressErrorDialog: true })
     try {
       await useDevRenderer(page, app, markdown)
-      const item = await openHeadingMenu(page)
+      const item = (await openHeadingMenu(page)).locator('li.item.delete-section')
       const box = await item.boundingBox()
       expect(box).not.toBeNull()
       expect(box!.y).toBeGreaterThanOrEqual(0)
@@ -87,7 +87,7 @@ test('dismissing and reopening the menu preserves single-click deletion', async(
   try {
     await useDevRenderer(page, app, markdown)
     for (const cancel of ['outside', 'escape']) {
-      const item = await openHeadingMenu(page)
+      const item = (await openHeadingMenu(page)).locator('li.item.delete-section')
       if (cancel === 'outside') {
         await page.locator('.editor-component .mu-paragraph').first().click()
       } else {
@@ -97,10 +97,36 @@ test('dismissing and reopening the menu preserves single-click deletion', async(
       await expect(page.locator('.mu-front-menu').locator('..')).toHaveCSS('opacity', '0')
       await expect.poll(() => engineMarkdown(page)).toBe(markdown.trim())
     }
-    const item = await openHeadingMenu(page)
+    const item = (await openHeadingMenu(page)).locator('li.item.delete-section')
     await item.click()
     await expect(page.locator('.editor-component')).not.toContainText('First')
     await expect.poll(() => engineMarkdown(page)).toBe('# Second\n\nkeep')
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
+test('offers one copy action for the entire heading section', async() => {
+  const section = '# First\n\nBody.\n\n## Child\n\nDetails.'
+  const markdown = `${section}\n\n# Second\n\nKeep.\n`
+  const { app, page } = await launchWithMarkdown(markdown, { suppressErrorDialog: true })
+  try {
+    await useDevRenderer(page, app, markdown)
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeAllListeners('annotamd::clipboard::write-text')
+      ipcMain.once('annotamd::clipboard::write-text', (_event, text: string) => {
+        Object.assign(globalThis, { copiedSection: text })
+      })
+    })
+    const menu = await openHeadingMenu(page)
+    await expect(menu.locator('li.item.copy-plain-text, li.item.copy-markdown')).toHaveCount(0)
+    await expect(menu.locator('li.item.duplicate-section')).toBeVisible()
+    await expect(menu.locator('li.item.cut-section')).toBeVisible()
+    await menu.locator('li.item.copy-section').click()
+    await expect.poll(() => app.evaluate(() => Reflect.get(globalThis, 'copiedSection'))).toBe(section)
+    await expect(menu.locator('..')).toHaveCSS('opacity', '0')
+    await expect.poll(() => engineMarkdown(page)).toBe(markdown.trim())
     await expectNoRendererErrors(app)
   } finally {
     await app.close()

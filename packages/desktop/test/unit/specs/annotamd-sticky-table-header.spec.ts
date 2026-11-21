@@ -51,6 +51,25 @@ afterEach(() => {
 })
 
 describe('AnnotaMDStickyTableHeader', () => {
+  it('keeps the preceding table header when a later section contains a hidden table', () => {
+    const { root } = mountTable(rect(105, -100, 380, 600))
+    root.scrollTop = 1000
+    const firstRow = root.querySelector('tr')!
+    firstRow.getBoundingClientRect = () => rect(105, -100, 380, 40)
+    const hiddenFigure = root.querySelector('figure')!.cloneNode(true) as HTMLElement
+    hiddenFigure.hidden = true
+    hiddenFigure.getBoundingClientRect = () => rect(0, 0, 0, 0)
+    hiddenFigure.querySelector('table')!.getBoundingClientRect = () => rect(0, 0, 0, 0)
+    hiddenFigure.querySelector('tr')!.getBoundingClientRect = () => rect(0, 0, 0, 0)
+    root.appendChild(hiddenFigure)
+
+    const stickyHeader = new AnnotaMDStickyTableHeader(root)
+    const overlay = document.querySelector<HTMLElement>('.annotamd-sticky-table-header')!
+    expect(overlay.style.display).toBe('block')
+    expect(overlay.textContent).toContain('版本')
+    stickyHeader.destroy()
+  })
+
   it('aligns the sticky overlay with the inner table instead of the padded figure', () => {
     const { root } = mountTable(rect(105, -20, 380, 600))
     const stickyHeader = new AnnotaMDStickyTableHeader(root)
