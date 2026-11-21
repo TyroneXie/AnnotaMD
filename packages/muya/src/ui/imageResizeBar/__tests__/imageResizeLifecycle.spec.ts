@@ -22,7 +22,7 @@ describe('image resize lifecycle', () => {
         resizeBar = new ImageResizeBar({
             domNode: host,
             eventCenter,
-        } as Muya);
+        } as unknown as Muya);
     });
 
     afterEach(() => {
@@ -48,9 +48,10 @@ describe('image resize lifecycle', () => {
         expect(document.querySelector('.mu-transformer')?.childElementCount).toBe(0);
     });
 
-    it('cancels document drag listeners when the image controls are hidden', () => {
+    it('keeps the active pointer when hover changes and restores the width on cancel', () => {
         const reference = document.createElement('span');
         const image = document.createElement('img');
+        image.setAttribute('width', '120');
         vi.spyOn(image, 'getBoundingClientRect').mockReturnValue({
             bottom: 160,
             height: 80,
@@ -62,34 +63,48 @@ describe('image resize lifecycle', () => {
             y: 80,
             toJSON: () => ({}),
         });
+        vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
         reference.appendChild(image);
         host.appendChild(reference);
+        const updateImage = vi.fn();
 
         eventCenter.emit('muya-transformer', {
-            block: {},
+            block: { updateImage },
             imageInfo: {},
             reference,
         });
         vi.runAllTimers();
 
-        const handle = document.querySelector<HTMLElement>('.mu-transformer .bottom-right');
-        expect(handle).not.toBeNull();
-        handle!.dispatchEvent(new MouseEvent('mousedown', {
+        const handle = document.querySelector<HTMLElement>('.mu-transformer .bottom-right')!;
+        const setPointerCapture = vi.fn();
+        const releasePointerCapture = vi.fn();
+        Object.assign(handle, { setPointerCapture, hasPointerCapture: () => true, releasePointerCapture });
+        handle.dispatchEvent(new PointerEvent('pointerdown', {
             bubbles: true,
+            pointerId: 1,
             clientX: 220,
             clientY: 160,
         }));
-        expect(eventCenter.events.filter(({ event }) =>
-            event === 'mousemove' || event === 'mouseup')).toHaveLength(2);
+        expect(setPointerCapture).toHaveBeenCalledWith(1);
 
         eventCenter.emit('muya-transformer', { reference: null });
-
-        expect(eventCenter.events.filter(({ event }) =>
-            event === 'mousemove' || event === 'mouseup')).toHaveLength(0);
-        expect(() => document.body.dispatchEvent(new MouseEvent('mousemove', {
+        eventCenter.emit('muya-transformer', { reference, block: {}, imageInfo: {} });
+        vi.runAllTimers();
+        expect(handle.isConnected).toBe(true);
+        handle.dispatchEvent(new PointerEvent('pointermove', {
             bubbles: true,
-            clientX: 240,
+            pointerId: 1,
+            clientX: 190,
             clientY: 160,
-        }))).not.toThrow();
+        }));
+        expect(image.getAttribute('width')).toBe('90');
+        expect(updateImage).not.toHaveBeenCalled();
+
+        handle.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }));
+
+        expect(releasePointerCapture).toHaveBeenCalledWith(1);
+        expect(handle.isConnected).toBe(false);
+        expect(image.getAttribute('width')).toBe('120');
+        expect(updateImage).not.toHaveBeenCalled();
     });
 });

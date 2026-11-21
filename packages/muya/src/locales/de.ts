@@ -148,7 +148,9 @@ export const de = {
         'Copy Image': 'Bild kopieren',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
+        'View Full Image': 'Bild in voller Größe ansehen',
         'Inline Image': 'Inline-Bild',
+        'Place Next to Adjacent Image': 'Neben dem benachbarten Bild platzieren',
         'Remove Image': 'Bild entfernen',
         // ImageSelector
         'Select': 'Auswählen',

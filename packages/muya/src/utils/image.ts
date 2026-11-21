@@ -1,4 +1,4 @@
-import type { ImageToken } from '../inlineRenderer/types';
+import type { HTMLTagToken, ImageToken, Token } from '../inlineRenderer/types';
 import { isWin } from '../config/index';
 import { tokenizer } from '../inlineRenderer/lexer';
 import { findContentDOM, getOffsetOfParagraph } from '../selection/dom';
@@ -6,6 +6,38 @@ import { findContentDOM, getOffsetOfParagraph } from '../selection/dom';
 export interface IImageInfo {
     token: ImageToken;
     imageId: string;
+}
+
+export type ImageLineToken = ImageToken | HTMLTagToken;
+
+export function getImageLineTokens(tokens: Token[]) {
+    const images: ImageLineToken[] = [];
+    for (const token of tokens) {
+        if (token.type === 'text' && /^[\t ]*$/.test(token.raw))
+            continue;
+
+        if (token.type !== 'image' && (token.type !== 'html_tag' || token.tag !== 'img'))
+            return [];
+
+        if (!token.attrs.src || token.attrs.alt?.startsWith('loading-'))
+            return [];
+
+        images.push(token);
+    }
+    return images;
+}
+
+export function imageLineMarkdown(images: ImageLineToken[]) {
+    return images.map((image) => {
+        if (images.length === 1 || !image.attrs['data-align'] || image.attrs['data-align'] === 'inline')
+            return image.raw;
+
+        const template = document.createElement('template');
+        template.innerHTML = image.raw;
+        const element = template.content.firstElementChild!;
+        element.removeAttribute('data-align');
+        return element.outerHTML;
+    }).join(' ');
 }
 
 export function getImageInfo(image: HTMLElement): IImageInfo {

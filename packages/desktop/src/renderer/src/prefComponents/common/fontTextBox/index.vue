@@ -123,6 +123,31 @@ onMounted(async () => {
   background: var(--floatHoverColor);
 }
 
+.font-autocomplete {
+  & .el-input__wrapper {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid color-mix(in srgb, var(--editorColor) 15%, transparent);
+    border-radius: 13px;
+    background: var(--editorColor02);
+    box-shadow: none;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+
+  & .el-input__wrapper:hover,
+  & .el-input__wrapper.is-focus {
+    border-color: var(--editorColor30);
+    background: var(--editorBgColor);
+    box-shadow: none;
+  }
+
+  & .el-input__inner {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+  }
+}
+
 .pref-font-input-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--prefControlWidth);

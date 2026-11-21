@@ -61,7 +61,7 @@ describe('performance regression guards', () => {
     )
 
     expect(config).not.toContain('setInterval(')
-    expect(sidebar).toContain('watch(locale, () =>')
+    expect(sidebar).not.toContain('setInterval(')
   })
 
   it('removes sidebar listeners when tree components unmount', () => {

@@ -46,7 +46,7 @@ describe('AnnotaMD compact inline toolbar', () => {
     expect(css).toMatch(
       /\.mu-format-picker li\.item \.icon-wrapper\s*\{[^}]*width:\s*18px;[^}]*min-width:\s*18px;[^}]*height:\s*18px;/s
     )
-    expect(toolbar).toContain('renderActionIcon(formatActionIcon(icon.type)!')
+    expect(toolbar).toContain('renderActionIcon(TOOLBAR_ACTION_ICONS[icon.type] ?? formatActionIcon(icon.type)!)')
   })
 
   it('uses immediate Feishu-style tooltips instead of native title bubbles', () => {
@@ -88,8 +88,9 @@ describe('AnnotaMD compact inline toolbar', () => {
       /type:\s*'annotamd_comment',[^}]*tooltip:\s*'Comment',[^}]*label:\s*'',[^}]*groupBreakBefore:\s*true/s
     )
     expect(config).not.toContain("type: 'mark'")
-    expect(toolbar).toContain("renderActionIcon('comment')")
-    expect(toolbar).toContain("renderActionIcon('agent')")
+    expect(toolbar).toContain("annotamd_comment: 'comment'")
+    expect(toolbar).toContain("annotamd_agent: 'agent'")
+    expect(toolbar).toContain("annotamd_quote_agent: 'paperclip'")
     expect(toolbar).toContain("import '../actionIcons.css'")
     expect(css).not.toMatch(/\.mu-format-picker li\.item\.annotamd_comment\s*\{[^}]*background:/s)
     expect(toolbar).toContain("? 'annotamd-comment-selection'")

@@ -3,11 +3,21 @@ import type { Muya } from '../../index';
 import type { ImageToken } from '../../inlineRenderer/types';
 import { autoUpdate } from '@floating-ui/dom';
 
-import { isHTMLElement, isMouseEvent } from '../../utils';
+import { isHTMLElement } from '../../utils';
 import { findScrollContainer } from '../../utils/dom';
 import './index.css';
 
 type CornerHandle = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+type RowHandle = 'row-left' | 'row-right';
+type ResizeHandle = CornerHandle | RowHandle;
+
+interface IImageRowDrag {
+    items: HTMLElement[];
+    widths: number[];
+    index: number;
+    neighbor: number;
+    preview: number[] | null;
+}
 
 const CORNER_HANDLES: CornerHandle[] = [
     'top-left',
@@ -15,7 +25,9 @@ const CORNER_HANDLES: CornerHandle[] = [
     'bottom-left',
     'bottom-right',
 ];
+const ROW_HANDLES: RowHandle[] = ['row-left', 'row-right'];
 const HANDLE_SIZE = 32;
+const RESIZE_DRAG_THRESHOLD = 4;
 const MIN_IMAGE_WIDTH = 50;
 const IMAGE_WIDTH_GUIDE_RANGE = 36;
 const IMAGE_WIDTH_SNAP_RANGE = 12;
@@ -35,6 +47,17 @@ export function getImageWidthSnap(
     };
 }
 
+export function redistributeImageWidths(widths: number[], index: number, neighbor: number, delta: number) {
+    const pairWidth = widths[index] + widths[neighbor];
+    const minWidth = Math.min(MIN_IMAGE_WIDTH, widths[index]);
+    const maxWidth = pairWidth - Math.min(MIN_IMAGE_WIDTH, widths[neighbor]);
+    const width = Math.max(minWidth, Math.min(maxWidth, widths[index] + delta));
+    const next = [...widths];
+    next[index] = width;
+    next[neighbor] = pairWidth - width;
+    return next;
+}
+
 export class ImageResizeBar {
     static pluginName = 'transformer';
     private _reference: HTMLElement | null = null;
@@ -44,17 +67,20 @@ export class ImageResizeBar {
         imageId: string;
     } | null = null;
 
-    private _movingAnchor: CornerHandle | null = null;
     private _status: boolean = false;
-    private _width: number | null = null;
-    private _eventId: string[] = [];
     private _lastScrollTop: number | null = null;
-    private _resizing: boolean = false;
-    private _dragStart: {
+    private _drag: {
+        pointerId: number;
+        handle: HTMLElement;
+        handleType: ResizeHandle;
+        image: HTMLImageElement;
+        row: IImageRowDrag | null;
         clientX: number;
         clientY: number;
-        width: number;
+        startWidth: number;
         aspectRatio: number;
+        originalWidth: string | null;
+        width: number | null;
     } | null = null;
     // Stops the autoUpdate reposition loop set up in `_render`.
     private _cleanup: (() => void) | null = null;
@@ -90,7 +116,7 @@ export class ImageResizeBar {
 
             // only when scroll distance great than 50px, then hide the float box.
             if (
-                !this._resizing
+                !this._drag
                 && this._status
                 && Math.abs(event.target.scrollTop - this._lastScrollTop) > 50
             ) {
@@ -99,6 +125,11 @@ export class ImageResizeBar {
         };
 
         eventCenter.on('muya-transformer', ({ block, reference, imageInfo }) => {
+            // Moving handles can expose the bitmap (or another image) under the
+            // pointer. Hover events must not retarget an active resize.
+            if (this._drag)
+                return;
+
             this._reference = reference;
             if (reference) {
                 this._block = block;
@@ -121,13 +152,17 @@ export class ImageResizeBar {
         eventCenter.attachDOMEvent(this._container, 'dragstart', event =>
             event.preventDefault());
         eventCenter.attachDOMEvent(this._container, 'mouseout', this._handleContainerMouseOut);
-        eventCenter.attachDOMEvent(document.body, 'mousedown', this._mouseDown);
+        eventCenter.attachDOMEvent(this._container, 'pointerdown', this._pointerDown);
+        eventCenter.attachDOMEvent(this._container, 'pointermove', this._pointerMove);
+        eventCenter.attachDOMEvent(this._container, 'pointerup', this._pointerUp);
+        eventCenter.attachDOMEvent(this._container, 'pointercancel', this._pointerCancel);
+        eventCenter.attachDOMEvent(this._container, 'lostpointercapture', this._pointerCancel);
     }
 
     private _render() {
         const { eventCenter } = this.muya;
         const reference = this._reference;
-        if (!reference?.isConnected)
+        if (this._drag || !reference?.isConnected)
             return;
 
         if (this._status)
@@ -153,7 +188,10 @@ export class ImageResizeBar {
         const outline = document.createElement('div');
         outline.className = 'mu-image-resize-outline';
         this._container.appendChild(outline);
-        CORNER_HANDLES.forEach((c) => {
+        const handles = this._reference?.closest('.mu-image-row')
+            ? [...CORNER_HANDLES, ...ROW_HANDLES]
+            : CORNER_HANDLES;
+        handles.forEach((c) => {
             const bar = document.createElement('div');
             bar.classList.add('bar');
             bar.classList.add(c);
@@ -192,8 +230,61 @@ export class ImageResizeBar {
             bar.style.left = `${isLeft ? rect.left : rect.right - HANDLE_SIZE}px`;
             bar.style.top = `${isTop ? rect.top : rect.bottom - HANDLE_SIZE}px`;
         }
+        this._positionRowHandles(reference);
 
         return true;
+    }
+
+    private _positionRowHandles(reference: HTMLElement) {
+        const row = reference.closest('.mu-image-row');
+        const item = reference.closest('.mu-inline-image');
+        if (!row || !item)
+            return;
+
+        const items = Array.from(row.querySelectorAll<HTMLElement>(':scope > .mu-inline-image'));
+        const index = items.indexOf(item as HTMLElement);
+        const rowBounds = row.getBoundingClientRect();
+        const bounds = item.getBoundingClientRect();
+        for (const side of ROW_HANDLES) {
+            const handle = this._container.querySelector<HTMLElement>(`.${side}`);
+            const isRight = side === 'row-right';
+            const neighbor = items[index + (isRight ? 1 : -1)];
+            if (!handle)
+                continue;
+
+            handle.hidden = !neighbor;
+            if (neighbor) {
+                const other = neighbor.getBoundingClientRect();
+                const left = isRight ? bounds.right : other.right;
+                const right = isRight ? other.left : bounds.left;
+                Object.assign(handle.style, {
+                    left: `${left - 2}px`,
+                    top: `${rowBounds.top}px`,
+                    width: `${right - left + 4}px`,
+                    height: `${rowBounds.height}px`,
+                });
+            }
+        }
+    }
+
+    private _getRowDrag(reference: HTMLElement, handle: ResizeHandle): IImageRowDrag | null {
+        const row = reference.closest('.mu-image-row');
+        if (!row)
+            return null;
+
+        const items = Array.from(row.querySelectorAll<HTMLElement>(':scope > .mu-inline-image'));
+        const index = items.findIndex(item => item.contains(reference));
+        if (index === -1 || items.length < 2)
+            return null;
+
+        const direction = handle.endsWith('right') ? 1 : -1;
+        return {
+            items,
+            widths: items.map(item => item.getBoundingClientRect().width),
+            index,
+            neighbor: items[index + direction] ? index + direction : index - direction,
+            preview: null,
+        };
     }
 
     private _handleContainerMouseOut = (event: Event) => {
@@ -211,74 +302,77 @@ export class ImageResizeBar {
             return;
         }
 
-        if (!this._resizing)
+        if (!this._drag)
             this.hide();
     };
 
-    private _mouseDown = (event: Event) => {
-        if (!isHTMLElement(event.target) || !event.target.closest('.bar'))
+    private _pointerDown = (event: Event) => {
+        if (!(event instanceof PointerEvent) || event.button !== 0 || this._drag || !isHTMLElement(event.target))
             return;
 
-        const target = event.target;
-        const { eventCenter } = this.muya;
-        this._movingAnchor = target.getAttribute('data-position') as CornerHandle;
-        const image = this._reference?.querySelector('img');
+        const handle = event.target.closest<HTMLElement>('.bar');
+        const reference = this._reference;
+        const image = reference?.querySelector('img');
         const rect = image?.getBoundingClientRect();
-        if (!image || !rect || rect.width <= 0 || rect.height <= 0) {
-            this._movingAnchor = null;
+        if (!handle || !reference || !image || !rect || rect.width <= 0 || rect.height <= 0)
             return;
-        }
-        const mouseEvent = event as MouseEvent;
-        this._dragStart = {
-            clientX: mouseEvent.clientX,
-            clientY: mouseEvent.clientY,
-            width: rect.width,
+
+        const handleType = handle.dataset.position as ResizeHandle;
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        this._drag = {
+            pointerId: event.pointerId,
+            handle,
+            handleType,
+            image,
+            row: this._getRowDrag(reference, handleType),
+            clientX: event.clientX,
+            clientY: event.clientY,
+            startWidth: rect.width,
             aspectRatio: rect.width / rect.height,
+            originalWidth: image.getAttribute('width'),
+            width: null,
         };
-        const mouseMoveId = eventCenter.attachDOMEvent(
-            document.body,
-            'mousemove',
-            this._mouseMove,
-        );
-        const mouseUpId = eventCenter.attachDOMEvent(
-            document.body,
-            'mouseup',
-            this._mouseUp,
-        );
-        this._resizing = true;
-        // Hide image toolbar
-        eventCenter.emit('muya-image-toolbar', { reference: null });
-        this._eventId.push(mouseMoveId, mouseUpId);
+        this.muya.eventCenter.emit('muya-image-toolbar', { reference: null });
     };
 
-    private _mouseMove = (event: Event) => {
-        if (!isMouseEvent(event))
+    private _pointerMove = (event: Event) => {
+        const drag = this._drag;
+        if (!(event instanceof PointerEvent) || !drag || drag.pointerId !== event.pointerId)
             return;
 
         event.preventDefault();
-        if (!this._movingAnchor || !this._dragStart)
-            return;
-
         const reference = this._reference;
-        if (!reference?.isConnected) {
+        if (!reference?.isConnected || !drag.image.isConnected) {
             this.hide();
             return;
         }
 
-        const image = reference.querySelector('img');
-        if (!image)
+        const { handleType, row, startWidth, aspectRatio, clientX: startX, clientY: startY } = drag;
+        const movementX = event.clientX - startX;
+        const movementY = event.clientY - startY;
+        const isDivider = handleType.startsWith('row-');
+        const movement = isDivider ? Math.abs(movementX) : Math.max(Math.abs(movementX), Math.abs(movementY));
+        if (drag.width === null && !row?.preview && movement < RESIZE_DRAG_THRESHOLD)
             return;
 
-        const { clientX, clientY } = event;
-        const { width: startWidth, aspectRatio, clientX: startX, clientY: startY }
-            = this._dragStart;
-        const horizontalDelta = (this._movingAnchor.endsWith('right') ? 1 : -1)
-            * (clientX - startX);
-        const verticalDelta = (this._movingAnchor.startsWith('bottom') ? 1 : -1)
-            * (clientY - startY) * aspectRatio;
-        const delta = Math.abs(horizontalDelta) >= Math.abs(verticalDelta)
+        const horizontalDelta = (handleType.endsWith('right') ? 1 : -1)
+            * movementX;
+        const verticalDelta = (handleType.startsWith('bottom') ? 1 : -1)
+            * movementY * aspectRatio;
+        const delta = isDivider || Math.abs(horizontalDelta) >= Math.abs(verticalDelta)
             ? horizontalDelta
             : verticalDelta;
+        if (row) {
+            const widths = redistributeImageWidths(row.widths, row.index, row.neighbor, delta);
+            row.items.forEach((item, index) => {
+                item.style.flexGrow = String(widths[index]);
+            });
+            row.preview = widths;
+            this._update();
+            return;
+        }
+
         const content = reference.closest('.mu-content')
             ?? this.muya.domNode.querySelector('.mu-container')
             ?? this.muya.domNode;
@@ -291,26 +385,52 @@ export class ImageResizeBar {
         else this._hideSnapGuide();
 
         // Image width/height attribute must be an integer.
-        this._width = width;
-        image.setAttribute('width', String(width));
+        drag.width = width;
+        drag.image.setAttribute('width', String(width));
         this._update();
     };
 
-    private _mouseUp = (event: Event) => {
-        event.preventDefault();
-        this._detachDragEvents();
+    private _pointerUp = (event: Event) => {
+        if (!(event instanceof PointerEvent) || this._drag?.pointerId !== event.pointerId)
+            return;
 
-        if (typeof this._width === 'number' && this._block && this._imageInfo) {
-            this._block.updateImage(this._imageInfo, 'width', String(this._width));
+        event.preventDefault();
+        this._finishDrag(true);
+        this.hide();
+    };
+
+    private _pointerCancel = (event: Event) => {
+        if (event instanceof PointerEvent && this._drag?.pointerId === event.pointerId)
             this.hide();
+    };
+
+    private _finishDrag(commit = false) {
+        const drag = this._drag;
+        if (!drag)
+            return;
+
+        this._drag = null;
+        if (drag.handle.hasPointerCapture(drag.pointerId))
+            drag.handle.releasePointerCapture(drag.pointerId);
+
+        if (drag.row) {
+            const { items, preview } = drag.row;
+            items.forEach(item => item.style.removeProperty('flex-grow'));
+            if (commit && preview && items.every(item => item.isConnected))
+                this._block?.updateImageRowWidths(preview);
+            return;
         }
 
-        this._width = null;
-        this._resizing = false;
-        this._movingAnchor = null;
-        this._dragStart = null;
-        this._hideSnapGuide();
-    };
+        if (drag.width === null || !drag.image.isConnected)
+            return;
+
+        if (commit && this._block && this._imageInfo)
+            this._block.updateImage(this._imageInfo, 'width', String(drag.width));
+        else if (drag.originalWidth === null)
+            drag.image.removeAttribute('width');
+        else
+            drag.image.setAttribute('width', drag.originalWidth);
+    }
 
     private _showSnapGuide(contentRight: number) {
         const editor = this.muya.domNode.closest('.editor-component')
@@ -330,25 +450,13 @@ export class ImageResizeBar {
         delete this._snapGuide.dataset.visible;
     }
 
-    private _detachDragEvents() {
-        const { eventCenter } = this.muya;
-        for (const id of this._eventId)
-            eventCenter.detachDOMEvent(id);
-
-        this._eventId = [];
-    }
-
     hide() {
         const { eventCenter } = this.muya;
         if (this._pendingRender) {
             clearTimeout(this._pendingRender);
             this._pendingRender = null;
         }
-        this._detachDragEvents();
-        this._width = null;
-        this._resizing = false;
-        this._movingAnchor = null;
-        this._dragStart = null;
+        this._finishDrag();
         this._cleanup?.();
         this._cleanup = null;
         this._container.replaceChildren();
@@ -362,7 +470,7 @@ export class ImageResizeBar {
     destroy() {
         if (this._pendingRender)
             clearTimeout(this._pendingRender);
-        this._detachDragEvents();
+        this._finishDrag();
         this._cleanup?.();
         this._cleanup = null;
         this._container.remove();

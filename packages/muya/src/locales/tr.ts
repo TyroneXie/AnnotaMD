@@ -131,7 +131,9 @@ export const tr = {
         'Copy Image': 'Görseli Kopyala',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
+        'View Full Image': 'Görseli tam boyutta göster',
         'Inline Image': 'Satır İçi Görsel',
+        'Place Next to Adjacent Image': 'Bitişikteki görselin yanına yerleştir',
         'Remove Image': 'Görseli Kaldır',
         // ImageSelector
         'Select': 'Seç',

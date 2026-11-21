@@ -127,7 +127,7 @@ onMounted(() => {
       box-sizing: border-box;
       width: 100%;
       min-width: 0;
-      padding: calc(var(--titleBarHeight) + 68px) 36px 36px;
+      padding: calc(var(--titleBarHeight) + 18px) 36px 36px;
       flex: 1;
       height: 100vh;
       overflow: auto;
@@ -147,7 +147,7 @@ onMounted(() => {
     /* Move the scrollbar below the titlebar */
     margin-top: var(--titleBarHeight);
     height: calc(100vh - var(--titleBarHeight));
-    padding-top: 68px;
+    padding-top: 18px;
   }
 }
 </style>

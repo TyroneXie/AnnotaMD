@@ -499,6 +499,37 @@ blockquote .mu-hide.mu-math > .mu-math-render {
     max-width: 100%;
 }
 
+.mu-image-line > .mu-inline-image img {
+    cursor: grab;
+}
+
+.mu-content.mu-image-row {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+    white-space: normal;
+}
+
+.mu-image-row > .mu-plain-text {
+    display: contents;
+}
+
+.mu-image-row > .mu-inline-image {
+    flex: var(--mu-image-aspect, 1) 1 0px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.mu-image-row-sized > .mu-inline-image {
+    flex-grow: var(--mu-image-width, 1);
+}
+
+.mu-image-row > .mu-inline-image > .mu-image-container,
+.mu-image-row > .mu-inline-image img {
+    width: 100%;
+    height: auto;
+}
+
 .mu-inline-image.mu-image-success {
     background: transparent;
 }

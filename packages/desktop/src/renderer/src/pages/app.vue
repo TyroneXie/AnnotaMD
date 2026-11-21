@@ -275,7 +275,8 @@ const setupDragDropHandler = (): void => {
   window.addEventListener(
     'dragover',
     (e: DragEvent) => {
-      if (!e.dataTransfer || !e.dataTransfer.types.length) return
+      // The editor has already accepted and assigned an effect to this drop.
+      if (e.defaultPrevented || !e.dataTransfer || !e.dataTransfer.types.length) return
 
       if (e.dataTransfer.types.indexOf('Files') >= 0) {
         if (

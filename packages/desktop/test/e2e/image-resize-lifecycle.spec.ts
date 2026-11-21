@@ -9,6 +9,39 @@ import {
 
 const LOCAL_IMAGE_PATH = resolve(__dirname, '../../static/logo-96px.png')
 
+test('keeps resizing during a single drag across a moving image handle', async() => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="560" height="280"><rect width="560" height="280" fill="teal"/></svg>').toString('base64')
+  const { app, page } = await launchWithMarkdown(
+    `![continuous resize](data:image/svg+xml;base64,${svg})\n`,
+    { suppressErrorDialog: true }
+  )
+  try {
+    const image = page.locator('.editor-component img[alt="continuous resize"]')
+    await image.hover()
+    const handle = page.locator('.mu-transformer .top-right')
+    await expect(handle).toBeVisible()
+    const initialWidth = Math.round((await image.boundingBox())!.width)
+    const corner = (await handle.boundingBox())!
+    const x = corner.x + corner.width / 2
+    const y = corner.y + corner.height / 2
+
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x - 70, y, { steps: 5 })
+    await expect(image).toHaveAttribute('width', String(initialWidth - 70))
+    await page.mouse.move(x - 155, y, { steps: 5 })
+    await expect(image).toHaveAttribute('width', String(initialWidth - 155))
+    await page.mouse.move(x - 102, y, { steps: 5 })
+    await expect(image).toHaveAttribute('width', String(initialWidth - 102))
+    await page.mouse.up()
+
+    await expect.poll(() => getMarkdownContent(page, app)).toContain(`width="${initialWidth - 102}"`)
+    await expectNoRendererErrors(app)
+  } finally {
+    await app.close()
+  }
+})
+
 test('image resize survives stale hover work and persists the dragged width', async() => {
   const { app, page } = await launchWithMarkdown(
     `![resize lifecycle](${LOCAL_IMAGE_PATH})\n`,

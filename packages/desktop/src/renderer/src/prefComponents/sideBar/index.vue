@@ -4,37 +4,13 @@
       <el-icon><Setting /></el-icon>
       {{ t('preferences.title') }}
     </h3>
-    <section class="search-wrapper">
-      <el-autocomplete
-        :key="locale"
-        v-model="state"
-        popper-class="pref-autocomplete"
-        :fetch-suggestions="querySearch"
-        :placeholder="t('preferences.search.placeholder')"
-        :trigger-on-focus="false"
-        @select="handleSelect"
-      >
-        <template #prefix>
-          <Search
-            width="16"
-            height="16"
-          />
-        </template>
-        <template #default="{ item }">
-          <div class="name">
-            {{ item.category }}
-          </div>
-          <span class="addr">{{ item.preference }}</span>
-        </template>
-      </el-autocomplete>
-    </section>
     <section class="category">
       <div
         v-for="c of getCategory()"
         :key="c.name"
         class="item"
-        :class="{ active: c.label === currentCategory }"
-        @click="handleCategoryItemClick(c)"
+        :class="{ active: c.label === (route.name ?? 'general') }"
+        @click="router.push(c.path)"
       >
         <component :is="c.icon" />
         <span>{{ c.name }}</span>
@@ -43,87 +19,18 @@
   </div>
 </template>
 <script setup lang="ts">
-import { getCategory, getTranslatedSearchContent } from './config'
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { getCategory } from './config'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Search, Setting } from '@element-plus/icons-vue'
+import { Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 
 let stopCategoryListener: (() => void) | null = null
 
-interface SearchEntry {
-  key: string
-  category: string
-  categoryEn: string
-  preference: string
-  preferenceEn: string
-  routeCategory: string
-  description: string
-  enum: unknown[] | undefined
-}
-
-interface CategoryItem {
-  name: string
-  path: string
-}
-
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
-
-const currentCategory = ref<string>('general')
-const restaurants = ref<SearchEntry[]>([])
-const state = ref<string>('')
-
-watch(
-  () => route.name,
-  (newRouteName) => {
-    if (newRouteName) {
-      currentCategory.value = String(newRouteName)
-    }
-  }
-)
-
-const querySearch = (queryString: string, cb: (results: SearchEntry[]) => void): void => {
-  const results = queryString
-    ? restaurants.value.filter(createFilter(queryString))
-    : restaurants.value
-  cb(results)
-}
-
-const createFilter = (queryString: string): ((restaurant: SearchEntry) => boolean) => {
-  const q = queryString.toLowerCase()
-  return (restaurant: SearchEntry): boolean => {
-    // Support both the current language and English keywords
-    const fields = [
-      restaurant.preference,
-      restaurant.category,
-      restaurant.preferenceEn,
-      restaurant.categoryEn
-    ]
-      .filter(Boolean)
-      .map((s) => String(s).toLowerCase())
-    return fields.some((f) => f.indexOf(q) >= 0)
-  }
-}
-
-const loadAll = (): SearchEntry[] => getTranslatedSearchContent()
-
-const handleSelect = (item: SearchEntry | null | undefined): void => {
-  // Use a safe routeCategory to avoid a blank screen caused by invalid categories
-  const target =
-    item && item.routeCategory ? item.routeCategory : (item?.category || 'general').toLowerCase()
-  router.push({ path: `/preference/${target}` }).catch(() => {})
-}
-
-const handleCategoryItemClick = (item: CategoryItem): void => {
-  if (item.name.toLowerCase() !== currentCategory.value) {
-    router.push({
-      path: item.path
-    })
-  }
-}
 
 const onIpcCategoryChange = (_event: unknown, category: unknown): void => {
   const categoryName = typeof category === 'string' ? category : ''
@@ -138,18 +45,10 @@ const onIpcCategoryChange = (_event: unknown, category: unknown): void => {
 }
 
 onMounted(() => {
-  restaurants.value = loadAll()
-  if (route.name) {
-    currentCategory.value = String(route.name)
-  }
   stopCategoryListener = window.electron.ipcRenderer.on(
     'settings::change-tab',
     onIpcCategoryChange
   )
-})
-
-watch(locale, () => {
-  restaurants.value = loadAll()
 })
 
 onUnmounted(() => {
@@ -188,79 +87,10 @@ onUnmounted(() => {
     font-size: 17px;
   }
 }
-.search-wrapper {
-  -webkit-app-region: no-drag;
-  position: fixed;
-  z-index: 5;
-  top: 0;
-  right: 36px;
-  left: calc(var(--prefSideBarWidth) + 36px);
-  margin: 0;
-  padding: 13px 20px 12px 0;
-  background: var(--editorBgColor);
-}
-.el-autocomplete {
-  width: 100%;
-
-  & .el-input__wrapper {
-    min-height: 38px;
-    padding: 0 14px;
-    border: 1px solid color-mix(in srgb, var(--editorColor) 15%, transparent);
-    border-radius: 13px;
-    background: var(--editorColor02);
-    box-shadow: none;
-    transition: border-color .15s ease, background-color .15s ease;
-  }
-
-  & .el-input__wrapper:hover,
-  & .el-input__wrapper.is-focus {
-    border-color: var(--editorColor30);
-    background: var(--editorBgColor);
-    box-shadow: none;
-  }
-
-  & .el-input__inner {
-    border: none;
-    background: transparent;
-    height: 36px;
-    line-height: 36px;
-    font-size: 13px;
-  }
-}
-.pref-autocomplete {
-  background: var(--floatBgColor);
-  border-color: var(--floatBorderColor);
-  & .el-autocomplete-suggestion__wrap li:hover {
-    background: var(--floatHoverColor);
-  }
-  & .popper__arrow {
-    display: none;
-  }
-  & li {
-    line-height: normal;
-    padding: 7px;
-    opacity: 0.8;
-
-    & .name {
-      text-overflow: ellipsis;
-      overflow: hidden;
-      font-weight: 600;
-      color: var(--editorColor80);
-    }
-    & .addr {
-      font-size: 12px;
-      color: var(--editorColor);
-    }
-
-    & .highlighted .addr {
-      color: var(--editorColor);
-    }
-  }
-}
 .category {
   -webkit-app-region: no-drag;
   overflow-y: auto;
-  margin-top: 32px;
+  margin-top: 20px;
   & .item {
     width: 100%;
     min-height: 36px;

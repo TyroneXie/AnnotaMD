@@ -45,10 +45,10 @@ export default function loadImageAsync(
                     img.alt = attrs.alt.replace(/[`*{}[\]()#+\-.!_>~:|<$]/g, '');
                 if (attrs.title)
                     img.setAttribute('title', attrs.title);
-                if (attrs.width && typeof attrs.width === 'number')
+                if (attrs.width)
                     img.setAttribute('width', attrs.width);
 
-                if (attrs.height && typeof attrs.height === 'number')
+                if (attrs.height)
                     img.setAttribute('height', attrs.height);
 
                 if (imageClass)
@@ -56,6 +56,8 @@ export default function loadImageAsync(
 
                 if (imageText) {
                     if (imageText.classList.contains(`${CLASS_NAMES.MU_INLINE_IMAGE}`)) {
+                        if (width && height)
+                            imageText.style.setProperty('--mu-image-aspect', String(width / height));
                         const imageContainer = imageText.querySelector(
                             `.${CLASS_NAMES.MU_IMAGE_CONTAINER}`,
                         );

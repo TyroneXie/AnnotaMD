@@ -35,6 +35,26 @@
     cursor: nesw-resize;
 }
 
+.mu-transformer .row-left,
+.mu-transformer .row-right {
+    cursor: col-resize;
+}
+
+.mu-transformer .bar[hidden] {
+    display: none;
+}
+
+.mu-transformer :is(.row-left, .row-right)::after {
+    position: absolute;
+    inset: 4px auto;
+    left: calc(50% - 1px);
+    width: 2px;
+    border-radius: 2px;
+    background: var(--theme-color, #3370ff);
+    opacity: .6;
+    content: '';
+}
+
 .mu-image-resize-guide {
     position: fixed;
     z-index: 9998;

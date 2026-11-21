@@ -148,7 +148,9 @@ export const en = {
         // imageToolbar
         'Edit Image': 'Edit Image',
         'Copy Image': 'Copy Image',
+        'View Full Image': 'View Full Image',
         'Inline Image': 'Inline Image',
+        'Place Next to Adjacent Image': 'Place Next to Adjacent Image',
         'Remove Image': 'Remove Image',
         // ImageSelector
         'Select': 'Select',

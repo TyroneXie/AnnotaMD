@@ -148,7 +148,9 @@ export const ja = {
         'Copy Image': '画像をコピー',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
+        'View Full Image': '画像を拡大表示',
         'Inline Image': '行内画像',
+        'Place Next to Adjacent Image': '隣の画像と並べる',
         'Remove Image': '画像を削除する',
         // ImageSelector
         'Select': '選択',

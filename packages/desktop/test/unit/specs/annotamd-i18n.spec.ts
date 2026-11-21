@@ -107,12 +107,6 @@ describe('AnnotaMD UI localization', () => {
     expect(tree).not.toContain('placeholder="Enter .md file name"')
   })
 
-  it('refreshes the preferences search input when the locale changes', () => {
-    const sidebar = readFileSync(resolve(renderer, 'prefComponents/sideBar/index.vue'), 'utf8')
-    expect(sidebar).toContain(':key="locale"')
-    expect(sidebar).toContain('const { t, locale } = useI18n()')
-  })
-
   it('loads source locales before ignored minified artifacts in development', () => {
     const commonI18n = readFileSync(resolve(desktop, 'common/i18n.ts'), 'utf8')
     expect(commonI18n).toContain('fs.existsSync(rawPath) ? rawPath : minPath')

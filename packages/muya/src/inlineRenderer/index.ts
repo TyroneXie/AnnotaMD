@@ -4,6 +4,7 @@ import type { Muya } from '../muya';
 import type { IRenderCursor } from '../selection/types';
 import type { IParagraphState, TContainerState, TState } from '../state/types';
 import type { IHighlight, Labels } from './types';
+import { getImageLineTokens } from '../utils/image';
 import logger from '../utils/logger';
 import { tokenizer } from './lexer';
 import Renderer from './renderer';
@@ -67,6 +68,17 @@ class InlineRenderer {
             debug.error('Patch can only handle content block');
 
         const tokens = this._tokenizer(block, highlights);
+        if (block.blockName === 'paragraph.content') {
+            const images = getImageLineTokens(tokens);
+            domNode!.classList.toggle('mu-image-line', images.length > 0);
+            const isImageRow = images.length > 1 && images.every(({ attrs }) =>
+                !attrs['data-align'] || attrs['data-align'] === 'inline',
+            );
+            domNode!.classList.toggle('mu-image-row', isImageRow);
+            domNode!.classList.toggle('mu-image-row-sized', isImageRow && images.every(({ attrs }) =>
+                Number.isFinite(Number(attrs.width)) && Number(attrs.width) > 0,
+            ));
+        }
         const html = this.renderer.output(
             tokens,
             block,

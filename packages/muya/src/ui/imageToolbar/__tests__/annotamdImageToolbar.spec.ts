@@ -53,7 +53,7 @@ describe('AnnotaMD image toolbar', () => {
         const { toolbar } = setup('![alt](https://example.com/image.png)\n');
         const items = toolbar.container!.querySelectorAll<HTMLElement>('li.item');
 
-        expect(items).toHaveLength(7);
+        expect(items).toHaveLength(8);
         expect(Array.from(items).every(item => item.getAttribute('role') === 'button')).toBe(true);
         expect(Array.from(items).every(item => item.getAttribute('tabindex') === '0')).toBe(true);
         expect(toolbar.container!.querySelector('.center')?.getAttribute('aria-pressed')).toBe('true');
@@ -82,6 +82,46 @@ describe('AnnotaMD image toolbar', () => {
 
         await expect.poll(() => muya.getMarkdown()).toContain('data-align="center"');
         expect(muya.getMarkdown()).not.toContain('data-align="inline"');
+    });
+
+    it('places adjacent image paragraphs on one line without losing sizes or text', async () => {
+        const first = '![first](https://example.com/first.png)';
+        const second = '<img src="https://example.com/second.png" alt="second" width="240" data-align="right" />';
+        const markdown = `${first}\n\n${second}\n\nCaption\n`;
+        const { muya, toolbar } = setup(markdown);
+
+        toolbar.container!.querySelector<HTMLElement>('.side-by-side')!.click();
+
+        const row = muya.domNode.querySelector<HTMLElement>('.mu-image-row')!;
+        expect(row.querySelectorAll('.mu-inline-image')).toHaveLength(2);
+        expect(row.classList.contains('mu-image-row-sized')).toBe(false);
+        await expect.poll(() => muya.getMarkdown()).toBe(
+            `${first} <img src="https://example.com/second.png" alt="second" width="240">\n\nCaption\n`,
+        );
+
+        muya.undo();
+        await expect.poll(() => muya.getMarkdown()).toBe(markdown);
+        expect(muya.domNode.querySelector('.mu-image-row')).toBeNull();
+    });
+
+    it('does not offer to merge across a paragraph containing text', () => {
+        const { toolbar } = setup(
+            '![first](https://example.com/first.png)\n\nCaption ![second](https://example.com/second.png)\n',
+        );
+
+        expect(toolbar.container!.querySelector('.side-by-side')).toBeNull();
+    });
+
+    it('persists a row adjustment as one undo step', async () => {
+        const markdown = '![first](https://example.com/a.png) ![second](https://example.com/b.png)\n';
+        const { block, muya } = setup(markdown);
+
+        block.updateImageRowWidths([320, 180]);
+
+        await expect.poll(() => muya.getMarkdown()).toMatch(/width="320".*width="180"/);
+        expect(muya.domNode.querySelector('.mu-image-row-sized')).not.toBeNull();
+        muya.undo();
+        await expect.poll(() => muya.getMarkdown()).toBe(markdown);
     });
 
     it('hides the text format toolbar before it opens', async () => {

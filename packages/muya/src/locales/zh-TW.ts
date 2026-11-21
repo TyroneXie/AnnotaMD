@@ -148,7 +148,9 @@ export const zhTW = {
         'Copy Image': '複製圖片',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
+        'View Full Image': '查看大圖',
         'Inline Image': '行內圖片',
+        'Place Next to Adjacent Image': '與相鄰圖片並排',
         'Remove Image': '刪除圖片',
         // ImageSelector
         'Select': '選擇',

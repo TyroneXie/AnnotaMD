@@ -1,21 +1,24 @@
 import type Format from '../block/base/format';
 import type Parent from '../block/base/parent';
 import type { Muya } from '../muya';
+import type { ImageLineToken } from '../utils/image';
 import { ScrollPage } from '../block/scrollPage';
 import { IMAGE_EXT_REG, URL_REG } from '../config';
+import { tokenizer } from '../inlineRenderer/lexer';
 import { findContentDOM } from '../selection/dom';
+import { SelectionType } from '../selection/types';
 import { getUniqueId } from '../utils';
 import { getBlock, query } from '../utils/dom';
-import { checkImageContentType, getImageInfo, getImageSrc } from '../utils/image';
+import { checkImageContentType, getImageInfo, getImageLineTokens, getImageSrc, imageLineMarkdown } from '../utils/image';
 import logger from '../utils/logger';
 
 const debug = logger('editor:dragDropImage:');
 
-// Drag-and-drop image insertion: a dropped image — either a web-link image
+// External image insertion: a dropped image — either a web-link image
 // (`text/uri-list`) or a local image FILE — is inserted as a new `![](src)`
 // paragraph block.
 //
-// Two drop paths:
+// The two external drop paths:
 //   - web-link image (`text/uri-list`)  → verify it is an image, then insert
 //                                          `![](url)` verbatim.
 //   - local image FILE (`dataTransfer.files`) → resolve the file to a path via
@@ -28,10 +31,25 @@ const debug = logger('editor:dragDropImage:');
 
 const GHOST_ID = 'mu-dragover-ghost';
 const GHOST_HEIGHT = 3;
+const IMAGE_MOVE = 'application/x-annotamd-image-move';
 
 interface IDropTarget {
     anchor: Parent;
     position: 'up' | 'down';
+}
+
+interface IDraggedImage {
+    block: Format;
+    text: string;
+    images: ImageLineToken[];
+    index: number;
+}
+
+interface IRowDropTarget {
+    block: Format;
+    slot: number;
+    x: number;
+    bounds: DOMRect;
 }
 
 function hideGhost(): void {
@@ -83,8 +101,7 @@ function resolveDropTarget(event: DragEvent): IDropTarget | null {
 }
 
 // Draw the horizontal drop indicator at the anchor block's top/bottom edge.
-function drawGhost(target: IDropTarget): void {
-    const rect = target.anchor.domNode!.getBoundingClientRect();
+function showGhost(left: number, top: number, width: number, height: number): void {
     let ghost = document.querySelector<HTMLElement>(`#${GHOST_ID}`);
     if (!ghost) {
         ghost = document.createElement('div');
@@ -93,13 +110,86 @@ function drawGhost(target: IDropTarget): void {
     }
 
     Object.assign(ghost.style, {
-        width: `${rect.width}px`,
-        left: `${rect.left}px`,
-        top:
-            target.position === 'up'
-                ? `${rect.top - GHOST_HEIGHT}px`
-                : `${rect.top + rect.height}px`,
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
     });
+}
+
+function drawGhost(target: IDropTarget): void {
+    const rect = target.anchor.domNode!.getBoundingClientRect();
+    const y = target.position === 'up' ? rect.top - GHOST_HEIGHT : rect.bottom;
+    showGhost(rect.left, y, rect.width, GHOST_HEIGHT);
+}
+
+function resolveImageRowDrop(event: DragEvent, source: IDraggedImage): IRowDropTarget | null {
+    const content = findContentDOM(event.target as Node | null);
+    const block = getBlock(content) as Format | undefined;
+    if (!content?.classList.contains('mu-image-line') || !block?.parent
+        || block.parent.parent !== source.block.parent?.parent)
+        return null;
+
+    const bounds = content.getBoundingClientRect();
+    const edge = Math.min(GHOST_HEIGHT + 6, bounds.height / 4);
+    if (event.clientY < bounds.top + edge || event.clientY > bounds.bottom - edge)
+        return null;
+
+    const images = Array.from(content.querySelectorAll(':scope > .mu-inline-image'), wrapper =>
+        (wrapper.querySelector('img') ?? wrapper).getBoundingClientRect());
+    if (!images.length)
+        return null;
+
+    const next = images.findIndex(rect => event.clientX < rect.left + rect.width / 2);
+    const slot = next === -1 ? images.length : next;
+    const left = images[slot - 1]?.right;
+    const right = images[slot]?.left;
+    const x = left === undefined ? right - GHOST_HEIGHT : right === undefined ? left : (left + right) / 2;
+    return { block, slot, x, bounds };
+}
+
+function moveImage(muya: Muya, source: IDraggedImage, target: IRowDropTarget | IDropTarget): void {
+    if (!source.block.domNode?.isConnected || source.block.text !== source.text)
+        return;
+
+    const sameRow = 'block' in target && target.block === source.block;
+    const remaining = source.images.filter((_image, index) => index !== source.index);
+    const image = source.images[source.index];
+    let nextText = '';
+    if ('block' in target) {
+        const images = sameRow ? remaining : getImageLineTokens(tokenizer(target.block.text));
+        if (!images.length || (sameRow && (target.slot === source.index || target.slot === source.index + 1)))
+            return;
+
+        const slot = sameRow && target.slot > source.index ? target.slot - 1 : target.slot;
+        images.splice(slot, 0, image);
+        nextText = imageLineMarkdown(images);
+    }
+    else if (target.anchor === source.block.parent && !remaining.length) {
+        return;
+    }
+
+    muya.flush();
+    muya.editor.history.cutoff();
+    muya.editor.selection.activate(SelectionType.TEXT);
+    muya.domNode.focus({ preventScroll: true });
+    if ('block' in target) {
+        target.block.text = nextText;
+        target.block.setCursor(nextText.length, nextText.length, true);
+    }
+    else {
+        insertImageParagraph(muya, target, image.raw);
+    }
+
+    if (!sameRow) {
+        if (remaining.length) {
+            source.block.text = imageLineMarkdown(remaining);
+            source.block.update();
+        }
+        else {
+            source.block.parent?.remove();
+        }
+    }
 }
 
 // Insert a `![alt](src)` image as a new paragraph block above/below the
@@ -266,12 +356,45 @@ function handleFileImage(
 
 export function attachDragDropImageHandlers(muya: Muya): void {
     const { eventCenter, domNode } = muya;
+    let draggedImage: IDraggedImage | null = null;
 
-    // Prevent the browser from starting its own image drag inside the editor;
-    // it would otherwise open the dragged image as a navigation.
+    const endDrag = () => {
+        draggedImage = null;
+        hideGhost();
+    };
+
     const dragStartHandler = (event: Event) => {
-        if ((event.target as HTMLElement)?.tagName === 'IMG')
+        if (!(event.target instanceof HTMLImageElement))
+            return;
+
+        const { dataTransfer } = event as DragEvent;
+        const content = findContentDOM(event.target);
+        const block = getBlock(content) as Format | undefined;
+        const wrapper = event.target.closest<HTMLElement>('.mu-inline-image');
+        if (!dataTransfer || !content?.classList.contains('mu-image-line') || !block || !wrapper) {
             event.preventDefault();
+            return;
+        }
+
+        const images = getImageLineTokens(tokenizer(block.text));
+        const start = getImageInfo(wrapper).token.range.start;
+        const index = images.findIndex(image => image.range.start === start);
+        if (index === -1) {
+            event.preventDefault();
+            return;
+        }
+
+        draggedImage = { block, text: block.text, images, index };
+        dataTransfer.clearData();
+        dataTransfer.setData(IMAGE_MOVE, 'move');
+        dataTransfer.effectAllowed = 'move';
+        muya.hideAllFloatTools();
+    };
+
+    const resolveMoveTarget = (event: DragEvent, source: IDraggedImage) => {
+        const row = resolveImageRowDrop(event, source);
+        const drop = row ?? resolveDropTarget(event);
+        return drop && ('block' in drop || drop.anchor.parent === source.block.parent?.parent) ? drop : null;
     };
 
     const dragOverHandler = (event: Event) => {
@@ -279,6 +402,19 @@ export function attachDragDropImageHandlers(muya: Muya): void {
         const { dataTransfer } = dragEvent;
         if (!dataTransfer)
             return;
+
+        if (draggedImage && dataTransfer.types.includes(IMAGE_MOVE)) {
+            event.preventDefault();
+            const target = resolveMoveTarget(dragEvent, draggedImage);
+            dataTransfer.dropEffect = target ? 'move' : 'none';
+            if (!target)
+                hideGhost();
+            else if ('block' in target)
+                showGhost(target.x - GHOST_HEIGHT / 2, target.bounds.top, GHOST_HEIGHT, target.bounds.height);
+            else
+                drawGhost(target);
+            return;
+        }
 
         // Only intercept a single image file or a likely web-image drag; leave
         // everything else (plain hyperlinks, tab reordering, text) to the
@@ -303,6 +439,16 @@ export function attachDragDropImageHandlers(muya: Muya): void {
         if (!dataTransfer)
             return;
 
+        if (draggedImage && dataTransfer.types.includes(IMAGE_MOVE)) {
+            event.preventDefault();
+            const source = draggedImage;
+            const target = resolveMoveTarget(dragEvent, source);
+            endDrag();
+            if (target)
+                moveImage(muya, source, target);
+            return;
+        }
+
         hideGhost();
         const target = resolveDropTarget(dragEvent);
         if (!target)
@@ -324,6 +470,7 @@ export function attachDragDropImageHandlers(muya: Muya): void {
     const dragLeaveHandler = () => hideGhost();
 
     eventCenter.attachDOMEvent(domNode, 'dragstart', dragStartHandler);
+    eventCenter.attachDOMEvent(domNode, 'dragend', endDrag);
     eventCenter.attachDOMEvent(domNode, 'dragover', dragOverHandler);
     eventCenter.attachDOMEvent(domNode, 'drop', dropHandler);
     // `dragleave` is bound on `document` (not `window`) to clear the ghost when

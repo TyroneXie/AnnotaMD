@@ -27,8 +27,8 @@ import { generator, tokenizer } from '../../inlineRenderer/lexer';
 import Selection, { getCursorReference } from '../../selection';
 import { getTextContent } from '../../selection/dom';
 import { isListItemState } from '../../state/types';
-import { conflict, isHTMLElement, isMouseEvent } from '../../utils';
-import { correctImageSrc, encodeImageSrc, getImageInfo } from '../../utils/image';
+import { conflict, escapeHTML, isHTMLElement, isMouseEvent } from '../../utils';
+import { correctImageSrc, encodeImageSrc, getImageInfo, getImageLineTokens } from '../../utils/image';
 import logger from '../../utils/logger';
 
 interface IOffset {
@@ -40,6 +40,14 @@ interface IOffsetWithDelta extends IOffset {
 }
 
 const debug = logger('block.format:');
+
+function imageWithAttribute(attrs: Record<string, string | null>, name: string, value: string) {
+    const attributes = Object.entries({ ...attrs, [name]: value }).map(([key, data]) => {
+        const attribute = key === 'src' && data ? correctImageSrc(data) : (data ?? '');
+        return `${key}="${escapeHTML(attribute)}"`;
+    });
+    return `<img ${attributes.join(' ')} />`;
+}
 
 interface SmartLinkViewState {
     href: string;
@@ -529,24 +537,9 @@ class Format extends Content {
         attrName: string,
         attrValue: string,
     ) {
-    // inline/left/center/right
         const { start, end } = token.range;
         const oldText = this.text;
-        let imageText = '';
-        const attrs = Object.assign({}, token.attrs);
-        attrs[attrName] = attrValue;
-
-        imageText = '<img ';
-
-        for (const attr of Object.keys(attrs)) {
-            let value = attrs[attr];
-            if (value && attr === 'src')
-                value = correctImageSrc(value);
-
-            imageText += `${attr}="${value}" `;
-        }
-        imageText = imageText.trim();
-        imageText += ' />';
+        const imageText = imageWithAttribute(token.attrs, attrName, attrValue);
         this.text
             = oldText.substring(0, start) + imageText + oldText.substring(end);
 
@@ -563,6 +556,22 @@ class Format extends Content {
 
         if (image)
             image.click();
+    }
+
+    updateImageRowWidths(widths: number[]) {
+        const images = getImageLineTokens(tokenizer(this.text));
+        if (images.length !== widths.length)
+            return;
+
+        let text = this.text;
+        for (let index = images.length - 1; index >= 0; index--) {
+            const { attrs, range } = images[index];
+            const image = imageWithAttribute(attrs, 'width', String(Math.max(1, Math.round(widths[index]))));
+            text = text.slice(0, range.start) + image + text.slice(range.end);
+        }
+        this.muya.editor.history.cutoff();
+        this.text = text;
+        this.update();
     }
 
     // Replace the link's source text (e.g. `[Anthropic](https://…)`) with the

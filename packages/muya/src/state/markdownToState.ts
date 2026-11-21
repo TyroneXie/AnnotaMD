@@ -389,9 +389,9 @@ export class MarkdownToState {
 
             case 'html': {
                 const text = token.text.trim();
-                // TODO: Treat html state which only contains one img as paragraph, we maybe add image state in the future.
-                const isSingleImage = /^<img[^<>]+>$/.test(text);
-                if (isSingleImage) {
+                // A line of image tags stays editable after resizing writes HTML attributes.
+                const isImageLine = /^(?:<img\b(?:[^<>"']|"[^"]*"|'[^']*')*>[ \t]*)+$/.test(text);
+                if (isImageLine) {
                     state = {
                         name: 'paragraph' as const,
                         text,

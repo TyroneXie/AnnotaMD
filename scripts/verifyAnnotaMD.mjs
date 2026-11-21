@@ -41,10 +41,13 @@ const testPacks = {
       'src/block/commonMark/html/__tests__/htmlPreviewEmptyGuard.spec.ts',
       'src/editor/__tests__/initialPreviewFocus.spec.ts',
       'src/editor/__tests__/blankAreaInsert.spec.ts',
+      'src/editor/__tests__/dragDropImage.spec.ts',
       'src/state/__tests__/markdownToState.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeBarStyle.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeSnap.spec.ts',
       'src/ui/imageResizeBar/__tests__/imageResizeLifecycle.spec.ts',
+      'src/ui/imageToolbar/__tests__/annotamdImageToolbar.spec.ts',
+      'src/inlineRenderer/renderer/__tests__/loadImageAsync.spec.ts',
       'src/selection/__tests__/imageHoverResize.spec.ts',
       'src/block/base/__tests__/imageSelfClose.spec.ts',
       'src/block/extra/highlightBlock/__tests__/highlightBlock.spec.ts'

@@ -148,7 +148,9 @@ export const ko = {
         'Copy Image': '이미지 복사',
         'Edit Block': 'Edit Block',
         'Delete Block': 'Delete Block',
+        'View Full Image': '이미지 크게 보기',
         'Inline Image': '인라인 이미지',
+        'Place Next to Adjacent Image': '인접한 이미지와 나란히 배치',
         'Remove Image': '이미지 삭제',
         // ImageSelector
         'Select': '선택',

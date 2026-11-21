@@ -76,8 +76,10 @@ class Clipboard {
                 return;
             }
 
-            const { isSelectionInSameBlock } = this.selection.getSelection() ?? {};
-            if (isSelectionInSameBlock)
+            const selection = this.selection.getSelection();
+            // An image selection has no text range. Let the image handler own
+            // its keyboard shortcuts, including Space to open the preview.
+            if (!selection || selection.isSelectionInSameBlock)
                 return;
 
             if (!shouldCrossBlockCut(key, metaKey, event.ctrlKey))

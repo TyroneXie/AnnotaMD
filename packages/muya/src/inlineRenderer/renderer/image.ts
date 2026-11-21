@@ -92,6 +92,7 @@ export default function image(
         dataset: {
             raw: token.raw,
         },
+        style: {} as Record<string, string>,
     };
     let id: string = '';
     let isSuccess: boolean | undefined;
@@ -109,6 +110,11 @@ export default function image(
         ({ id, isSuccess, url: resolvedUrl, width: naturalWidth, height: naturalHeight }
             = this.loadImageAsync(imageSrc, token.attrs));
     }
+
+    if (naturalWidth && naturalHeight)
+        data.style['--mu-image-aspect'] = String(naturalWidth / naturalHeight);
+    if (Number.isFinite(Number(width)) && Number(width) > 0)
+        data.style['--mu-image-width'] = width;
 
     // What the rendered <img> actually points at. For local files this is the
     // cache-busted `file://?mucache=…` URL resolved by `loadImageAsync`, so a

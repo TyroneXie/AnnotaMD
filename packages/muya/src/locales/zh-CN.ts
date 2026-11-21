@@ -146,7 +146,9 @@ export const zhCN = {
         // imageToolbar
         'Edit Image': '编辑图片',
         'Copy Image': '复制图片',
+        'View Full Image': '查看大图',
         'Inline Image': '行内图片',
+        'Place Next to Adjacent Image': '与相邻图片并排',
         'Remove Image': '删除图片',
         // ImageSelector
         'Select': '选择',

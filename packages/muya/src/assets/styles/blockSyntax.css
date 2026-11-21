@@ -1637,7 +1637,7 @@ pre[data-role='vega-lite']::after {
     content: '\200B';
 }
 
-.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type::after {
+.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type:is([placeholder], :empty)::after {
     padding-left: 8px;
 
     color: var(--editor-color-30);

@@ -33,7 +33,7 @@ describe('AnnotaMD preference styling', () => {
     expect(css).toMatch(/\.pref-switch-item\.has-notes \.el-switch\s*\{[^}]*margin-top:\s*-2px;/s)
   })
 
-  it('uses the DBX-style settings shell and typography', () => {
+  it('puts settings content below the title bar with no search row', () => {
     const css = readRepoFile('packages/desktop/src/renderer/src/pages/preference.vue')
     const sidebar = readRepoFile(
       'packages/desktop/src/renderer/src/prefComponents/sideBar/index.vue'
@@ -45,15 +45,9 @@ describe('AnnotaMD preference styling', () => {
     expect(css).toContain('font-family: var(--prefFontFamily);')
     expect(css).toMatch(/& h4\s*\{[^}]*font-size:\s*17px;/s)
     expect(css).toMatch(
-      /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 68px\) 36px 36px;/s
+      /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 18px\) 36px 36px;/s
     )
-    expect(sidebar).toMatch(/\.search-wrapper\s*\{[^}]*position:\s*fixed;[^}]*top:\s*0;[^}]*padding:\s*13px 20px 12px 0;[^}]*background:\s*var\(--editorBgColor\);/s)
-    expect(sidebar).toMatch(
-      /\.el-input__wrapper\s*\{[^}]*min-height:\s*38px;[^}]*padding:\s*0 14px;/s
-    )
-    expect(sidebar).toMatch(
-      /\.el-input__inner\s*\{[^}]*height:\s*36px;[^}]*line-height:\s*36px;/s
-    )
+    expect(sidebar).not.toContain('<el-autocomplete')
     expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--highlightThemeColor\);/s)
   })
 

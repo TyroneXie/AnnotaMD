@@ -6,7 +6,9 @@ import type { Muya } from '../../index';
 import type { ImageToken } from '../../inlineRenderer/types';
 import type { ActionIconName } from '../actionIcons';
 import type { Icon } from './config';
-import { getImageClipboardSource } from '../../utils/image';
+import { tokenizer } from '../../inlineRenderer/lexer';
+import { SelectionType } from '../../selection/types';
+import { getImageClipboardSource, getImageLineTokens, imageLineMarkdown } from '../../utils/image';
 import { h, patch } from '../../utils/snabbdom';
 import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
@@ -19,7 +21,9 @@ function imageActionIcon(type: Icon['type']): ActionIconName {
     const iconsByType: Record<Icon['type'], ActionIconName> = {
         edit: 'edit',
         copy: 'copy',
+        preview: 'fullscreen',
         inline: 'inline-image',
+        'side-by-side': 'diagram-view',
         left: 'align-left',
         center: 'align-center',
         right: 'align-right',
@@ -47,7 +51,6 @@ export class ImageToolBar extends BaseFloat {
         imageId: string;
     } | null = null;
 
-    private _icons: Icon[] = icons;
     private _reference: ReferenceElement | null = null;
     private _block: Format | null = null;
     private _toolbarContainer: HTMLDivElement = document.createElement('div');
@@ -111,14 +114,15 @@ export class ImageToolBar extends BaseFloat {
     }
 
     private _render() {
-        const { _icons: icons, _oldVNode: oldVNode, _toolbarContainer: toolbarContainer, _imageInfo: imageInfo } = this;
+        const { _oldVNode: oldVNode, _toolbarContainer: toolbarContainer, _imageInfo: imageInfo } = this;
         const { i18n } = this.muya;
         const { attrs } = imageInfo!.token;
         const dataAlign = attrs['data-align'];
         const defaultAlign = this._block!.text.trim() === imageInfo!.token.raw.trim()
             ? 'center'
             : 'inline';
-        const children = icons.map((i) => {
+        const canPlaceSideBySide = !!this._getAdjacentImageParagraphs();
+        const children = icons.filter(i => i.type !== 'side-by-side' || canPlaceSideBySide).map((i) => {
             const iconWrapperSelector = 'div.icon-wrapper';
             const iconWrapper = h(iconWrapperSelector, renderActionIcon(imageActionIcon(i.type)));
             let itemSelector = `li.item.${i.type}.mu-icon-tooltip`;
@@ -164,6 +168,54 @@ export class ImageToolBar extends BaseFloat {
         this._oldVNode = vnode;
     }
 
+    private _getAdjacentImageParagraphs() {
+        const block = this._block;
+        if (block?.blockName !== 'paragraph.content' || !block.parent)
+            return null;
+
+        const images = getImageLineTokens(tokenizer(block.text));
+        if (!images.length)
+            return null;
+
+        const paragraph = block.parent;
+        for (const neighbor of [paragraph.prev, paragraph.next]) {
+            if (neighbor?.blockName !== 'paragraph')
+                continue;
+
+            const content = neighbor.firstContentInDescendant();
+            if (!content)
+                continue;
+
+            const adjacentImages = getImageLineTokens(tokenizer(content.text));
+            if (!adjacentImages.length)
+                continue;
+
+            const current = { content: block, paragraph, images };
+            const adjacent = { content, paragraph: neighbor, images: adjacentImages };
+            return neighbor === paragraph.prev ? [adjacent, current] as const : [current, adjacent] as const;
+        }
+
+        return null;
+    }
+
+    private _placeSideBySide() {
+        const pair = this._getAdjacentImageParagraphs();
+        if (!pair)
+            return;
+
+        const [left, right] = pair;
+        const text = imageLineMarkdown([...left.images, ...right.images]);
+
+        const { editor, eventCenter, domNode } = this.muya;
+        editor.history.cutoff();
+        editor.selection.activate(SelectionType.TEXT);
+        left.content.text = text;
+        right.paragraph.remove();
+        eventCenter.emit('muya-transformer', { reference: null });
+        domNode.focus({ preventScroll: true });
+        left.content.setCursor(text.length, text.length, true);
+    }
+
     private _selectItem(event: Event, item: Icon) {
         event.preventDefault();
         event.stopPropagation();
@@ -171,6 +223,19 @@ export class ImageToolBar extends BaseFloat {
         const { _imageInfo: imageInfo } = this;
 
         switch (item.type) {
+            case 'preview': {
+                const data = getImageClipboardSource(imageInfo!.token);
+                if (data) {
+                    this.muya.eventCenter.emit('muya-transformer', { reference: null });
+                    this.muya.eventCenter.emit('preview-image', { data });
+                }
+                return this.hide();
+            }
+
+            case 'side-by-side':
+                this._placeSideBySide();
+                return this.hide();
+
             case 'copy': {
                 const source = getImageClipboardSource(imageInfo!.token);
                 if (source)
