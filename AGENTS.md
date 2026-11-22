@@ -263,6 +263,13 @@
 - 现象：macOS 提交「询问 AI」后，程序坞短暂出现 `exec` 图标。根因：用 Electron 主程序启动 Pi 时，Launch Services 会把子进程登记为 `Foreground`。推荐做法：用 Electron 提供的 `process.helperExecPath` 启动内置 Pi，沿用 `ELECTRON_RUN_AS_NODE` 和 RPC 管道。验证方式：在选区询问和侧栏对话请求期间按 Pi 进程 PID 检查 `lsappinfo`，确认登记为 `UIElement`，并检查两处都能收到回复。
 - 内置 Pi 的新工具必须同时注册到适配器和 RPC 启动的 `--tools` 列表。只注册适配器时，Pi 的工具允许列表会过滤它。评论读取按本轮文档作用域取数。用实际 Pi 握手检查 `activeTools`，再在关闭 MCP 的 Electron 中验证评论分页、完整回复和选区询问隔离。
 
+### Windows 内置 Pi 准备
+
+- 现象：Windows 构建在准备内置 Pi 时立即报 `spawnSync npm.cmd EINVAL`。
+- 根因：Node 的 `execFileSync` 不能直接启动 Windows `.cmd` 批处理入口。
+- 推荐做法：Windows 使用 `process.execPath` 执行同一 Node 安装目录内的 `node_modules/npm/bin/npm-cli.js`，将安装参数作为独立参数传入，不启用 shell；其他平台保留 npm 可执行入口。
+- 验证方式：`build-contracts.spec.ts` 覆盖带空格的 Windows 路径及非 Windows 分支，并确认 Windows x64、arm64 的完整打包与产物上传均通过。
+
 ### Electron 大版本与 Linux 原生模块工具链
 
 - 现象：Electron 大版本升级后，macOS 和 Windows 能完成原生模块重建，但 Linux 在 `native-keymap` 包含 V8 头文件时出现 `V8_EXPORT`/`expected identifier` 编译错误。
