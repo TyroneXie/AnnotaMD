@@ -7,14 +7,14 @@ import { canTurnInto } from '../../../block/blockTransforms';
 import { BLOCK_DOM_PROPERTY } from '../../../config';
 import { Muya } from '../../../muya';
 import {
-    frontButtonElementsForEditor,
+    frontButtonAnchorRect,
     frontButtonBlockKind,
     frontButtonBlockLabel,
+    frontButtonElementsForEditor,
     frontButtonMainAxis,
-    frontButtonAnchorRect,
     frontButtonTarget,
-    imageFrontButtonWrapper,
     imageFrontButtonTarget,
+    imageFrontButtonWrapper,
     isImageBlockHoverRegion,
     isImageFloatingControlHit,
     isStandaloneImageBlock,
@@ -122,6 +122,9 @@ describe('paragraph front button positioning', () => {
             block,
             focusMenu: true,
         }));
+        const reference = opened.mock.calls[0][0].reference;
+        expect(() => reference.getBoundingClientRect()).not.toThrow();
+        expect(reference.getBoundingClientRect()).toBeInstanceOf(DOMRect);
     });
 
     it('targets the hovered list item instead of the whole list container', () => {

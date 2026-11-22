@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, sendIpcToRenderer, focusEditor } from './helpers'
 
 // #3458 — re-pressing Find (Cmd/Ctrl-F) while the bar is already open just

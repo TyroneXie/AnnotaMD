@@ -1,7 +1,10 @@
 <template>
   <div class="recent-files-projects">
     <section class="start-panel">
-      <div class="start-icon" aria-hidden="true">
+      <div
+        class="start-icon"
+        aria-hidden="true"
+      >
         <span />
       </div>
       <h2>{{ t('recent.startTitle') }}</h2>

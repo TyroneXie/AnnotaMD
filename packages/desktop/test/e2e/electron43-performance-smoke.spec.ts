@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {

@@ -1,5 +1,5 @@
+import { readSource as readFileSync } from '../readSource'
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import en from '../../../static/locales/en.json'

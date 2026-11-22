@@ -10,8 +10,8 @@ import type {
     ITaskListState,
     TState,
 } from '../../state/types';
-import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import type { ActionIconName } from '../actionIcons';
+import type { IQuickInsertMenuItem } from '../paragraphQuickInsertMenu/config';
 import { replaceBlockByLabel, replaceTextContainerByLabel } from '../../block/blockTransforms';
 import { convertListItem, isListItemBlock, listStateWithItems, mergeAdjacentCompatibleLists } from '../../block/listItemTransforms';
 import {
@@ -24,11 +24,11 @@ import { BLOCK_DOM_PROPERTY, CLASS_NAMES } from '../../config';
 import emptyStates from '../../config/emptyStates';
 import { tokenizer, tokensToPlainText } from '../../inlineRenderer/lexer';
 
+import { findContentDOM } from '../../selection/dom';
 import { isAnyListState, isAtxHeadingState } from '../../state/types';
 import { deepClone, isHTMLElement } from '../../utils';
 import { getImageClipboardSource, getImageInfo } from '../../utils/image';
 import { h, patch } from '../../utils/snabbdom';
-import { findContentDOM } from '../../selection/dom';
 import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import { canTurnIntoMenu, FRONT_MENU } from './config';
@@ -290,7 +290,7 @@ export class ParagraphFrontMenu extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
-                        type: 'button',
+                        'type': 'button',
                         'aria-label': tooltip,
                         'aria-pressed': String(isActive),
                         'aria-disabled': String(isActive || conversionBlocked),
@@ -373,8 +373,8 @@ export class ParagraphFrontMenu extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
-                        role: 'button',
-                        tabindex: '0',
+                        'role': 'button',
+                        'tabindex': '0',
                         'aria-label': i18n.t(menuItem.text),
                     },
                     on: {
@@ -404,8 +404,9 @@ export class ParagraphFrontMenu extends BaseFloat {
             if (label === 'copy-plain-text' && (this._kind === 'image' || !plainText))
                 return;
             if (label === 'copy-markdown' && this._kind !== 'image'
-                && block.blockName !== 'thematic-break' && plainText === markdown)
+                && block.blockName !== 'thematic-break' && plainText === markdown) {
                 return;
+            }
             if (label === 'copy-markdown' && !markdown)
                 return;
             const icon = 'icon' in menuItem && typeof menuItem.icon === 'string'
@@ -432,8 +433,8 @@ export class ParagraphFrontMenu extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
-                        role: 'button',
-                        tabindex: isDisabled ? '-1' : '0',
+                        'role': 'button',
+                        'tabindex': isDisabled ? '-1' : '0',
                         'aria-label': i18n.t(menuText),
                         'aria-disabled': String(isDisabled),
                     },
@@ -654,6 +655,8 @@ export class ParagraphFrontMenu extends BaseFloat {
                 const quote = Array.from(
                     block.domNode?.querySelectorAll<HTMLElement>('[contenteditable="true"]') ?? [],
                 )
+                    // innerText omits hidden Markdown markers from the quote.
+                    // eslint-disable-next-line unicorn/prefer-dom-node-text-content
                     .map(node => node.innerText || node.textContent || '')
                     .join('\n')
                     .replace(/\s+/g, ' ')
@@ -788,11 +791,12 @@ export class ParagraphFrontMenu extends BaseFloat {
     private _shiftHeadingSection(block: Parent, delta: -1 | 1): Content | null {
         const headings = this._headingSectionBlocks(block)
             .filter(item => this._headingLevel(item) != null);
-        if (headings.some(item => {
+        if (headings.some((item) => {
             const level = this._headingLevel(item)!;
             return level + delta < 1 || level + delta > 6;
-        }))
+        })) {
             return null;
+        }
 
         let firstReplacement: Parent | null = null;
         for (const heading of headings) {
@@ -936,8 +940,9 @@ export class ParagraphFrontMenu extends BaseFloat {
         if (
             /^(?:frontmatter|code-block|diagram|math-block|html-block)$/.test(block.blockName)
             && 'text' in state
-        )
+        ) {
             return state.text.trimEnd();
+        }
 
         if (state.name === 'table') {
             return state.children
@@ -953,7 +958,7 @@ export class ParagraphFrontMenu extends BaseFloat {
             .map(line => line
                 .replace(/^\s{0,3}#{1,6}\s+/, '')
                 .replace(/^\s*(?:>\s*)+/, '')
-                .replace(/^\s*(?:[-+*]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/, ''))
+                .replace(/^\s*(?:[-+*]|\d+[.)])\s+(?:\[[ x]\]\s+)?/i, ''))
             .map(line => this._inlinePlainText(line))
             .join('\n')
             .trim();
@@ -1033,6 +1038,8 @@ export class ParagraphFrontMenu extends BaseFloat {
                         muya,
                         highlightState,
                     );
+                    if (!this._convertedBlock)
+                        return null;
                     block.replaceWith(this._convertedBlock);
                     return this._convertedBlock.firstContentInDescendant();
                 }

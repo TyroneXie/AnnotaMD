@@ -1,4 +1,5 @@
 import path from 'path'
+import { grantFileAccess } from '../security/fileAccess'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type { BrowserWindowConstructorOptions, IpcMainEvent } from 'electron'
 import log from 'electron-log'
@@ -135,6 +136,13 @@ class EditorWindow extends BaseWindow {
     }
 
     let win: BrowserWindow | null = (this.browserWindow = new BrowserWindow(winOptions))
+    if (rootDirectory) grantFileAccess(win.webContents, rootDirectory)
+    for (const pathname of fileList) grantFileAccess(win.webContents, path.dirname(pathname))
+    void this._accessor.dataCenter.getItem('imageFolderPath').then(imageDirectory => {
+      if (win && !win.isDestroyed() && typeof imageDirectory === 'string' && path.isAbsolute(imageDirectory)) {
+        grantFileAccess(win.webContents, imageDirectory)
+      }
+    }).catch(error => log.warn('Cannot authorize the configured image directory', error))
 
     // Give every editor window a stable id for session buffer persistence.
     // We cant use win.id as it might collide with same IDs from closed windows
@@ -388,6 +396,7 @@ class EditorWindow extends BaseWindow {
   /** Add a directory root to the current window workspace. */
   openFolder(pathname: string): void {
     if (!pathname || this.lifecycle === WindowLifecycle.QUITTED) return
+    if (this.browserWindow) grantFileAccess(this.browserWindow.webContents, pathname)
 
     const currentRoots =
       this.lifecycle === WindowLifecycle.READY
@@ -432,6 +441,7 @@ class EditorWindow extends BaseWindow {
    */
   addToOpenedFiles(filePath: string): void {
     const { _openedFiles, browserWindow } = this
+    grantFileAccess(browserWindow!.webContents, path.dirname(filePath))
     _openedFiles!.push(filePath)
     ipcMain.emit('watcher-watch-file', browserWindow, filePath)
   }
@@ -566,6 +576,7 @@ class EditorWindow extends BaseWindow {
     const { _accessor, _openedFiles, browserWindow } = this
     const { menu: appMenu } = _accessor
     const { pathname } = rawDocument
+    grantFileAccess(browserWindow!.webContents, path.dirname(pathname))
 
     // Listen for file changed.
     ipcMain.emit('watcher-watch-file', browserWindow, pathname)
@@ -608,8 +619,8 @@ class EditorWindow extends BaseWindow {
       if (!Array.isArray(bufferState.restoreWarnings)) {
         bufferState.restoreWarnings = []
       }
-      const rootDirectories = bufferState.project?.rootDirectories
-        ?? (bufferState.project?.rootDirectory ? [bufferState.project.rootDirectory] : [])
+      const rootDirectories = bufferState.project?.rootDirectories ??
+        (bufferState.project?.rootDirectory ? [bufferState.project.rootDirectory] : [])
       for (const rootDirectory of rootDirectories) {
         this.openFolder(rootDirectory)
       }

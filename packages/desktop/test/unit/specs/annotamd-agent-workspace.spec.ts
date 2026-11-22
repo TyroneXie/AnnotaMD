@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -71,10 +71,10 @@ describe('AI workspace panel', () => {
     expect(composer).toContain('<AgentModelSelector')
     expect(modelSelector).toContain('<AiProviderLogo')
     expect(modelSelector).toContain('selectedModel.value?.effortLevels')
-    expect(modelSelector).toContain("watch(() => settings.agentReadiness")
+    expect(modelSelector).toContain('watch(() => settings.agentReadiness')
     expect(modelSelector).toContain('class="annotamd-agent-model-options"')
     expect(modelSelector.match(/:teleported="false"/g)).toHaveLength(2)
-    expect(modelSelector).toContain('<el-option value="provider-default"')
+    expect(modelSelector).toMatch(/<el-option\s+value="provider-default"/)
     expect(modelSelector).not.toContain('selectedConfig && effortLevels.length > 0')
     expect(modelSelector).toContain('settings.cachedModels(configId)')
     expect(modelSelector).not.toContain('<el-option value="low"')
@@ -88,14 +88,14 @@ describe('AI workspace panel', () => {
     expect(changeSet).toContain('data-testid="ai-change-set-card"')
     expect(changeSet).toContain('data-testid="ai-change-set-keep"')
     expect(changeSet).toContain('data-testid="ai-change-set-rollback"')
-    expect(changeSet).toContain("changeSet.transaction?.diff.lines")
+    expect(changeSet).toContain('changeSet.transaction?.diff.lines')
     expect(changeSet).not.toContain('proposal')
-    expect(panel).toContain("conversations.send({")
+    expect(panel).toContain('conversations.send({')
     expect(panel).toContain('matchesAiConversationIdentity')
     expect(panel).toContain('reusableConversationId.value')
-    expect(panel).toContain("conversations.retry(request)")
-    expect(panel).toContain("conversations.stopConversation")
-    expect(panel).toContain("conversations.resolveChangeSet")
+    expect(panel).toContain('conversations.retry(request)')
+    expect(panel).toContain('conversations.stopConversation')
+    expect(panel).toContain('conversations.resolveChangeSet')
     expect(panel).toContain('data-testid="ai-setup-required"')
     expect(panel).toContain("'annotamd::open-setting-window', 'agent'")
     expect(panel).toContain("window.addEventListener('focus', refreshAfterSettings)")
@@ -122,10 +122,10 @@ describe('AI workspace panel', () => {
     expect(app).toContain('readRightPaneWidth')
     expect(app).toContain('writeRightPaneWidth')
     expect(app).toMatch(
-      /\.annotamd-shared-scroll-source::\-webkit-scrollbar\)\s*\{[^}]*width:\s*10px;[^}]*height:\s*10px;/s
+      /\.annotamd-shared-scroll-source::-webkit-scrollbar\)\s*\{[^}]*width:\s*10px;[^}]*height:\s*10px;/s
     )
     expect(app).not.toMatch(
-      /\.annotamd-shared-scroll-source::\-webkit-scrollbar\)\s*\{[^}]*display:\s*none;/s
+      /\.annotamd-shared-scroll-source::-webkit-scrollbar\)\s*\{[^}]*display:\s*none;/s
     )
     expect(app).toMatch(/\.annotamd-editor-width-stable\)\s*\{[^}]*scrollbar-gutter:\s*stable;/s)
     expect(editor).toContain("container.classList.add('annotamd-editor-width-stable')")

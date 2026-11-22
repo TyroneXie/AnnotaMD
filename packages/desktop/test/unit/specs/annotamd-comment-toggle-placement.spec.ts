@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -39,6 +39,7 @@ describe('AnnotaMD comment toggle placement', () => {
 
     expect(titleBar).not.toContain('tab-comment-toggle')
     expect(titleBar).not.toContain('tab-agent-toggle')
+    // eslint-disable-next-line no-template-curly-in-string
     expect(sideBar).toContain('`sidebar-${c.id}-toggle`')
     expect(sideBar).toContain('v-else-if="rightColumn === \'agent\'"')
     expect(sideBarHelp).toContain("id: 'agent'")
@@ -116,16 +117,16 @@ describe('AnnotaMD comment toggle placement', () => {
     const originalSelection = {
       quote: '最初选中的整段代码',
       exactQuote: '最初选中的整段代码',
-      anchor: { path: [0], offset: 0 },
-      focus: { path: [0], offset: 9 },
+      anchor: { key: '0', path: [0], offset: 0 },
+      focus: { key: '0', path: [0], offset: 9 },
       isCrossBlock: false,
       capturedAt: 1
     }
     const laterSelection = {
       quote: '后来选中的小段',
       exactQuote: '后来选中的小段',
-      anchor: { path: [1], offset: 0 },
-      focus: { path: [1], offset: 7 },
+      anchor: { key: '1', path: [1], offset: 0 },
+      focus: { key: '1', path: [1], offset: 7 },
       isCrossBlock: false,
       capturedAt: 2
     }

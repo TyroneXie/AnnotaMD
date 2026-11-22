@@ -11,7 +11,7 @@ import type { BrowserWindow } from 'electron'
 import type { LineEnding } from '@shared/types/files'
 import type Preference from '../preferences'
 
-// TODO(refactor): Please see GH#1035.
+// The watcher waits for atomic saves to settle before emitting file changes.
 
 export const WATCHER_STABILITY_THRESHOLD = 1000
 export const WATCHER_STABILITY_POLL_INTERVAL = 150
@@ -340,7 +340,7 @@ class Watcher {
         if (
           globalThis.ANNOTAMD_DEBUG_VERBOSE >= 3
         ) {
-          console.log('watcher: ', event, subpath, details)
+          log.debug('watcher: ', event, subpath, details)
         }
 
         // Fix atomic rename on Linux (chokidar#591).
@@ -485,7 +485,7 @@ class Watcher {
                 if (
                   globalThis.ANNOTAMD_DEBUG_VERBOSE >= 3
                 ) {
-                  console.log(
+                  log.debug(
                     `Ignoring file event after "stat": current="${currentTime.toISOString()}", start="${start.toISOString()}", file="${fileInfo.mtime.toISOString()}".`
                   )
                 }

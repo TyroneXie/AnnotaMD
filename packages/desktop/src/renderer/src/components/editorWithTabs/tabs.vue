@@ -53,8 +53,16 @@
       :aria-pressed="commentPaneActive"
       @click.stop="openCommentPane"
     >
-      <el-icon class="tab-comment-icon" aria-hidden="true"><ChatLineRound /></el-icon>
-      <span v-if="selectionCommentCount" class="tab-comment-count">
+      <el-icon
+        class="tab-comment-icon"
+        aria-hidden="true"
+      >
+        <ChatLineRound />
+      </el-icon>
+      <span
+        v-if="selectionCommentCount"
+        class="tab-comment-count"
+      >
         {{ selectionCommentCount }}
       </span>
     </button>

@@ -336,14 +336,16 @@ describe('PiAgentHost', () => {
         }
       }
     })
-    expect(buildModelsConfig({ providers: [{
-      ...deepseek,
-      baseUrl: 'https://proxy.example.com/v1',
-      models: [
-        { id: 'deepseek-flash', enabled: true },
-        { id: 'custom', enabled: true, effortLevels: ['low'] }
-      ]
-    }] })).toMatchObject({
+    expect(buildModelsConfig({
+      providers: [{
+        ...deepseek,
+        baseUrl: 'https://proxy.example.com/v1',
+        models: [
+          { id: 'deepseek-flash', enabled: true },
+          { id: 'custom', enabled: true, effortLevels: ['low'] }
+        ]
+      }]
+    })).toMatchObject({
       providers: {
         'renamed-deepseek': {
           models: [

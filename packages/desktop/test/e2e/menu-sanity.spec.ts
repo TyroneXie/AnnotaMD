@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import { launchElectron, waitForMenuReady } from './helpers'
 
 test.describe('Application menu wiring', () => {

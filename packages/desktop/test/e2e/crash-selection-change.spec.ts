@@ -7,7 +7,7 @@
 // current develop these recipes pass — the model-cursor fallback at
 // paragraphCtrl.js:18-22 catches the transient DOM-selection-loss case.
 import { test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   expectNoRendererErrors,
   clearRendererErrors,

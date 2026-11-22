@@ -44,7 +44,7 @@ describe('AnnotaMD right pane', () => {
     expect(sideBar).toContain('window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH')
     expect(sideBar).toContain("rightPaneStore.closeIf('comments')")
     expect(app).toMatch(
-      /commentPaneVisible\.value\s+&& rightPaneMode\.value === 'comments'/
+      /commentPaneVisible\.value\s+&&\s+rightPaneMode\.value === 'comments'/
     )
     expect(app).toMatch(
       /watch\(\[init, hasCurrentFile\][\s\S]*?rightColumn !== 'agent'[\s\S]*?SET_LAYOUT\(\{ rightColumn: '' \}\)/

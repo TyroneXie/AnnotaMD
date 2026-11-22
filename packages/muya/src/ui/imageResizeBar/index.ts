@@ -82,6 +82,7 @@ export class ImageResizeBar {
         originalWidth: string | null;
         width: number | null;
     } | null = null;
+
     // Stops the autoUpdate reposition loop set up in `_render`.
     private _cleanup: (() => void) | null = null;
     private _pendingRender: ReturnType<typeof setTimeout> | null = null;

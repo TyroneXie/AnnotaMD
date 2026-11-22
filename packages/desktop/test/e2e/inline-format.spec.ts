@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, clickMenuById } from './helpers'
 
 // Note: applying inline format marks (bold/italic/etc.) requires a live Muya

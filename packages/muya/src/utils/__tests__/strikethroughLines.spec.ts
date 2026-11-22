@@ -2,22 +2,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { measureStrikethroughLines } from '../strikethroughLines';
 
-const rect = (
-    left: number,
-    top: number,
-    right: number,
-    bottom: number,
-): DOMRect => ({
-    x: left,
-    y: top,
-    left,
-    top,
-    right,
-    bottom,
-    width: right - left,
-    height: bottom - top,
-    toJSON: () => ({}),
-});
+function rect(left: number, top: number, right: number, bottom: number): DOMRect {
+    return {
+        x: left,
+        y: top,
+        left,
+        top,
+        right,
+        bottom,
+        width: right - left,
+        height: bottom - top,
+        toJSON: () => ({}),
+    };
+}
 
 describe('strikethrough line geometry', () => {
     afterEach(() => {

@@ -6,7 +6,7 @@
 // ExportMarkdown.generate). The bug surface is list/backspace mutation in
 // pre-migration editor engine/lib/contentState/ + pre-migration editor engine/lib/utils/exportMarkdown.js.
 import { test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   launchWithMarkdown,
   placeCaretInEditor,

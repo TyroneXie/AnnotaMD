@@ -1,16 +1,16 @@
 export type TableAxisTarget = 'row' | 'column' | 'cells';
 export type TableAxisFormat = 'strong' | 'del' | 'em' | 'u' | 'inline_code';
-export type TableAxisAction =
-    | 'insert'
-    | 'remove'
-    | 'move'
-    | 'align'
-    | 'reset-width'
-    | 'format'
-    | 'palette'
-    | 'comment';
+export type TableAxisAction
+    = | 'insert'
+        | 'remove'
+        | 'move'
+        | 'align'
+        | 'reset-width'
+        | 'format'
+        | 'palette'
+        | 'comment';
 
-export interface MenuItem {
+export interface IMenuItem {
     label: string;
     action: TableAxisAction;
     target: TableAxisTarget;
@@ -21,16 +21,18 @@ export interface MenuItem {
     group: number;
 }
 
-const formatTools = (target: TableAxisTarget, group: number): MenuItem[] => [
-    { label: 'Emphasize', action: 'format', target, format: 'strong', symbol: 'B', group },
-    { label: 'Strikethrough', action: 'format', target, format: 'del', symbol: 'S', group },
-    { label: 'Italic', action: 'format', target, format: 'em', symbol: 'I', group },
-    { label: 'Underline', action: 'format', target, format: 'u', symbol: 'U', group },
-    { label: 'Inline Code', action: 'format', target, format: 'inline_code', symbol: '</>', group },
-    { label: 'Font Color', action: 'palette', target, symbol: 'A', group },
-];
+function formatTools(target: TableAxisTarget, group: number): IMenuItem[] {
+    return [
+        { label: 'Emphasize', action: 'format', target, format: 'strong', symbol: 'B', group },
+        { label: 'Strikethrough', action: 'format', target, format: 'del', symbol: 'S', group },
+        { label: 'Italic', action: 'format', target, format: 'em', symbol: 'I', group },
+        { label: 'Underline', action: 'format', target, format: 'u', symbol: 'U', group },
+        { label: 'Inline Code', action: 'format', target, format: 'inline_code', symbol: '</>', group },
+        { label: 'Font Color', action: 'palette', target, symbol: 'A', group },
+    ];
+}
 
-export const toolList: Record<'right' | 'bottom' | 'rect', MenuItem[]> = {
+export const toolList: Record<'right' | 'bottom' | 'rect', IMenuItem[]> = {
     right: [
         ...formatTools('row', 1),
         { label: 'Move Row Up', action: 'move', location: 'previous', target: 'row', symbol: '↑', group: 2 },
@@ -54,3 +56,5 @@ export const toolList: Record<'right' | 'bottom' | 'rect', MenuItem[]> = {
         { label: 'Comment', action: 'comment', target: 'cells', symbol: '', group: 2 },
     ],
 };
+
+export type MenuItem = IMenuItem;

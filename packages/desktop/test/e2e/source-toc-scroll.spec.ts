@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, waitForEditor, enterSourceMode, clickMenuById } from './helpers'
 
 // annotamd #3580: clicking a TOC entry in SOURCE CODE mode must scroll the

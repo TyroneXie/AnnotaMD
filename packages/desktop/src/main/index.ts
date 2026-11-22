@@ -1,3 +1,5 @@
+import type * as AgentBridgeModule from './comments/AgentBridgeServer'
+import './security/ipc'
 import './globalSetting'
 import path from 'path'
 import { app, dialog, crashReporter, ipcMain } from 'electron'
@@ -126,7 +128,7 @@ const appController = new App(accessor, args as unknown as { _: string[] })
 appController.init()
 setAutomaticUpdateDownloads(accessor.preferences.getItem<boolean>('autoDownloadUpdates'))
 
-let agentBridgeModule: Promise<typeof import('./comments/AgentBridgeServer')> | null = null
+let agentBridgeModule: Promise<typeof AgentBridgeModule> | null = null
 const syncAgentBridge = (nextEnabled: boolean): void => {
   // Avoid parsing the HTTP bridge, crypto helpers, or comment database stack
   // merely to call its no-op stop path when the user has disabled MCP access.

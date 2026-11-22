@@ -207,7 +207,7 @@ describe('menu template accelerators match the platform keybinding tables (Parag
   ) => MenuItemConstructorOptions
 
   const preferences = {
-    getItem: <T,>(_key: string): T => false as T,
+    getItem: <T>(_key: string): T => false as T,
     setItem: (_key: string, _value: unknown): void => {}
   }
 

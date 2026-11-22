@@ -1,5 +1,6 @@
+import type { MuyaElement, CodeMirrorElement } from './editor-elements'
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import { resolve } from 'node:path'
 import { enterSourceMode, expectNoRendererErrors, launchWithMarkdown, sendIpcToRenderer, waitForEditor } from './helpers'
 
@@ -7,18 +8,19 @@ const imagePath = resolve(__dirname, '../../static/logo-96px.png')
 
 async function expectNativeCaret(page: Page, target: Locator) {
   expect(await page.evaluate(() => CSS.supports('caret-animation', 'manual'))).toBe(true)
-  await page.addStyleTag({content: '* { caret-animation: manual !important; }'})
+  await page.addStyleTag({ content: '* { caret-animation: manual !important; }' })
   const box = (await target.boundingBox())!
-  const viewport = await page.evaluate(() => ({width: innerWidth, height: innerHeight}))
+  const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))
   const clip = {
-    x: Math.max(0, box.x), y: Math.max(0, box.y),
+    x: Math.max(0, box.x),
+    y: Math.max(0, box.y),
     width: Math.min(box.width, viewport.width - box.x),
     height: Math.min(box.height, viewport.height - box.y)
   }
   const color = await target.evaluate(element => getComputedStyle(element).caretColor)
   expect(color).not.toMatch(/transparent|rgba\(0, 0, 0, 0\)/)
-  const visible = await page.screenshot({clip, caret: 'initial', animations: 'disabled'})
-  const hidden = await page.screenshot({clip, caret: 'hide', animations: 'disabled'})
+  const visible = await page.screenshot({ clip, caret: 'initial', animations: 'disabled' })
+  const hidden = await page.screenshot({ clip, caret: 'hide', animations: 'disabled' })
   expect(visible.equals(hidden), 'native caret must paint pixels inside the editing area').toBe(false)
 }
 
@@ -129,13 +131,13 @@ test('source editor cursor is visible and accepts input after a click', async() 
   try {
     await useCurrentRenderer(page, app, markdown)
     await enterSourceMode(page, app)
-    await page.locator('.source-code .CodeMirror').evaluate((element: any) => element.CodeMirror.setOption('cursorBlinkRate', 0))
-    await page.locator('.source-code .CodeMirror-lines').click({position: {x: 30, y: 10}})
+    await page.locator('.source-code .CodeMirror').evaluate((element) => (element as CodeMirrorElement).CodeMirror.setOption('cursorBlinkRate', 0))
+    await page.locator('.source-code .CodeMirror-lines').click({ position: { x: 30, y: 10 } })
     const cursor = page.locator('.source-code .CodeMirror-cursors .CodeMirror-cursor').first()
     await expect(cursor).toBeVisible()
     expect((await cursor.boundingBox())!.height).toBeGreaterThan(10)
     await page.keyboard.insertText('SOURCE_CARET')
-    expect(await page.locator('.source-code .CodeMirror').evaluate((element: any) => element.CodeMirror.getValue())).toContain('SOURCE_CARET')
+    expect(await page.locator('.source-code .CodeMirror').evaluate((element) => (element as CodeMirrorElement).CodeMirror.getValue())).toContain('SOURCE_CARET')
     await expectNoRendererErrors(app)
   } finally {
     await app.close()
@@ -151,30 +153,37 @@ async function useCurrentRenderer(page: Page, app: ElectronApplication, markdown
   await page.goto(url.href)
   await page.waitForSelector('.editor-placeholder')
   await sendIpcToRenderer(app, 'annotamd::bootstrap-editor', {
-    addBlankTab: false, markdownList: filePath ? [] : [markdown], lineEnding: 'lf',
-    sideBarVisibility: true, tabBarVisibility: true
+    addBlankTab: false,
+    markdownList: filePath ? [] : [markdown],
+    lineEnding: 'lf',
+    sideBarVisibility: true,
+    tabBarVisibility: true
   })
   if (filePath) {
     await sendIpcToRenderer(app, 'annotamd::open-new-tab', {
-      markdown, filename: 'note.md', pathname: filePath,
-      encoding: {encoding: 'utf8', hasBOM: false},
-      lineEnding: 'lf', adjustLineEndingOnSave: false,
-      trimTrailingNewline: 1, isMixedLineEndings: false
+      markdown,
+      filename: 'note.md',
+      pathname: filePath,
+      encoding: { encoding: 'utf8', hasBOM: false },
+      lineEnding: 'lf',
+      adjustLineEndingOnSave: false,
+      trimTrailingNewline: 1,
+      isMixedLineEndings: false
     })
   }
   await waitForEditor(page)
   if (markdown.startsWith('[^note]:')) {
-    await page.locator('.editor-component .mu-container').evaluate((element: any) => {
-      element.__MUYA_BLOCK__.muya.setOptions({footnote: true}, true)
+    await page.locator('.editor-component .mu-container').evaluate((element) => {
+      (element as MuyaElement).__MUYA_BLOCK__.muya.setOptions({ footnote: true }, true)
     })
   }
 }
 
 async function state(page: Page) {
-  return page.locator('.editor-component .mu-container').evaluate((element: any) => {
-    const muya = element.__MUYA_BLOCK__.muya
+  return page.locator('.editor-component .mu-container').evaluate((element) => {
+    const muya = (element as MuyaElement).__MUYA_BLOCK__.muya
     muya.editor.jsonState.flush()
-    return muya.getState() as Array<{name: string; text?: string}>
+    return muya.getState() as Array<{ name: string; text?: string }>
   })
 }
 
@@ -210,23 +219,23 @@ for (const [name, source] of cases) {
       const before = await state(page)
       const first = (await blocks.first().boundingBox())!
       const next = (await blocks.nth(1).boundingBox())!
-      let point = {x: first.x + first.width / 2, y: (first.y + first.height + next.y) / 2}
+      let point = { x: first.x + first.width / 2, y: (first.y + first.height + next.y) / 2 }
       if (name === 'image') {
         const image = (await blocks.first().locator('img').boundingBox())!
-        point = {x: image.x + image.width / 2, y: image.y + image.height + 18}
+        point = { x: image.x + image.width / 2, y: image.y + image.height + 18 }
       }
       await page.mouse.dblclick(point.x, point.y)
-      await expect.poll(() => state(page)).toEqual([before[0], {name: 'paragraph', text: ''}, before[1]])
+      await expect.poll(() => state(page)).toEqual([before[0], { name: 'paragraph', text: '' }, before[1]])
       await page.mouse.dblclick(point.x, point.y)
-      expect(await state(page)).toEqual([before[0], {name: 'paragraph', text: ''}, before[1]])
+      expect(await state(page)).toEqual([before[0], { name: 'paragraph', text: '' }, before[1]])
       await expectNativeCaret(page, blocks.nth(1).locator('.mu-content'))
-      await page.screenshot({path: `/tmp/annotamd-blank-${name.replaceAll(' ', '-')}.png`, caret: 'initial'})
+      await page.screenshot({ path: `/tmp/annotamd-blank-${name.replaceAll(' ', '-')}.png`, caret: 'initial' })
       await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'undo')
       await expect.poll(() => state(page)).toEqual(before)
       await sendIpcToRenderer(app, 'annotamd::editor-edit-action', 'redo')
-      await expect.poll(() => state(page)).toEqual([before[0], {name: 'paragraph', text: ''}, before[1]])
+      await expect.poll(() => state(page)).toEqual([before[0], { name: 'paragraph', text: '' }, before[1]])
       await page.keyboard.insertText('New editable line')
-      await expect.poll(() => state(page)).toEqual([before[0], {name: 'paragraph', text: 'New editable line'}, before[1]])
+      await expect.poll(() => state(page)).toEqual([before[0], { name: 'paragraph', text: 'New editable line' }, before[1]])
       await expectNoRendererErrors(app)
     } finally {
       await app.close()
@@ -245,16 +254,16 @@ for (const location of ['before document', 'after document', 'empty document']) 
       const before = await state(page)
       const first = (await blocks.first().boundingBox())!
       const last = (await blocks.last().boundingBox())!
-      const point = {x: first.x + 30, y: location === 'before document' ? first.y - 8 : last.y + last.height + 12}
+      const point = { x: first.x + 30, y: location === 'before document' ? first.y - 8 : last.y + last.height + 12 }
       await page.mouse.dblclick(point.x, point.y)
       const insertedIndex = location === 'after document' ? before.length : 0
       await expectNativeCaret(page, blocks.nth(insertedIndex).locator('.mu-content'))
       await page.keyboard.insertText('Boundary editing')
       const expected = location === 'empty document'
-        ? [{name: 'paragraph', text: 'Boundary editing'}]
+        ? [{ name: 'paragraph', text: 'Boundary editing' }]
         : location === 'before document'
-          ? [{name: 'paragraph', text: 'Boundary editing'}, ...before]
-          : [...before, {name: 'paragraph', text: 'Boundary editing'}]
+          ? [{ name: 'paragraph', text: 'Boundary editing' }, ...before]
+          : [...before, { name: 'paragraph', text: 'Boundary editing' }]
       await expect.poll(() => state(page)).toEqual(expected)
       await expectNoRendererErrors(app)
     } finally {
@@ -275,7 +284,7 @@ test('double clicking a word preserves word selection and document structure', a
       range.setStart(text, 0)
       range.setEnd(text, 10)
       const rect = range.getBoundingClientRect()
-      return {x: rect.x + rect.width / 2, y: rect.y + rect.height / 2}
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }
     })
     await page.mouse.dblclick(point.x, point.y)
     expect((await page.evaluate(() => window.getSelection()!.toString())).trim()).toBe('Selectable')

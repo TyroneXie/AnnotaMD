@@ -14,7 +14,7 @@
 // with a stale cursor. If these tests start failing, the upstream guards
 // have regressed and paragraphCtrl.updateParagraph needs its own check.
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   clickMenuById,
   clearRendererErrors,

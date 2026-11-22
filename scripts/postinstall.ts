@@ -5,12 +5,8 @@
  * Cross-platform postinstall: patch native-keymap for C++20, download Electron,
  * rebuild all native modules for Electron's ABI, generate locale files.
  *
- * native-keymap is listed as optionalDependency so pnpm ignores its auto-gyp
- * compile failure on Node v24+. This script restores the source, patches and
- * rebuilds it correctly via @electron/rebuild.
- *
- * Step order matters: native-keymap source must be restored before downloading
- * Electron, because the inner `pnpm add` can disturb devDependency state.
+ * pnpm skips native-keymap's Node-ABI install script. Keep its locked source,
+ * apply the C++20 patch and rebuild against Electron's ABI instead.
  *
  * Monorepo layout: the Electron desktop app lives in packages/desktop with
  * its own node_modules (workspace-local deps are not hoisted to the root —
@@ -33,10 +29,6 @@ function run(cmd, opts = {}) {
   execSync(cmd, { stdio: 'inherit', cwd, env: { ...process.env, ...env } })
 }
 
-// Detect which package manager invoked this postinstall so commands work
-// regardless of whether the caller is pnpm (primary) or npm (fallback).
-const userAgent = process.env.npm_config_user_agent || ''
-const isPnpm = userAgent.startsWith('pnpm')
 // patch-package and electron-rebuild are locally installed; call their
 // node_modules/.bin entries directly (hoisted by shamefully-hoist=true).
 const ext = process.platform === 'win32' ? '.cmd' : ''
@@ -46,14 +38,7 @@ const electronRebuildBin = path.join(desktopRoot, 'node_modules', '.bin', `elect
 // ── 1. Ensure native-keymap source is present (pm removes it on optional failure) ──
 const nativeKeymapDir = path.join(desktopRoot, 'node_modules', 'native-keymap')
 if (!fs.existsSync(nativeKeymapDir)) {
-  console.log('Installing native-keymap source (skipping compilation)...')
-  // native-keymap is already in AnnotaMD optionalDependencies; the add
-  // re-installs without changing the version range.
-  if (isPnpm) {
-    run('pnpm --filter annotamd add native-keymap --ignore-scripts')
-  } else {
-    run('npm install native-keymap --ignore-scripts --no-save', { cwd: desktopRoot })
-  }
+  throw new Error('Missing native-keymap source. Run pnpm install --frozen-lockfile --ignore-scripts, then rerun postinstall. Do not install with --no-optional.')
 }
 
 // ── 2. Download + extract Electron binary ────────────────────────────────────

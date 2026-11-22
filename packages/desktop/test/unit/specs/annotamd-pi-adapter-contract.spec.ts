@@ -49,7 +49,7 @@ describe('bundled external Pi adapter contract', () => {
   it('uses the stock RPC UI tunnel with bounded base64url envelopes', () => {
     expect(adapterSource).toContain("const BRIDGE_TITLE = 'annotamd.bridge.v1'")
     expect(adapterSource).toContain("const WIRE_PREFIX = 'am1.'")
-    expect(adapterSource).toContain("const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024")
+    expect(adapterSource).toContain('const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024')
     expect(adapterSource).toContain("toString('base64url')")
     expect(adapterSource).toContain("Buffer.from(encoded, 'base64url')")
     expect(adapterSource).toContain('ctx.ui.input(BRIDGE_TITLE, encodeEnvelope(request), { signal })')
@@ -73,6 +73,7 @@ describe('bundled external Pi adapter contract', () => {
     expect(adapterSource).toContain('tools,')
     expect(adapterSource.match(/'annotamd-pi-adapter\/v1'/g)).toHaveLength(3)
     expect(adapterSource).toContain('const ready = encodeReadyPayload({')
+    // eslint-disable-next-line no-template-curly-in-string
     expect(adapterSource).toContain('ctx.ui.notify(`${READY_PREFIX}${ready}`, \'info\')')
     expect(adapterSource).not.toMatch(/session_start[\s\S]{0,800}ui\.input/)
     expect(adapterSource).not.toMatch(/writeFile as fsWriteFile|mkdir as fsMkdir/)

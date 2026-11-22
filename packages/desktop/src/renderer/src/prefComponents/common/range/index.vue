@@ -39,7 +39,10 @@
             <Plus />
           </button>
         </div>
-        <span v-if="unit" class="unit">{{ unit }}</span>
+        <span
+          v-if="unit"
+          class="unit"
+        >{{ unit }}</span>
         <LinkIcon
           v-if="more"
           :size="14"

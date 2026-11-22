@@ -20,7 +20,7 @@ test('keeps the regex tooltip inside the right edge of the sidebar', async() => 
         opacity: tooltip.opacity,
         right: tooltip.right,
         whiteSpace: tooltip.whiteSpace,
-        fitsInsideSidebar: Boolean(sidebarRect) &&
+        fitsInsideSidebar: !!sidebarRect &&
           tooltipLeft >= sidebarRect.left &&
           tooltipRight <= sidebarRect.right
       }

@@ -54,8 +54,8 @@ export const prepareMacBundleUpdate = async(
     await run('/usr/bin/ditto', ['-x', '-k', archive, stage])
     const candidate = path.join(stage, 'AnnotaMD.app')
     const info = parse(await fs.readFile(path.join(candidate, 'Contents', 'Info.plist'), 'utf8')) as Record<string, unknown>
-    if (info.CFBundleIdentifier !== bundleIdentifier || info.CFBundleExecutable !== 'AnnotaMD'
-      || info.CFBundleShortVersionString !== version) {
+    if (info.CFBundleIdentifier !== bundleIdentifier || info.CFBundleExecutable !== 'AnnotaMD' ||
+      info.CFBundleShortVersionString !== version) {
       throw new Error('The downloaded application does not match the requested AnnotaMD update.')
     }
     const binary = path.join(candidate, 'Contents', 'MacOS', 'AnnotaMD')
@@ -79,8 +79,8 @@ export const prepareMacBundleUpdate = async(
 }
 
 const ownsStagingFolder = (stage: string, target: string): boolean =>
-  typeof stage === 'string' && path.dirname(stage) === path.dirname(target)
-  && path.basename(stage).startsWith('.annotamd-update-')
+  typeof stage === 'string' && path.dirname(stage) === path.dirname(target) &&
+  path.basename(stage).startsWith('.annotamd-update-')
 
 // Arguments remain separate from the shell source, including application paths
 // containing quotes, spaces, dollar signs or backticks.
@@ -155,8 +155,8 @@ export const acknowledgeMacBundleUpdate = async(
   if (!await fs.pathExists(journal)) return
   const update = await fs.readJson(journal) as PreparedMacUpdate
   const target = macAppBundlePath(executablePath)
-  if (!target || update.target !== target || update.version !== version
-    || !ownsStagingFolder(update.stage, target)) return
+  if (!target || update.target !== target || update.version !== version ||
+    !ownsStagingFolder(update.stage, target)) return
   if (await fs.pathExists(update.stage)) await fs.writeFile(path.join(update.stage, 'ready'), '')
   await fs.remove(journal)
 }

@@ -30,8 +30,8 @@ describe('image hover resize affordance', () => {
         const muya = {
             domNode,
             eventCenter: { attachDOMEvent, emit },
-        } as any;
-        const selection = { selectImage: vi.fn() } as any;
+        } as unknown as ConstructorParameters<typeof ImageSelection>[0];
+        const selection = { selectImage: vi.fn() } as unknown as ConstructorParameters<typeof ImageSelection>[1];
         new ImageSelection(muya, selection).attach();
 
         image.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));

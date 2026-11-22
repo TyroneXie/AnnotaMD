@@ -1,5 +1,6 @@
+import type { MuyaElement } from './editor-elements'
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, sendIpcToRenderer } from './helpers'
 
 const selectParagraphText = async(page: Page, paragraphIndex: number, start = 0, end?: number) => {
@@ -23,15 +24,19 @@ const selectParagraphText = async(page: Page, paragraphIndex: number, start = 0,
     }
     const begin = boundaryAt(start)
     const finish = boundaryAt(end ?? target.textContent?.length ?? start)
-    root.focus({ preventScroll: true })
+    const muya = (target as MuyaElement).__MUYA_BLOCK__.muya
+    muya.domNode.focus({ preventScroll: true })
     const range = document.createRange()
     range.setStart(begin.node, begin.offset)
     range.setEnd(finish.node, finish.offset)
     const selection = window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
+    const liveSelection = muya.editor.selection.getSelection()
+    if (!liveSelection) throw new Error('Muya selection is unavailable')
+    muya.editor.selection.setSelection(liveSelection.anchor, liveSelection.focus)
     document.dispatchEvent(new Event('selectionchange'))
-    root.dispatchEvent(new KeyboardEvent('keyup', {
+    target.dispatchEvent(new KeyboardEvent('keyup', {
       key: 'ArrowRight',
       bubbles: true,
       cancelable: true
@@ -53,8 +58,8 @@ const selectAcrossParagraphs = async(
     const startElement = paragraphs?.[startIndex]
     const endElement = paragraphs?.[endIndex]
     if (!root || !startElement || !endElement) throw new Error('cross-block text is unavailable')
-    const startBlock = (startElement as HTMLElement & { __MUYA_BLOCK__?: any }).__MUYA_BLOCK__
-    const endBlock = (endElement as HTMLElement & { __MUYA_BLOCK__?: any }).__MUYA_BLOCK__
+    const startBlock = (startElement as MuyaElement).__MUYA_BLOCK__
+    const endBlock = (endElement as MuyaElement).__MUYA_BLOCK__
     const selection = startBlock?.muya?.editor?.selection
     if (!startBlock || !endBlock || !selection) throw new Error('Muya cross-block selection is unavailable')
 
@@ -83,10 +88,10 @@ const addComment = async(
   await selectParagraphText(page, paragraphIndex, start, end)
   await page.locator('.mu-format-picker li.annotamd_comment').click()
   const composer = page.locator('.annotamd-composer-card')
-    await expect(composer).toBeVisible()
-    await expect(composer.locator('blockquote')).toContainText(expectedQuote)
-    await composer.locator('textarea').fill(body)
-    await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
+  await expect(composer).toBeVisible()
+  await expect(composer.locator('blockquote')).toContainText(expectedQuote)
+  await composer.locator('textarea').fill(body)
+  await composer.locator('.annotamd-composer-actions button:not(.annotamd-send-agent)').click()
   await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(expectedCount)
 }
 
@@ -1257,7 +1262,7 @@ test.describe('AnnotaMD comment anchors in Electron', () => {
     if (app) await app.close()
   })
 
-  test('tracks the selected duplicate and removes it only when its own text changes', async() => {
+  test('tracks the selected duplicate through partial edits and removes it after a full replacement', async() => {
     await addComment(page, 2, '只修改第二处')
     await selectParagraphText(page, 0, 0, 1)
     await page.keyboard.type('新')
@@ -1266,6 +1271,10 @@ test.describe('AnnotaMD comment anchors in Electron', () => {
 
     await selectParagraphText(page, 2, 0, 1)
     await page.keyboard.type('新')
+    await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(1)
+    await expect(page.locator('span.mu-paragraph-content').nth(2)).toHaveText('新复文字：需要修正。')
+    await selectParagraphText(page, 2)
+    await page.keyboard.type('整段替换')
     await expect(page.locator('.annotamd-comment-card[data-comment-id]')).toHaveCount(0)
   })
 })

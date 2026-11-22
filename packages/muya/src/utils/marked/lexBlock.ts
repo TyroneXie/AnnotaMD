@@ -17,8 +17,8 @@ function normalizeAttachedClosingFences(src: string): string {
         const line = parts[index];
 
         if (!openFence) {
-            const opener = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-            if (opener && !(opener[1][0] === '`' && opener[2].includes('`'))) {
+            const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+            if (opener && !(opener[1][0] === '`' && line.slice(opener[0].length).includes('`'))) {
                 openFence = {
                     marker: opener[1][0] as '`' | '~',
                     length: opener[1].length,

@@ -137,7 +137,10 @@ const testPacks = {
       'test/unit/specs/macos-installer-volumes.spec.ts',
       'test/unit/specs/native-dialog-localization.spec.ts',
       'test/unit/specs/multi-root-sidebar.spec.ts',
-      'test/unit/specs/side-bar-search-ui.spec.ts'
+      'test/unit/specs/side-bar-search-ui.spec.ts',
+      'test/unit/specs/ipc-security.spec.ts',
+      'test/unit/specs/file-access-policy.spec.ts',
+      'test/unit/specs/build-contracts.spec.ts'
     ]
   }
 }
@@ -237,6 +240,12 @@ if (selectedPacks.includes('table')) {
 }
 
 if (mode === 'feature') {
+  checks.push({
+    label: 'desktop test typecheck',
+    command: path.join(root, 'packages/desktop/node_modules/.bin/vue-tsc'),
+    args: ['--noEmit', '-p', 'tsconfig.tests.json'],
+    cwd: path.join(root, 'packages/desktop')
+  })
   checks.push({
     label: 'AnnotaMD desktop typecheck',
     command: path.join(root, 'packages/desktop/node_modules/.bin/vue-tsc'),

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from 'playwright'
+import type { Page } from '@playwright/test'
 import {
   launchWithMarkdown,
   waitForMenuReady,

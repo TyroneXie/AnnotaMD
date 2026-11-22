@@ -24,7 +24,9 @@ export class MacArchiveUpdater extends AppUpdater {
       file.url.pathname.endsWith('.zip') && file.url.pathname.includes(`-${fileArchitecture}-`))
     if (!file) throw new Error('No AnnotaMD update is available for this Mac architecture.')
     return this.executeDownload({
-      fileExtension: 'zip', fileInfo: file, downloadUpdateOptions: options,
+      fileExtension: 'zip',
+      fileInfo: file,
+      downloadUpdateOptions: options,
       task: (destination, downloadOptions) => this.downloader.download(file.url, destination, downloadOptions),
       done: async(event: UpdateDownloadedEvent) => {
         this.prepared = await prepareMacBundleUpdate(

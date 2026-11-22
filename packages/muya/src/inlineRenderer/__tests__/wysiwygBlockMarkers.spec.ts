@@ -50,7 +50,7 @@ function bootTable(markdown: string) {
     return cells[cells.length - 1];
 }
 
-describe('Feishu-style block editing markers', () => {
+describe('feishu-style block editing markers', () => {
     it('keeps the leading heading hashes hidden when the caret is inside them', () => {
         const { content, block } = bootHeading('### Heading\n');
 

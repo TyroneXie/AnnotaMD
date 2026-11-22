@@ -17,7 +17,7 @@ AnnotaMD is a WYSIWYG markdown editor built on Electron + Vue 3. It supports Com
 | Layer | Technology |
 |---|---|
 | Language | TypeScript 5.9 (strict mode) |
-| Desktop shell | Electron 42 |
+| Desktop shell | Electron 43 |
 | Build system | electron-vite 5 |
 | Packaging | electron-builder 26 |
 | Frontend framework | Vue 3 |
@@ -42,9 +42,8 @@ root holds only shared tooling and CI-facing scripts.
                             annotamd ...`. CI invocations are unchanged.
   pnpm-workspace.yaml       `packages: ['packages/*']` plus allowBuilds.
   pnpm-lock.yaml            Single lockfile, shared across all packages.
-  eslint.config.js          Root ESLint v9 flat config (covers desktop +
-                            muya; website has its own ESLint v8 config
-                            and is ignored here).
+  eslint.config.js          Root ESLint v9 flat config for desktop, scripts
+                            and MCP sources; Muya has its own lint gate.
   scripts/                  Workspace-level scripts. postinstall.ts,
                             minify-locales.ts, generateThirdPartyLicense.ts,
                             validateLicenses.ts, thirdPartyChecker.ts all
@@ -111,11 +110,7 @@ root holds only shared tooling and CI-facing scripts.
                             wired in playwright.config.ts but deferred
                             until BACKLOG Phase 3 lands engine-independent
                             specs.
-    website/                annotamd-website (Vite + React 18). Standalone
-                            toolchain; depends on @muyajs/core from npm,
-                            not on the local muyajs package. Not part of
-                            desktop CI today.
-      src/ / public/ / build/ / vite.config.ts / tsconfig.json
+  web/v2/                   Static product site (HTML/CSS/JavaScript).
 ```
 
 The root has no `src/`, `test/`, `static/`, or `build/` of its own anymore — they all live in `packages/desktop/`.
@@ -153,9 +148,8 @@ pnpm run minify-locales
 pnpm run perf:inspect       # attach when ready
 pnpm run perf:inspect-brk   # break on first line
 
-# Website (not yet wired into CI)
-pnpm --filter annotamd-website dev      # Vite dev server
-pnpm --filter annotamd-website build    # static build → packages/website/build/
+# Static product site
+python3 -m http.server 8000 --directory web/v2
 ```
 
 If you need to invoke a script directly inside a package, use
@@ -194,10 +188,10 @@ pnpm -C packages/desktop exec playwright test -g 'partial test name'
 
 Enforced by ESLint + Prettier. Run `pnpm run lint` and `pnpm run typecheck` before committing.
 
-- 2-space indentation
-- No semicolons
+- Desktop and root scripts use 2-space indentation and no semicolons.
+- Muya uses 4-space indentation and semicolons, enforced by its own ESLint configuration.
 - Single quotes
-- TypeScript with `strict: true`; see `packages/website/content/docs/dev/TYPESCRIPT.md`
+- TypeScript uses `strict: true`. Desktop production and tests are checked separately by `pnpm --filter annotamd typecheck`.
 - Cross-process types live in `packages/desktop/src/shared/types/`; ambient declarations in `packages/desktop/src/types/`
 - IPC channels are typed via the contract in `packages/desktop/src/shared/types/ipc.ts`
 - The renderer is fully sandboxed — every IPC and Node access goes through `window.electron.*` / `window.fileUtils.*` etc. (typed in `packages/desktop/src/types/global.d.ts`)
@@ -221,8 +215,9 @@ main process  (packages/desktop/src/main/)
 
 preload  (packages/desktop/src/preload/)
   ├── Bridge between main and renderer
-  ├── Note: editor and preferences windows use contextIsolation: false +
-  │   nodeIntegration: true (see packages/desktop/src/main/config.js)
+  ├── Editor and preferences windows use contextIsolation: true,
+  │   nodeIntegration: false, sandbox: true and webSecurity: true
+  │   (see packages/desktop/src/main/config.ts)
   └── Compiled to CommonJS
 
 renderer  (packages/desktop/src/renderer/)
@@ -234,7 +229,6 @@ renderer  (packages/desktop/src/renderer/)
 Muya  (packages/muya/)              ← workspace package @muyajs/core
   ├── Self-contained editor backend
   ├── Primarily avoids Electron APIs; uses Node's zlib for PlantUML encoding
-  ├── Handles markdown parsing, block data structure, document export, rendering
   └── Handles markdown parsing, block state, export and rendering.
 ```
 
@@ -242,20 +236,17 @@ Muya  (packages/muya/)              ← workspace package @muyajs/core
 
 Most IPC channels between main and renderer use the `annotamd::` prefix (e.g. `annotamd::open-new-tab`, `annotamd::file-saved`). Some internal channels do not follow this convention (e.g. `language-changed`).
 
-See `packages/website/content/docs/dev/IPC.md` for conventions and examples.
+See `packages/desktop/src/shared/types/ipc.ts` for typed channel contracts and `docs/development/security-boundaries.md` for runtime authorization.
 
 ## Further Reading
 
-`packages/website/content/docs/dev/` contains the deeper developer documentation referenced by this guide. Same files are published as the developer docs section on docs/:
+Developer documentation lives in `docs/`:
 
-- `ARCHITECTURE.md` — process/module layering beyond the summary above
-- `BUILD.md` — full platform build prerequisites (including the Arch Linux deps added recently)
-- `DEBUGGING.md` — attaching debuggers to main/renderer processes
-- `INTERFACE.md` — Muya and renderer public interfaces
-- `IPC.md` — full IPC channel catalog and `annotamd::` conventions
-- `LINUX_DEV.md` — Linux-specific dev environment setup
-- `PERFORMANCE.md` — perf measurement workflow (pairs with `pnpm run perf:inspect`)
-- `RELEASE.md` / `RELEASE_HOTFIX.md` — release process
+- `AGENTS.md` — verification, packaging, releases and document editing rules.
+- `docs/development/security-boundaries.md` — renderer trust and filesystem capabilities.
+- `docs/development/code-review-2026-11-21-resolution.md` — review decisions and validation evidence.
+- `docs/development/official-icon-themes.md` — SVG icon generation.
+- `docs/performance-optimization-plan-electron-43.md` — performance evidence and remaining work.
 
 ## Important Build Notes
 

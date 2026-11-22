@@ -33,7 +33,7 @@ const defaultDependencies: CleanupDependencies = {
   runCommand: execFileAsync
 }
 
-export const cleanupMountedAnnotaMdInstallers = async (
+export const cleanupMountedAnnotaMdInstallers = async(
   options: CleanupOptions,
   dependencies: CleanupDependencies = defaultDependencies
 ): Promise<string[]> => {

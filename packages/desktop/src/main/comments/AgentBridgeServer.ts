@@ -110,9 +110,9 @@ const commentIdsParam = (params: Record<string, unknown>): string[] => {
   const commentId = params.commentId
   const commentIds = params.commentIds
   const hasCommentId = typeof commentId === 'string' && commentId.length > 0
-  const hasCommentIds = Array.isArray(commentIds)
-    && commentIds.length > 0
-    && commentIds.every((value) => typeof value === 'string' && value.length > 0)
+  const hasCommentIds = Array.isArray(commentIds) &&
+    commentIds.length > 0 &&
+    commentIds.every((value) => typeof value === 'string' && value.length > 0)
   if (hasCommentId === hasCommentIds) {
     throw new Error('Provide exactly one of commentId or commentIds')
   }

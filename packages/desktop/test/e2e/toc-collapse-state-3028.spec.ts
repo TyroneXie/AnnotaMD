@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
 
 // #3028 — collapsing a heading in the TOC must survive a document edit.

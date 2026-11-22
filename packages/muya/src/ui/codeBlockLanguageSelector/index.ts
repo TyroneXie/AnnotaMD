@@ -2,21 +2,21 @@ import type { VNode } from 'snabbdom';
 import type LangInputContent from '../../block/content/langInputContent';
 import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
+import type { ActionIconName } from '../actionIcons';
+import type { LanguageCategory, LanguagePickerItem } from './languageItems';
 import { ScrollPage } from '../../block/scrollPage';
+
 import { firstWordOfInfo } from '../../utils';
 import { languageDisplayName, search, transformAliasToOrigin } from '../../utils/prism';
-
 import { h, patch } from '../../utils/snabbdom';
-import BaseScrollFloat from '../baseScrollFloat';
 import { renderActionIcon } from '../actionIcons';
-import type { ActionIconName } from '../actionIcons';
+import BaseScrollFloat from '../baseScrollFloat';
 import { LANGUAGE_ICONS } from './generatedLanguageIcons';
 import {
     buildLanguagePickerItems,
     languageCategory,
     MORE_LANGUAGES_ITEM_NAME,
 } from './languageItems';
-import type { LanguageCategory, LanguagePickerItem } from './languageItems';
 
 import '../actionIcons.css';
 import './index.css';
@@ -108,8 +108,8 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             const query = this._searchInput.value.trim();
             this.renderArray = query
                 ? uniqueLanguageItems(
-                    search(query).map(item => ({ ...item, kind: 'language' as const })),
-                )
+                        search(query).map(item => ({ ...item, kind: 'language' as const })),
+                    )
                 : buildLanguagePickerItems(this._showAllLanguages);
             this.activeItem = this.renderArray[0] ?? null;
             this.render();
@@ -198,8 +198,7 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             const itemContent = [text];
 
             if (isMoreItem) {
-                itemContent.push(h('span.mu-language-more-chevron',
-                    renderActionIcon(item.expanded ? 'move-up' : 'move-down')));
+                itemContent.push(h('span.mu-language-more-chevron', renderActionIcon(item.expanded ? 'move-up' : 'move-down')));
             }
             else {
                 const language = transformAliasToOrigin([item.name.toLowerCase()])[0];

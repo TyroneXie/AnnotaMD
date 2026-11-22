@@ -2,8 +2,8 @@ import type { VNode } from 'snabbdom';
 import type Format from '../../block/base/format';
 import type { Muya } from '../../muya';
 import type { IBaseOptions } from '../types';
-import { h, patch } from '../../utils/snabbdom';
 import { getPageTitle } from '../../utils/paste';
+import { h, patch } from '../../utils/snabbdom';
 import { isUrlLikeLinkText } from '../../utils/url';
 import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
@@ -97,7 +97,9 @@ class LinkTools extends BaseFloat {
                     this.render();
                 }, 0);
             }
-            else this._scheduleHide();
+            else {
+                this._scheduleHide();
+            }
         });
 
         const mouseOverHandler = () => {
@@ -169,7 +171,7 @@ class LinkTools extends BaseFloat {
                     h('span.link-edit-label', i18n.t('Text')),
                     h('input.link-edit-input.link-text-input', {
                         attrs: {
-                            type: 'text',
+                            'type': 'text',
                             'aria-label': i18n.t('Text'),
                         },
                         props: { value: this._draftText },
@@ -183,7 +185,7 @@ class LinkTools extends BaseFloat {
                     h('label.link-edit-label', { attrs: { for: 'mu-link-edit-href' } }, i18n.t('Link Address')),
                     h('input#mu-link-edit-href.link-edit-input.link-href-input', {
                         attrs: {
-                            type: 'url',
+                            'type': 'url',
                             'aria-label': i18n.t('Link Address'),
                         },
                         props: { value: this._draftHref },
@@ -222,8 +224,8 @@ class LinkTools extends BaseFloat {
                 'button.action-button',
                 {
                     attrs: {
-                        type: 'button',
-                        title: i18n.t(item.tooltip),
+                        'type': 'button',
+                        'title': i18n.t(item.tooltip),
                         'aria-label': i18n.t(item.tooltip),
                     },
                     on: { click: (event: Event) => this.selectItem(event, item) },
@@ -233,24 +235,24 @@ class LinkTools extends BaseFloat {
         ));
 
         const addressNode = h(
-                    'button.link-address',
-                    {
-                        attrs: {
-                            type: 'button',
-                            title: address,
-                            'aria-label': address,
-                        },
-                        on: {
-                            click: (event: Event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                if (this._linkInfo?.href)
-                                    this.options.jumpClick?.(this._linkInfo);
-                            },
-                        },
+            'button.link-address',
+            {
+                attrs: {
+                    'type': 'button',
+                    'title': address,
+                    'aria-label': address,
+                },
+                on: {
+                    click: (event: Event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (this._linkInfo?.href)
+                            this.options.jumpClick?.(this._linkInfo);
                     },
-                    h('span.link-address-text', address),
-                );
+                },
+            },
+            h('span.link-address-text', address),
+        );
 
         const viewMenu = this._viewMenuOpen ? this._createViewMenu() : null;
         const moreMenu = this._moreMenuOpen ? this._createMoreMenu() : null;
@@ -260,39 +262,41 @@ class LinkTools extends BaseFloat {
                 addressNode,
                 h('ul.link-actions', [
                     ...topActions,
-                    ...(canChangeView ? [
-                        h('li.link-divider'),
-                        h(
-                        `li.item.view-selector${this._viewMenuOpen ? '.open' : ''}`,
-                        [
-                            h(
-                                'button.view-selector-button',
-                                {
-                                    attrs: {
-                                        type: 'button',
-                                        'aria-label': i18n.t(viewMode === 'link' ? 'Link View' : 'Title View'),
-                                        'aria-expanded': String(this._viewMenuOpen),
-                                    },
-                                    on: {
-                                        click: (event: Event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            this._moreMenuOpen = false;
-                                            this._viewMenuOpen = !this._viewMenuOpen;
-                                            this.render();
-                                        },
-                                    },
-                                },
-                                [
-                                    h('span.view-mode-mark', renderActionIcon(viewMode === 'link' ? 'link-view' : 'title-view')),
-                                    h('span.view-mode-label', i18n.t(viewMode === 'link' ? 'Link View' : 'Title View')),
-                                    h('span.view-mode-chevron'),
-                                ],
-                            ),
-                            ...(viewMenu ? [viewMenu] : []),
-                        ],
-                        ),
-                    ] : []),
+                    ...(canChangeView
+                        ? [
+                                h('li.link-divider'),
+                                h(
+                                    `li.item.view-selector${this._viewMenuOpen ? '.open' : ''}`,
+                                    [
+                                        h(
+                                            'button.view-selector-button',
+                                            {
+                                                attrs: {
+                                                    'type': 'button',
+                                                    'aria-label': i18n.t(viewMode === 'link' ? 'Link View' : 'Title View'),
+                                                    'aria-expanded': String(this._viewMenuOpen),
+                                                },
+                                                on: {
+                                                    click: (event: Event) => {
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        this._moreMenuOpen = false;
+                                                        this._viewMenuOpen = !this._viewMenuOpen;
+                                                        this.render();
+                                                    },
+                                                },
+                                            },
+                                            [
+                                                h('span.view-mode-mark', renderActionIcon(viewMode === 'link' ? 'link-view' : 'title-view')),
+                                                h('span.view-mode-label', i18n.t(viewMode === 'link' ? 'Link View' : 'Title View')),
+                                                h('span.view-mode-chevron'),
+                                            ],
+                                        ),
+                                        ...(viewMenu ? [viewMenu] : []),
+                                    ],
+                                ),
+                            ]
+                        : []),
                     h('li.link-divider'),
                     h(
                         `li.item.more${this._moreMenuOpen ? '.open' : ''}`,
@@ -301,7 +305,7 @@ class LinkTools extends BaseFloat {
                                 'button.action-button.more-button',
                                 {
                                     attrs: {
-                                        type: 'button',
+                                        'type': 'button',
                                         'aria-label': i18n.t('More'),
                                         'aria-expanded': String(this._moreMenuOpen),
                                     },
@@ -330,7 +334,6 @@ class LinkTools extends BaseFloat {
             patch(linkContainer, vnode);
 
         this._oldVNode = vnode;
-
     }
 
     private _createViewMenu(): VNode {
@@ -358,12 +361,12 @@ class LinkTools extends BaseFloat {
                     },
                 },
             },
-                [
-                    h('span.link-menu-icon', renderActionIcon(mode.type === 'link' ? 'link-view' : 'title-view')),
-                    h('span.link-menu-label', i18n.t(mode.label)),
-                    ...(mode.type === current ? [h('span.link-menu-check', '✓')] : []),
-                ],
-            ),
+            [
+                h('span.link-menu-icon', renderActionIcon(mode.type === 'link' ? 'link-view' : 'title-view')),
+                h('span.link-menu-label', i18n.t(mode.label)),
+                ...(mode.type === current ? [h('span.link-menu-check', '✓')] : []),
+            ],
+        ),
         ));
     }
 
@@ -496,8 +499,9 @@ class LinkTools extends BaseFloat {
     }
 
     private _handleEditKeydown(event: KeyboardEvent): void {
-        if (event.key === 'Enter')
+        if (event.key === 'Enter') {
             this._commitLink(event);
+        }
         else if (event.key === 'Escape') {
             event.preventDefault();
             this._editing = false;
@@ -579,7 +583,6 @@ class LinkTools extends BaseFloat {
                 this.hide();
                 break;
             }
-
         }
     }
 }

@@ -19,7 +19,9 @@
       :aria-expanded="menuOpen"
       @click="menuOpen = !menuOpen"
     >
-      <el-icon :size="14"><ArrowDown /></el-icon>
+      <el-icon :size="14">
+        <ArrowDown />
+      </el-icon>
     </button>
     <div
       v-if="menuOpen"

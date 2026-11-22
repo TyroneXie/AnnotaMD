@@ -1,4 +1,5 @@
 import path from 'path'
+import { assertFileAccess } from '../security/fileAccess'
 import fsPromises from 'fs/promises'
 import { exec } from 'child_process'
 import dayjs from 'dayjs'
@@ -807,8 +808,8 @@ class App {
       app.quit()
     })
 
-    ipcMain.on('annotamd::open-file-by-window-id', (_e, windowId: number, filePath: string) => {
-      const resolvedPath = normalizeAndResolvePath(filePath)
+    ipcMain.on('annotamd::open-file-by-window-id', (event, windowId: number, filePath: string) => {
+      const resolvedPath = assertFileAccess(event.sender, normalizeAndResolvePath(filePath))
       const openFilesInNewWindow = this._accessor.preferences.getItem<boolean>('openFilesInNewWindow')
       if (openFilesInNewWindow) {
         this._createEditorWindow(null, [resolvedPath])

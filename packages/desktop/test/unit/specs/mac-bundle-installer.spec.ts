@@ -19,11 +19,11 @@ afterEach(async() => { await fs.remove(root) })
 
 const paths = () => {
   const target = path.join(root, 'AnnotaMD `literal` $value.app')
-  return {target, executable: path.join(target, 'Contents/MacOS/AnnotaMD'), userData: path.join(root, 'user data')}
+  return { target, executable: path.join(target, 'Contents/MacOS/AnnotaMD'), userData: path.join(root, 'user data') }
 }
 
 it('only enables bundle replacement for a writable app bundle outside App Translocation', async() => {
-  const {executable, target} = paths()
+  const { executable, target } = paths()
   await fs.ensureDir(target)
   expect(macAppBundlePath(executable)).toBe(await fs.realpath(target))
   expect(canReplaceMacAppBundle(executable)).toBe(true)
@@ -32,7 +32,7 @@ it('only enables bundle replacement for a writable app bundle outside App Transl
 })
 
 it.skipIf(process.platform === 'win32')('resolves application aliases to the same bundle before comparing installation identity', async() => {
-  const {target, executable} = paths()
+  const { target, executable } = paths()
   await fs.ensureDir(target)
   const alias = path.join(root, 'alias.app')
   await fs.ensureSymlink(target, alias)
@@ -50,8 +50,11 @@ describe.skipIf(process.platform !== 'darwin')('validating an ad-hoc signed upda
       '-o', path.join(source, 'Contents/MacOS', changes.CFBundleExecutable ?? 'AnnotaMD')])
     await fs.outputFile(path.join(source, 'Contents/Resources/note.txt'), 'original')
     await fs.writeFile(path.join(source, 'Contents/Info.plist'), build({
-      CFBundleIdentifier: 'com.github.tyronexie.annotamd', CFBundleExecutable: 'AnnotaMD',
-      CFBundlePackageType: 'APPL', CFBundleShortVersionString: '2.20.0', ...changes
+      CFBundleIdentifier: 'com.github.tyronexie.annotamd',
+      CFBundleExecutable: 'AnnotaMD',
+      CFBundlePackageType: 'APPL',
+      CFBundleShortVersionString: '2.20.0',
+      ...changes
     }))
     await run('/usr/bin/codesign', ['--force', '--sign', '-', source])
     if (tamper) await fs.writeFile(path.join(source, 'Contents/Resources/note.txt'), 'changed')
@@ -61,7 +64,7 @@ describe.skipIf(process.platform !== 'darwin')('validating an ad-hoc signed upda
   }
 
   it('prepares a locally signed update without an Apple developer certificate or changing the installed app', async() => {
-    const {target, executable, userData} = paths()
+    const { target, executable, userData } = paths()
     await fs.outputFile(path.join(target, 'old-version'), 'keep')
     const prepared = await prepareMacBundleUpdate(await archive(), '2.20.0', executable, userData, process.arch === 'arm64' ? 'arm64' : 'x86_64')
     expect(await fs.readFile(path.join(target, 'old-version'), 'utf8')).toBe('keep')
@@ -71,22 +74,22 @@ describe.skipIf(process.platform !== 'darwin')('validating an ad-hoc signed upda
   })
 
   it.each([
-    {CFBundleIdentifier: 'org.other.app'}, {CFBundleShortVersionString: '2.19.0'},
-    {CFBundleExecutable: 'other'}
-  ])('rejects mismatched bundle identity before touching the installed app: %j', async changes => {
-    const {executable, userData} = paths()
+    { CFBundleIdentifier: 'org.other.app' }, { CFBundleShortVersionString: '2.19.0' },
+    { CFBundleExecutable: 'other' }
+  ] as Array<Record<string, string>>)('rejects mismatched bundle identity before touching the installed app: %j', async changes => {
+    const { executable, userData } = paths()
     await expect(prepareMacBundleUpdate(await archive(changes), '2.20.0', executable, userData, 'arm64')).rejects.toThrow('does not match')
     expect((await fs.readdir(root)).filter(name => name.startsWith('.annotamd-update-'))).toEqual([])
   })
 
   it('rejects an unsupported architecture and removes the staging folder', async() => {
-    const {executable, userData} = paths()
+    const { executable, userData } = paths()
     await expect(prepareMacBundleUpdate(await archive(), '2.20.0', executable, userData, 'not-a-cpu')).rejects.toThrow('architecture')
     expect((await fs.readdir(root)).filter(name => name.startsWith('.annotamd-update-'))).toEqual([])
   })
 
   it('rejects a modified bundle even when its version and identity match', async() => {
-    const {executable, userData} = paths()
+    const { executable, userData } = paths()
     await expect(prepareMacBundleUpdate(await archive({}, true), '2.20.0', executable, userData, process.arch === 'arm64' ? 'arm64' : 'x86_64')).rejects.toThrow('codesign')
     expect((await fs.readdir(root)).filter(name => name.startsWith('.annotamd-update-'))).toEqual([])
   })
@@ -94,7 +97,7 @@ describe.skipIf(process.platform !== 'darwin')('validating an ad-hoc signed upda
 
 describe.skipIf(process.platform === 'win32')('the detached installation transaction', () => {
   const setup = async(approved = true, failNewLaunch = false) => {
-    const {target, userData} = paths()
+    const { target, userData } = paths()
     const stage = path.join(root, '.annotamd-update-test')
     await fs.outputFile(path.join(target, 'version'), 'old')
     await fs.outputFile(path.join(stage, 'AnnotaMD.app/version'), 'new')
@@ -109,12 +112,12 @@ if [ "$version" = new ]; then
 fi
 echo "$version" >> "$UPDATE_LAUNCHES"
 /bin/sleep 0.5
-`, {mode: 0o700})
-    return {target, stage, script, userData, launcher}
+`, { mode: 0o700 })
+    return { target, stage, script, userData, launcher }
   }
   const execute = (p: Awaited<ReturnType<typeof setup>>) => new Promise<number | null>((resolve, reject) => {
     const child = spawn('/bin/sh', [p.script, p.target, p.stage, '99999999', p.userData, p.launcher], {
-      env: {...process.env, UPDATE_STAGE: p.stage, UPDATE_LAUNCHES: path.join(root, 'launches')}, stdio: 'ignore'
+      env: { ...process.env, UPDATE_STAGE: p.stage, UPDATE_LAUNCHES: path.join(root, 'launches') }, stdio: 'ignore'
     })
     child.once('error', reject)
     child.once('exit', resolve)
@@ -144,11 +147,11 @@ echo "$version" >> "$UPDATE_LAUNCHES"
 })
 
 it('acknowledges only the expected version and installed bundle', async() => {
-  const {target, executable, userData} = paths()
+  const { target, executable, userData } = paths()
   const stage = path.join(root, '.annotamd-update-ack')
   await fs.ensureDir(stage)
   const journal = path.join(userData, 'pending-mac-update.json')
-  await fs.outputJson(journal, {target, stage, version: '2.20.0', userData})
+  await fs.outputJson(journal, { target, stage, version: '2.20.0', userData })
   await acknowledgeMacBundleUpdate(executable, '2.19.0', userData)
   expect(await fs.pathExists(path.join(stage, 'ready'))).toBe(false)
   await acknowledgeMacBundleUpdate(executable, '2.20.0', userData)

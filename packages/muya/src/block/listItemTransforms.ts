@@ -9,8 +9,8 @@ import type {
 } from '../state/types';
 import type Parent from './base/parent';
 import { deepClone } from '../utils';
-import { ScrollPage } from './scrollPage';
 import { convertTextStatesToLabel } from './blockTransforms';
+import { ScrollPage } from './scrollPage';
 
 type TListState = IOrderListState | IBulletListState | ITaskListState;
 type TListItemState = IListItemState | ITaskListItemState;

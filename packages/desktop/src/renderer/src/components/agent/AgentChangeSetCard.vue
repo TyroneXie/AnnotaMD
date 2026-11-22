@@ -16,7 +16,11 @@
       </div>
     </header>
 
-    <div v-if="diffLines.length" class="annotamd-agent-line-diff" data-testid="ai-change-set-diff">
+    <div
+      v-if="diffLines.length"
+      class="annotamd-agent-line-diff"
+      data-testid="ai-change-set-diff"
+    >
       <div
         v-for="(line, index) in diffLines"
         :key="`${line.kind}:${line.beforeLine ?? ''}:${line.afterLine ?? ''}:${index}`"
@@ -28,14 +32,27 @@
       </div>
     </div>
 
-    <p v-else class="annotamd-agent-change-set-empty">
+    <p
+      v-else
+      class="annotamd-agent-change-set-empty"
+    >
       {{ t('annotamd.agentWorkspace.changeSet.noDiff') }}
     </p>
 
-    <p v-if="changeSet.status === 'conflicted'" class="annotamd-agent-change-set-conflict" role="alert">
+    <p
+      v-if="changeSet.status === 'conflicted'"
+      class="annotamd-agent-change-set-conflict"
+      role="alert"
+    >
       {{ changeSet.message || t('annotamd.agentWorkspace.changeSet.conflictedDescription') }}
     </p>
-    <p v-if="error" class="annotamd-agent-change-set-error" role="alert">{{ error }}</p>
+    <p
+      v-if="error"
+      class="annotamd-agent-change-set-error"
+      role="alert"
+    >
+      {{ error }}
+    </p>
 
     <div
       v-if="changeSet.status === 'applied-unreviewed'"

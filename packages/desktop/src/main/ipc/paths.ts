@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import { isSamePathSync, isImageFile } from 'common/filesystem/paths'
+import { canonicalPath, grantFileAccess } from '../security/fileAccess'
+import { hasImageHeader } from '../security/imageAccess'
 
 export const registerPathHandlers = (): void => {
   // The renderer's preload computes isChildOfDirectory / hasMarkdownExtension
@@ -8,5 +10,15 @@ export const registerPathHandlers = (): void => {
   ipcMain.on('annotamd::paths::is-same-sync', (event, a: string, b: string) => {
     event.returnValue = isSamePathSync(a, b, true)
   })
-  ipcMain.handle('annotamd::paths::is-image', (_e, p: string) => isImageFile(p))
+  ipcMain.handle('annotamd::paths::is-image', async(event, p: string) => {
+    const pathname = canonicalPath(p)
+    if (!isImageFile(pathname)) return false
+    try {
+      if (!await hasImageHeader(pathname)) return false
+      grantFileAccess(event.sender, pathname, false, false)
+      return true
+    } catch {
+      return false
+    }
+  })
 }

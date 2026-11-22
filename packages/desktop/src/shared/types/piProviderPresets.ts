@@ -79,7 +79,7 @@ export const matchPiProviderPreset = (
 )
 
 export const piProviderIcon = (provider: Pick<PiProviderEntry, 'id' | 'kind' | 'baseUrl'>): string | undefined => {
-  const preset = matchPiProviderPreset(provider.kind, provider.baseUrl)
-    ?? PI_PROVIDER_PRESETS.find(item => item.id === provider.id || item.iconProvider === provider.id)
+  const preset = matchPiProviderPreset(provider.kind, provider.baseUrl) ??
+    PI_PROVIDER_PRESETS.find(item => item.id === provider.id || item.iconProvider === provider.id)
   return preset?.iconProvider ?? preset?.id
 }

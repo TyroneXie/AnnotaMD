@@ -10,7 +10,7 @@
 // The fix is two-layered: muya's linkTools no longer offers "jump" when
 // there is no href, and FORMAT_LINK_CLICK guards null hrefs defensively.
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   launchWithMarkdown,
   clearRendererErrors,

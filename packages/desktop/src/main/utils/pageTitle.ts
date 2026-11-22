@@ -52,9 +52,9 @@ export const isUsablePageTitle = (value: string, rawUrl: string): boolean => {
     const url = new URL(rawUrl)
     const normalizedTitle = normalizeUrlLikeTitle(title)
     const normalizedHost = url.hostname.replace(/^www\./i, '').toLowerCase()
-    return normalizedTitle !== normalizeUrlLikeTitle(rawUrl)
-      && normalizedTitle !== normalizedHost
-      && !normalizedTitle.startsWith(`${normalizedHost}/`)
+    return normalizedTitle !== normalizeUrlLikeTitle(rawUrl) &&
+      normalizedTitle !== normalizedHost &&
+      !normalizedTitle.startsWith(`${normalizedHost}/`)
   } catch {
     return true
   }

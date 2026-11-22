@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import type { PiSettingsState, PiModelsUpdateRequest } from '../../src/shared/types/piProvider'
 import { expectNoRendererErrors, launchElectron, launchWithMarkdown, waitForEditor } from './helpers'
 
@@ -12,14 +12,29 @@ async function openSettings(multipleProviders: boolean) {
   await app.evaluate(({ ipcMain }, multiple) => {
     const state: PiSettingsState = {
       providers: [
-        { id: 'deepseek', name: 'DeepSeek', kind: 'openai', enabled: true,
-          baseUrl: 'https://api.deepseek.com/v1', defaultModel: 'deepseek-flash',
-          models: [{ id: 'deepseek-flash', enabled: true }] },
-        ...(multiple ? [{ id: 'openai', name: 'OpenAI', kind: 'openai' as const, enabled: true,
-          baseUrl: 'https://api.openai.com/v1', defaultModel: 'test-model',
-          models: [{ id: 'test-model', enabled: true }] }] : [])
+        {
+          id: 'deepseek',
+          name: 'DeepSeek',
+          kind: 'openai',
+          enabled: true,
+          baseUrl: 'https://api.deepseek.com/v1',
+          defaultModel: 'deepseek-flash',
+          models: [{ id: 'deepseek-flash', enabled: true }]
+        },
+        ...(multiple
+          ? [{
+            id: 'openai',
+            name: 'OpenAI',
+            kind: 'openai' as const,
+            enabled: true,
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'test-model',
+            models: [{ id: 'test-model', enabled: true }]
+          }]
+          : [])
       ],
-      defaultProviderId: 'deepseek', keyedProviderIds: ['deepseek', 'openai']
+      defaultProviderId: 'deepseek',
+      keyedProviderIds: ['deepseek', 'openai']
     }
     ;(globalThis as unknown as { __annotamdModelManagement: PiSettingsState }).__annotamdModelManagement = state
     ipcMain.removeHandler('annotamd::pi::settings:get')
@@ -44,7 +59,7 @@ const settingsState = (app: ElectronApplication) => app.evaluate(() => (
   (globalThis as unknown as { __annotamdModelManagement: PiSettingsState }).__annotamdModelManagement
 ))
 
-test('shows inline model controls without a redundant manage action for a single provider', async({}, testInfo) => {
+test('shows inline model controls without a redundant manage action for a single provider', async({ browserName: _browserName }, testInfo) => {
   const { app, settings } = await openSettings(false)
   try {
     await expect(settings.getByRole('button', { name: 'Manage models', exact: true })).toHaveCount(0)
@@ -63,7 +78,7 @@ test('shows inline model controls without a redundant manage action for a single
   } finally { await app.close() }
 })
 
-test('switches the managed provider with visible selected state while preserving the default provider', async({}, testInfo) => {
+test('switches the managed provider with visible selected state while preserving the default provider', async({ browserName: _browserName }, testInfo) => {
   const { app, settings } = await openSettings(true)
   try {
     const deepseek = settings.locator('.pref-ai-provider').filter({ hasText: 'DeepSeek' })

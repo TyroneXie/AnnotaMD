@@ -1,12 +1,12 @@
 import type { ActionIconName } from '../actionIcons';
 
-interface LinkToolIconConfig {
+interface ILinkToolIconConfig {
     type: 'edit' | 'unlink';
     actionIcon: ActionIconName;
     tooltip: string;
 }
 
-const icons: LinkToolIconConfig[] = [
+const icons: ILinkToolIconConfig[] = [
     {
         type: 'edit',
         actionIcon: 'edit',

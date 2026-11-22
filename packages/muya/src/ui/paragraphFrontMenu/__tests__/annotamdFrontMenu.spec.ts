@@ -58,7 +58,7 @@ function visibleActions(block: Parent): string[] {
         .map(item => item.label);
 }
 
-describe('AnnotaMD paragraph front menu configuration', () => {
+describe('annotaMD paragraph front menu configuration', () => {
     it('offers the approved scheme A actions in compact groups', () => {
         expect(FRONT_MENU.map(item => item.label)).toEqual([
             'copy-plain-text',
@@ -80,10 +80,23 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'delete-section',
         ]);
         expect(FRONT_MENU.map(item => item.group)).toEqual([
-            1, 1, 1, 1, 1, 1,
-            2, 2, 2, 2,
-            3, 3, 3, 3,
-            4, 4, 4,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
         ]);
     });
 
@@ -119,7 +132,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'utf8',
         );
         expect(sharedIconCss).toMatch(
-            /\.mu-action-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s,
+            /\.mu-action-icon\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/,
         );
     });
 
@@ -151,8 +164,8 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             resolve(process.cwd(), 'src/ui/paragraphFrontMenu/index.css'),
             'utf8',
         );
-        expect(stylesheet).toMatch(/\.menu-symbol\.copy-plain-text::before\s*\{[^}]*font-size:\s*14px;/s);
-        expect(stylesheet).toMatch(/\.menu-symbol\s*\{[^}]*transform:\s*scale\(1\.125\);/s);
+        expect(stylesheet).toMatch(/\.menu-symbol\.copy-plain-text::before\s*\{[^}]*font-size:\s*14px;/);
+        expect(stylesheet).toMatch(/\.menu-symbol\s*\{[^}]*transform:\s*scale\(1\.125\);/);
     });
 
     it('reveals heading disclosure controls only while the heading is hovered', () => {
@@ -161,10 +174,10 @@ describe('AnnotaMD paragraph front menu configuration', () => {
             'utf8',
         );
         expect(stylesheet).toMatch(
-            /\.mu-section-collapse-indicator\s*\{[^}]*opacity:\s*0;[^}]*pointer-events:\s*none;/s,
+            /\.mu-section-collapse-indicator\s*\{[^}]*opacity:\s*0;[^}]*pointer-events:\s*none;/,
         );
         expect(stylesheet).toMatch(
-            /\.mu-section-has-disclosure:hover\s*>\s*\.mu-section-collapse-indicator[^\{]*\{[^}]*opacity:\s*1;[^}]*pointer-events:\s*auto;/s,
+            /\.mu-section-has-disclosure:hover\s*>\s*\.mu-section-collapse-indicator[^{]*\{[^}]*opacity:\s*1;[^}]*pointer-events:\s*auto;/,
         );
     });
 
@@ -182,7 +195,7 @@ describe('AnnotaMD paragraph front menu configuration', () => {
     });
 });
 
-describe('AnnotaMD paragraph front menu actions', () => {
+describe('annotaMD paragraph front menu actions', () => {
     it.each([
         ['plain paragraph', 'Plain text.\n', ['copy-plain-text']],
         ['formatted paragraph', '**Formatted** text.\n', ['copy-plain-text', 'copy-markdown']],
@@ -283,7 +296,7 @@ describe('AnnotaMD paragraph front menu actions', () => {
         openOn(menu, item);
         menu.selectItem(new Event('click'), { label: 'cut' });
         expect(writeText).toHaveBeenLastCalledWith(expected);
-        await vi.waitFor(() => expect(muya.getMarkdown()).toBe(source.split('\n')[0] + '\n'));
+        await vi.waitFor(() => expect(muya.getMarkdown()).toBe(`${source.split('\n')[0]}\n`));
     });
 
     it('copies source-oriented special blocks without their Markdown fences', () => {
@@ -848,7 +861,7 @@ describe('AnnotaMD paragraph front menu actions', () => {
     it('collapses and expands section descendants without changing Markdown', () => {
         const source = '# First\n\nintro\n\n## Nested\n\ndetail\n\n# Second\n';
         const muya = bootMuya(source);
-        new ParagraphFrontMenu(muya, {});
+        const menu = new ParagraphFrontMenu(muya, {});
         const heading = blocks(muya)[0];
 
         expect(visibleActions(heading)).not.toContain('collapse-section');
@@ -876,6 +889,7 @@ describe('AnnotaMD paragraph front menu actions', () => {
         expect(indicator?.getAttribute('aria-label')).toBe('Collapse Section');
         expect(indicator?.dataset.tooltip).toBe('Collapse Section');
         expect(muya.getMarkdown()).toBe(source);
+        menu.destroy();
     });
 
     it('deletes an entire heading section with one menu click', async () => {

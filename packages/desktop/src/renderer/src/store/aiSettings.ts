@@ -54,24 +54,24 @@ const loadPreferences = (): AiUiPreferences => {
 const configInputFromSummary = (config: AiConfigSummary): AiConfigInput => (
   config.kind === 'api'
     ? {
-        kind: 'api',
-        name: config.name,
-        provider: config.provider as AiApiProviderId,
-        baseUrl: config.baseUrl ?? '',
-        apiKey: undefined,
-        defaultModelId: config.defaultModelId,
-        apiStyle: config.apiStyle,
-        authMethod: config.authMethod
-      }
+      kind: 'api',
+      name: config.name,
+      provider: config.provider as AiApiProviderId,
+      baseUrl: config.baseUrl ?? '',
+      apiKey: undefined,
+      defaultModelId: config.defaultModelId,
+      apiStyle: config.apiStyle,
+      authMethod: config.authMethod
+    }
     : {
-        kind: 'cli',
-        name: config.name,
-        provider: config.provider as AiCliProviderId,
-        executablePath: config.executablePath,
-        environment: config.environment,
-        defaultModelId: config.defaultModelId,
-        supportsNativeResume: config.supportsNativeResume
-      }
+      kind: 'cli',
+      name: config.name,
+      provider: config.provider as AiCliProviderId,
+      executablePath: config.executablePath,
+      environment: config.environment,
+      defaultModelId: config.defaultModelId,
+      supportsNativeResume: config.supportsNativeResume
+    }
 )
 
 export const useAiSettingsStore = defineStore('aiSettings', {
@@ -270,7 +270,15 @@ export const useAiSettingsStore = defineStore('aiSettings', {
     },
 
     cachedModels(id: string): AiModelInfo[] {
-      return this.modelsByConfig[id] ?? []
+      const cached = this.modelsByConfig[id]
+      if (cached) return cached
+      if (this.configs.find(config => config.id === id)?.provider !== 'pi') return []
+      // Readiness already lists the configured, enabled models. Discovery adds
+      // capabilities, but must not block selecting one of these known models.
+      return (this.agentReadiness?.modelIds ?? []).map(modelId => ({
+        id: modelId,
+        name: modelId.slice(modelId.indexOf('/') + 1)
+      }))
     },
 
     async listModels(id: string, force = false): Promise<AiModelInfo[]> {

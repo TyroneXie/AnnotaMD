@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { getMarkdownContent, launchWithMarkdown, setSourceMarkdown } from './helpers'
 
 const prepareLastHeading = async(page: Page) => {

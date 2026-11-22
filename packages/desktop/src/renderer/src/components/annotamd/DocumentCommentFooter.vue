@@ -42,7 +42,10 @@
               >
                 {{ t('annotamd.comments.save') }}
               </button>
-              <button type="button" @click="cancelEdit">
+              <button
+                type="button"
+                @click="cancelEdit"
+              >
                 {{ t('annotamd.comments.cancel') }}
               </button>
             </template>
@@ -54,10 +57,25 @@
                   :aria-label="t('annotamd.comments.moreActions')"
                   @click.stop
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="5" cy="12" r="1.6" />
-                    <circle cx="12" cy="12" r="1.6" />
-                    <circle cx="19" cy="12" r="1.6" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="5"
+                      cy="12"
+                      r="1.6"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="1.6"
+                    />
+                    <circle
+                      cx="19"
+                      cy="12"
+                      r="1.6"
+                    />
                   </svg>
                 </summary>
                 <div class="annotamd-document-message-menu">
@@ -85,7 +103,9 @@
           class="annotamd-document-editor"
           rows="3"
         />
-        <p v-else>{{ comment.body }}</p>
+        <p v-else>
+          {{ comment.body }}
+        </p>
       </div>
 
       <div
@@ -123,7 +143,10 @@
                 >
                   {{ t('annotamd.comments.save') }}
                 </button>
-                <button type="button" @click="cancelReplyEdit">
+                <button
+                  type="button"
+                  @click="cancelReplyEdit"
+                >
                   {{ t('annotamd.comments.cancel') }}
                 </button>
               </template>
@@ -135,17 +158,38 @@
                     :aria-label="t('annotamd.comments.moreActions')"
                     @click.stop
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle cx="5" cy="12" r="1.6" />
-                      <circle cx="12" cy="12" r="1.6" />
-                      <circle cx="19" cy="12" r="1.6" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="5"
+                        cy="12"
+                        r="1.6"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="1.6"
+                      />
+                      <circle
+                        cx="19"
+                        cy="12"
+                        r="1.6"
+                      />
                     </svg>
                   </summary>
                   <div class="annotamd-document-message-menu">
-                    <button type="button" @click.stop="startReplyEdit(reply.id, reply.body)">
+                    <button
+                      type="button"
+                      @click.stop="startReplyEdit(reply.id, reply.body)"
+                    >
                       {{ t('annotamd.comments.edit') }}
                     </button>
-                    <button type="button" @click.stop="deleteReply(comment.id, reply.id)">
+                    <button
+                      type="button"
+                      @click.stop="deleteReply(comment.id, reply.id)"
+                    >
                       {{ t('annotamd.comments.delete') }}
                     </button>
                   </div>
@@ -159,7 +203,9 @@
             class="annotamd-document-editor"
             rows="3"
           />
-          <p v-else>{{ reply.body }}</p>
+          <p v-else>
+            {{ reply.body }}
+          </p>
         </article>
       </div>
 
@@ -181,7 +227,10 @@
         </button>
       </div>
 
-      <div v-if="agentTurns.isRunning(comment.id)" class="annotamd-agent-turn-actions">
+      <div
+        v-if="agentTurns.isRunning(comment.id)"
+        class="annotamd-agent-turn-actions"
+      >
         <p class="annotamd-agent-turn-status">
           {{ t('annotamd.comments.agentRunning') }}
         </p>
@@ -193,7 +242,10 @@
           {{ t('annotamd.comments.agentStop') }}
         </button>
       </div>
-      <p v-else-if="agentTurns.errorFor(comment.id)" class="annotamd-agent-turn-error">
+      <p
+        v-else-if="agentTurns.errorFor(comment.id)"
+        class="annotamd-agent-turn-error"
+      >
         {{ agentTurns.errorFor(comment.id) }}
       </p>
 
@@ -229,7 +281,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useEditorStore } from '@/store/editor'
 import {

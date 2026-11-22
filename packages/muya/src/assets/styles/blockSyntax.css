@@ -124,7 +124,9 @@
     opacity: 0;
     pointer-events: none;
 
-    transition: opacity 80ms linear, transform 80ms linear;
+    transition:
+        opacity 80ms linear,
+        transform 80ms linear;
 
     content: attr(data-tooltip);
 }
@@ -145,7 +147,9 @@
     opacity: 0;
     pointer-events: none;
 
-    transition: opacity 80ms linear, transform 80ms linear;
+    transition:
+        opacity 80ms linear,
+        transform 80ms linear;
 
     content: '';
 }
@@ -237,7 +241,9 @@
     opacity: 0;
     pointer-events: none;
 
-    transition: opacity 50ms linear, transform 50ms linear;
+    transition:
+        opacity 50ms linear,
+        transform 50ms linear;
 
     content: attr(data-tooltip);
 }
@@ -553,7 +559,9 @@ body.dark .mu-container blockquote {
     opacity: 0;
     pointer-events: none;
 
-    transition: opacity 50ms linear, transform 50ms linear;
+    transition:
+        opacity 50ms linear,
+        transform 50ms linear;
 
     content: attr(data-tooltip);
 }
@@ -633,14 +641,16 @@ body.dark .mu-container blockquote {
     border-radius: 5px;
     background: transparent;
     color: #646a73;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
     font-size: 12px;
     line-height: 24px;
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
 
-    transition: color 0.16s ease, background-color 0.16s ease;
+    transition:
+        color 0.16s ease,
+        background-color 0.16s ease;
 }
 
 .mu-code-actions button + button,
@@ -761,7 +771,7 @@ input.mu-code-caption {
     color: #646a73;
     font-weight: 400;
     font-size: 12px;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
     line-height: 26px;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -1432,7 +1442,7 @@ figure.mu-diagram-block:hover > .mu-diagram-toolbar,
     border-radius: 4px;
     background: transparent;
     color: #646a73;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
     font-size: 12px;
     line-height: 26px;
     white-space: nowrap;
@@ -1484,7 +1494,7 @@ figure.mu-diagram-block:hover > .mu-diagram-toolbar,
     padding: 3px 7px;
 
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
     font-size: 11px;
     line-height: 18px;
     white-space: nowrap;
@@ -1637,7 +1647,9 @@ pre[data-role='vega-lite']::after {
     content: '\200B';
 }
 
-.mu-show-quick-insert-hint .mu-paragraph.mu-active > .mu-paragraph-content:first-of-type:is([placeholder], :empty)::after {
+.mu-show-quick-insert-hint
+    .mu-paragraph.mu-active
+    > .mu-paragraph-content:first-of-type:is([placeholder], :empty)::after {
     padding-left: 8px;
 
     color: var(--editor-color-30);

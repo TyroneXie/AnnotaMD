@@ -1,12 +1,21 @@
 <template>
   <footer class="annotamd-agent-composer">
     <div class="annotamd-agent-compose-box">
-      <div class="annotamd-agent-context" :title="workspacePath || undefined">
-        <el-icon aria-hidden="true"><FolderOpened /></el-icon>
+      <div
+        class="annotamd-agent-context"
+        :title="workspacePath || undefined"
+      >
+        <el-icon aria-hidden="true">
+          <FolderOpened />
+        </el-icon>
         <span>{{ t('annotamd.agentWorkspace.workspace') }}</span>
         <code>{{ workspaceLabel }}</code>
       </div>
-      <div v-if="selectionText" class="annotamd-agent-selection" data-testid="ai-selection-context">
+      <div
+        v-if="selectionText"
+        class="annotamd-agent-selection"
+        data-testid="ai-selection-context"
+      >
         <span>{{ t('annotamd.agentWorkspace.selectionContext') }}</span>
         <strong :title="selectionText">{{ selectionText }}</strong>
         <button
@@ -18,8 +27,15 @@
           <el-icon><Close /></el-icon>
         </button>
       </div>
-      <div v-if="attachments.length" class="annotamd-agent-attachments" data-testid="ai-attachments">
-        <span v-for="(attachment, index) in attachments" :key="`${attachment.name}-${index}`">
+      <div
+        v-if="attachments.length"
+        class="annotamd-agent-attachments"
+        data-testid="ai-attachments"
+      >
+        <span
+          v-for="(attachment, index) in attachments"
+          :key="`${attachment.name}-${index}`"
+        >
           <el-icon><Picture v-if="attachment.kind === 'image'" /><Document v-else /></el-icon>
           <strong :title="attachment.name">{{ attachment.name }}</strong>
           <button
@@ -32,7 +48,11 @@
           </button>
         </span>
       </div>
-      <p v-if="attachmentError" class="annotamd-agent-attachment-error" role="alert">
+      <p
+        v-if="attachmentError"
+        class="annotamd-agent-attachment-error"
+        role="alert"
+      >
         {{ attachmentError }}
       </p>
       <textarea
@@ -187,7 +207,7 @@ const removeAttachment = (index: number): void => {
   attachmentError.value = ''
   emit('update:attachments', props.attachments.filter((_item, itemIndex) => itemIndex !== index))
 }
-const onFilesSelected = async(event: Event): Promise<void> => {
+const onFilesSelected = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement
   const files = [...(input.files ?? [])]
   input.value = ''

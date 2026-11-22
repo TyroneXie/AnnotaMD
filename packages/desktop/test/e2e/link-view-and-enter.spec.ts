@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -15,8 +15,7 @@ const selectParagraphText = async(page: Page, text: string) => {
     if (!root || !paragraph) throw new Error('Paragraph text is unavailable')
     const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT)
     let textNode = walker.nextNode() as Text | null
-    while (textNode && !textNode.data.includes(selectedText))
-      textNode = walker.nextNode() as Text | null
+    while (textNode && !textNode.data.includes(selectedText)) { textNode = walker.nextNode() as Text | null }
     if (!textNode) throw new Error('Selected text is unavailable')
     const start = textNode.data.indexOf(selectedText)
     root.focus()

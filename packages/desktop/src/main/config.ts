@@ -16,7 +16,7 @@ export const editorWinOptions: Readonly<BrowserWindowConstructorOptions> = Objec
     // enable it always and set the HTML spelling attribute to false.
     spellcheck: true,
     nodeIntegration: false,
-    webSecurity: false,
+    webSecurity: true,
     preload: path.join(__dirname, '../preload/index.js')
   },
   useContentSize: true,
@@ -39,7 +39,7 @@ export const preferencesWinOptions: Readonly<BrowserWindowConstructorOptions> = 
     // Always true to access native spellchecker.
     spellcheck: true,
     nodeIntegration: false,
-    webSecurity: false,
+    webSecurity: true,
     preload: path.join(__dirname, '../preload/index.js')
   },
   fullscreenable: false,

@@ -134,51 +134,51 @@ export default function link(
                     },
                     linkView
                         ? [
-                            ...(linkLoading && isStandaloneLink
-                                ? [h('span.mu-link-title-loading', {
-                                    attrs: { 'aria-hidden': 'true' },
-                                })]
-                                : []),
-                            h('span.mu-link-view-text', token.href),
-                        ]
-                        : [
-                            ...(showTitleIcon
-                                ? [h('span.mu-link-title-icon-shell', [
-                                    ...(linkIcon
-                                        ? [h('span.mu-link-title-icon', {
-                                            attrs: {
-                                                'aria-hidden': 'true',
-                                            },
-                                            style: {
-                                                backgroundImage: `url(${JSON.stringify(linkIcon)})`,
-                                            },
+                                ...(linkLoading && isStandaloneLink
+                                    ? [h('span.mu-link-title-loading', {
+                                            attrs: { 'aria-hidden': 'true' },
                                         })]
-                                        : []),
-                                    renderActionIcon('web-link'),
-                                ])]
-                                : []),
-                            ...token.children.reduce((acc: VNode[], to: Token) => {
-                            // The original passed a `className` field too, but
-                            // receivers read `outerClass` — so it was silently
-                            // dropped under the previous `as any` cast.
-                                const chunk = this.dispatch(snakeToCamel(to.type), {
+                                    : []),
+                                h('span.mu-link-view-text', token.href),
+                            ]
+                        : [
+                                ...(showTitleIcon
+                                    ? [h('span.mu-link-title-icon-shell', [
+                                            ...(linkIcon
+                                                ? [h('span.mu-link-title-icon', {
+                                                        attrs: {
+                                                            'aria-hidden': 'true',
+                                                        },
+                                                        style: {
+                                                            backgroundImage: `url(${JSON.stringify(linkIcon)})`,
+                                                        },
+                                                    })]
+                                                : []),
+                                            renderActionIcon('web-link'),
+                                        ])]
+                                    : []),
+                                ...token.children.reduce((acc: VNode[], to: Token) => {
+                                    // The original passed a `className` field too, but
+                                    // receivers read `outerClass` — so it was silently
+                                    // dropped under the previous `as any` cast.
+                                    const chunk = this.dispatch(snakeToCamel(to.type), {
+                                        h,
+                                        cursor,
+                                        block,
+                                        token: to,
+                                    });
+                                    return Array.isArray(chunk)
+                                        ? [...acc, ...chunk]
+                                        : [...acc, chunk];
+                                }, []),
+                                ...this.backlashInToken(
                                     h,
-                                    cursor,
-                                    block,
-                                    token: to,
-                                });
-                                return Array.isArray(chunk)
-                                    ? [...acc, ...chunk]
-                                    : [...acc, chunk];
-                            }, []),
-                            ...this.backlashInToken(
-                                h,
-                                token.backlash.first,
-                                className,
-                                firstBacklashStart,
-                                token,
-                            ),
-                        ],
+                                    token.backlash.first,
+                                    className,
+                                    firstBacklashStart,
+                                    token,
+                                ),
+                            ],
                 ),
                 h(`span.${className}.${CLASS_NAMES.MU_REMOVE}`, middleBracket),
                 h(

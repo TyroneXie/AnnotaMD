@@ -424,37 +424,37 @@ export type AiWorkspaceEvent =
   | { type: 'conversation-updated'; conversation: AiConversation }
   | { type: 'conversation-deleted'; conversationId: string }
   | {
-      type: 'conversation-selected'
-      conversationId: string
-      messages: AiMessage[]
-      changeSets: AiChangeSet[]
-    }
+    type: 'conversation-selected'
+    conversationId: string
+    messages: AiMessage[]
+    changeSets: AiChangeSet[]
+  }
   | { type: 'turn-started'; conversationId: string; turnId: string }
   | {
-      type: 'message-delta'
-      conversationId: string
-      turnId: string
-      messageId: string
-      role: Extract<AiMessageRole, 'assistant' | 'tool' | 'system'>
-      delta: string
-      toolName?: string
-    }
+    type: 'message-delta'
+    conversationId: string
+    turnId: string
+    messageId: string
+    role: Extract<AiMessageRole, 'assistant' | 'tool' | 'system'>
+    delta: string
+    toolName?: string
+  }
   | { type: 'message'; conversationId: string; turnId?: string; message: AiMessage }
   | { type: 'tool'; conversationId: string; turnId: string; tool: AiToolCall }
   | { type: 'approval-requested'; approval: AiApprovalRequest }
   | {
-      type: 'approval-resolved'
-      conversationId: string
-      turnId: string
-      approvalId: string
-      decision: AiApprovalDecision
-    }
+    type: 'approval-resolved'
+    conversationId: string
+    turnId: string
+    approvalId: string
+    decision: AiApprovalDecision
+  }
   | { type: 'change-set'; conversationId: string; turnId: string; changeSet: AiChangeSet }
   | { type: 'turn-finished'; conversationId: string; turnId: string }
   | {
-      type: 'turn-error'
-      conversationId: string
-      turnId?: string
-      message: string
-      retryable: boolean
-    }
+    type: 'turn-error'
+    conversationId: string
+    turnId?: string
+    message: string
+    retryable: boolean
+  }

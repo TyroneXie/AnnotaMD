@@ -63,8 +63,8 @@ describe('CREATE_FILE_DIRECTORY — name conflict guard (#1946)', () => {
     await store.CREATE_FILE_DIRECTORY('fresh')
 
     expect(create).toHaveBeenCalledWith('/docs/fresh.md', 'file')
-    expect(useEditorStore().currentFile.pathname).toBe('/docs/fresh.md')
-    expect(useEditorStore().currentFile.markdown).toBe('')
+    expect(useEditorStore().currentFile?.pathname).toBe('/docs/fresh.md')
+    expect(useEditorStore().currentFile?.markdown).toBe('')
     expect(notice.notify).not.toHaveBeenCalled()
   })
 })

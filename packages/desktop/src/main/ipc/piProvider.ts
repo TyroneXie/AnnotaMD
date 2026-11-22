@@ -129,9 +129,9 @@ export const registerPiProviderHandlers = (): void => {
         ? buildProvider(draft, stored?.id ?? 'draft', stored)
         : stored
       if (!provider) throw new Error('Choose a provider first.')
-      const apiKey = request.apiKey?.trim()
-        || (stored ? await readPiProviderKey(settings, secrets, stored.id) : '')
-        || ''
+      const apiKey = request.apiKey?.trim() ||
+        (stored ? await readPiProviderKey(settings, secrets, stored.id) : '') ||
+        ''
       return await fetchPiModels(provider, apiKey)
     }
   )

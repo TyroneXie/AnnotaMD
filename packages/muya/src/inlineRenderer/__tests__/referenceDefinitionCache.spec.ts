@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as json1 from 'ot-json1';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../muya';
 
 let host: HTMLElement;
@@ -17,7 +17,7 @@ afterEach(() => {
     document.getSelection()?.removeAllRanges();
 });
 
-describe('InlineRenderer reference-definition cache', () => {
+describe('inlineRenderer reference-definition cache', () => {
     it('scans document definitions once while mounting many content leaves', () => {
         const markdown = [
             'A [reference][ref].',

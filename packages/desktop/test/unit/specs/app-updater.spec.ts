@@ -10,7 +10,6 @@ import type { AppUpdateState } from '../../../src/shared/types/update'
 import preferenceSchema from '../../../src/main/preferences/schema.json'
 import defaultPreferences from '../../../static/preference.json'
 // The release workflow runs this dependency-free ESM module directly with Node.
-// @ts-expect-error JavaScript release helper intentionally has no declaration file.
 import {
   groupUpdateArtifacts,
   serializeUpdateManifest,

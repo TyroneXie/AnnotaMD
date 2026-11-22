@@ -9,10 +9,10 @@ describe('AnnotaMD agent settings', () => {
   it('manages providers and their models instead of local CLI Agents', () => {
     const source = read('packages/desktop/src/renderer/src/prefComponents/agent/index.vue')
 
-    expect(source).toContain("annotamd::pi::provider:save")
-    expect(source).toContain("annotamd::pi::provider:delete")
-    expect(source).toContain("annotamd::pi::provider:models")
-    expect(source).toContain("annotamd::pi::models:update")
+    expect(source).toContain('annotamd::pi::provider:save')
+    expect(source).toContain('annotamd::pi::provider:delete')
+    expect(source).toContain('annotamd::pi::provider:models')
+    expect(source).toContain('annotamd::pi::models:update')
     expect(source).toContain('preferences.agent.provider.interfaceType')
     expect(source).toContain('preferences.agent.provider.baseUrl')
     expect(source).toContain('preferences.agent.provider.modelsUrl')

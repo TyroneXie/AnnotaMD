@@ -1,3 +1,4 @@
+import type { AiSelectionRequest, AiSelectionResult } from './aiSelection'
 /**
  * IPC channel contract — single source of truth for renderer↔main messaging.
  *
@@ -147,8 +148,8 @@ export interface IpcInvokeChannels {
   }
   'annotamd::ai::send': { args: [request: AiSendRequest]; ret: AiSendResult }
   'annotamd::ai::selection:run': {
-    args: [request: import('./aiSelection').AiSelectionRequest]
-    ret: import('./aiSelection').AiSelectionResult
+    args: [request: AiSelectionRequest]
+    ret: AiSelectionResult
   }
   'annotamd::ai::selection:stop': { args: [requestId: string]; ret: boolean }
   'annotamd::ai::stop': { args: [request: AiStopRequest]; ret: boolean }
@@ -343,7 +344,7 @@ export interface IpcSendChannels {
   'annotamd::win::toggle-fullscreen': []
   'annotamd::win::toggle-maximize': []
   'annotamd::win::unmaximize': []
-  'annotamd::window-add-file-path': [windowId: number, filePath: string]
+  'annotamd::window-add-file-path': [filePath: string]
   'annotamd::window-initialized': []
   'annotamd::window-tab-closed': [pathname: string]
   'annotamd::window-toggle-always-on-top': []

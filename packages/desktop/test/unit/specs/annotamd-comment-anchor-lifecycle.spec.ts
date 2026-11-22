@@ -114,7 +114,8 @@ describe('AnnotaMD live comment anchors', () => {
     let releaseFirst: ((value: unknown) => void) | undefined
     let revision = 0
     const invoke = vi.mocked(window.electron.ipcRenderer.invoke)
-    invoke.mockImplementation((channel: string, request: { comments?: AnnotaMDComment[] }) => {
+    invoke.mockImplementation((channel: string, ...args: unknown[]) => {
+      const request = args[0] as { comments?: AnnotaMDComment[] }
       if (channel !== 'annotamd::comments::replace') {
         return Promise.resolve({ comments: [], revision })
       }

@@ -1,13 +1,13 @@
 import type { JSONOp, Path } from 'ot-json1';
-import { type as json1 } from 'ot-json1';
 import diff from 'fast-diff';
+import { type as json1 } from 'ot-json1';
 
 export interface IAnnotationPoint {
     path: Path;
     offset: number;
 }
 
-const readTextAtPath = (doc: unknown, path: Path): string | null => {
+function readTextAtPath(doc: unknown, path: Path): string | null {
     let value = doc;
     for (const segment of path) {
         if (value == null || (typeof value !== 'object' && !Array.isArray(value)))
@@ -15,17 +15,17 @@ const readTextAtPath = (doc: unknown, path: Path): string | null => {
         value = (value as Record<string | number, unknown>)[segment];
     }
     return typeof value === 'string' ? value : null;
-};
+}
 
-interface TextLeaf {
+interface ITextLeaf {
     path: Path;
     text: string;
     start: number;
     end: number;
 }
 
-const flattenTextLeaves = (doc: unknown): { text: string; leaves: TextLeaf[] } => {
-    const leaves: TextLeaf[] = [];
+function flattenTextLeaves(doc: unknown): { text: string; leaves: ITextLeaf[] } {
+    const leaves: ITextLeaf[] = [];
     const parts: string[] = [];
     let position = 0;
 
@@ -52,25 +52,23 @@ const flattenTextLeaves = (doc: unknown): { text: string; leaves: TextLeaf[] } =
                 parts.push(child);
                 position += child.length;
             }
-            else visit(child, childPath);
+            else {
+                visit(child, childPath);
+            }
         }
     };
 
     visit(doc, []);
     return { text: parts.join(''), leaves };
-};
+}
 
-const pathsEqual = (first: Path, second: Path): boolean =>
-    first.length === second.length && first.every((segment, index) => segment === second[index]);
+function pathsEqual(first: Path, second: Path): boolean {
+    return first.length === second.length && first.every((segment, index) => segment === second[index]);
+}
 
 export type AnnotationAffinity = 'left' | 'right';
 
-const mapUtf16Offset = (
-    previousText: string,
-    nextText: string,
-    offset: number,
-    affinity: AnnotationAffinity,
-): number => {
+function mapUtf16Offset(previousText: string, nextText: string, offset: number, affinity: AnnotationAffinity): number {
     let previousOffset = 0;
     let nextOffset = 0;
 
@@ -97,7 +95,7 @@ const mapUtf16Offset = (
     }
 
     return nextOffset;
-};
+}
 
 /**
  * Move an annotation endpoint through the same JSON OT operation that updates
@@ -175,7 +173,7 @@ export function mapAnnotationPointBetweenDocumentsUtf16(
 ): IAnnotationPoint | null {
     const previous = flattenTextLeaves(previousDocument);
     const next = flattenTextLeaves(nextDocument);
-    const previousLeaf = previous.leaves.find((leaf) => pathsEqual(leaf.path, point.path));
+    const previousLeaf = previous.leaves.find(leaf => pathsEqual(leaf.path, point.path));
     if (!previousLeaf || point.offset < 0 || point.offset > previousLeaf.text.length)
         return null;
 
@@ -192,8 +190,9 @@ export function mapAnnotationPointBetweenDocumentsUtf16(
             leaf => leaf.text === previousLeaf.text,
         ).length;
         if (previousOccurrences !== nextOccurrences
-            && (previousOccurrences > 1 || nextOccurrences > 1))
+            && (previousOccurrences > 1 || nextOccurrences > 1)) {
             return null;
+        }
     }
 
     const absoluteOffset = previousLeaf.start + point.offset;
@@ -203,7 +202,7 @@ export function mapAnnotationPointBetweenDocumentsUtf16(
         absoluteOffset,
         affinity,
     );
-    const nextLeaf = next.leaves.find((leaf) => (
+    const nextLeaf = next.leaves.find(leaf => (
         nextAbsoluteOffset > leaf.start && nextAbsoluteOffset < leaf.end
     ) || (
         nextAbsoluteOffset === leaf.start && affinity === 'right'

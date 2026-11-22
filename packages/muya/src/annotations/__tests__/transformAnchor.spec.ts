@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
 import { editOp, insertOp, moveOp, removeOp } from 'ot-json1';
+import { describe, expect, it } from 'vitest';
 import {
+    mapAnnotationPointBetweenDocumentsUtf16,
     transformAnnotationPoint,
     transformAnnotationPointUtf16,
-    mapAnnotationPointBetweenDocumentsUtf16,
 } from '../transformAnchor';
 
 describe('annotation anchor OT mapping', () => {
@@ -36,7 +36,7 @@ describe('annotation anchor OT mapping', () => {
     });
 
     it('drops an endpoint when its block is removed', () => {
-        const operation = removeOp([1], { name: 'paragraph', text: 'same' });
+        const operation = removeOp([1], true);
 
         expect(transformAnnotationPoint({ path: [1, 'text'], offset: 3 }, operation))
             .toBeNull();

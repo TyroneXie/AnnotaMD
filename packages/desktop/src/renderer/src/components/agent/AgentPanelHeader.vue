@@ -1,7 +1,11 @@
 <template>
   <header class="annotamd-agent-header">
     <div class="annotamd-agent-title">
-      <span class="annotamd-agent-title-dot" :class="`is-${status}`" aria-hidden="true" />
+      <span
+        class="annotamd-agent-title-dot"
+        :class="`is-${status}`"
+        aria-hidden="true"
+      />
       <strong :title="title">{{ title }}</strong>
     </div>
     <div class="annotamd-agent-actions">

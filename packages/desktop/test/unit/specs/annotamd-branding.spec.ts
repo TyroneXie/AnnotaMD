@@ -27,6 +27,7 @@ describe('AnnotaMD user-visible branding', () => {
     expect(renderer).not.toContain(`<title>${forbiddenBrand}</title>`)
     expect(about).toContain("const name = 'AnnotaMD'")
     expect(builder).toMatch(/^productName:\s*AnnotaMD$/m)
+  // eslint-disable-next-line no-template-curly-in-string
     expect(builder).toContain("artifactName: 'annotamd-mac-${arch}-${version}.${ext}'")
     expect(packageJson.name).toBe('annotamd')
     expect(packageJson.description).toBe('AnnotaMD')

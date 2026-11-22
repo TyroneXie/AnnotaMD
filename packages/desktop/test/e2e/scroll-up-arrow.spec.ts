@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { focusEditor, launchWithMarkdown } from './helpers'
 
 // #3329 — moving the caret DOWN auto-scrolls the view (the #628 handler), but

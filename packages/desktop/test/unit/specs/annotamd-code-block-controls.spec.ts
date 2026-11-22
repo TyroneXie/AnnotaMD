@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -31,7 +31,7 @@ describe('AnnotaMD code block controls', () => {
     expect(appearance).toContain("onSelectChange('trimUnnecessaryCodeBlockEmptyLines', value)")
     expect(appearance).toContain("onSelectChange('codeBlockLineNumbers', value)")
     expect(appearance).toContain("onSelectChange('wrapCodeBlocks', value)")
-    expect(appearance).toContain("preferences.markdown.codeBlock.title")
+    expect(appearance).toContain('preferences.markdown.codeBlock.title')
   })
 
   it('shows code line numbers by default in every preference source', () => {
@@ -63,7 +63,7 @@ describe('AnnotaMD code block controls', () => {
     expect(titleBar).not.toContain('annotamd-mode-switch')
     expect(titleBar).not.toContain('setSourceMode')
     expect(viewMenu).toContain("id: 'sourceCodeModeMenuItem'")
-    expect(viewMenu).toContain("actions.toggleSourceCodeMode")
+    expect(viewMenu).toContain('actions.toggleSourceCodeMode')
   })
 
   it('always bootstraps editor windows in quick-edit mode', () => {

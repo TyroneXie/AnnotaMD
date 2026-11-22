@@ -17,7 +17,8 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   keytar: true
-  native-keymap: true
+  # Compile against Electron only, after the C++20 patch in postinstall.
+  native-keymap: false
   sharp: true
   unrs-resolver: true
   workerd: true

@@ -199,7 +199,7 @@ describe('paragraphQuickInsertMenu emoji action', () => {
         expect(payloads).toHaveLength(1);
         expect(payloads[0]?.showAll).toBe(true);
         expect(payloads[0]?.block?.text).toBe('');
-        expect(muya.editor.scrollPage!.firstChild.blockName).toBe('paragraph');
+        expect(muya.editor.scrollPage!.firstChild?.blockName).toBe('paragraph');
     });
 });
 

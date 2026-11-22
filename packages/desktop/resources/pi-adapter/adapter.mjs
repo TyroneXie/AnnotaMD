@@ -24,29 +24,29 @@ const READ_COMMENTS_TOOL = 'read_comments'
 const READ_ONLY_TOOL_NAMES = new Set(['read', 'grep', 'find', 'ls', READ_COMMENTS_TOOL])
 
 class BridgeProtocolError extends Error {
-  constructor(message) {
+  constructor (message) {
     super(`AnnotaMD bridge protocol error: ${message}`)
     this.name = 'BridgeProtocolError'
   }
 }
 
 class BridgeDecisionError extends Error {
-  constructor(decision, message = '') {
+  constructor (decision, message = '') {
     super(message || decision)
     this.name = 'BridgeDecisionError'
     this.decision = decision
   }
 }
 
-function isRecord(value) {
+function isRecord (value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function utf8Bytes(value) {
+function utf8Bytes (value) {
   return Buffer.byteLength(value, 'utf8')
 }
 
-function requireString(record, key, maxBytes, { allowEmpty = false } = {}) {
+function requireString (record, key, maxBytes, { allowEmpty = false } = {}) {
   const value = record[key]
   if (typeof value !== 'string' || (!allowEmpty && value.length === 0)) {
     throw new BridgeProtocolError(`${key} must be a${allowEmpty ? '' : ' non-empty'} string`)
@@ -57,7 +57,7 @@ function requireString(record, key, maxBytes, { allowEmpty = false } = {}) {
   return value
 }
 
-function requireHash(record, key) {
+function requireHash (record, key) {
   const value = requireString(record, key, 64)
   if (!/^[a-f0-9]{64}$/.test(value)) {
     throw new BridgeProtocolError(`${key} must be a lowercase SHA-256 digest`)
@@ -65,7 +65,7 @@ function requireHash(record, key) {
   return value
 }
 
-function assertEnvelope(record, kind) {
+function assertEnvelope (record, kind) {
   if (!isRecord(record)) {
     throw new BridgeProtocolError('response must be an object')
   }
@@ -77,11 +77,11 @@ function assertEnvelope(record, kind) {
   }
 }
 
-function sha256(content) {
+function sha256 (content) {
   return createHash('sha256').update(content, 'utf8').digest('hex')
 }
 
-function validateDocumentContent(content, fieldName) {
+function validateDocumentContent (content, fieldName) {
   if (typeof content !== 'string') {
     throw new BridgeProtocolError(`${fieldName} must be a string`)
   }
@@ -91,7 +91,7 @@ function validateDocumentContent(content, fieldName) {
   return content
 }
 
-function encodeEnvelope(value) {
+function encodeEnvelope (value) {
   const json = JSON.stringify(value)
   if (utf8Bytes(json) > MAX_WIRE_BYTES) {
     throw new BridgeProtocolError('request exceeds the bridge wire limit')
@@ -99,11 +99,11 @@ function encodeEnvelope(value) {
   return `${WIRE_PREFIX}${Buffer.from(json, 'utf8').toString('base64url')}`
 }
 
-function encodeReadyPayload(value) {
+function encodeReadyPayload (value) {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url')
 }
 
-function decodeEnvelope(value) {
+function decodeEnvelope (value) {
   if (typeof value !== 'string' || !value.startsWith(WIRE_PREFIX)) {
     throw new BridgeProtocolError(`response must use the ${WIRE_PREFIX} base64url envelope`)
   }
@@ -136,12 +136,12 @@ function decodeEnvelope(value) {
   return parsed
 }
 
-function currentSessionId(ctx) {
+function currentSessionId (ctx) {
   const sessionId = ctx.sessionManager?.getSessionId?.()
   return typeof sessionId === 'string' ? sessionId : null
 }
 
-async function requestFromHost(ctx, signal, request) {
+async function requestFromHost (ctx, signal, request) {
   if (ctx.mode !== 'rpc' || !ctx.hasUI) {
     throw new BridgeProtocolError('the adapter only operates with an attached Pi RPC host')
   }
@@ -156,7 +156,7 @@ async function requestFromHost(ctx, signal, request) {
   return decodeEnvelope(response)
 }
 
-async function requestSnapshot(ctx, signal, toolCallId, toolName, path) {
+async function requestSnapshot (ctx, signal, toolCallId, toolName, path) {
   if (utf8Bytes(path) > MAX_PATH_BYTES) {
     throw new BridgeProtocolError('path exceeds the allowed size')
   }
@@ -194,7 +194,7 @@ async function requestSnapshot(ctx, signal, toolCallId, toolName, path) {
   }
 }
 
-async function requestProposalDecision(ctx, signal, toolCallId, toolName, path, snapshot, proposedContent) {
+async function requestProposalDecision (ctx, signal, toolCallId, toolName, path, snapshot, proposedContent) {
   const candidate = validateDocumentContent(proposedContent, 'proposal.proposedContent')
   const proposedHash = sha256(candidate)
   const proposalId = randomUUID()
@@ -247,7 +247,7 @@ async function requestProposalDecision(ctx, signal, toolCallId, toolName, path, 
   }
 }
 
-async function requestToolApproval(ctx, event) {
+async function requestToolApproval (ctx, event) {
   const response = await requestFromHost(ctx, new AbortController().signal, {
     v: PROTOCOL_VERSION,
     kind: 'approval',
@@ -260,7 +260,7 @@ async function requestToolApproval(ctx, event) {
   return response.decision === 'accepted'
 }
 
-function routeCache(loader) {
+function routeCache (loader) {
   const routes = new Map()
   return async (path) => {
     let pending = routes.get(path)
@@ -272,7 +272,7 @@ function routeCache(loader) {
   }
 }
 
-function decisionResult(error, ctx) {
+function decisionResult (error, ctx) {
   if (!(error instanceof BridgeDecisionError)) {
     throw error
   }
@@ -304,7 +304,7 @@ function decisionResult(error, ctx) {
   }
 }
 
-export default function annotaMDPiAdapter(pi) {
+export default function annotaMDPiAdapter (pi) {
   const initialCwd = process.cwd()
   const baseReadTool = createReadTool(initialCwd)
   const baseEditTool = createEditTool(initialCwd)
@@ -318,7 +318,7 @@ export default function annotaMDPiAdapter(pi) {
       offset: Type.Optional(Type.Integer({ minimum: 0, description: 'The previous page’s nextOffset.' })),
       revision: Type.Optional(Type.Integer({ minimum: 0, description: 'The revision returned by the previous page.' }))
     }),
-    async execute(toolCallId, params, signal, _onUpdate, ctx) {
+    async execute (toolCallId, params, signal, _onUpdate, ctx) {
       const response = await requestFromHost(ctx, signal, {
         v: PROTOCOL_VERSION,
         kind: 'read-comments',
@@ -335,7 +335,7 @@ export default function annotaMDPiAdapter(pi) {
 
   pi.registerTool({
     ...baseReadTool,
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute (toolCallId, params, signal, onUpdate, ctx) {
       const initialPath = params.path
       const initialRoute = await requestSnapshot(ctx, signal, toolCallId, 'read', initialPath)
       if (!initialRoute.handled) {
@@ -351,14 +351,14 @@ export default function annotaMDPiAdapter(pi) {
       })
       const tool = createReadTool(ctx.cwd, {
         operations: {
-          async access(path) {
+          async access (path) {
             await getRoute(path)
           },
-          async readFile(path) {
+          async readFile (path) {
             const route = await getRoute(path)
             return Buffer.from(route.content, 'utf8')
           },
-          async detectImageMimeType() {
+          async detectImageMimeType () {
             return null
           }
         }
@@ -370,7 +370,7 @@ export default function annotaMDPiAdapter(pi) {
   pi.registerTool({
     ...baseEditTool,
     executionMode: 'sequential',
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute (toolCallId, params, signal, onUpdate, ctx) {
       const initialPath = params.path
       const initialRoute = await requestSnapshot(ctx, signal, toolCallId, 'edit', initialPath)
       if (!initialRoute.handled) {
@@ -386,14 +386,14 @@ export default function annotaMDPiAdapter(pi) {
       })
       const tool = createEditTool(ctx.cwd, {
         operations: {
-          async access(path) {
+          async access (path) {
             await getRoute(path)
           },
-          async readFile(path) {
+          async readFile (path) {
             const route = await getRoute(path)
             return Buffer.from(route.content, 'utf8')
           },
-          async writeFile(path, content) {
+          async writeFile (path, content) {
             const route = await getRoute(path)
             await requestProposalDecision(ctx, signal, toolCallId, 'edit', path, route, content)
           }
@@ -411,7 +411,7 @@ export default function annotaMDPiAdapter(pi) {
   pi.registerTool({
     ...baseWriteTool,
     executionMode: 'sequential',
-    async execute(toolCallId, params, signal, onUpdate, ctx) {
+    async execute (toolCallId, params, signal, onUpdate, ctx) {
       const initialPath = params.path
       const initialRoute = await requestSnapshot(ctx, signal, toolCallId, 'write', initialPath)
       if (!initialRoute.handled) {
@@ -427,10 +427,10 @@ export default function annotaMDPiAdapter(pi) {
       })
       const tool = createWriteTool(ctx.cwd, {
         operations: {
-          async mkdir() {
+          async mkdir () {
             // The host applies accepted proposals; the adapter must not mutate the filesystem first.
           },
-          async writeFile(path, content) {
+          async writeFile (path, content) {
             const route = await getRoute(path)
             await requestProposalDecision(ctx, signal, toolCallId, 'write', path, route, content)
           }

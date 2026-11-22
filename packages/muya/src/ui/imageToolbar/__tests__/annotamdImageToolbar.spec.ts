@@ -48,7 +48,7 @@ function setup(markdown: string, options: Partial<IMuyaOptions> = {}) {
     return { block, imageInfo, muya, toolbar };
 }
 
-describe('AnnotaMD image toolbar', () => {
+describe('annotaMD image toolbar', () => {
     it('exposes accessible image actions and the active alignment', () => {
         const { toolbar } = setup('![alt](https://example.com/image.png)\n');
         const items = toolbar.container!.querySelectorAll<HTMLElement>('li.item');

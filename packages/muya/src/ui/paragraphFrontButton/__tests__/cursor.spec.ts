@@ -9,7 +9,7 @@ const stylesheet = readFileSync(
 
 describe('paragraph front button cursor', () => {
     it('uses a pointing hand until the drag handle is pressed', () => {
-        expect(stylesheet).toMatch(/\.mu-icon-wrapper\s*\{[^}]*cursor:\s*pointer;/s);
-        expect(stylesheet).toMatch(/\.mu-icon-wrapper:active\s*\{[^}]*cursor:\s*grabbing;/s);
+        expect(stylesheet).toMatch(/\.mu-icon-wrapper\s*\{[^}]*cursor:\s*pointer;/);
+        expect(stylesheet).toMatch(/\.mu-icon-wrapper:active\s*\{[^}]*cursor:\s*grabbing;/);
     });
 });

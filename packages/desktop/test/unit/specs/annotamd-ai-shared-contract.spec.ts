@@ -86,6 +86,7 @@ describe('provider-neutral AI workspace contract', () => {
       id: 'conversation-1',
       title: 'Review the current document',
       mode: 'agent',
+      permissionMode: 'request' as const,
       configId: 'cli-1',
       modelId: 'provider/model',
       effort: { kind: 'preset', id: 'high' },
@@ -113,6 +114,7 @@ describe('provider-neutral AI workspace contract', () => {
       text: 'Summarize this document.',
       selection: {
         mode: 'ask',
+        permissionMode: 'request' as const,
         configId: 'api-1',
         modelId: 'model-1',
         effort: { kind: 'provider-default' },
@@ -159,6 +161,8 @@ describe('provider-neutral AI workspace contract', () => {
         turnId: 'turn-1',
         changeSet: {
           id: 'change-set-1',
+          documentId: 'doc-1',
+          documentUri: 'file:///workspace/note.md',
           conversationId: 'conversation-1',
           turnId: 'turn-1',
           filePath: '/workspace/note.md',

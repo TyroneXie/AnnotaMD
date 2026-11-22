@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Locator } from 'playwright'
+import type { Locator } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { expectNoRendererErrors, getMarkdownContent, launchElectron, launchWithMarkdown, waitForEditor } from './helpers'
 

@@ -168,45 +168,49 @@ if (agentScopeToken) {
     ...(handleId ? { handleId } : {})
   })))
 
-  if (agentMutationsEnabled) server.registerTool('annotamd_edit_document', {
-    title: '精确修改 Muya 文档',
-    description: '在指定 revision/hash 上执行一组唯一、非重叠的精确文本替换并立即更新 Muya。任何旧基线、重复目标或重叠编辑都会整次拒绝；成功后返回新的 revision/hash。',
-    inputSchema: {
-      handleId: z.string().min(1),
-      expectedRevision: z.number().int().nonnegative(),
-      expectedHash: z.string().regex(/^[a-f0-9]{64}$/),
-      edits: z.array(z.object({
-        oldText: z.string().min(1),
-        newText: z.string(),
-        occurrence: z.number().int().positive().optional()
-      })).min(1).max(100)
-    }
-  }, async({ handleId, expectedRevision, expectedHash, edits }) => result(
-    await callScopedBridge('agent_edit_document', {
-      handleId,
-      expectedRevision,
-      expectedHash,
-      edits
-    })
-  ))
+  if (agentMutationsEnabled) {
+    server.registerTool('annotamd_edit_document', {
+      title: '精确修改 Muya 文档',
+      description: '在指定 revision/hash 上执行一组唯一、非重叠的精确文本替换并立即更新 Muya。任何旧基线、重复目标或重叠编辑都会整次拒绝；成功后返回新的 revision/hash。',
+      inputSchema: {
+        handleId: z.string().min(1),
+        expectedRevision: z.number().int().nonnegative(),
+        expectedHash: z.string().regex(/^[a-f0-9]{64}$/),
+        edits: z.array(z.object({
+          oldText: z.string().min(1),
+          newText: z.string(),
+          occurrence: z.number().int().positive().optional()
+        })).min(1).max(100)
+      }
+    }, async({ handleId, expectedRevision, expectedHash, edits }) => result(
+      await callScopedBridge('agent_edit_document', {
+        handleId,
+        expectedRevision,
+        expectedHash,
+        edits
+      })
+    ))
+  }
 
-  if (agentMutationsEnabled) server.registerTool('annotamd_replace_document', {
-    title: '替换 Muya 文档',
-    description: '在指定 revision/hash 上用完整 canonical Markdown 立即替换本次授权文档。只适合无法表达为精确局部替换的修改。',
-    inputSchema: {
-      handleId: z.string().min(1),
-      expectedRevision: z.number().int().nonnegative(),
-      expectedHash: z.string().regex(/^[a-f0-9]{64}$/),
-      markdown: z.string()
-    }
-  }, async({ handleId, expectedRevision, expectedHash, markdown }) => result(
-    await callScopedBridge('agent_replace_document', {
-      handleId,
-      expectedRevision,
-      expectedHash,
-      markdown
-    })
-  ))
+  if (agentMutationsEnabled) {
+    server.registerTool('annotamd_replace_document', {
+      title: '替换 Muya 文档',
+      description: '在指定 revision/hash 上用完整 canonical Markdown 立即替换本次授权文档。只适合无法表达为精确局部替换的修改。',
+      inputSchema: {
+        handleId: z.string().min(1),
+        expectedRevision: z.number().int().nonnegative(),
+        expectedHash: z.string().regex(/^[a-f0-9]{64}$/),
+        markdown: z.string()
+      }
+    }, async({ handleId, expectedRevision, expectedHash, markdown }) => result(
+      await callScopedBridge('agent_replace_document', {
+        handleId,
+        expectedRevision,
+        expectedHash,
+        markdown
+      })
+    ))
+  }
 }
 
 const transport = new StdioServerTransport()

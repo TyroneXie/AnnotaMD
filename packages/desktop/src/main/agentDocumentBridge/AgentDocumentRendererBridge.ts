@@ -108,9 +108,9 @@ export class AgentDocumentRendererBridge {
     const transaction = this.transactionsByRun.get(runId)
     return transaction
       ? {
-          ...transaction,
-          diff: { ...transaction.diff, lines: transaction.diff.lines.map(line => ({ ...line })) }
-        }
+        ...transaction,
+        diff: { ...transaction.diff, lines: transaction.diff.lines.map(line => ({ ...line })) }
+      }
       : undefined
   }
 

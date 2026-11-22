@@ -1,88 +1,119 @@
 <template>
-  <el-popover
-    :visible="visible"
-    placement="top-end"
-    :width="280"
-    trigger="click"
-    popper-class="annotamd-agent-model-popover"
-    @update:visible="emit('update:visible', $event)"
-    @show="loadModels"
-  >
-    <template #reference>
-      <button
-        type="button"
-        class="annotamd-agent-model-trigger"
-        data-testid="ai-model-selector"
-        :title="triggerTitle"
-        :aria-label="triggerTitle"
+  <div class="annotamd-agent-model-control">
+    <button
+      ref="trigger"
+      type="button"
+      class="annotamd-agent-model-trigger"
+      data-testid="ai-model-selector"
+      :title="triggerTitle"
+      :aria-label="triggerTitle"
+      :aria-expanded="visible"
+      @click="emit('update:visible', !visible)"
+      @keydown.esc.stop="emit('update:visible', false)"
+    >
+      <AiProviderLogo
+        v-if="providerBrand?.icon"
+        :provider="providerBrand.icon"
+        :label="providerBrand.name"
+      />
+      <el-icon v-else-if="!selectedConfig">
+        <Setting />
+      </el-icon>
+      <span class="annotamd-agent-model-label">{{ triggerLabel }}</span>
+      <el-icon aria-hidden="true">
+        <ArrowDown />
+      </el-icon>
+    </button>
+    <Teleport to="body">
+      <section
+        v-if="visible"
+        ref="menu"
+        :style="menuStyle"
+        class="annotamd-agent-model-popover"
+        @keydown.esc.stop="emit('update:visible', false)"
       >
-        <AiProviderLogo
-          v-if="providerBrand?.icon"
-          :provider="providerBrand.icon"
-          :label="providerBrand.name"
-        />
-        <el-icon v-else-if="!selectedConfig"><Setting /></el-icon>
-        <span class="annotamd-agent-model-label">{{ triggerLabel }}</span>
-        <el-icon aria-hidden="true"><ArrowDown /></el-icon>
-      </button>
-    </template>
-    <div class="annotamd-agent-model-menu">
-      <header>
-        <strong>{{ t('annotamd.agentWorkspace.model') }}</strong>
-        <small>{{ t('annotamd.agentWorkspace.modelDescription') }}</small>
-      </header>
-      <div v-if="configs.length === 0" class="annotamd-agent-model-empty">
-        <p>{{ t('annotamd.agentWorkspace.configureAgent') }}</p>
-        <button type="button" data-testid="ai-model-open-settings" @click="openSettings">
-          {{ t('annotamd.agentWorkspace.openSettings') }}
-        </button>
-      </div>
-      <div v-if="selectedConfig" class="annotamd-agent-model-options">
-        <div class="annotamd-agent-model-field">
-          <label :for="modelPickerId">{{ t('annotamd.agentWorkspace.modelId') }}</label>
-          <el-select
-            :id="modelPickerId"
-            :model-value="selectedModelId || undefined"
-            size="small"
-            filterable
-            :teleported="false"
-            default-first-option
-            :placeholder="runtimeModel || t('annotamd.agentWorkspace.modelId')"
-            @change="selectModel"
+        <div class="annotamd-agent-model-menu">
+          <header>
+            <strong>{{ t('annotamd.agentWorkspace.model') }}</strong>
+            <small>{{ t('annotamd.agentWorkspace.modelDescription') }}</small>
+          </header>
+          <div
+            v-if="configs.length === 0"
+            class="annotamd-agent-model-empty"
           >
-            <el-option v-for="model in models" :key="model.id" :value="model.id" :label="model.name || model.id" />
-          </el-select>
-          <small v-if="loadingModels">{{ t('annotamd.agentWorkspace.loadingModels') }}</small>
-          <small v-else-if="modelError" class="is-error">{{ modelError }}</small>
-        </div>
-        <div v-if="effortLevels.some(level => level !== 'off')" class="annotamd-agent-model-field">
-          <label :for="effortPickerId">{{ t('annotamd.agentWorkspace.effort') }}</label>
-          <el-select
-            :id="effortPickerId"
-            :model-value="effortId"
-            size="small"
-            :teleported="false"
-            @change="selectEffort"
+            <p>{{ t('annotamd.agentWorkspace.configureAgent') }}</p>
+            <button
+              type="button"
+              data-testid="ai-model-open-settings"
+              @click="openSettings"
+            >
+              {{ t('annotamd.agentWorkspace.openSettings') }}
+            </button>
+          </div>
+          <div
+            v-if="selectedConfig"
+            class="annotamd-agent-model-options"
           >
-            <el-option value="provider-default" :label="t('annotamd.agentWorkspace.effortDefault')" />
-            <el-option
-              v-for="level in effortLevels"
-              :key="level"
-              :value="level"
-              :label="effortLabel(level)"
-            />
-          </el-select>
+            <div class="annotamd-agent-model-field">
+              <label :for="modelPickerId">{{ t('annotamd.agentWorkspace.modelId') }}</label>
+              <el-select
+                :id="modelPickerId"
+                :model-value="selectedModelId || undefined"
+                size="small"
+                filterable
+                :teleported="false"
+                default-first-option
+                :placeholder="runtimeModel || t('annotamd.agentWorkspace.modelId')"
+                @change="selectModel"
+              >
+                <el-option
+                  v-for="model in models"
+                  :key="model.id"
+                  :value="model.id"
+                  :label="model.name || model.id"
+                />
+              </el-select>
+              <small v-if="loadingModels">{{ t('annotamd.agentWorkspace.loadingModels') }}</small>
+              <small
+                v-else-if="modelError"
+                class="is-error"
+              >{{ modelError }}</small>
+            </div>
+            <div
+              v-if="effortLevels.some(level => level !== 'off')"
+              class="annotamd-agent-model-field"
+            >
+              <label :for="effortPickerId">{{ t('annotamd.agentWorkspace.effort') }}</label>
+              <el-select
+                :id="effortPickerId"
+                :model-value="effortId"
+                size="small"
+                :teleported="false"
+                @change="selectEffort"
+              >
+                <el-option
+                  value="provider-default"
+                  :label="t('annotamd.agentWorkspace.effortDefault')"
+                />
+                <el-option
+                  v-for="level in effortLevels"
+                  :key="level"
+                  :value="level"
+                  :label="effortLabel(level)"
+                />
+              </el-select>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </el-popover>
+      </section>
+    </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { ArrowDown, Setting } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
-import type { AiModelInfo } from '@shared/types/aiWorkspace'
 import { aiProviderOption } from '@shared/types/aiProviderPresets'
 import { useAiSettingsStore } from '@/store/aiSettings'
 import AiProviderLogo from './AiProviderLogo.vue'
@@ -91,7 +122,13 @@ const props = defineProps<{ runtimeModel?: string; visible: boolean }>()
 const emit = defineEmits<{ 'update:visible': [visible: boolean] }>()
 const { t } = useI18n()
 const settings = useAiSettingsStore()
-const models = ref<AiModelInfo[]>([])
+const trigger = ref<HTMLElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
+const menuStyle = ref<Record<string, string>>({})
+const models = computed(() => {
+  const configId = selectedConfig.value?.id
+  return configId ? settings.cachedModels(configId) : []
+})
 const modelPickerId = useId()
 const effortPickerId = useId()
 const loadingModels = ref(false)
@@ -135,9 +172,11 @@ const effortLabel = (level: string): string => {
   const normalized = level.trim().toLocaleLowerCase()
   const key = `annotamd.agentWorkspace.effortLevels.${normalized}`
   const label = t(key)
-  return label !== key ? label : normalized.replace(/(^|[-_\s]+)(\w)/g, (_match, _separator, char) => (
-    String(char).toLocaleUpperCase()
-  ))
+  return label !== key
+    ? label
+    : normalized.replace(/(^|[-_\s]+)(\w)/g, (_match, _separator, char) => (
+      String(char).toLocaleUpperCase()
+    ))
 }
 const resetUnsupportedEffort = (): void => {
   if (selection.value.effort.kind !== 'preset') return
@@ -153,18 +192,16 @@ const selectModel = (value: unknown): void => {
   settings.selectModel('agent', typeof value === 'string' ? value : undefined)
   resetUnsupportedEffort()
 }
-const loadModels = async(): Promise<void> => {
+const loadModels = async (): Promise<void> => {
   const version = ++loadVersion
   const configId = selectedConfig.value?.id
   const cached = configId ? settings.cachedModels(configId) : []
-  models.value = cached
   modelError.value = ''
   loadingModels.value = Boolean(configId && cached.length === 0)
   if (!configId) return
   try {
-    const available = await settings.listModels(configId)
+    await settings.listModels(configId)
     if (version !== loadVersion) return
-    models.value = available
     resetUnsupportedEffort()
   } catch (error) {
     if (version === loadVersion) modelError.value = error instanceof Error ? error.message : String(error)
@@ -172,8 +209,43 @@ const loadModels = async(): Promise<void> => {
     if (version === loadVersion) loadingModels.value = false
   }
 }
+// Warm metadata when the composer becomes ready, before the first click.
+watch(() => selectedConfig.value?.id, () => { void loadModels() }, { immediate: true })
 watch(() => settings.agentReadiness, () => {
-  if (props.visible) void loadModels()
+  const configId = selectedConfig.value?.id
+  if (props.visible || (configId && !settings.modelsByConfig[configId])) void loadModels()
+})
+const positionMenu = (): void => {
+  if (!props.visible || !trigger.value) return
+  const rect = trigger.value.getBoundingClientRect()
+  const width = Math.min(280, window.innerWidth - 16)
+  menuStyle.value = {
+    left: `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`,
+    bottom: `${window.innerHeight - rect.top + 8}px`,
+    width: `${width}px`
+  }
+}
+const onDocumentPointerDown = (event: PointerEvent): void => {
+  if (!props.visible || !(event.target instanceof Node)) return
+  if (trigger.value?.contains(event.target) || menu.value?.contains(event.target)) return
+  emit('update:visible', false)
+}
+watch(() => props.visible, visible => {
+  if (visible) {
+    positionMenu()
+    void loadModels()
+    void nextTick(positionMenu)
+  }
+})
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocumentPointerDown, true)
+  window.addEventListener('resize', positionMenu)
+  if (props.visible) positionMenu()
+})
+onBeforeUnmount(() => {
+  loadVersion++
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  window.removeEventListener('resize', positionMenu)
 })
 const openSettings = (): void => {
   window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
@@ -181,7 +253,9 @@ const openSettings = (): void => {
 </script>
 
 <style scoped>
-.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); font-size: 11px; font-weight: 550; cursor: pointer; }
+.annotamd-agent-model-control { min-width: 0; }
+.annotamd-agent-model-popover { position: fixed; z-index: 3000; box-sizing: border-box; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); box-shadow: 0 10px 30px color-mix(in srgb, #000 13%, transparent); }
+.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; max-width: 100%; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); font-size: 11px; font-weight: 550; cursor: pointer; }
 .annotamd-agent-model-trigger:hover, .annotamd-agent-model-trigger[aria-expanded="true"] { border-color: var(--annotamd-border); }
 .annotamd-agent-model-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-model-trigger > .el-icon { flex: none; }

@@ -25,7 +25,9 @@
     background: #fff;
     cursor: pointer;
 
-    transition: border-color 0.16s ease, background-color 0.16s ease;
+    transition:
+        border-color 0.16s ease,
+        background-color 0.16s ease;
 }
 
 .mu-icon-wrapper:focus-visible {
@@ -55,7 +57,8 @@
     box-sizing: border-box;
     border-radius: 7px 0 0 7px;
     color: #3370ff;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     font-weight: 650;
     font-size: 12px;
     line-height: 1;
@@ -103,7 +106,7 @@
 }
 
 .mu-block-label.code .mu-block-label-glyph {
-    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
     font-size: 10px;
     font-weight: 650;
     letter-spacing: -0.04em;
@@ -111,7 +114,7 @@
 
 .mu-block-label.html .mu-block-label-glyph {
     color: #7c5ce7;
-    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
     font-size: 11px;
     font-weight: 650;
     letter-spacing: -0.08em;

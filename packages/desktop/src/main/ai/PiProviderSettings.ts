@@ -160,13 +160,15 @@ export const buildModelsConfig = (settings: PiSettings): Record<string, unknown>
           thinkingLevelMap: Object.fromEntries(
             PI_THINKING_LEVELS.map(level => [level, efforts.includes(level) ? level : null])
           ),
-          ...(deepseek && apiName(provider) === 'openai-completions' ? {
-            compat: {
-              thinkingFormat: 'deepseek',
-              supportsReasoningEffort: true,
-              requiresReasoningContentOnAssistantMessages: true
+          ...(deepseek && apiName(provider) === 'openai-completions'
+            ? {
+              compat: {
+                thinkingFormat: 'deepseek',
+                supportsReasoningEffort: true,
+                requiresReasoningContentOnAssistantMessages: true
+              }
             }
-          } : {})
+            : {})
         }
       })
     }
@@ -192,16 +194,16 @@ export const normalizeModelList = (models: PiModelEntry[] | undefined): PiModelE
 }
 
 export const defaultModelFor = (models: PiModelEntry[], preferred?: string): string | undefined => (
-  models.find(model => model.enabled && model.id === preferred)?.id
-    ?? models.find(model => model.enabled)?.id
+  models.find(model => model.enabled && model.id === preferred)?.id ??
+    models.find(model => model.enabled)?.id
 )
 
 export const defaultProviderFor = (
   providers: PiProviderEntry[],
   preferred?: string
 ): PiProviderEntry | undefined => (
-  providers.find(provider => provider.enabled && provider.id === preferred)
-    ?? providers.find(provider => provider.enabled)
+  providers.find(provider => provider.enabled && provider.id === preferred) ??
+    providers.find(provider => provider.enabled)
 )
 
 const normalizeProvider = (provider: PiProviderEntry): PiProviderEntry => {

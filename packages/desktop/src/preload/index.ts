@@ -9,6 +9,7 @@
 import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import pathe from 'pathe'
+import { INVOKE_CHANNELS, SEND_CHANNELS, SYNC_CHANNELS, EVENT_CHANNELS } from '@shared/ipcChannels'
 
 import type {
   IpcInvokeChannels,
@@ -26,10 +27,19 @@ type RendererEventListener<K extends keyof IpcMainEventChannels> = (
 const invoke = <K extends keyof IpcInvokeChannels>(
   channel: K,
   ...args: IpcInvokeChannels[K]['args']
-): Promise<IpcInvokeChannels[K]['ret']> => ipcRenderer.invoke(channel, ...args)
+): Promise<IpcInvokeChannels[K]['ret']> => {
+  assertChannel(INVOKE_CHANNELS, channel)
+  return ipcRenderer.invoke(channel, ...args)
+}
 
-const send = <K extends keyof IpcSendChannels>(channel: K, ...args: IpcSendChannels[K]): void =>
+const send = <K extends keyof IpcSendChannels>(channel: K, ...args: IpcSendChannels[K]): void => {
+  assertChannel(SEND_CHANNELS, channel)
   ipcRenderer.send(channel, ...args)
+}
+
+function assertChannel(allowed: ReadonlySet<string>, channel: unknown): void {
+  if (typeof channel !== 'string' || !allowed.has(channel)) throw new Error('Unknown IPC channel')
+}
 
 // One synchronous handshake at startup so the renderer can read platform/env
 // without an `await` from inside Vue computed properties etc.
@@ -40,14 +50,18 @@ const ipcWrapper = {
   sendSync: <K extends keyof IpcSyncChannels>(
     channel: K,
     ...args: IpcSyncChannels[K]['args']
-  ): IpcSyncChannels[K]['ret'] => ipcRenderer.sendSync(channel, ...args),
+  ): IpcSyncChannels[K]['ret'] => {
+    assertChannel(SYNC_CHANNELS, channel)
+    return ipcRenderer.sendSync(channel, ...args)
+  },
   invoke,
   on: <K extends keyof IpcMainEventChannels>(
     channel: K,
     listener: RendererEventListener<K>
   ): (() => void) => {
+    assertChannel(EVENT_CHANNELS, channel)
     const subscription = (event: IpcRendererEvent, ...args: unknown[]): void => {
-      listener(event, ...(args as IpcMainEventChannels[K]))
+      listener({} as IpcRendererEvent, ...(args as IpcMainEventChannels[K]))
     }
     ipcRenderer.on(channel, subscription)
     return () => ipcRenderer.removeListener(channel, subscription)
@@ -56,13 +70,15 @@ const ipcWrapper = {
     channel: K,
     listener: RendererEventListener<K>
   ): (() => void) => {
+    assertChannel(EVENT_CHANNELS, channel)
     const subscription = (event: IpcRendererEvent, ...args: unknown[]): void => {
-      listener(event, ...(args as IpcMainEventChannels[K]))
+      listener({} as IpcRendererEvent, ...(args as IpcMainEventChannels[K]))
     }
     ipcRenderer.once(channel, subscription)
     return () => ipcRenderer.removeListener(channel, subscription)
   },
   removeAllListeners: (channel: keyof IpcMainEventChannels | string): void => {
+    assertChannel(EVENT_CHANNELS, channel)
     ipcRenderer.removeAllListeners(channel as string)
   }
 }
@@ -91,7 +107,15 @@ const webFrameAPI = {
 }
 
 const webUtilsAPI = {
-  getPathForFile: (file: File): string => webUtils.getPathForFile(file)
+  getPathForFile: (file: File): string => {
+    const pathname = webUtils.getPathForFile(file)
+    // This private channel cannot be reached through the generic IPC bridge.
+    // Only Electron's native File handle may authorize a dropped file.
+    if (pathname && !ipcRenderer.sendSync('annotamd::native-file-drop', pathname)) {
+      throw new Error('Unable to authorize the dropped file')
+    }
+    return pathname
+  }
 }
 
 const windowControlAPI = {

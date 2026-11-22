@@ -1,16 +1,17 @@
 import type { Muya } from '../../../muya';
 import type { IRenderCursor } from '../../../selection/types';
+import type { PreviousHeadingNumber } from '../../../utils/headingNumber';
 import type AtxHeading from '../../commonMark/atxHeading';
 import { isKeyboardEvent } from '../../../utils';
 import {
     headingNumberValue,
     normalizeHeadingNumber,
     parseAtxHeadingNumber,
+
     replaceHeadingNumberValue,
     restartedHeadingNumber,
     standardizedHeadingNumber,
     suggestedHeadingNumber,
-    type PreviousHeadingNumber,
 } from '../../../utils/headingNumber';
 import Format from '../../base/format';
 import { ScrollPage } from '../../scrollPage';
@@ -34,7 +35,7 @@ function previousHeadingNumbers(heading: AtxHeading): PreviousHeadingNumber[] {
     return headings;
 }
 
-export interface HeadingNumberMenuState {
+export interface IHeadingNumberMenuState {
     canContinue: boolean;
     canRestart: boolean;
     continuation: string | null;
@@ -95,7 +96,7 @@ class AtxHeadingContent extends Format {
         return result;
     }
 
-    getHeadingNumberMenuState(): HeadingNumberMenuState | null {
+    getHeadingNumberMenuState(): IHeadingNumberMenuState | null {
         const headingNumber = parseAtxHeadingNumber(this.text);
         if (!headingNumber || !this.parent)
             return null;
@@ -223,3 +224,5 @@ class AtxHeadingContent extends Format {
 }
 
 export default AtxHeadingContent;
+
+export type HeadingNumberMenuState = IHeadingNumberMenuState;

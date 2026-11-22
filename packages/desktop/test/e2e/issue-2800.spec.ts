@@ -8,7 +8,7 @@
 // so the existing clamp at pre-migration editor engine/lib/selection/index.js did not
 // cover it.
 import { test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   launchWithMarkdown,
   placeCaretInEditor,

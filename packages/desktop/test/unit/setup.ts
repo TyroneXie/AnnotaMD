@@ -1,3 +1,5 @@
+export {}
+
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>()
 

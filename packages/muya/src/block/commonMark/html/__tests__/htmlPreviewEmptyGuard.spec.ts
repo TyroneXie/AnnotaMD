@@ -26,7 +26,7 @@ describe('isEmptyHtmlBlock (#3821)', () => {
     });
 });
 
-describe('GitHub-style details blocks', () => {
+describe('gitHub-style details blocks', () => {
     it('renders Markdown in the details body while preserving the summary', () => {
         const doc = new DOMParser().parseFromString(`
             <details>

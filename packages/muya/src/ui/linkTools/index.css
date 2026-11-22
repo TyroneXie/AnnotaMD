@@ -4,7 +4,9 @@
     background: var(--float-bg-color);
     border: 1px solid var(--editor-color-10);
     border-radius: 8px;
-    box-shadow: 0 6px 18px rgb(31 35 41 / 12%), 0 1px 4px rgb(31 35 41 / 8%);
+    box-shadow:
+        0 6px 18px rgb(31 35 41 / 12%),
+        0 1px 4px rgb(31 35 41 / 8%);
 }
 
 .mu-link-tools {
@@ -44,7 +46,13 @@
 
 .mu-link-tools .link-edit-label {
     color: #1f2329;
-    font: 14px/20px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font:
+        14px/20px -apple-system,
+        BlinkMacSystemFont,
+        'SF Pro Text',
+        'Segoe UI',
+        'PingFang SC',
+        sans-serif;
 }
 
 .mu-link-tools .link-edit-input {
@@ -53,7 +61,13 @@
     height: 40px;
     padding: 0 12px;
     color: #1f2329;
-    font: 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font:
+        14px/40px -apple-system,
+        BlinkMacSystemFont,
+        'SF Pro Text',
+        'Segoe UI',
+        'PingFang SC',
+        sans-serif;
     background: #fff;
     border: 1px solid #bbbfc4;
     border-radius: 6px;
@@ -69,7 +83,13 @@
     height: 40px;
     padding: 0;
     color: #fff;
-    font: 500 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font:
+        500 14px/40px -apple-system,
+        BlinkMacSystemFont,
+        'SF Pro Text',
+        'Segoe UI',
+        'PingFang SC',
+        sans-serif;
     background: #3370ff;
     border: 0;
     border-radius: 6px;
@@ -270,7 +290,9 @@
     background: var(--float-bg-color);
     border: 1px solid var(--editor-color-10);
     border-radius: 8px;
-    box-shadow: 0 8px 22px rgb(31 35 41 / 14%), 0 2px 6px rgb(31 35 41 / 8%);
+    box-shadow:
+        0 8px 22px rgb(31 35 41 / 14%),
+        0 2px 6px rgb(31 35 41 / 8%);
 }
 
 .mu-link-tools .link-view-menu {

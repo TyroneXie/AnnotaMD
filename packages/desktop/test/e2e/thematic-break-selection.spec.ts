@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { getMarkdownContent, launchWithMarkdown } from './helpers'
 
 test.describe('Thematic break block selection', () => {

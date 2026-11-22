@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, clickMenuById, waitForEditor } from './helpers'
 
 // Build a long document with many top-level headings so the editor content

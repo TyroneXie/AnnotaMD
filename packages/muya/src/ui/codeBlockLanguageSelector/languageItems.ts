@@ -9,7 +9,7 @@ export const MORE_LANGUAGES_ITEM_NAME = '__more-languages__';
 
 export type LanguageCategory = 'plain' | 'markup' | 'query' | 'config' | 'code';
 
-export interface LanguagePickerItem {
+export interface ILanguagePickerItem {
     name: string;
     title?: string;
     kind: 'language' | 'more';
@@ -78,8 +78,8 @@ export function languageCategory(name: string): LanguageCategory {
 export function buildLanguagePickerItems(
     expanded: boolean,
     currentLanguage = '',
-): LanguagePickerItem[] {
-    const common: LanguagePickerItem[] = listCommonLanguages()
+): ILanguagePickerItem[] {
+    const common: ILanguagePickerItem[] = listCommonLanguages()
         .map(item => ({ ...item, kind: 'language' as const }));
     const currentLabel = languageDisplayName(currentLanguage);
     const currentIsCommon = common.some(item => item.name === currentLanguage
@@ -103,3 +103,5 @@ export function buildLanguagePickerItems(
         },
     ];
 }
+
+export type LanguagePickerItem = ILanguagePickerItem;

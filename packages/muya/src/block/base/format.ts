@@ -49,14 +49,14 @@ function imageWithAttribute(attrs: Record<string, string | null>, name: string, 
     return `<img ${attributes.join(' ')} />`;
 }
 
-interface SmartLinkViewState {
+interface ISmartLinkViewState {
     href: string;
     linkView: boolean;
     icon?: string;
     loading?: boolean;
 }
 
-const smartLinkViews = new WeakMap<object, Map<string, SmartLinkViewState>>();
+const smartLinkViews = new WeakMap<object, Map<string, ISmartLinkViewState>>();
 
 const INLINE_STYLE_PROPERTIES = {
     text_color: 'color',
@@ -327,7 +327,7 @@ class Format extends Content {
     private _getSmartLinkView(
         range: { start: number; end: number } | null | undefined,
         href: string,
-    ): SmartLinkViewState | null {
+    ): ISmartLinkViewState | null {
         if (!range || !this.parent)
             return null;
         return smartLinkViews.get(this.muya)?.get(this._smartLinkViewKey(range, href)) ?? null;

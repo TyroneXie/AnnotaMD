@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export default async function verifyPackedPiRuntime({ packager, appOutDir }) {
+export default async function verifyPackedPiRuntime ({ packager, appOutDir }) {
   const resources = packager.getResourcesDir(appOutDir)
   const requiredFiles = [
     'pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js',

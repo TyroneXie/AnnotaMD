@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import bus from '@/bus'

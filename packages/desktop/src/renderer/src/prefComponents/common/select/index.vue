@@ -16,7 +16,12 @@
           @click="handleMoreClick"
         />
       </div>
-      <div v-if="notes" class="notes">{{ notes }}</div>
+      <div
+        v-if="notes"
+        class="notes"
+      >
+        {{ notes }}
+      </div>
     </div>
     <el-select
       v-model="selectValue"
@@ -27,7 +32,10 @@
       :placeholder="placeholder"
       @change="select"
     >
-      <template v-if="$slots.prefix" #prefix>
+      <template
+        v-if="$slots.prefix"
+        #prefix
+      >
         <slot name="prefix" />
       </template>
       <el-option
@@ -36,7 +44,12 @@
         :label="item.label"
         :value="item.value"
       >
-        <slot name="option" :item="item">{{ item.label }}</slot>
+        <slot
+          name="option"
+          :item="item"
+        >
+          {{ item.label }}
+        </slot>
       </el-option>
     </el-select>
     <div

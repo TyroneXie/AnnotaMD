@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, clickMenuById, enterSourceMode } from './helpers'
 
 // #2372 — in source-code mode the dark themes (railscasts) rendered the

@@ -33,7 +33,7 @@ describe('AnnotaMD Agent document MCP boundary', () => {
   it('does not expose shell or general file mutation methods', () => {
     const mcp = source('tools/annotamd-mcp/src/index.ts')
 
-    expect(mcp).toContain("if (agentScopeToken) {")
+    expect(mcp).toContain('if (agentScopeToken) {')
     expect(mcp).toContain("registerTool('annotamd_edit_document'")
     expect(mcp).toContain("registerTool('annotamd_replace_document'")
     expect(mcp).not.toMatch(/registerTool\('(?:write_file|shell|execute_command)'/)

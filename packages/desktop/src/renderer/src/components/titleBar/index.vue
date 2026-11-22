@@ -342,7 +342,6 @@ div.title > span {
   font-weight: 600;
 }
 
-
 .active .save-dot {
   margin-right: 0.25rem;
   width: 8px;

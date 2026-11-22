@@ -15,6 +15,9 @@ importers:
       '@babel/eslint-parser':
         specifier: ^7.29.7
         version: 7.29.7(@babel/core@7.29.6)(eslint@9.39.4(jiti@2.7.0))
+      '@eslint/js':
+        specifier: 9.39.4
+        version: 9.39.4
       '@iconify-json/bi':
         specifier: ^1.2.7
         version: 1.2.7
@@ -60,6 +63,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^10.9.2
         version: 10.9.2(@stylistic/eslint-plugin@5.10.0(eslint@9.39.4(jiti@2.7.0)))(@typescript-eslint/parser@8.61.1(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.4(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@9.39.4(jiti@2.7.0)))
+      globals:
+        specifier: 17.6.0
+        version: 17.6.0
       license-checker:
         specifier: ^25.0.1
         version: 25.0.1
@@ -148,7 +154,7 @@ importers:
         specifier: ^11.0.2
         version: 11.0.2
       electron-updater:
-        specifier: ^6.8.9
+        specifier: 6.8.9
         version: 6.8.9
       electron-window-state:
         specifier: ^5.0.3
@@ -199,7 +205,7 @@ importers:
         specifier: ^0.17.0
         version: 0.17.0
       keytar:
-        specifier: ^7.9.0
+        specifier: 7.9.0
         version: 7.9.0
       lodash:
         specifier: ^4.18.1
@@ -396,7 +402,7 @@ importers:
         specifier: 1.18.0
         version: 1.18.0
       native-keymap:
-        specifier: ^3.3.9
+        specifier: 3.3.9
         version: 3.3.9
 
   packages/muya:

@@ -17,7 +17,7 @@
 // `annotamd::handle-renderer-error` IPC events (captured via the helper installed
 // by launchElectron); if they start failing, the offset clamp has regressed.
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   expectNoRendererErrors,
   clearRendererErrors,

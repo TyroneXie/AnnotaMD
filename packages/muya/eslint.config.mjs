@@ -119,6 +119,10 @@ export default antfu(
             // legacy muyajs engine; not subject to our lint/format rules.
             'src/utils/diagram/sequence/sequence-diagram-snap.js',
             'src/utils/diagram/sequence/sequence-diagram.css',
+            // Generated SVG maps retain deterministic JSON serialization;
+            // TypeScript and the icon tests validate their contents.
+            'src/ui/generatedOfficialIconThemes.ts',
+            'src/ui/codeBlockLanguageSelector/generatedLanguageIcons.ts',
         ],
     },
     {

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from 'playwright'
+import type { Page } from '@playwright/test'
 import { getMarkdownContent, launchWithMarkdown } from './helpers'
 
 const selectCodeText = async(page: Page, start: number, end: number) => {
@@ -7,8 +7,8 @@ const selectCodeText = async(page: Page, start: number, end: number) => {
     const root = document.querySelector('.editor-component') as HTMLElement | null
     const target = root?.querySelector<HTMLElement>('.mu-code-block .mu-codeblock-content')
     if (!root || !target) throw new Error('code block is unavailable')
-    const text = [...target.childNodes].find((node) => node.nodeType === Node.TEXT_NODE) as Text | undefined
-      ?? document.createTreeWalker(target, NodeFilter.SHOW_TEXT).nextNode() as Text | null
+    const text = [...target.childNodes].find((node) => node.nodeType === Node.TEXT_NODE) as Text | undefined ??
+      document.createTreeWalker(target, NodeFilter.SHOW_TEXT).nextNode() as Text | null
     if (!text) throw new Error('code block has no text node')
     const range = document.createRange()
     range.setStart(text, start)
@@ -32,8 +32,7 @@ test('code selection exposes rich toolbar and applies bold in fenced source', as
     await selectCodeText(page, 0, 5)
     const toolbar = page.locator('.mu-format-picker')
     await expect(toolbar).toBeVisible()
-    for (const item of ['strong', 'del', 'em', 'u', 'color_palette', 'annotamd_comment'])
-      await expect(toolbar.locator(`li.${item}`)).toBeVisible()
+    for (const item of ['strong', 'del', 'em', 'u', 'color_palette', 'annotamd_comment']) { await expect(toolbar.locator(`li.${item}`)).toBeVisible() }
 
     await toolbar.locator('li.strong').click()
     await expect(page.locator('.mu-codeblock-content strong')).toContainText('plain')

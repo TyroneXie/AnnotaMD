@@ -2,11 +2,11 @@ import type { Muya } from '../../../muya';
 import type { IDiagramMeta, IDiagramState } from '../../../state/types';
 import type { TBlockPath } from '../../types';
 import { CopyType } from '../../../clipboard/types';
+import { createActionIconElement } from '../../../ui/actionIcons';
 import logger from '../../../utils/logger';
 import { loadLanguage } from '../../../utils/prism';
 import Parent from '../../base/parent';
 import { ScrollPage } from '../../scrollPage';
-import { createActionIconElement } from '../../../ui/actionIcons';
 import '../../../ui/actionIcons.css';
 
 const debug = logger('diagram:');

@@ -27,7 +27,7 @@ describe('icon-only block control tooltips', () => {
     it('uses the shared black tooltip with near-immediate feedback', () => {
         const css = read('../tooltip/index.css');
         expect(css).toMatch(/\.mu-icon-tooltip::after\s*\{[^}]*color:\s*#fff;[^}]*background:\s*#1f2329;/);
-        expect(css).toContain('transition: opacity 50ms linear, transform 50ms linear');
+        expect(css).toMatch(/transition:\s*opacity 50ms linear,\s*transform 50ms linear/);
     });
 
     it.each([
@@ -54,8 +54,8 @@ describe('icon-only block control tooltips', () => {
         const themes = read('../iconThemes.ts');
         const css = read('../paragraphFrontButton/index.css');
         expect(source).toContain('renderActionIcon');
-        expect(config).toContain("case 'block-quote': return 'quote'");
-        expect(themes).toContain("'quote':");
+        expect(config).toContain('case \'block-quote\': return \'quote\'');
+        expect(themes).toContain('\'quote\':');
         expect(css).toMatch(/\.mu-block-label\.quote \.mu-block-label-glyph\s*\{[^}]*color:\s*#3370ff;/);
     });
 

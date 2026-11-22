@@ -22,7 +22,7 @@ describe('cleanupMountedAnnotaMdInstallers', () => {
       true,
       '/private/var/folders/aa/AppTranslocation/123/d/AnnotaMD.app/Contents/MacOS/AnnotaMD'
     ]
-  ] as const)('does nothing for an ineligible launch', async (platform, isPackaged, executablePath) => {
+  ] as const)('does nothing for an ineligible launch', async(platform, isPackaged, executablePath) => {
     const dependencies = createDependencies()
 
     await expect(
@@ -34,7 +34,7 @@ describe('cleanupMountedAnnotaMdInstallers', () => {
     expect(dependencies.readdir).not.toHaveBeenCalled()
   })
 
-  it('unregisters and detaches only mounted AnnotaMD installer apps', async () => {
+  it('unregisters and detaches only mounted AnnotaMD installer apps', async() => {
     const dependencies = createDependencies()
     dependencies.readdir.mockResolvedValue([
       directoryEntry('AnnotaMD 2.10.1-arm64'),
@@ -70,7 +70,7 @@ describe('cleanupMountedAnnotaMdInstallers', () => {
     ])
   })
 
-  it('ignores a matching volume without an AnnotaMD app', async () => {
+  it('ignores a matching volume without an AnnotaMD app', async() => {
     const dependencies = createDependencies()
     dependencies.readdir.mockResolvedValue([directoryEntry('AnnotaMD Backup')])
     dependencies.access.mockRejectedValue(new Error('missing'))

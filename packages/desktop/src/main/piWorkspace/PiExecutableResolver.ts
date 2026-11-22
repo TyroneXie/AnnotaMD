@@ -210,11 +210,11 @@ export const discoverExecutableDirectories = async(
   const platform = options.platform ?? process.platform
   const environment = options.environment ?? process.env
   const pathApi = platform === 'win32' ? win32 : posix
-  const pathValue = options.pathValue
-    ?? environment.PATH
-    ?? environment.Path
-    ?? environment.path
-    ?? ''
+  const pathValue = options.pathValue ??
+    environment.PATH ??
+    environment.Path ??
+    environment.path ??
+    ''
 
   return uniquePaths([
     ...pathEntries(pathValue, platform),
@@ -263,11 +263,11 @@ export const buildPiExecutableCandidates = (
   const environment = options.environment ?? process.env
   const pathApi = platform === 'win32' ? win32 : posix
   const explicitPath = environment.ANNOTAMD_PI_PATH?.trim()
-  const pathValue = options.pathValue
-    ?? environment.PATH
-    ?? environment.Path
-    ?? environment.path
-    ?? ''
+  const pathValue = options.pathValue ??
+    environment.PATH ??
+    environment.Path ??
+    environment.path ??
+    ''
   const directories = uniquePaths([
     ...pathEntries(pathValue, platform),
     ...commonDirectories(
@@ -429,7 +429,7 @@ export const buildManagedPiCliCandidates = (
   return [pathApi.normalize(pathApi.join(packageRoot, ...PI_BUNDLED_CLI_PATH))]
 }
 
-const readPackageVersion = async (filePath: string): Promise<string | undefined> => {
+const readPackageVersion = async(filePath: string): Promise<string | undefined> => {
   try {
     const parsed = JSON.parse(await readFile(filePath, 'utf8')) as { version?: unknown }
     return typeof parsed.version === 'string' ? parsePiVersion(parsed.version) : undefined

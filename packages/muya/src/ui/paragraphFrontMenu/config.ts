@@ -44,8 +44,10 @@ function sectionHeadings(block: Parent): Parent[] {
 
 function hasPreviousPeerHeading(block: Parent): boolean {
     const level = headingLevel(block);
+    if (level == null)
+        return false;
     let current = block.prev as Parent | null;
-    while (current && level != null) {
+    while (current) {
         const currentLevel = headingLevel(current);
         if (currentLevel != null && currentLevel <= level)
             return currentLevel === level;
@@ -56,8 +58,10 @@ function hasPreviousPeerHeading(block: Parent): boolean {
 
 function hasNextPeerHeading(block: Parent): boolean {
     const level = headingLevel(block);
+    if (level == null)
+        return false;
     let current = block.next as Parent | null;
-    while (current && level != null) {
+    while (current) {
         const currentLevel = headingLevel(current);
         if (currentLevel != null && currentLevel <= level)
             return currentLevel === level;

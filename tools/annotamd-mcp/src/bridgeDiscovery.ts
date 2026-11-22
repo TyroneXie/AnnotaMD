@@ -40,8 +40,8 @@ export const getBridgeFileCandidates = (
 const parseBridgeConfig = (value: string): BridgeConfig | null => {
   try {
     const config = JSON.parse(value) as Partial<BridgeConfig>
-    return Number.isInteger(config.port) && Number(config.port) > 0 && typeof config.token === 'string'
-      && config.token.length > 0
+    return Number.isInteger(config.port) && Number(config.port) > 0 && typeof config.token === 'string' &&
+      config.token.length > 0
       ? { port: Number(config.port), token: config.token }
       : null
   } catch {

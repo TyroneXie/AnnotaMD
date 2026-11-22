@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, setSourceMarkdown, waitForMenuReady } from './helpers'
 
 // PARITY SCOREBOARD — gap PG1 (file PG01), desktop e2e half.

@@ -189,6 +189,8 @@ export class ScrollPage extends Parent {
         if (!paragraph) {
             this.muya.editor.history.cutoff();
             paragraph = ScrollPage.loadBlock('paragraph').create(this.muya, { name: 'paragraph', text: '' });
+            if (!paragraph)
+                return;
             if (next)
                 this.insertBefore(paragraph, next, 'user');
             else

@@ -134,8 +134,8 @@ export const useAgentTurnsStore = defineStore('agentTurns', {
           this.activeByComment = { ...this.activeByComment, [event.commentId]: event }
         }
       )
-      window.addEventListener('focus', () => void this.refreshReadiness())
-      window.addEventListener('annotamd:ai-selection-changed', () => void this.refreshReadiness())
+      window.addEventListener('focus', () => this.refreshReadiness())
+      window.addEventListener('annotamd:ai-selection-changed', () => this.refreshReadiness())
     },
 
     async stop(commentId: string): Promise<boolean> {

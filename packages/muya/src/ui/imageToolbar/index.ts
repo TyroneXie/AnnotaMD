@@ -19,15 +19,15 @@ import './index.css';
 
 function imageActionIcon(type: Icon['type']): ActionIconName {
     const iconsByType: Record<Icon['type'], ActionIconName> = {
-        edit: 'edit',
-        copy: 'copy',
-        preview: 'fullscreen',
-        inline: 'inline-image',
+        'edit': 'edit',
+        'copy': 'copy',
+        'preview': 'fullscreen',
+        'inline': 'inline-image',
         'side-by-side': 'diagram-view',
-        left: 'align-left',
-        center: 'align-center',
-        right: 'align-right',
-        delete: 'delete',
+        'left': 'align-left',
+        'center': 'align-center',
+        'right': 'align-right',
+        'delete': 'delete',
     };
     return iconsByType[type];
 }
@@ -134,8 +134,8 @@ export class ImageToolBar extends BaseFloat {
                 itemSelector,
                 {
                     attrs: {
-                        role: 'button',
-                        tabindex: '0',
+                        'role': 'button',
+                        'tabindex': '0',
                         'aria-label': i18n.t(i.tooltip),
                         'data-tooltip': i18n.t(i.tooltip),
                         ...(i.type === 'inline' || i.type === 'left' || i.type === 'center' || i.type === 'right'

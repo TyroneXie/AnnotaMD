@@ -52,10 +52,10 @@ const hashContent = (content: string): string => {
     first = Math.imul(first ^ code, 2654435761)
     second = Math.imul(second ^ code, 1597334677)
   }
-  first = Math.imul(first ^ (first >>> 16), 2246822507)
-    ^ Math.imul(second ^ (second >>> 13), 3266489909)
-  second = Math.imul(second ^ (second >>> 16), 2246822507)
-    ^ Math.imul(first ^ (first >>> 13), 3266489909)
+  first = Math.imul(first ^ (first >>> 16), 2246822507) ^
+    Math.imul(second ^ (second >>> 13), 3266489909)
+  second = Math.imul(second ^ (second >>> 16), 2246822507) ^
+    Math.imul(first ^ (first >>> 13), 3266489909)
   return `${second >>> 0}:${first >>> 0}`
 }
 

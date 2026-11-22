@@ -81,7 +81,7 @@ describe('#2505 — aligned/edited images emit a self-closing <img/> (JSX-safe)'
         expect(imageEl).not.toBeNull();
 
         block.updateImage(getImageInfo(imageEl!), 'width', '420');
-        expect(block.text).toMatch(/<img\b[^>]*width="420"[^>]*\/>/);
+        expect(block.text).toMatch(/<img\s[^>]*width="420"[^>]*\/>/);
 
         const reopened = bootMuya(`${block.text}\n`);
         const reopenedImage = reopened.domNode.querySelector<HTMLElement>('[data-raw]');

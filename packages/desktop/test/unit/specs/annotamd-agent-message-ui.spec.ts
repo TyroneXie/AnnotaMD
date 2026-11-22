@@ -33,6 +33,7 @@ describe('Agent message presentation', () => {
     expect(preference).toContain(':min="10"')
     expect(preference).toContain(':max="18"')
     expect(workspace).toContain(':style="agentWorkspaceStyle"')
+    // eslint-disable-next-line no-template-curly-in-string
     expect(workspace).toContain("'--annotamd-agent-font-size': `${agentFontSize.value}px`")
     expect(timeline).toMatch(
       /\.annotamd-agent-message-content\s*\{[^}]*font-size:\s*var\(--annotamd-agent-font-size,\s*12px\);/s
@@ -164,7 +165,7 @@ describe('Agent message presentation', () => {
     expect(timeline).toContain("activity.message.status === 'failed'")
     expect(timeline).toContain('toolDisplayName(activity.message.toolName)')
     expect(timeline).toContain("return t('annotamd.agentWorkspace.toolActivityComplete')")
-    expect(timeline).toContain("message.toolName === AI_REASONING_MESSAGE_TOOL")
+    expect(timeline).toContain('message.toolName === AI_REASONING_MESSAGE_TOOL')
     expect(timeline).toContain("activity.message.status === 'failed' && activity.message.content")
   })
 })

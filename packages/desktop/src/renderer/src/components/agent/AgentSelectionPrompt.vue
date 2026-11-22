@@ -8,7 +8,9 @@
       :aria-label="t('title')"
     >
       <div class="selection-context">
-        <blockquote :title="context.selectedText">{{ context.selectedText }}</blockquote>
+        <blockquote :title="context.selectedText">
+          {{ context.selectedText }}
+        </blockquote>
         <button
           type="button"
           class="icon-button close-button"
@@ -18,7 +20,10 @@
           <Close />
         </button>
       </div>
-      <form v-if="!applied" @submit.prevent="submit">
+      <form
+        v-if="!applied"
+        @submit.prevent="submit"
+      >
         <textarea
           ref="input"
           v-model="instruction"
@@ -29,8 +34,17 @@
           @keydown.enter="onEnter"
         />
         <div class="prompt-actions">
-          <span v-if="running" role="status">{{ t('running') }}</span>
-          <button v-if="running" type="button" @click="cancel">{{ tCommon('common.cancel') }}</button>
+          <span
+            v-if="running"
+            role="status"
+          >{{ t('running') }}</span>
+          <button
+            v-if="running"
+            type="button"
+            @click="cancel"
+          >
+            {{ tCommon('common.cancel') }}
+          </button>
           <button
             v-else
             type="submit"
@@ -43,15 +57,33 @@
           </button>
         </div>
       </form>
-      <p v-if="error" role="alert" class="prompt-error">{{ error }}</p>
-      <div v-if="result" class="prompt-result" aria-live="polite">
+      <p
+        v-if="error"
+        role="alert"
+        class="prompt-error"
+      >
+        {{ error }}
+      </p>
+      <div
+        v-if="result"
+        class="prompt-result"
+        aria-live="polite"
+      >
         <span>{{ t('reply') }}</span>
-        <div class="result-text">{{ result.text }}</div>
-        <span v-if="applied" class="result-status">
+        <div class="result-text">
+          {{ result.text }}
+        </div>
+        <span
+          v-if="applied"
+          class="result-status"
+        >
           <Check />
           {{ t('applied') }}
         </span>
-        <div v-else-if="result.kind === 'replacement'" class="result-text">
+        <div
+          v-else-if="result.kind === 'replacement'"
+          class="result-text"
+        >
           {{ result.replacementMarkdown || t('remove') }}
         </div>
       </div>

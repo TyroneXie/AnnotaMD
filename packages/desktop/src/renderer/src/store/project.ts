@@ -273,7 +273,7 @@ export const useProjectStore = defineStore('project', () => {
         break
       default:
         if (window.electron?.process?.env?.NODE_ENV === 'development') {
-          console.log(`Unknown directory watch type: "${type}"`)
+          console.debug(`Unknown directory watch type: "${type}"`)
         }
         break
     }

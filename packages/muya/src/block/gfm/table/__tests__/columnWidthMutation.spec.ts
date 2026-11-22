@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import type Table from '../index';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { Muya } from '../../../../muya';
 import { applyTableColumnWidths } from '../../../../ui/tableDragBar';
 

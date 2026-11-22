@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, focusEditor, enterSourceMode, exitSourceMode } from './helpers'
 
 // #3531 — Paragraph and Format menu commands act on the hidden WYSIWYG engine,

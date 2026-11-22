@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
-import type AtxHeadingContent from '../../../block/content/atxHeadingContent';
 import type Parent from '../../../block/base/parent';
+import type AtxHeadingContent from '../../../block/content/atxHeadingContent';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../../../muya';
 import { HeadingNumberMenu } from '../index';

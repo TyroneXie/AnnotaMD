@@ -1,5 +1,5 @@
+import { readSource as readFileSync } from '../readSource'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   ANNOTAMD_COMMENT_COMPOSER_ANCHOR_ID,
@@ -140,7 +140,8 @@ describe('AnnotaMD selection comment highlights', () => {
     const root = document.createElement('div')
     root.append(contentBlock([0, 0], 'first and second'))
     const HighlightClass = class {
-      constructor(..._ranges: Range[]) {}
+      ranges: Range[]
+      constructor(...ranges: Range[]) { this.ranges = ranges }
     }
     const registry = { delete: vi.fn(), set: vi.fn() }
     vi.stubGlobal('Highlight', HighlightClass)

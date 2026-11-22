@@ -104,7 +104,10 @@ const createRuntime = (
           data: {
             models: [
               {
-                provider: 'test', id: 'model', name: 'Test model', reasoning: true,
+                provider: 'test',
+                id: 'model',
+                name: 'Test model',
+                reasoning: true,
                 thinkingLevelMap: { minimal: null, medium: null, max: 'max' }
               },
               { provider: 'test', id: 'second', reasoning: false }
@@ -329,7 +332,7 @@ describe('PiRpcProcessManager', () => {
     const envelope = {
       v: 1,
       kind: 'proposal',
-      content: 'line one\nline two line three'
+      content: 'line one\nline two\u2028line three'
     }
     expect(decodePiBridgeEnvelope(encodePiBridgeEnvelope(envelope))).toEqual(envelope)
     expect(() => decodePiBridgeEnvelope('plain text')).toThrow(PiRpcCompatibilityError)

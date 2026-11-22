@@ -14,6 +14,7 @@ import type {
 import { AiStore } from 'main_renderer/ai/AiStore'
 import type { AiSecretStore } from 'main_renderer/ai/AiSecretStore'
 import { AiWorkspaceService } from 'main_renderer/ai/AiWorkspaceService'
+import type { AgentDocumentScopeInput } from 'main_renderer/agentDocumentBridge/AgentDocumentScopeService'
 
 class Secrets implements AiSecretStore {
   private readonly values = new Map<string, string>()
@@ -23,6 +24,7 @@ class Secrets implements AiSecretStore {
 }
 
 class FakeHost implements AiHost {
+  resolveApproval?: AiHost['resolveApproval']
   readonly providers = ['openai-compatible', 'codex'] as const
   readonly kind: 'api' | 'cli'
   requests: AiHostRunRequest[] = []
@@ -34,9 +36,11 @@ class FakeHost implements AiHost {
       effortLevels: ['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra']
     }]
   }
+
   async testConnection(_config: AiHostConfig): Promise<AiHostConnectionResult> {
     return { success: true, message: 'ok' }
   }
+
   async run(request: AiHostRunRequest, emit: (event: AiHostEvent) => void): Promise<string> {
     this.requests.push(request)
     emit({ type: 'run-started', runId: request.runId, conversationId: request.conversationId })
@@ -44,6 +48,7 @@ class FakeHost implements AiHost {
     emit({ type: 'run-finished', runId: request.runId })
     return 'Done'
   }
+
   async stop(_runId: string): Promise<boolean> { return true }
   dispose(): void {}
 }
@@ -60,9 +65,9 @@ const setup = (options: {
   const cliHost = new FakeHost('cli')
   const events: AiWorkspaceEvent[] = []
   const scopes = {
-    issued: [] as Array<Record<string, unknown>>,
+    issued: [] as AgentDocumentScopeInput[],
     revoked: [] as string[],
-    issueScope(input: Record<string, unknown>) {
+    issueScope(input: AgentDocumentScopeInput) {
       this.issued.push(input)
       return 'scope-1'
     },
@@ -125,8 +130,14 @@ describe('AnnotaMD AI workspace service', () => {
       instruction: 'Rewrite the excerpt',
       modelId: 'endpoint/other',
       context: {
-        documentName: 'draft.md', blockPath: '2/0', startOffset: 4, endOffset: 7,
-        selectedText: 'old', selectedMarkdown: 'old', before: 'The ', after: ' draft.'
+        documentName: 'draft.md',
+        blockPath: '2/0',
+        startOffset: 4,
+        endOffset: 7,
+        selectedText: 'old',
+        selectedMarkdown: 'old',
+        before: 'The ',
+        after: ' draft.'
       }
     }
     vi.spyOn(cliHost, 'run').mockImplementationOnce(async(input) => {
@@ -150,7 +161,8 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.sendAndWait(owner, {
       text: 'Review the draft',
-      selection: { mode: 'agent', templateIds: [] },
+      workspacePath: '',
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
       documentUri: 'untitled://doc-1',
@@ -171,7 +183,7 @@ describe('AnnotaMD AI workspace service', () => {
       isDefault: true
     })
     const conversation = service.createConversation(owner, {
-      title: 'Old conversation', mode: 'agent', configId: legacy.id, templateIds: []
+      title: 'Old conversation', mode: 'agent', permissionMode: 'request' as const, configId: legacy.id, templateIds: []
     })
     expect(await service.listConfigs(owner)).toEqual([])
     readiness = { status: 'ready', modelId: 'endpoint/model', modelIds: ['endpoint/model'] }
@@ -181,7 +193,8 @@ describe('AnnotaMD AI workspace service', () => {
     expect(snapshot.conversations).toContainEqual(conversation)
     await expect(service.send(owner, {
       text: 'Try the old config',
-      selection: { mode: 'agent', configId: legacy.id, templateIds: [] }
+      workspacePath: '',
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: legacy.id, templateIds: [] }
     })).rejects.toThrow('This Agent configuration is unavailable')
     readiness = { status: 'missing', setupIssue: 'provider', modelIds: [] }
     await service.notifyPiSettingsChanged()
@@ -193,7 +206,7 @@ describe('AnnotaMD AI workspace service', () => {
   it('renames a conversation and emits the persisted update', async() => {
     const { service, events, owner } = setup()
     const conversation = service.createConversation(owner, {
-      title: 'Old title', mode: 'agent', templateIds: []
+      title: 'Old title', mode: 'agent', permissionMode: 'request' as const, templateIds: []
     })
 
     const renamed = service.renameConversation(owner, conversation.id, '  New   title  ')
@@ -229,7 +242,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.sendAndWait(owner, {
       text: 'Review these references',
-      selection: { mode: 'agent', templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -265,7 +278,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.sendAndWait(owner, {
       text: 'Review this project',
-      selection: { mode: 'agent', templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       workspacePath: '/workspace/project'
     })
 
@@ -289,7 +302,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.sendAndWait(owner, {
       text: 'Summarize the current document',
-      selection: { mode: 'agent', templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       workspacePath: '/workspace/project',
       documentHandleId: 'handle-1',
       documentId: 'document-1',
@@ -314,7 +327,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const completion = await service.sendAndWait(owner, {
       text: 'Comment task',
-      selection: { mode: 'agent', templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -347,7 +360,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const result = await service.send(owner, {
       text: 'Hello',
-      selection: { mode: 'ask', configId: config.id, templateIds: [] },
+      selection: { mode: 'ask', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: ''
     }, 9)
     await vi.waitFor(async() => {
@@ -392,7 +405,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     const result = await service.send(owner, {
       text: 'Review the document',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace'
     })
     await vi.waitFor(async() => {
@@ -427,8 +440,12 @@ describe('AnnotaMD AI workspace service', () => {
         type: 'tool-started', runId: request.runId, toolCallId: 'tool-1', toolName: 'readDocument'
       })
       emit({
-        type: 'tool-finished', runId: request.runId, toolCallId: 'tool-1',
-        toolName: 'readDocument', output: 'Document read', isError: false
+        type: 'tool-finished',
+        runId: request.runId,
+        toolCallId: 'tool-1',
+        toolName: 'readDocument',
+        output: 'Document read',
+        isError: false
       })
       emit({ type: 'text-delta', runId: request.runId, delta: 'The review is complete.' })
       now = 3_500
@@ -438,7 +455,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.send(owner, {
       text: 'Review the document',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace'
     })
     await vi.waitFor(async() => {
@@ -477,7 +494,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await service.send(owner, {
       text: 'Review the document',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace'
     })
     await vi.waitFor(async() => {
@@ -509,7 +526,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const first = await service.send(owner, {
       text: 'First',
-      selection: { mode: 'ask', configId: config.id, templateIds: ['template-1'] },
+      selection: { mode: 'ask', permissionMode: 'request' as const, configId: config.id, templateIds: ['template-1'] },
       workspacePath: '/workspace/one'
     })
     await vi.waitFor(() => expect(apiHost.requests).toHaveLength(1))
@@ -520,7 +537,7 @@ describe('AnnotaMD AI workspace service', () => {
     const continued = await service.send(owner, {
       conversationId: first.conversationId,
       text: 'Second',
-      selection: { mode: 'ask', configId: config.id, templateIds: ['template-1'] },
+      selection: { mode: 'ask', permissionMode: 'request' as const, configId: config.id, templateIds: ['template-1'] },
       workspacePath: '/workspace/one'
     })
     await vi.waitFor(() => expect(apiHost.requests).toHaveLength(2))
@@ -531,7 +548,7 @@ describe('AnnotaMD AI workspace service', () => {
     const forked = await service.send(owner, {
       conversationId: first.conversationId,
       text: 'Third',
-      selection: { mode: 'ask', configId: config.id, templateIds: ['template-1'] },
+      selection: { mode: 'ask', permissionMode: 'request' as const, configId: config.id, templateIds: ['template-1'] },
       workspacePath: '/workspace/two'
     })
     await vi.waitFor(() => expect(apiHost.requests).toHaveLength(3))
@@ -574,6 +591,7 @@ describe('AnnotaMD AI workspace service', () => {
     const conversation = service.createConversation(owner, {
       title: 'New conversation',
       mode: 'ask',
+      permissionMode: 'request' as const,
       configId: config.id,
       templateIds: []
     })
@@ -581,7 +599,7 @@ describe('AnnotaMD AI workspace service', () => {
     await service.send(owner, {
       conversationId: conversation.id,
       text: 'First prompt becomes the title\nMore detail',
-      selection: { mode: 'ask', configId: config.id, templateIds: [] },
+      selection: { mode: 'ask', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: ''
     })
     await vi.waitFor(async() => {
@@ -604,7 +622,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const result = await service.send(owner, {
       text: 'Edit it',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -667,7 +685,7 @@ describe('AnnotaMD AI workspace service', () => {
       selection: {
         mode: 'agent',
         configId: config.id,
-        permissionMode: 'request',
+        permissionMode: 'request' as const,
         templateIds: []
       },
       workspacePath: '/workspace'
@@ -749,7 +767,7 @@ describe('AnnotaMD AI workspace service', () => {
     const result = await service.send(owner, {
       text: 'Edit it',
       selection: {
-        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+        mode: 'agent', configId: config.id, permissionMode: 'request' as const, templateIds: []
       },
       workspacePath: join(directories.at(-1)!),
       documentHandleId: 'handle-1',
@@ -812,7 +830,7 @@ describe('AnnotaMD AI workspace service', () => {
     const completion = await service.sendAndWait(owner, {
       text: 'Summarize it without editing',
       selection: {
-        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+        mode: 'agent', configId: config.id, permissionMode: 'request' as const, templateIds: []
       },
       workspacePath: join(directories.at(-1)!),
       documentHandleId: 'handle-1',
@@ -864,7 +882,7 @@ describe('AnnotaMD AI workspace service', () => {
     await service.sendAndWait(owner, {
       text: 'Summarize it',
       selection: {
-        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+        mode: 'agent', configId: config.id, permissionMode: 'request' as const, templateIds: []
       },
       workspacePath: join(directories.at(-1)!),
       documentHandleId: 'handle-1',
@@ -918,7 +936,7 @@ describe('AnnotaMD AI workspace service', () => {
     await expect(service.send(owner, {
       text: 'Edit it',
       selection: {
-        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+        mode: 'agent', configId: config.id, permissionMode: 'request' as const, templateIds: []
       },
       workspacePath: join(directories.at(-1)!),
       documentHandleId: 'handle-1',
@@ -964,7 +982,7 @@ describe('AnnotaMD AI workspace service', () => {
     const result = await service.send(owner, {
       text: 'Read only',
       selection: {
-        mode: 'agent', configId: config.id, permissionMode: 'request', templateIds: []
+        mode: 'agent', configId: config.id, permissionMode: 'request' as const, templateIds: []
       },
       workspacePath: join(directories.at(-1)!),
       documentHandleId: 'handle-1',
@@ -992,18 +1010,21 @@ describe('AnnotaMD AI workspace service', () => {
     const { service, owner } = setup()
     const api = await service.saveConfig(owner, {
       input: {
-        name: 'API', kind: 'api', provider: 'openai-compatible',
-        baseUrl: 'https://example.test/v1', apiKey: 'secret'
+        name: 'API',
+        kind: 'api',
+        provider: 'openai-compatible',
+        baseUrl: 'https://example.test/v1',
+        apiKey: 'secret'
       }
     })
     const cli = await service.saveConfig(owner, {
       input: { name: 'CLI', kind: 'cli', provider: 'codex' }
     })
     await expect(service.send(owner, {
-      text: 'No', selection: { mode: 'ask', configId: cli.id, templateIds: [] }, workspacePath: ''
+      text: 'No', selection: { mode: 'ask', permissionMode: 'request' as const, configId: cli.id, templateIds: [] }, workspacePath: ''
     })).rejects.toThrow('Ask mode requires an API')
     await expect(service.send(owner, {
-      text: 'No', selection: { mode: 'agent', configId: api.id, templateIds: [] }, workspacePath: ''
+      text: 'No', selection: { mode: 'agent', permissionMode: 'request' as const, configId: api.id, templateIds: [] }, workspacePath: ''
     })).rejects.toThrow('Agent mode requires a local CLI')
     service.dispose()
   })
@@ -1012,8 +1033,11 @@ describe('AnnotaMD AI workspace service', () => {
     const { service, apiHost, cliHost, owner } = setup()
     await service.saveConfig(owner, {
       input: {
-        name: 'Default API', kind: 'api', provider: 'openai-compatible',
-        baseUrl: 'https://example.test/v1', apiKey: 'secret'
+        name: 'Default API',
+        kind: 'api',
+        provider: 'openai-compatible',
+        baseUrl: 'https://example.test/v1',
+        apiKey: 'secret'
       },
       isDefault: true
     })
@@ -1022,12 +1046,12 @@ describe('AnnotaMD AI workspace service', () => {
       isDefault: false
     })
     await service.send(owner, {
-      text: 'Ask', selection: { mode: 'ask', templateIds: [] }, workspacePath: ''
+      text: 'Ask', selection: { mode: 'ask', permissionMode: 'request' as const, templateIds: [] }, workspacePath: ''
     })
     await vi.waitFor(() => expect(apiHost.requests).toHaveLength(1))
     await service.send(owner, {
       text: 'Edit',
-      selection: { mode: 'agent', templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, templateIds: [] },
       workspacePath: '',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -1046,7 +1070,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const result = await service.send(owner, {
       text: 'Edit',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -1074,7 +1098,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     const result = await service.send(owner, {
       text: 'Edit',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -1114,7 +1138,7 @@ describe('AnnotaMD AI workspace service', () => {
     })
     await service.send(owner, {
       text: 'First edit',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',
@@ -1128,7 +1152,7 @@ describe('AnnotaMD AI workspace service', () => {
 
     await expect(service.send(owner, {
       text: 'Second edit',
-      selection: { mode: 'agent', configId: config.id, templateIds: [] },
+      selection: { mode: 'agent', permissionMode: 'request' as const, configId: config.id, templateIds: [] },
       workspacePath: '/workspace',
       documentHandleId: 'handle-1',
       documentId: 'doc-1',

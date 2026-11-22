@@ -1,10 +1,11 @@
 import type { VNode } from 'snabbdom';
 import type AtxHeadingContent from '../../block/content/atxHeadingContent';
 import type { Muya } from '../../muya';
+import type { ActionIconName } from '../actionIcons';
 import type { IBaseOptions } from '../types';
 import { isHTMLInputElement } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
-import { renderActionIcon, type ActionIconName } from '../actionIcons';
+import { renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 
 import './index.css';
@@ -173,8 +174,9 @@ export class HeadingNumberMenu extends BaseFloat {
                         this._valueError = false;
                     },
                     keydown: (event: KeyboardEvent) => {
-                        if (event.key === 'Enter')
+                        if (event.key === 'Enter') {
                             this._confirmValue();
+                        }
                         else if (event.key === 'Escape') {
                             this._editingValue = false;
                             this._render();

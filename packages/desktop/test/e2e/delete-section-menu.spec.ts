@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import { expectNoRendererErrors, getMarkdownContent, launchWithMarkdown, sendIpcToRenderer, waitForEditor } from './helpers'
 
 // Exercise current renderer source without changing the isolated main-process

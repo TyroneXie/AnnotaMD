@@ -209,7 +209,7 @@ export function frontButtonBlockKind(block: Parent) {
     }
 }
 
-function renderBlockLabel(kind: string, label: string, block: Parent) {
+function renderBlockLabel(kind: string, block: Parent) {
     return h(`span.mu-block-label.${kind}`, [
         h('span.mu-block-label-glyph', renderActionIcon(kind === 'image' ? 'inline-image' : getIcon(block))),
     ]);
@@ -589,19 +589,18 @@ export class ParagraphFrontButton {
     }
 
     render() {
-        const { _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
+        const { _container: container, _iconWrapper: iconWrapper, _block: block, _oldVNode: oldVNode } = this;
 
         const visualBlock = displayBlock(block!);
         const kind = this._kindOverride ?? frontButtonBlockKind(visualBlock);
-        const label = frontButtonBlockLabel(visualBlock);
         const iconWrapperSelector = `button.mu-icon-wrapper.${kind}`;
         const vnode = h(
             iconWrapperSelector,
             {
                 attrs: {
-                    type: 'button',
-                    role: 'button',
-                    tabindex: '0',
+                    'type': 'button',
+                    'role': 'button',
+                    'tabindex': '0',
                     'aria-label': this.muya.i18n.t('More'),
                 },
                 on: {
@@ -622,7 +621,7 @@ export class ParagraphFrontButton {
                 },
             },
             [
-                renderBlockLabel(kind, label, visualBlock),
+                renderBlockLabel(kind, visualBlock),
                 renderGrip(),
             ],
         );
@@ -633,7 +632,6 @@ export class ParagraphFrontButton {
             patch(iconWrapper, vnode);
 
         this._oldVNode = vnode;
-
     }
 
     hide() {

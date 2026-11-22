@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchElectron, launchWithMarkdown, sendIpcToRenderer } from './helpers'
 
 test.describe('application update indicator', () => {
@@ -135,7 +135,8 @@ test.describe('application update indicator', () => {
     await expect(settingsPage!.locator('.app-update-panel button')).toContainText('View downloads')
 
     const referenceSwitch = process.platform === 'darwin'
-      ? settingsPage!.locator('.pref-switch-item').first() : automaticDownload
+      ? settingsPage!.locator('.pref-switch-item').first()
+      : automaticDownload
     const switchBox = await referenceSwitch.locator('.el-switch').boundingBox()
     const switchLabelBox = await referenceSwitch.locator('.description').boundingBox()
     const updateActionBox = await settingsPage!
@@ -146,8 +147,8 @@ test.describe('application update indicator', () => {
     expect(updateActionBox).not.toBeNull()
     if (process.platform === 'darwin') {
       const updatePanelBox = (await settingsPage!.locator('.app-update-panel').boundingBox())!
-      expect(Math.abs(updateActionBox!.y + updateActionBox!.height / 2
-        - (updatePanelBox.y + updatePanelBox.height / 2))).toBeLessThanOrEqual(1)
+      expect(Math.abs(updateActionBox!.y + updateActionBox!.height / 2 -
+        (updatePanelBox.y + updatePanelBox.height / 2))).toBeLessThanOrEqual(1)
     } else {
       expect(Math.abs(
         switchBox!.y + switchBox!.height / 2 - (switchLabelBox!.y + switchLabelBox!.height / 2)

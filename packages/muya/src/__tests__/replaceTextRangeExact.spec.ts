@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 
+import type Parent from '../block/base/parent';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Muya } from '../muya';
 
-describe('Muya.replaceTextRangeExact', () => {
+describe('muya.replaceTextRangeExact', () => {
     let muya: Muya;
     let host: HTMLElement;
 
@@ -21,7 +22,7 @@ describe('Muya.replaceTextRangeExact', () => {
     });
 
     it('replaces only the exact anchored repeated text', () => {
-        const second = muya.editor.scrollPage!.find(1)!.firstContentInDescendant()!;
+        const second = (muya.editor.scrollPage!.find(1) as Parent).firstContentInDescendant()!;
 
         expect(muya.replaceTextRangeExact({
             anchor: { offset: 0 },
@@ -33,7 +34,7 @@ describe('Muya.replaceTextRangeExact', () => {
     });
 
     it('refuses to edit when the commented text no longer matches', () => {
-        const second = muya.editor.scrollPage!.find(1)!.firstContentInDescendant()!;
+        const second = (muya.editor.scrollPage!.find(1) as Parent).firstContentInDescendant()!;
 
         expect(muya.replaceTextRangeExact({
             anchor: { offset: 0 },

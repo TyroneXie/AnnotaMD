@@ -1,12 +1,13 @@
 import type Content from '../block/base/content';
+import type Format from '../block/base/format';
 import type Parent from '../block/base/parent';
 import type TreeNode from '../block/base/treeNode';
+import type { TBlockPath } from '../block/types';
 import type { Muya } from '../muya';
 import type { TState } from '../state/types';
 import type { Nullable } from '../types';
 import type Clipboard from './index';
 import CodeBlockContent from '../block/content/codeBlockContent';
-import type Format from '../block/base/format';
 import LangInputContent from '../block/content/langInputContent';
 import { ScrollPage } from '../block/scrollPage';
 import { URL_REG } from '../config';
@@ -139,7 +140,7 @@ function getStandaloneLink(block: Format, href: string) {
 }
 
 function escapeLinkLabel(value: string): string {
-    return value.replace(/\s+/g, ' ').trim().replace(/([\\\[\]])/g, '\\$1');
+    return value.replace(/\s+/g, ' ').trim().replace(/([\\[\]])/g, '\\$1');
 }
 
 async function resolveLinkMetadata(muya: Muya, href: string): Promise<{ title: string; icon: string }> {
@@ -150,7 +151,7 @@ async function resolveLinkMetadata(muya: Muya, href: string): Promise<{ title: s
     return { title: await getPageTitle(href), icon: '' };
 }
 
-async function autoTitleStandaloneLink(muya: Muya, blockPath: number[], href: string): Promise<void> {
+async function autoTitleStandaloneLink(muya: Muya, blockPath: TBlockPath, href: string): Promise<void> {
     const initialBlock = muya.editor.scrollPage?.queryBlock([...blockPath]);
     if (!initialBlock?.isContent())
         return;
@@ -161,7 +162,7 @@ async function autoTitleStandaloneLink(muya: Muya, blockPath: number[], href: st
 
     block.setLinkLoading(link.range, href, true);
     const timeout = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), AUTO_TITLE_TIMEOUT_MS);
+        setTimeout(resolve, AUTO_TITLE_TIMEOUT_MS, null);
     });
     let metadata: { title: string; icon: string } | null = null;
     try {
@@ -744,8 +745,9 @@ async function applyPaste(clipboard: Clipboard, data: IPasteData): Promise<void>
 
         const isPlainInlineSpaces = /^ +$/.test(text);
 
-        if (isLiteralAnchor || isPlainInlineSpaces)
+        if (isLiteralAnchor || isPlainInlineSpaces) {
             applyLiteralPaste(clipboard, ctx, isPlainInlineSpaces ? text : markdown);
+        }
         else {
             applyParsedPaste(clipboard, ctx, markdown);
             if (autoTitleBlockPath)

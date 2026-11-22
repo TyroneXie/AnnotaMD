@@ -230,6 +230,7 @@ export class ApiAskHost implements AiHost {
     'custom',
     'anthropic-messages'
   ] as const
+
   private readonly controllers = new Map<string, AbortController>()
 
   async listModels(config: AiHostConfig): Promise<AiHostModel[]> {

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { assertFileAccess } from '../security/fileAccess'
 import type { BrowserWindow as IBrowserWindow } from 'electron'
 import log from 'electron-log'
 import { TypedEmitter } from '@shared/types/typedEmitter'
@@ -112,7 +113,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
     this._windowActivity = new WindowActivityList()
     this.editorBufferStore = editorBufferStore
 
-    // TODO(need::refactor): Please see #1035.
+    // A shared watcher outlives individual windows; subscriptions are removed on window close.
     this._watcher = new Watcher(preferences)
 
     this._listenForIpcMain()
@@ -373,7 +374,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
   // --- private --------------------------------
 
   private _listenForIpcMain(): void {
-    // HACK: Don't use this event! Please see #1034 and #1035
+    // A newly saved untitled tab becomes a watched file without reopening it.
     ipcMain.on('annotamd::window-add-file-path', (e, filePath: string) => {
       const win = BrowserWindow.fromWebContents(e.sender)
       if (!win) return
@@ -382,7 +383,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         log.error(`Cannot find window id "${win.id}" to add opened file.`)
         return
       }
-      editor.addToOpenedFiles(filePath)
+      editor.addToOpenedFiles(assertFileAccess(e.sender, filePath))
     })
 
     // Force close a BrowserWindow
@@ -404,7 +405,7 @@ class WindowManager extends TypedEmitter<WindowManagerEvents> {
         log.error(`Cannot find window id "${win.id}" to open file.`)
         return
       }
-      editor.openTab(filePath, options, true)
+      editor.openTab(assertFileAccess(e.sender, filePath), options, true)
     })
 
     ipcMain.on('annotamd::window-tab-closed', (e, pathname: string) => {

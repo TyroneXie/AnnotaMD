@@ -1,18 +1,18 @@
 import { OFFICIAL_ICON_THEMES } from './generatedOfficialIconThemes';
 
-export type IconThemeName =
-    | 'tabler' | 'lucide' | 'heroicons' | 'feather' | 'svg'
-    | 'phosphor' | 'remix' | 'material' | 'hugeicons' | 'mdi' | 'bootstrap';
+export type IconThemeName
+    = | 'tabler' | 'lucide' | 'heroicons' | 'feather' | 'svg'
+        | 'phosphor' | 'remix' | 'material' | 'hugeicons' | 'mdi' | 'bootstrap';
 
-export interface OfficialIconGlyph {
+export interface IOfficialIconGlyph {
     source: string;
     viewBox: string;
     body: string;
 }
 
-export type IconThemeIcon = string[] | OfficialIconGlyph;
+export type IconThemeIcon = string[] | IOfficialIconGlyph;
 
-export interface IconThemeConfig {
+export interface IIconThemeConfig {
     label: string;
     viewBox: string;
     strokeWidth: number;
@@ -421,7 +421,7 @@ for (const icons of [TABLER_ICONS, LUCIDE_ICONS, HEROICONS_ICONS, FEATHER_ICONS,
     Object.assign(icons, COMPLETE_MENU_ICONS, HEADING_NUMBER_ICONS, { paperclip: OFFICIAL_ICON_THEMES.lucide.icons.paperclip });
 
 /* ========== Theme configs ========== */
-const ICON_THEMES: Record<IconThemeName, IconThemeConfig> = {
+const ICON_THEMES: Record<IconThemeName, IIconThemeConfig> = {
     tabler: {
         label: 'Tabler',
         viewBox: '0 0 24 24',
@@ -525,7 +525,7 @@ export function setIconTheme(theme: IconThemeName): void {
     }
 }
 
-export function getIconThemeConfig(): IconThemeConfig {
+export function getIconThemeConfig(): IIconThemeConfig {
     return ICON_THEMES[currentTheme];
 }
 
@@ -546,3 +546,6 @@ export function getAllThemeNames(): IconThemeName[] {
 export function getThemeLabel(theme: IconThemeName): string {
     return ICON_THEMES[theme]?.label ?? theme;
 }
+
+export type OfficialIconGlyph = IOfficialIconGlyph;
+export type IconThemeConfig = IIconThemeConfig;

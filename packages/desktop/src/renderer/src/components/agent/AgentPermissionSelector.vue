@@ -14,7 +14,9 @@
     >
       <el-icon><Lock v-if="mode === 'request'" /><Unlock v-else /></el-icon>
       <span>{{ modeLabel }}</span>
-      <el-icon class="is-chevron"><ArrowDown /></el-icon>
+      <el-icon class="is-chevron">
+        <ArrowDown />
+      </el-icon>
     </button>
 
     <Teleport to="body">
@@ -41,11 +43,16 @@
           <span>
             <b>{{ t('annotamd.agentWorkspace.permissionRequest') }}</b>
             <small class="is-description">{{ t('annotamd.agentWorkspace.permissionRequestDescription') }}</small>
-            <small v-if="!requestSupported" class="is-unsupported-note">
+            <small
+              v-if="!requestSupported"
+              class="is-unsupported-note"
+            >
               {{ t('annotamd.agentWorkspace.permissionRequestUnsupported') }}
             </small>
           </span>
-          <el-icon v-if="mode === 'request'"><Check /></el-icon>
+          <el-icon v-if="mode === 'request'">
+            <Check />
+          </el-icon>
         </button>
         <button
           type="button"
@@ -58,7 +65,9 @@
             <b>{{ t('annotamd.agentWorkspace.permissionFullAccess') }}</b>
             <small class="is-description">{{ t('annotamd.agentWorkspace.permissionFullAccessDescription') }}</small>
           </span>
-          <el-icon v-if="mode === 'full-access'"><Check /></el-icon>
+          <el-icon v-if="mode === 'full-access'">
+            <Check />
+          </el-icon>
         </button>
         <p v-if="mode === 'full-access'">
           {{ t('annotamd.agentWorkspace.permissionFullAccessWarning') }}

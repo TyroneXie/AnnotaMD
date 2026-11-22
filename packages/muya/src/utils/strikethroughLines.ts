@@ -18,10 +18,7 @@ export interface IStrikethroughLine {
     color: string;
 }
 
-export const measureStrikethroughLines = (
-    deletions: Iterable<HTMLElement>,
-    rootRect: IRect,
-): IStrikethroughLine[] => {
+export function measureStrikethroughLines(deletions: Iterable<HTMLElement>, rootRect: IRect): IStrikethroughLine[] {
     const lines: IStrikethroughLine[] = [];
 
     for (const deletion of deletions) {
@@ -40,9 +37,9 @@ export const measureStrikethroughLines = (
     }
 
     return lines;
-};
+}
 
-export const syncStrikethroughLineOverlays = (root: HTMLElement): void => {
+export function syncStrikethroughLineOverlays(root: HTMLElement): void {
     root.querySelector(`:scope > .${LAYER_CLASS}`)?.remove();
 
     const lines = measureStrikethroughLines(
@@ -71,12 +68,12 @@ export const syncStrikethroughLineOverlays = (root: HTMLElement): void => {
     // comment mount as the final child; appending here would make both features
     // continuously move each other while observing child-list changes.
     root.prepend(layer);
-};
+}
 
-const isOverlayNode = (node: Node): boolean => {
+function isOverlayNode(node: Node): boolean {
     return node instanceof Element
         && (node.classList.contains(LAYER_CLASS) || node.closest(`.${LAYER_CLASS}`) != null);
-};
+}
 
 export default class StrikethroughLineOverlay {
     private _frame: number | null = null;

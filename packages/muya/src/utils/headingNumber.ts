@@ -1,22 +1,22 @@
-export interface HeadingNumberMatch {
+export interface IHeadingNumberMatch {
     gapEnd: number;
     marker: string;
     markerEnd: number;
     markerStart: number;
 }
 
-export interface PreviousHeadingNumber {
+export interface IPreviousHeadingNumber {
     level: number;
     marker: string | null;
 }
 
-const ATX_HEADING_NUMBER = /^( {0,3}#{1,6}[ \t]+)(\d+(?:[.。．]\d+)*[.。．])([ \t]+)/;
+const ATX_HEADING_NUMBER = /^( {0,3}#{1,6}[ \t]+)(\d+(?:[.。．]\d+)*[.。．])[ \t]+/;
 
 export function normalizeHeadingNumber(marker: string): string {
     return `${marker.match(/\d+/g)?.join('.') ?? ''}.`;
 }
 
-export function parseAtxHeadingNumber(text: string): HeadingNumberMatch | null {
+export function parseAtxHeadingNumber(text: string): IHeadingNumberMatch | null {
     const match = ATX_HEADING_NUMBER.exec(text);
     if (!match)
         return null;
@@ -52,7 +52,7 @@ export function replaceHeadingNumberValue(marker: string, value: number): string
 
 function firstChildHeadingNumber(marker: string, levelDifference: number): string {
     const parent = normalizeHeadingNumber(marker).slice(0, -1);
-    const children = Array.from({ length: levelDifference }, () => '1');
+    const children = Array.from({ length: levelDifference }).fill('1');
     return `${[parent, ...children].join('.')}.`;
 }
 
@@ -71,7 +71,7 @@ function childHeadingNumberFromInput(
 
 export function suggestedHeadingNumber(
     level: number,
-    previousHeadings: PreviousHeadingNumber[],
+    previousHeadings: IPreviousHeadingNumber[],
 ): string | null {
     for (const heading of previousHeadings) {
         if (heading.level > level || !heading.marker)
@@ -89,7 +89,7 @@ export function suggestedHeadingNumber(
 export function standardizedHeadingNumber(
     marker: string,
     level: number,
-    previousHeadings: PreviousHeadingNumber[],
+    previousHeadings: IPreviousHeadingNumber[],
 ): string {
     const normalized = normalizeHeadingNumber(marker);
     const inputValue = headingNumberValue(normalized);
@@ -116,7 +116,7 @@ export function standardizedHeadingNumber(
 
 export function restartedHeadingNumber(
     level: number,
-    previousHeadings: PreviousHeadingNumber[],
+    previousHeadings: IPreviousHeadingNumber[],
 ): string {
     for (const heading of previousHeadings) {
         if (heading.level >= level || !heading.marker)
@@ -127,3 +127,6 @@ export function restartedHeadingNumber(
 
     return '1.';
 }
+
+export type HeadingNumberMatch = IHeadingNumberMatch;
+export type PreviousHeadingNumber = IPreviousHeadingNumber;

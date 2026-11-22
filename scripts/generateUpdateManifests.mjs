@@ -78,7 +78,7 @@ const hashFile = (filePath) =>
     stream.on('end', () => resolve(hash.digest('base64')))
   })
 
-const readArtifact = async(outputDirectory, name) => {
+const readArtifact = async (outputDirectory, name) => {
   const filePath = path.join(outputDirectory, name)
   const fileStat = await stat(filePath)
   let blockMapSize
@@ -95,7 +95,7 @@ const readArtifact = async(outputDirectory, name) => {
   }
 }
 
-export const generateUpdateManifests = async(outputDirectory, rawTag) => {
+export const generateUpdateManifests = async (outputDirectory, rawTag) => {
   const version = rawTag.replace(/^v/, '')
   if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error(`Invalid release tag: ${rawTag}`)

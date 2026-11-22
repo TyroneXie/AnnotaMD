@@ -20,22 +20,47 @@
         aria-valuemin="0"
         aria-valuemax="100"
       >
-        <circle class="app-update-ring-track" cx="18" cy="18" r="15" />
-        <circle cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="100" :stroke-dashoffset="100 - roundedProgress" />
+        <circle
+          class="app-update-ring-track"
+          cx="18"
+          cy="18"
+          r="15"
+        />
+        <circle
+          cx="18"
+          cy="18"
+          r="15"
+          pathLength="100"
+          stroke-dasharray="100"
+          :stroke-dashoffset="100 - roundedProgress"
+        />
       </svg>
-      <Download class="app-update-icon" aria-hidden="true" />
+      <Download
+        class="app-update-icon"
+        aria-hidden="true"
+      />
     </button>
   </template>
 
-  <div v-else class="app-update-panel">
+  <div
+    v-else
+    class="app-update-panel"
+  >
     <div class="app-update-copy">
       <div class="app-update-version">
         {{ t('updates.currentVersion', { version: state.currentVersion }) }}
       </div>
-      <div class="app-update-status" :class="{ error: state.status === 'error' }">
+      <div
+        class="app-update-status"
+        :class="{ error: state.status === 'error' }"
+      >
         {{ statusText }}
       </div>
-      <div v-if="state.status === 'downloading'" class="app-update-progress" aria-hidden="true">
+      <div
+        v-if="state.status === 'downloading'"
+        class="app-update-progress"
+        aria-hidden="true"
+      >
         <span :style="{ width: `${roundedProgress}%` }" />
       </div>
     </div>
@@ -120,7 +145,7 @@ const actionLabel = computed(() => {
   }
 })
 
-const runAction = async(): Promise<void> => {
+const runAction = async (): Promise<void> => {
   let next: AppUpdateState | null = null
   if (
     state.status === 'unsupported' ||
@@ -141,7 +166,7 @@ const runAction = async(): Promise<void> => {
   if (next) applyState(next)
 }
 
-onMounted(async() => {
+onMounted(async () => {
   stopUpdateListener = window.electron.ipcRenderer.on('annotamd::update:state', (_event, next) => {
     applyState(next)
   })

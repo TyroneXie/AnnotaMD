@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { clickMenuById, expectNoRendererErrors, launchWithMarkdown } from './helpers'
 
-test('shows language SVGs in the code picker, including search aliases and expanded languages', async({}, testInfo) => {
+test('shows language SVGs in the code picker, including search aliases and expanded languages', async({ browserName: _browserName }, testInfo) => {
   const { app, page } = await launchWithMarkdown(
     '# 领域模型\n\n```typescript\ntype AiDslPanelContext = {\n  visible: boolean\n  mode: \'create\' | \'edit\' | \'mixed\'\n}\n```\n\n面板状态。\n',
     { suppressErrorDialog: true }

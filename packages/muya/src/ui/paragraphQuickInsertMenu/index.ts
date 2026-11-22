@@ -9,8 +9,8 @@ import ParagraphContent from '../../block/content/paragraphContent';
 import { deepClone } from '../../utils';
 import { query } from '../../utils/dom';
 import { h, patch } from '../../utils/snabbdom';
-import BaseScrollFloat from '../baseScrollFloat';
 import { renderActionIcon } from '../actionIcons';
+import BaseScrollFloat from '../baseScrollFloat';
 import {
     getLabelFromEvent,
     MENU_CONFIG,

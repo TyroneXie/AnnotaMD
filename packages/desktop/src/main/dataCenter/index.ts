@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { assertFileAccess, grantFileAccess } from '../security/fileAccess'
 import keytar from 'keytar'
 import schema from './schema.json'
 import Store, { type Schema } from 'electron-store'
@@ -187,22 +188,33 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
     })
 
     ipcMain.on('annotamd::ask-for-modify-image-folder-path', async(e, imagePath?: string) => {
-      if (!imagePath) {
+      let needsPicker = !imagePath
+      if (imagePath) {
+        try { imagePath = assertFileAccess(e.sender, imagePath, true) } catch { needsPicker = true }
+      }
+      if (needsPicker) {
         const win = BrowserWindow.fromWebContents(e.sender)
         if (!win) return
         const { filePaths } = await dialog.showOpenDialog(win, {
+          defaultPath: imagePath,
           properties: ['openDirectory', 'createDirectory']
         })
         if (filePaths && filePaths[0]) {
           imagePath = filePaths[0]
+        } else {
+          return
         }
       }
       if (imagePath) {
+        for (const window of BrowserWindow.getAllWindows()) grantFileAccess(window.webContents, imagePath)
         this.setItem('imageFolderPath', imagePath)
       }
     })
 
-    ipcMain.on('annotamd::set-user-data', (_e, userData: Record<string, unknown>) => {
+    ipcMain.on('annotamd::set-user-data', (e, userData: Record<string, unknown>) => {
+      for (const key of ['imageFolderPath', 'screenshotFolderPath']) {
+        if (key in userData) userData[key] = assertFileAccess(e.sender, userData[key], true)
+      }
       this.setItems(userData)
     })
 
@@ -220,6 +232,7 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       })
 
       if (filePaths && filePaths[0]) {
+        grantFileAccess(e.sender, filePaths[0], false)
         return filePaths[0]
       } else {
         return ''

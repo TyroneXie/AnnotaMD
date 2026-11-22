@@ -17,10 +17,12 @@ export default [
       '.claude/**',
       '**/out/**',
       '**/dist/**',
-      // The website ships with its own ESLint v8 config (React conventions).
-      // The root config here is desktop-focused; mixing the two surfaces
-      // pre-existing website style errors into desktop CI.
-      'packages/website/**',
+      // Static site and the separately maintained extension are outside the desktop gate.
+      'web/**',
+      'tools/annotamd-mcp/bundle/**',
+      'packages/desktop/resources/pi/**',
+      '**/test-results/**',
+      'packages/vscode-extension/**',
       // muya v2 (TS) self-lints with its own antfu-based config
       // (packages/muya/eslint.config.mjs). Different style rules from the
       // annotamd-desktop config (4-space indent, semis required, strict
@@ -175,6 +177,10 @@ export default [
 
   // 8. JSON validation
   ...pluginJsonc.configs['flat/recommended-with-json'],
+
+  {
+    rules: { 'no-void': ['error', { allowAsStatement: true }] }
+  },
 
   // 9. i18n JSON locales
   {

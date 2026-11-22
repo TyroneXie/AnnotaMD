@@ -18,9 +18,8 @@ import {
     MUYA_DEFAULT_OPTIONS,
     URL_REG,
 } from './config/index';
-import { setIconTheme } from './ui/iconThemes';
-
 import { Editor } from './editor/index';
+
 import EventCenter from './event/index';
 import I18n from './i18n/index';
 import {
@@ -30,6 +29,7 @@ import {
     resolveSentinelCursor,
 } from './selection/offsetCursor';
 import { isAnyListState, isAtxHeadingState, isCodeBlockState } from './state/types';
+import { setIconTheme } from './ui/iconThemes';
 import { Ui } from './ui/ui';
 import { deepClone } from './utils';
 import { encodeImageSrc } from './utils/image';
@@ -151,7 +151,7 @@ export class Muya {
 
     constructor(element: HTMLElement, options?: Partial<IMuyaOptions>) {
         this.options = Object.assign({}, MUYA_DEFAULT_OPTIONS, options ?? {});
-        setIconTheme(this.options.iconTheme);
+        setIconTheme(this.options.iconTheme ?? 'tabler');
         this.eventCenter = new EventCenter();
         this.domNode = getContainer(element, this.options);
         // this.domNode[BLOCK_DOM_PROPERTY] = this;
@@ -764,11 +764,11 @@ export class Muya {
             const replacement = alreadyTarget
                 ? block
                 : replaceBlockByLabel({
-                    block,
-                    muya: this,
-                    label,
-                    text: this._blockLeadingText(block),
-                });
+                        block,
+                        muya: this,
+                        label,
+                        text: this._blockLeadingText(block),
+                    });
             const newLeaf = replacement?.firstContentInDescendant();
             if (!newLeaf)
                 return;

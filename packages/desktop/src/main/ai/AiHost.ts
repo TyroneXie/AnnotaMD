@@ -1,3 +1,4 @@
+import type { AiCliProviderId } from '@shared/types/aiWorkspace'
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
 import type {
   AiApiAuthMethod,
@@ -101,17 +102,17 @@ export type AiHostEvent =
   | { type: 'reasoning-delta'; runId: string; delta: string }
   | { type: 'tool-started'; runId: string; toolCallId: string; toolName: string; input?: unknown }
   | {
-      type: 'approval-requested'
-      runId: string
-      approvalId: string
-      provider: Extract<AiHostProvider, import('@shared/types/aiWorkspace').AiCliProviderId>
-      kind: string
-      title: string
-      detail?: string
-      command?: string
-      paths?: string[]
-      options: AiApprovalDecision[]
-    }
+    type: 'approval-requested'
+    runId: string
+    approvalId: string
+    provider: Extract<AiHostProvider, AiCliProviderId>
+    kind: string
+    title: string
+    detail?: string
+    command?: string
+    paths?: string[]
+    options: AiApprovalDecision[]
+  }
   | {
     type: 'tool-finished'
     runId: string

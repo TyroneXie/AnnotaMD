@@ -196,7 +196,7 @@ const clearAgentQuote = (quote: AiDraftQuote): void => {
   if (agentQuote.value === quote) agentQuote.value = undefined
 }
 
-const quoteSelectionInAgent = async(event: Event): Promise<void> => {
+const quoteSelectionInAgent = async (event: Event): Promise<void> => {
   const quote = (event as CustomEvent<AiDraftQuote>).detail
   if (!quote?.text || quote.documentId !== props.agentDocumentContext?.documentId) return
   agentQuote.value = quote

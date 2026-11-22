@@ -51,7 +51,7 @@
     width: 2px;
     border-radius: 2px;
     background: var(--theme-color, #3370ff);
-    opacity: .6;
+    opacity: 0.6;
     content: '';
 }
 

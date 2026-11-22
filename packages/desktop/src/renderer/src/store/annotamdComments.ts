@@ -219,15 +219,15 @@ const cloneCommentForIpc = (comment: AnnotaMDComment): AnnotaMDComment => ({
   replies: comment.replies.map((reply) => ({ ...reply })),
   anchor: comment.anchor
     ? {
-        ...comment.anchor,
-        path: comment.anchor.path ? [...comment.anchor.path] : undefined
-      }
+      ...comment.anchor,
+      path: comment.anchor.path ? [...comment.anchor.path] : undefined
+    }
     : undefined,
   focus: comment.focus
     ? {
-        ...comment.focus,
-        path: comment.focus.path ? [...comment.focus.path] : undefined
-      }
+      ...comment.focus,
+      path: comment.focus.path ? [...comment.focus.path] : undefined
+    }
     : undefined
 })
 
@@ -413,10 +413,10 @@ export const useAnnotaMDCommentsStore = defineStore('annotamdComments', {
           changed = true
           return detachCommentDuringAgentTurn(comment)
         }
-        const anchorChanged = comparePaths(anchor.path, anchorPath) !== 0
-          || anchor.offset !== comment.anchor.offset
-        const focusChanged = comparePaths(focus.path, focusPath) !== 0
-          || focus.offset !== comment.focus.offset
+        const anchorChanged = comparePaths(anchor.path, anchorPath) !== 0 ||
+          anchor.offset !== comment.anchor.offset
+        const focusChanged = comparePaths(focus.path, focusPath) !== 0 ||
+          focus.offset !== comment.focus.offset
         if (!anchorChanged && !focusChanged) return [comment]
         changed = true
         return [{

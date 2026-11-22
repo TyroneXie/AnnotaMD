@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -47,7 +47,7 @@ describe('AnnotaMD document density', () => {
       /\.editor-component \.mu-container figure\.mu-table\s*\{[^}]*overflow-x:\s*auto !important;[^}]*overflow-y:\s*hidden !important;/s
     )
     expect(editor).toMatch(
-      /figure\.mu-table::\-webkit-scrollbar\s*\{[^}]*height:\s*8px;/s
+      /figure\.mu-table::-webkit-scrollbar\s*\{[^}]*height:\s*8px;/s
     )
   })
 

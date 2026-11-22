@@ -1,8 +1,14 @@
 <template>
   <div class="pref-ai">
     <header class="pref-ai-heading">
-      <h2 class="pref-ai-title">{{ t('preferences.agent.title') }}</h2>
-      <el-button type="primary" :icon="Plus" @click="openAdd">
+      <h2 class="pref-ai-title">
+        {{ t('preferences.agent.title') }}
+      </h2>
+      <el-button
+        type="primary"
+        :icon="Plus"
+        @click="openAdd"
+      >
         {{ t('preferences.agent.provider.addProvider') }}
       </el-button>
     </header>
@@ -11,17 +17,26 @@
         <h4>{{ t('preferences.agent.provider.title') }}</h4>
       </header>
 
-      <div v-if="providers.length === 0" class="pref-ai-empty">
+      <div
+        v-if="providers.length === 0"
+        class="pref-ai-empty"
+      >
         {{ t('preferences.agent.provider.noProviders') }}
       </div>
-      <div v-else class="pref-ai-providers">
+      <div
+        v-else
+        class="pref-ai-providers"
+      >
         <article
           v-for="provider in providers"
           :key="provider.id"
           class="pref-ai-provider"
           :class="{ 'is-default': provider.id === settings.defaultProviderId }"
         >
-          <AiProviderLogo :provider="iconFor(provider)" :label="provider.name" />
+          <AiProviderLogo
+            :provider="iconFor(provider)"
+            :label="provider.name"
+          />
           <div class="pref-ai-provider-text">
             <strong>
               {{ provider.name }}
@@ -35,7 +50,10 @@
                 ? t('preferences.agent.provider.keySaved')
                 : t('preferences.agent.provider.keyMissing') }}
             </small>
-            <small class="pref-ai-endpoint" :title="provider.baseUrl">{{ provider.baseUrl }}</small>
+            <small
+              class="pref-ai-endpoint"
+              :title="provider.baseUrl"
+            >{{ provider.baseUrl }}</small>
           </div>
           <div class="pref-ai-provider-actions">
             <button
@@ -49,10 +67,17 @@
                 ? 'preferences.agent.provider.managingModels'
                 : 'preferences.agent.provider.manageModels') }}
             </button>
-            <button type="button" @click="openEdit(provider)">
+            <button
+              type="button"
+              @click="openEdit(provider)"
+            >
               {{ t('preferences.agent.provider.edit') }}
             </button>
-            <el-dropdown trigger="click" placement="bottom-end" popper-class="pref-pi-menu">
+            <el-dropdown
+              trigger="click"
+              placement="bottom-end"
+              popper-class="pref-pi-menu"
+            >
               <button
                 type="button"
                 class="pref-ai-icon-button"
@@ -68,7 +93,10 @@
                   >
                     {{ t('preferences.agent.provider.setDefault') }}
                   </el-dropdown-item>
-                  <el-dropdown-item class="pref-pi-delete" @click="removeProvider(provider)">
+                  <el-dropdown-item
+                    class="pref-pi-delete"
+                    @click="removeProvider(provider)"
+                  >
                     {{ t('preferences.agent.provider.delete') }}
                   </el-dropdown-item>
                 </el-dropdown-menu>
@@ -84,7 +112,11 @@
       </div>
     </section>
 
-    <section v-if="activeProvider" ref="modelSection" class="pref-ai-section">
+    <section
+      v-if="activeProvider"
+      ref="modelSection"
+      class="pref-ai-section"
+    >
       <header>
         <div class="pref-ai-model-heading">
           <h4>{{ t('preferences.agent.provider.modelsTitle') }}</h4>
@@ -106,7 +138,10 @@
       </header>
 
       <div class="pref-ai-models">
-        <div v-if="activeProvider.models.length === 0" class="pref-ai-empty">
+        <div
+          v-if="activeProvider.models.length === 0"
+          class="pref-ai-empty"
+        >
           {{ t('preferences.agent.provider.noModels') }}
         </div>
         <template v-else>
@@ -116,7 +151,10 @@
             class="pref-ai-model"
           >
             <div class="pref-ai-model-name">
-              <span class="pref-ai-model-id" :title="model.id">{{ model.id }}</span>
+              <span
+                class="pref-ai-model-id"
+                :title="model.id"
+              >{{ model.id }}</span>
               <span
                 v-if="model.id === activeProvider.defaultModel"
                 class="pref-ai-model-default"
@@ -157,14 +195,23 @@
             :placeholder="t('preferences.agent.provider.modelName')"
             @keydown.enter="addModel(activeProvider)"
           />
-          <el-button :icon="Plus" :disabled="!newModelId.trim()" @click="addModel(activeProvider)">
+          <el-button
+            :icon="Plus"
+            :disabled="!newModelId.trim()"
+            @click="addModel(activeProvider)"
+          >
             {{ t('preferences.agent.provider.addModel') }}
           </el-button>
         </div>
       </div>
     </section>
 
-    <span v-if="status" class="pref-ai-status" :class="`is-${statusKind}`" role="status">
+    <span
+      v-if="status"
+      class="pref-ai-status"
+      :class="`is-${statusKind}`"
+      role="status"
+    >
       {{ status }}
     </span>
 
@@ -182,19 +229,41 @@
           :placeholder="t('preferences.agent.provider.searchModels')"
           :aria-label="t('preferences.agent.provider.searchModels')"
         />
-        <div class="pref-model-candidates" role="group" :aria-label="t('preferences.agent.provider.chooseModels')">
-          <label v-for="model in filteredDiscoveredModels" :key="model.id">
-            <input v-model="selectedModelIds" type="checkbox" :value="model.id">
+        <div
+          class="pref-model-candidates"
+          role="group"
+          :aria-label="t('preferences.agent.provider.chooseModels')"
+        >
+          <label
+            v-for="model in filteredDiscoveredModels"
+            :key="model.id"
+          >
+            <input
+              v-model="selectedModelIds"
+              type="checkbox"
+              :value="model.id"
+            >
             <span>{{ model.id }}</span>
           </label>
         </div>
-        <p v-if="!filteredDiscoveredModels.length" class="pref-ai-summary">
+        <p
+          v-if="!filteredDiscoveredModels.length"
+          class="pref-ai-summary"
+        >
           {{ t('preferences.agent.provider.noMatchingModels') }}
         </p>
-        <p v-if="modelPickerError" class="pref-ai-status is-failure" role="alert">{{ modelPickerError }}</p>
+        <p
+          v-if="modelPickerError"
+          class="pref-ai-status is-failure"
+          role="alert"
+        >
+          {{ modelPickerError }}
+        </p>
       </div>
       <template #footer>
-        <el-button @click="modelPickerVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button @click="modelPickerVisible = false">
+          {{ t('common.cancel') }}
+        </el-button>
         <el-button
           type="primary"
           :loading="addingDiscoveredModels"
@@ -216,9 +285,16 @@
       top="16px"
       append-to-body
     >
-      <el-form class="pref-ai-form" label-position="top">
+      <el-form
+        class="pref-ai-form"
+        label-position="top"
+      >
         <el-form-item :label="t('preferences.agent.provider.preset')">
-          <el-select v-model="draftPreset" popper-class="pref-pi-menu" @change="applyPreset">
+          <el-select
+            v-model="draftPreset"
+            popper-class="pref-pi-menu"
+            @change="applyPreset"
+          >
             <el-option
               v-for="option in presetOptions"
               :key="option.value"
@@ -226,19 +302,32 @@
               :value="option.value"
             >
               <span class="pref-provider-option">
-                <AiProviderLogo :provider="option.iconProvider" :label="option.label" />
+                <AiProviderLogo
+                  :provider="option.iconProvider"
+                  :label="option.label"
+                />
                 <span>{{ option.label }}</span>
               </span>
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item :label="t('preferences.agent.provider.name')" required>
-          <el-input v-model="draft.name" :placeholder="t('preferences.agent.provider.namePlaceholder')" />
+        <el-form-item
+          :label="t('preferences.agent.provider.name')"
+          required
+        >
+          <el-input
+            v-model="draft.name"
+            :placeholder="t('preferences.agent.provider.namePlaceholder')"
+          />
         </el-form-item>
         <el-form-item :label="t('preferences.agent.provider.interfaceType')">
           <el-radio-group v-model="draft.kind">
-            <el-radio value="openai">{{ t('preferences.agent.provider.openaiCompatible') }}</el-radio>
-            <el-radio value="anthropic">Anthropic</el-radio>
+            <el-radio value="openai">
+              {{ t('preferences.agent.provider.openaiCompatible') }}
+            </el-radio>
+            <el-radio value="anthropic">
+              Anthropic
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item
@@ -246,26 +335,50 @@
           :label="t('preferences.agent.provider.requestFormat')"
         >
           <el-radio-group v-model="draft.apiFormat">
-            <el-radio value="chat">Chat Completions</el-radio>
-            <el-radio value="responses">Responses</el-radio>
+            <el-radio value="chat">
+              Chat Completions
+            </el-radio>
+            <el-radio value="responses">
+              Responses
+            </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-else :label="t('preferences.agent.provider.authStyle')">
+        <el-form-item
+          v-else
+          :label="t('preferences.agent.provider.authStyle')"
+        >
           <el-radio-group v-model="draft.authStyle">
-            <el-radio value="api-key">x-api-key</el-radio>
-            <el-radio value="bearer">Bearer</el-radio>
+            <el-radio value="api-key">
+              x-api-key
+            </el-radio>
+            <el-radio value="bearer">
+              Bearer
+            </el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item class="pref-ai-form-wide" :label="t('preferences.agent.provider.baseUrl')" required>
-          <el-input v-model="draft.baseUrl" :placeholder="baseUrlPlaceholder" />
+        <el-form-item
+          class="pref-ai-form-wide"
+          :label="t('preferences.agent.provider.baseUrl')"
+          required
+        >
+          <el-input
+            v-model="draft.baseUrl"
+            :placeholder="baseUrlPlaceholder"
+          />
         </el-form-item>
-        <el-form-item class="pref-ai-form-wide" :label="t('preferences.agent.provider.modelsUrl')">
+        <el-form-item
+          class="pref-ai-form-wide"
+          :label="t('preferences.agent.provider.modelsUrl')"
+        >
           <el-input
             v-model="draft.modelsUrl"
             :placeholder="t('preferences.agent.provider.modelsUrlPlaceholder')"
           />
         </el-form-item>
-        <el-form-item class="pref-ai-form-wide" :label="t('preferences.agent.provider.apiKey')">
+        <el-form-item
+          class="pref-ai-form-wide"
+          :label="t('preferences.agent.provider.apiKey')"
+        >
           <el-input
             v-model="draft.apiKey"
             type="password"
@@ -277,11 +390,21 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <p v-if="dialogError" class="pref-ai-dialog-error" role="alert">{{ dialogError }}</p>
+        <p
+          v-if="dialogError"
+          class="pref-ai-dialog-error"
+          role="alert"
+        >
+          {{ dialogError }}
+        </p>
         <el-button @click="dialogVisible = false">
           {{ t('preferences.agent.provider.cancel') }}
         </el-button>
-        <el-button type="primary" :loading="saving" @click="saveProvider">
+        <el-button
+          type="primary"
+          :loading="saving"
+          @click="saveProvider"
+        >
           {{ t('preferences.agent.provider.save') }}
         </el-button>
       </template>
@@ -348,10 +471,10 @@ const draft = reactive<ProviderDraft>({
 
 const providers = computed(() => settings.value.providers)
 const activeProvider = computed<PiProviderEntry | undefined>(() => (
-  providers.value.find(provider => provider.id === managedProviderId.value)
-    ?? providers.value.find(provider => provider.id === settings.value.defaultProviderId)
-    ?? providers.value.find(provider => provider.enabled)
-    ?? providers.value[0]
+  providers.value.find(provider => provider.id === managedProviderId.value) ??
+    providers.value.find(provider => provider.id === settings.value.defaultProviderId) ??
+    providers.value.find(provider => provider.enabled) ??
+    providers.value[0]
 ))
 const activeModels = computed(() => (
   activeProvider.value?.models.filter(model => model.enabled) ?? []
@@ -389,7 +512,7 @@ const applyState = (next: PiSettingsState): void => {
   }
 }
 
-const manageModels = async(provider: PiProviderEntry): Promise<void> => {
+const manageModels = async (provider: PiProviderEntry): Promise<void> => {
   if (activeProvider.value?.id !== provider.id) newModelId.value = ''
   managedProviderId.value = provider.id
   status.value = ''
@@ -397,7 +520,7 @@ const manageModels = async(provider: PiProviderEntry): Promise<void> => {
   modelSection.value?.scrollIntoView({ block: 'nearest' })
 }
 
-const run = async(action: () => Promise<void>, success?: string): Promise<void> => {
+const run = async (action: () => Promise<void>, success?: string): Promise<void> => {
   status.value = ''
   try {
     await action()
@@ -455,7 +578,7 @@ const applyPreset = (value: string): void => {
   draft.baseUrl = preset.baseUrl
 }
 
-const saveProvider = async(): Promise<void> => {
+const saveProvider = async (): Promise<void> => {
   if (!draft.name.trim() || !draft.baseUrl.trim()) {
     dialogError.value = t('preferences.agent.provider.missingFields')
     return
@@ -489,8 +612,8 @@ const saveProvider = async(): Promise<void> => {
   }
 }
 
-const toggleProvider = async(provider: PiProviderEntry, enabled: boolean): Promise<void> => {
-  await run(async() => {
+const toggleProvider = async (provider: PiProviderEntry, enabled: boolean): Promise<void> => {
+  await run(async () => {
     applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::provider:save', {
       id: provider.id,
       name: provider.name,
@@ -504,8 +627,8 @@ const toggleProvider = async(provider: PiProviderEntry, enabled: boolean): Promi
   })
 }
 
-const setDefaultProvider = async(provider: PiProviderEntry): Promise<void> => {
-  await run(async() => {
+const setDefaultProvider = async (provider: PiProviderEntry): Promise<void> => {
+  await run(async () => {
     applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::provider:save', {
       id: provider.id,
       name: provider.name,
@@ -520,13 +643,13 @@ const setDefaultProvider = async(provider: PiProviderEntry): Promise<void> => {
   })
 }
 
-const removeProvider = async(provider: PiProviderEntry): Promise<void> => {
-  await run(async() => {
+const removeProvider = async (provider: PiProviderEntry): Promise<void> => {
+  await run(async () => {
     applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::provider:delete', provider.id))
   })
 }
 
-const updateModels = async(
+const updateModels = async (
   provider: PiProviderEntry,
   models: PiModelEntry[],
   defaultModel?: string
@@ -545,43 +668,43 @@ const updateModels = async(
   }))
 }
 
-const toggleModel = async(
+const toggleModel = async (
   provider: PiProviderEntry,
   model: PiModelEntry,
   enabled: boolean
 ): Promise<void> => {
-  await run(async() => {
+  await run(async () => {
     await updateModels(provider, provider.models.map(item => (
       item.id === model.id ? { ...item, enabled } : item
     )))
   })
 }
 
-const setDefaultModel = async(provider: PiProviderEntry, modelId: string): Promise<void> => {
-  await run(async() => {
+const setDefaultModel = async (provider: PiProviderEntry, modelId: string): Promise<void> => {
+  await run(async () => {
     await updateModels(provider, provider.models, modelId)
   })
 }
 
-const removeModel = async(provider: PiProviderEntry, modelId: string): Promise<void> => {
-  await run(async() => {
+const removeModel = async (provider: PiProviderEntry, modelId: string): Promise<void> => {
+  await run(async () => {
     await updateModels(provider, provider.models.filter(item => item.id !== modelId))
   })
 }
 
-const addModel = async(provider: PiProviderEntry): Promise<void> => {
+const addModel = async (provider: PiProviderEntry): Promise<void> => {
   const id = newModelId.value.trim()
   if (!id) return
-  await run(async() => {
+  await run(async () => {
     await updateModels(provider, [...provider.models, { id, enabled: true }])
     newModelId.value = ''
   })
 }
 
-const fetchModels = async(provider: PiProviderEntry): Promise<void> => {
+const fetchModels = async (provider: PiProviderEntry): Promise<void> => {
   if (fetchingModels.value) return
   fetchingModels.value = true
-  await run(async() => {
+  await run(async () => {
     const found = await window.electron.ipcRenderer.invoke('annotamd::pi::provider:models', {
       providerId: provider.id
     })
@@ -605,7 +728,7 @@ const fetchModels = async(provider: PiProviderEntry): Promise<void> => {
   fetchingModels.value = false
 }
 
-const addDiscoveredModels = async(): Promise<void> => {
+const addDiscoveredModels = async (): Promise<void> => {
   const discovery = modelDiscovery.value
   if (!discovery || addingDiscoveredModels.value || !selectedModelIds.value.length) return
   const chosen = new Set(selectedModelIds.value)
@@ -630,8 +753,8 @@ const addDiscoveredModels = async(): Promise<void> => {
   }
 }
 
-onMounted(async() => {
-  await run(async() => {
+onMounted(async () => {
+  await run(async () => {
     applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::settings:get'))
   })
 })

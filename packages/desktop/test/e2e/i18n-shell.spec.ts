@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, sendIpcToRenderer, waitForMenuReady } from './helpers'
 
 // Checklist item 278 — switching the UI language must re-translate the Vue

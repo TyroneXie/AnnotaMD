@@ -151,12 +151,12 @@ const annotatedRange = (
   const start = blockIndex == null || starts.length === 1
     ? starts[0]!
     : starts.reduce((best, candidate) => {
-        const candidateBlock = markdown.slice(0, candidate).split(/\n\s*\n/).length - 1
-        const bestBlock = markdown.slice(0, best).split(/\n\s*\n/).length - 1
-        return Math.abs(candidateBlock - blockIndex) < Math.abs(bestBlock - blockIndex)
-          ? candidate
-          : best
-      })
+      const candidateBlock = markdown.slice(0, candidate).split(/\n\s*\n/).length - 1
+      const bestBlock = markdown.slice(0, best).split(/\n\s*\n/).length - 1
+      return Math.abs(candidateBlock - blockIndex) < Math.abs(bestBlock - blockIndex)
+        ? candidate
+        : best
+    })
   return { start, end: start + quote.length }
 }
 
@@ -203,7 +203,10 @@ ${formatCommentThread(comment)}
 5. 最终始终返回一条简短的纯文字答复，它会直接追加到当前 AnnotaMD 评论线程。不要使用 Markdown 标题、列表或代码块，不要描述思考过程。`
 
 export const normalizeCommentAgentReply = (value: string): string => value
+  // Strip CLI ANSI escape sequences and NUL characters deliberately.
+  // eslint-disable-next-line no-control-regex
   .replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, '')
+  // eslint-disable-next-line no-control-regex
   .replace(/\u0000/g, '')
   .trim()
   .slice(0, MAX_COMMENT_REPLY_CHARS)

@@ -16,7 +16,9 @@
     border: 1px solid #dee0e3;
     border-radius: 8px;
     background: #fff;
-    box-shadow: 0 8px 24px rgb(31 35 41 / 12%), 0 2px 6px rgb(31 35 41 / 8%);
+    box-shadow:
+        0 8px 24px rgb(31 35 41 / 12%),
+        0 2px 6px rgb(31 35 41 / 8%);
 }
 
 .mu-format-picker.link-create-open {
@@ -40,7 +42,13 @@
     height: 40px;
     padding: 0 12px;
     color: #1f2329;
-    font: 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font:
+        14px/40px -apple-system,
+        BlinkMacSystemFont,
+        'SF Pro Text',
+        'Segoe UI',
+        'PingFang SC',
+        sans-serif;
     background: #fff;
     border: 1px solid #bbbfc4;
     border-radius: 6px;
@@ -61,7 +69,13 @@
     height: 40px;
     padding: 0;
     color: #fff;
-    font: 500 14px/40px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font:
+        500 14px/40px -apple-system,
+        BlinkMacSystemFont,
+        'SF Pro Text',
+        'Segoe UI',
+        'PingFang SC',
+        sans-serif;
     background: #3370ff;
     border: 0;
     border-radius: 6px;
@@ -109,7 +123,10 @@
     list-style: none;
     cursor: pointer;
 
-    transition: background-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+    transition:
+        background-color 0.14s ease,
+        color 0.14s ease,
+        box-shadow 0.14s ease;
 }
 
 .mu-format-picker li.item:hover {
@@ -140,7 +157,9 @@
     visibility: hidden;
     opacity: 0;
 
-    transition: opacity 50ms linear, transform 50ms linear;
+    transition:
+        opacity 50ms linear,
+        transform 50ms linear;
 
     pointer-events: none;
 }
@@ -222,7 +241,9 @@
     border: 1px solid #dee0e3;
     border-radius: 9px;
     background: #fff;
-    box-shadow: 0 12px 32px rgb(31 35 41 / 15%), 0 2px 8px rgb(31 35 41 / 8%);
+    box-shadow:
+        0 12px 32px rgb(31 35 41 / 15%),
+        0 2px 8px rgb(31 35 41 / 8%);
 }
 
 .mu-color-palette-section + .mu-color-palette-section {
@@ -242,7 +263,9 @@
     border: 1px solid #dee0e3;
     border-radius: 9px;
     background: #fff;
-    box-shadow: 0 12px 32px rgb(31 35 41 / 15%), 0 2px 8px rgb(31 35 41 / 8%);
+    box-shadow:
+        0 12px 32px rgb(31 35 41 / 15%),
+        0 2px 8px rgb(31 35 41 / 8%);
 }
 
 .mu-text-style-option {
@@ -290,7 +313,7 @@
 .mu-color-palette-title {
     margin-bottom: 8px;
     color: #646a73;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', sans-serif;
     font-size: 12px;
     font-weight: 600;
     text-align: left;

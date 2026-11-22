@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { launchWithMarkdown, sendIpcToRenderer, waitForEditor, expectNoRendererErrors } from './helpers'
 
@@ -27,13 +27,13 @@ const width = (page: Page) => page.locator('.editor-component .mu-container').ev
 
 async function resize(app: ElectronApplication, page: Page, size: number) {
   const id = Number(new URL(page.url()).searchParams.get('wid'))
-  await app.evaluate(({ BrowserWindow }, args) => BrowserWindow.fromId(args.id)!.setSize(args.size, 950), {id, size})
+  await app.evaluate(({ BrowserWindow }, args) => BrowserWindow.fromId(args.id)!.setSize(args.size, 950), { id, size })
 }
 
-test('a single saved side-margin value controls the responsive document', async () => {
+test('a single saved side-margin value controls the responsive document', async() => {
   test.setTimeout(90000)
   const document = process.env.ANNOTAMD_QA_DOCUMENT ? readFileSync(process.env.ANNOTAMD_QA_DOCUMENT, 'utf8') : markdown
-  const { app, page } = await launchWithMarkdown(document, {suppressErrorDialog: true})
+  const { app, page } = await launchWithMarkdown(document, { suppressErrorDialog: true })
   try {
     if (process.env.ANNOTAMD_TEST_RENDERER_URL) {
       const url = new URL(process.env.ANNOTAMD_TEST_RENDERER_URL)
@@ -43,13 +43,17 @@ test('a single saved side-margin value controls the responsive document', async 
       await page.goto(url.href)
       await page.waitForSelector('.editor-placeholder')
       await sendIpcToRenderer(app, 'annotamd::bootstrap-editor', {
-        addBlankTab: false, markdownList: [document], lineEnding: 'lf',
-        sideBarVisibility: true, tabBarVisibility: true, sourceCodeModeEnabled: false
+        addBlankTab: false,
+        markdownList: [document],
+        lineEnding: 'lf',
+        sideBarVisibility: true,
+        tabBarVisibility: true,
+        sourceCodeModeEnabled: false
       })
       await waitForEditor(page)
     }
     let settings = await openAppearance(app)
-    const input = () => settings.locator('.pref-range-item').filter({hasText: /Side margins|左右留白/}).locator('input')
+    const input = () => settings.locator('.pref-range-item').filter({ hasText: /Side margins|左右留白/ }).locator('input')
     await expect(input()).toBeEnabled()
     await expect(input()).toHaveValue('56')
     await expect(settings.getByText(/Fit document width to window|正文宽度随窗口变化/)).toHaveCount(0)
@@ -70,9 +74,9 @@ test('a single saved side-margin value controls the responsive document', async 
     await settings.close()
     settings = await openAppearance(app)
     await expect(input()).toHaveValue('80')
-    await settings.screenshot({path:'/tmp/annotamd-margin-settings.png'})
+    await settings.screenshot({ path: '/tmp/annotamd-margin-settings.png' })
     await settings.close()
-    await page.screenshot({path:'/tmp/annotamd-margin-document.png'})
+    await page.screenshot({ path: '/tmp/annotamd-margin-document.png' })
     await expectNoRendererErrors(app)
   } finally { await app.close() }
 })

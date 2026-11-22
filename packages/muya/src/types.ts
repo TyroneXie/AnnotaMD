@@ -1,4 +1,5 @@
 import type { TState } from './state/types';
+import type { IconThemeName } from './ui/iconThemes';
 
 export interface ILinkPreviewMetadata {
     title: string;
@@ -6,6 +7,7 @@ export interface ILinkPreviewMetadata {
 }
 
 export interface IMuyaOptions {
+    iconTheme?: IconThemeName;
     fontSize: number;
     lineHeight: number;
     editorFontFamily?: string;

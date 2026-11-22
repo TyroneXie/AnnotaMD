@@ -2,8 +2,9 @@ import type { ReferenceElement } from '@floating-ui/dom';
 import type { VNode } from 'snabbdom';
 import type { Muya } from '../../index';
 import type { Token } from '../../inlineRenderer/types';
-import type { IBaseOptions } from '../types';
+import type { ActionIconName } from '../actionIcons';
 
+import type { IBaseOptions } from '../types';
 import type { ColorFormatType, FormatToolIcon, TextStyleType } from './config';
 import Format, { isInlineStyleFormatToken } from '../../block/base/format';
 import { getCursorCoords } from '../../selection/cursorCoords';
@@ -11,7 +12,7 @@ import { SelectionDirection } from '../../selection/types';
 import { isAtxHeadingState } from '../../state/types';
 import { isKeyboardEvent } from '../../utils';
 import { h, patch } from '../../utils/snabbdom';
-import { formatActionIcon, renderActionIcon, type ActionIconName } from '../actionIcons';
+import { formatActionIcon, renderActionIcon } from '../actionIcons';
 import BaseFloat from '../baseFloat';
 import icons, { COLOR_PALETTES, TEXT_STYLE_OPTIONS } from './config';
 import '../actionIcons.css';
@@ -233,7 +234,7 @@ export class InlineFormatToolbar extends BaseFloat {
 
                 const reference = this._liveSelectionReference(
                     { getBoundingClientRect: () => cursorCoords },
-                    anchorBlock.domNode,
+                    anchorBlock.domNode ?? null,
                     direction === SelectionDirection.FORWARD,
                 );
                 this._reference = reference;
@@ -346,8 +347,8 @@ export class InlineFormatToolbar extends BaseFloat {
             const vnode = h('div.mu-link-create-panel', [
                 h('input.mu-link-create-input', {
                     attrs: {
-                        type: 'url',
-                        placeholder: i18n.t('Paste or enter link'),
+                        'type': 'url',
+                        'placeholder': i18n.t('Paste or enter link'),
                         'aria-label': i18n.t('Paste or enter link'),
                     },
                     props: { value: this._draftLinkHref },
@@ -359,8 +360,9 @@ export class InlineFormatToolbar extends BaseFloat {
                                 button.disabled = !this._draftLinkHref.trim();
                         },
                         keydown: (event: KeyboardEvent) => {
-                            if (event.key === 'Enter')
+                            if (event.key === 'Enter') {
                                 this._commitLink(event);
+                            }
                             else if (event.key === 'Escape') {
                                 event.preventDefault();
                                 this.hide();
@@ -400,7 +402,6 @@ export class InlineFormatToolbar extends BaseFloat {
      * @param i18n - Internationalization instance
      */
     private _createIconItem(icon: FormatToolIcon, formats: Token[], i18n: typeof this.muya.i18n) {
-        const textStyle = this._currentTextStyle();
         const actionIcon = renderActionIcon(TOOLBAR_ACTION_ICONS[icon.type] ?? formatActionIcon(icon.type)!);
 
         const iconWrapper = h('div.icon-wrapper', icon.type === 'text_style'
@@ -694,19 +695,21 @@ export class InlineFormatToolbar extends BaseFloat {
             this.muya.eventCenter.emit(
                 type === 'annotamd_comment'
                     ? 'annotamd-comment-selection'
-                    : 'annotamd-agent-selection', {
-                quote,
-                anchor: {
-                    key: anchorKey,
-                    offset: anchorOffset,
+                    : 'annotamd-agent-selection',
+                {
+                    quote,
+                    anchor: {
+                        key: anchorKey,
+                        offset: anchorOffset,
+                    },
+                    focus: {
+                        key: focusKey,
+                        offset: focusOffset,
+                    },
+                    isCrossBlock,
+                    capturedAt: Date.now(),
                 },
-                focus: {
-                    key: focusKey,
-                    offset: focusOffset,
-                },
-                isCrossBlock,
-                capturedAt: Date.now(),
-            });
+            );
             this.hide();
             return;
         }

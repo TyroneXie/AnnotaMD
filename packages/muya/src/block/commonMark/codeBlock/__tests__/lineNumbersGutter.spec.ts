@@ -134,7 +134,6 @@ describe('code-block line-numbers gutter', () => {
             const muya = bootMuya(THREE_LINE_FENCE, { codeBlockLineNumbers: false });
             expect(muya.domNode.querySelectorAll('.mu-line-numbers-rows').length).toBe(0);
         });
-
     });
 
     describe('the gutter is exclusive to real code blocks', () => {

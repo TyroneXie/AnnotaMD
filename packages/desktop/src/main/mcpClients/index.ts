@@ -157,9 +157,9 @@ export const hasNamedMcpServer = (output: string): boolean => {
 }
 
 export const hasCurrentMcpServer = (output: string): boolean => {
-  return hasNamedMcpServer(output)
-    && output.includes('annotamd-mcp')
-    && !output.includes('ANNOTAMD_BRIDGE_FILE')
+  return hasNamedMcpServer(output) &&
+    output.includes('annotamd-mcp') &&
+    !output.includes('ANNOTAMD_BRIDGE_FILE')
 }
 
 const readMcpServerOutput = async(

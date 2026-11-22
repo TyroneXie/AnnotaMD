@@ -1,8 +1,8 @@
+import type { LanguagePickerItem } from '../languageItems';
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
 import { CodeBlockLanguageSelector } from '../index';
 import { buildLanguagePickerItems } from '../languageItems';
-import type { LanguagePickerItem } from '../languageItems';
 
 function renderItems(items: LanguagePickerItem[]) {
     const container = document.createElement('div');

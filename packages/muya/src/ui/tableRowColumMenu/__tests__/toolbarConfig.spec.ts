@@ -67,7 +67,7 @@ describe('feishu-style table axis toolbar configuration', () => {
     });
 
     it('uses SVG stroke-based icons instead of text glyphs', () => {
-        expect(sharedIconCss).not.toMatch(/\.mu-action-icon svg\s*\{[^}]*(?:fill|stroke):/s);
+        expect(sharedIconCss).not.toMatch(/\.mu-action-icon svg\s*\{[^}]*(?:fill|stroke):/);
         expect(sharedIconCss).not.toContain('.mu-action-icon-inline-code');
     });
 });

@@ -1,3 +1,4 @@
+import type { AiApiAuthMethod, AiApiStyle } from '@shared/types/aiWorkspace'
 import { randomUUID } from 'node:crypto'
 import { isAbsolute } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -105,8 +106,8 @@ export interface AiRuntimeConfig {
   kind: 'api' | 'cli'
   provider: AiProviderId
   baseUrl?: string
-  apiStyle?: import('@shared/types/aiWorkspace').AiApiStyle
-  authMethod?: import('@shared/types/aiWorkspace').AiApiAuthMethod
+  apiStyle?: AiApiStyle
+  authMethod?: AiApiAuthMethod
   executablePath?: string
   environment?: Record<string, string>
   defaultModelId?: string
@@ -305,8 +306,8 @@ export class AiStore {
       kind: row.kind,
       provider: row.provider,
       ...(row.base_url ? { baseUrl: row.base_url } : {}),
-      ...(row.api_style ? { apiStyle: row.api_style as import('@shared/types/aiWorkspace').AiApiStyle } : {}),
-      ...(row.auth_method ? { authMethod: row.auth_method as import('@shared/types/aiWorkspace').AiApiAuthMethod } : {}),
+      ...(row.api_style ? { apiStyle: row.api_style as AiApiStyle } : {}),
+      ...(row.auth_method ? { authMethod: row.auth_method as AiApiAuthMethod } : {}),
       ...(row.executable_path ? { executablePath: row.executable_path } : {}),
       ...(row.kind === 'cli'
         ? { environment: parseJson<Record<string, string>>(row.environment_json, {}) }
@@ -404,14 +405,14 @@ export class AiStore {
   }
 
   getActiveConversationId(): string | undefined {
-    const row = this.db.prepare(`SELECT value FROM ai_meta WHERE key = 'active_conversation_id'`)
+    const row = this.db.prepare('SELECT value FROM ai_meta WHERE key = \'active_conversation_id\'')
       .get() as { value: string } | undefined
     return row?.value || undefined
   }
 
   setActiveConversationId(id?: string): void {
     if (!id) {
-      this.db.prepare(`DELETE FROM ai_meta WHERE key = 'active_conversation_id'`).run()
+      this.db.prepare('DELETE FROM ai_meta WHERE key = \'active_conversation_id\'').run()
       return
     }
     if (!this.getConversation(id)) throw new Error(`AI conversation ${id} was not found.`)
@@ -422,7 +423,7 @@ export class AiStore {
   }
 
   getPreferences(): AiWorkspacePreferences {
-    const row = this.db.prepare(`SELECT value FROM ai_meta WHERE key = 'max_api_retries'`)
+    const row = this.db.prepare('SELECT value FROM ai_meta WHERE key = \'max_api_retries\'')
       .get() as { value: string } | undefined
     const parsed = Number(row?.value)
     return {
@@ -784,8 +785,8 @@ export class AiStore {
       enabled: row.enabled === 1,
       ...(row.base_url ? { baseUrl: row.base_url } : {}),
       ...(row.secret_ref ? { apiKeyConfigured: Boolean(await this.secrets.get(row.secret_ref)) } : {}),
-      ...(row.api_style ? { apiStyle: row.api_style as import('@shared/types/aiWorkspace').AiApiStyle } : {}),
-      ...(row.auth_method ? { authMethod: row.auth_method as import('@shared/types/aiWorkspace').AiApiAuthMethod } : {}),
+      ...(row.api_style ? { apiStyle: row.api_style as AiApiStyle } : {}),
+      ...(row.auth_method ? { authMethod: row.auth_method as AiApiAuthMethod } : {}),
       ...(row.executable_path ? { executablePath: row.executable_path } : {}),
       ...(row.kind === 'cli'
         ? { environment: parseJson<Record<string, string>>(row.environment_json, {}) }

@@ -61,7 +61,8 @@ describe('AnnotaMD compact inline toolbar', () => {
 
     expect(toolbar).toContain("'data-tooltip': tooltip")
     expect(toolbar).toContain("'aria-label': i18n.t(icon.tooltip)")
-    expect(toolbar).not.toContain("title: `${i18n.t(icon.tooltip)}\\n${icon.shortcut}`")
+    // eslint-disable-next-line no-template-curly-in-string
+    expect(toolbar).not.toContain('title: `${i18n.t(icon.tooltip)}\\n${icon.shortcut}`')
     expect(css).toMatch(
       /\.mu-format-picker li\.item\[data-tooltip\]::after\s*\{[^}]*content:\s*attr\(data-tooltip\);[^}]*background:\s*#1f2329;/s
     )

@@ -165,7 +165,12 @@ describe('enter mid-paragraph — split into two paragraphs', () => {
         const muya = bootMuya(`${raw}\n`);
         const content = contentByText(muya, raw);
         const visibleLinkEnd = raw.indexOf('](');
+        content.setCursor(visibleLinkEnd, visibleLinkEnd, true);
+        const cursor = content.getCursor();
+        if (!cursor)
+            throw new Error('Expected the paragraph cursor');
         vi.spyOn(content, 'getCursor').mockReturnValue({
+            ...cursor,
             start: { offset: visibleLinkEnd },
             end: { offset: visibleLinkEnd },
             isCollapsed: true,

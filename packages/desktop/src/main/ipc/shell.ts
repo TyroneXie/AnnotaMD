@@ -3,6 +3,7 @@ import type { Session } from 'electron'
 import log from 'electron-log'
 import * as plist from 'plist'
 import { fileURLToPath } from 'node:url'
+import { assertFileAccess, canonicalPath } from '../security/fileAccess'
 import {
   extractPageMetadata,
   getPageMetadataFallbackRequest,
@@ -176,9 +177,9 @@ const resolvePageMetadata = async(targetSession: Session, rawUrl: string): Promi
     const renderedMetadata = await renderPageMetadata(targetSession, rawUrl)
     metadata = renderedMetadata.title
       ? {
-          title: renderedMetadata.title,
-          icon: renderedMetadata.icon || staticMetadata.icon || fallbackIcon(rawUrl)
-        }
+        title: renderedMetadata.title,
+        icon: renderedMetadata.icon || staticMetadata.icon || fallbackIcon(rawUrl)
+      }
       : staticMetadata.title
         ? { title: staticMetadata.title, icon: staticMetadata.icon || fallbackIcon(rawUrl) }
         : EMPTY_PAGE_METADATA
@@ -200,6 +201,7 @@ const resolvePageMetadata = async(targetSession: Session, rawUrl: string): Promi
 export const registerShellHandlers = (): void => {
   ipcMain.handle('annotamd::shell::open-external', async(_e, url: string) => {
     try {
+      if (!['http:', 'https:', 'mailto:'].includes(new URL(url).protocol)) return false
       await shell.openExternal(url)
       return true
     } catch (err) {
@@ -208,18 +210,24 @@ export const registerShellHandlers = (): void => {
     }
   })
   ipcMain.on('annotamd::shell::open-external', (_e, url: string) => {
-    shell.openExternal(url).catch((err) => log.error('shell.openExternal failed:', err))
+    try {
+      if (['http:', 'https:', 'mailto:'].includes(new URL(url).protocol)) {
+        void shell.openExternal(url).catch((err) => log.error('shell.openExternal failed:', err))
+      }
+    } catch (error) {
+      log.warn('Invalid external link', error)
+    }
   })
   ipcMain.on('annotamd::shell::show-item', (_e, fullPath: string) => {
     try {
-      shell.showItemInFolder(fullPath)
+      shell.showItemInFolder(canonicalPath(fullPath))
     } catch (err) {
       log.error('shell.showItemInFolder failed:', err)
     }
   })
-  ipcMain.handle('annotamd::shell::open-path', async(_e, fullPath: string) => {
+  ipcMain.handle('annotamd::shell::open-path', async(event, fullPath: string) => {
     try {
-      return await shell.openPath(fullPath)
+      return await shell.openPath(assertFileAccess(event.sender, fullPath))
     } catch (err) {
       log.error('shell.openPath failed:', err)
       return String(err instanceof Error ? err.message : err)

@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { BLOCK_DOM_PROPERTY } from '../../../config';
+import { isPointInsideEditorViewport } from '../../tableHoverGuard';
 import {
     getInsertionSide,
-    isTableCellOwnedByMuya,
     isSameInsertionBoundary,
+    isTableCellOwnedByMuya,
     shouldContinueTableDrag,
     shouldHighlightTableAxis,
 } from '../index';
-import { isPointInsideEditorViewport } from '../../tableHoverGuard';
 
 const rect = { left: 100, right: 200, top: 50, bottom: 90 };
 const css = readFileSync(fileURLToPath(new URL('../index.css', import.meta.url)), 'utf8');
@@ -18,7 +18,7 @@ const blockCss = readFileSync(
     'utf8',
 );
 
-describe('Feishu-style table insertion hit areas', () => {
+describe('feishu-style table insertion hit areas', () => {
     it('clears hover tools when the pointer moves into tabs above the editor', () => {
         const editorRect = { left: 100, right: 900, top: 120, bottom: 700 };
 
@@ -93,7 +93,7 @@ describe('Feishu-style table insertion hit areas', () => {
 
     it('keeps the drag hit areas transparent and paints hover borders outside cells', () => {
         expect(css).toMatch(
-            /\.mu-table-drag-bar::before\s*\{[^}]*background:\s*transparent;/s,
+            /\.mu-table-drag-bar::before\s*\{[^}]*background:\s*transparent;/,
         );
         expect(blockCss).toContain('.mu-table-axis-hover-edge-column::before');
         expect(blockCss).toContain('.mu-table-axis-hover-edge-row::before');
@@ -114,10 +114,10 @@ describe('Feishu-style table insertion hit areas', () => {
 
     it('keeps the insertion guide centered under the plus on both trailing edges', () => {
         expect(css).toMatch(
-            /\[data-drag='bottom'\]\[data-insert='after'\]::after\s*\{[^}]*translateX\(50%\)/s,
+            /\[data-drag='bottom'\]\[data-insert='after'\]::after\s*\{[^}]*translateX\(50%\)/,
         );
         expect(css).toMatch(
-            /\[data-drag='right'\]\[data-insert='after'\]::after\s*\{[^}]*translateY\(50%\)/s,
+            /\[data-drag='right'\]\[data-insert='after'\]::after\s*\{[^}]*translateY\(50%\)/,
         );
     });
 });

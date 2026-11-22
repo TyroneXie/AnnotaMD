@@ -10,10 +10,10 @@ const stylesheet = readFileSync(
 describe('rendered link cursor', () => {
     it('uses a pointer for Markdown, reference, auto and HTML-preview links', () => {
         expect(stylesheet).toMatch(
-            /a\.mu-inline-rule,\s*span\.mu-inline-rule\.mu-link\s*\{[^}]*cursor:\s*pointer;/s,
+            /a\.mu-inline-rule,\s*span\.mu-inline-rule\.mu-link\s*\{[^}]*cursor:\s*pointer;/,
         );
         expect(stylesheet).toMatch(
-            /\.mu-html-preview a\[href\]\s*\{[^}]*cursor:\s*pointer;/s,
+            /\.mu-html-preview a\[href\]\s*\{[^}]*cursor:\s*pointer;/,
         );
     });
 });

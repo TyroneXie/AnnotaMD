@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 
+import type { IMuyaOptions } from '../../../../types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyType } from '../../../../clipboard/types';
 import { Muya } from '../../../../muya';
-import type { IMuyaOptions } from '../../../../types';
 
 const loadRendererMock = vi.fn();
 vi.mock('../../../../utils/diagram', () => ({

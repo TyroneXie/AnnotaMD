@@ -56,5 +56,5 @@ export const isAutomaticUpdateInstallSupported = (
 }
 
 export const isMacBundleUpdateSupported = (options: UpdateSupportOptions = {}): boolean =>
-  (options.platform ?? process.platform) === 'darwin' && isAppUpdateSupported(options)
-  && (options.canReplaceMacBundle ?? canReplaceMacAppBundle)(options.executablePath ?? process.execPath)
+  (options.platform ?? process.platform) === 'darwin' && isAppUpdateSupported(options) &&
+  (options.canReplaceMacBundle ?? canReplaceMacAppBundle)(options.executablePath ?? process.execPath)

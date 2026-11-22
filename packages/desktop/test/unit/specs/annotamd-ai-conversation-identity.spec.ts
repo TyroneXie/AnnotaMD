@@ -6,6 +6,7 @@ const conversation = (): AiConversation => ({
   id: 'conversation-1',
   title: 'Conversation',
   mode: 'agent',
+  permissionMode: 'request' as const,
   configId: 'config-1',
   provider: 'codex',
   modelId: 'gpt-5',
@@ -19,6 +20,7 @@ const conversation = (): AiConversation => ({
 
 const identity = () => ({
   mode: 'agent' as const,
+  permissionMode: 'request' as const,
   configId: 'config-1',
   provider: 'codex' as const,
   modelId: 'gpt-5',

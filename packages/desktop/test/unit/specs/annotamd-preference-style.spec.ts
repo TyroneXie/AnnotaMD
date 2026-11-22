@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -242,6 +242,7 @@ describe('AnnotaMD preference styling', () => {
       /\.editor-component \.mu-container\s*\{[^}]*width:\s*min\(100%, var\(--annotamd-editor-area-width, 980px\)\);/s
     )
     expect(theme).toContain('--annotamd-editor-area-width: 100%;')
+  // eslint-disable-next-line no-template-curly-in-string
     expect(theme).toContain('--annotamd-editor-side-padding: ${padding}px;')
   })
 })

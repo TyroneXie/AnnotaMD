@@ -1,5 +1,8 @@
 <template>
-  <span class="annotamd-ai-provider-logo" :title="label">
+  <span
+    class="annotamd-ai-provider-logo"
+    :title="label"
+  >
     <el-icon v-if="provider === 'custom'"><Operation /></el-icon>
     <img
       v-else-if="iconUrl && !failed"

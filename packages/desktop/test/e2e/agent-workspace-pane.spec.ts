@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 import type { AiSelectionRequest } from '../../src/shared/types/aiSelection'
 import type { AiSendRequest } from '../../src/shared/types/aiWorkspace'
@@ -13,7 +14,7 @@ const commentPrompts = [
   'Use the document to answer all its comments one by one in this chat.'
 ]
 
-const selectEditorPhrase = async(page: import('@playwright/test').Page, phrase: string, occurrence = 0) => {
+const selectEditorPhrase = async(page: Page, phrase: string, occurrence = 0) => {
   await page.evaluate(({ selectedPhrase, occurrence }) => {
     const root = document.querySelector('.editor-component') as HTMLElement | null
     if (!root) throw new Error('editor unavailable')
@@ -115,7 +116,11 @@ test('quotes text in the Agent draft only through the selection toolbar', async(
       ipcMain.handle('annotamd::ai::configs:list', () => [config])
       ipcMain.handle('annotamd::ai::snapshot', () => ({
         readiness: { status: 'ready', configId: config.id, modelId: 'model', modelIds: ['model'] },
-        configs: [config], conversations: [], messages: [], changeSets: [], running: false
+        configs: [config],
+        conversations: [],
+        messages: [],
+        changeSets: [],
+        running: false
       }))
       const sends: AiSendRequest[] = []
       Object.assign(globalThis, { quoteTestSends: sends })
@@ -412,22 +417,38 @@ test('keeps one process disclosure with plain text and flat tool events', async(
       }
       const messages = [
         {
-          id: 'tool-trace-user', conversationId: conversation.id, role: 'user',
-          content: 'Review this document', status: 'complete', createdAt: now
+          id: 'tool-trace-user',
+          conversationId: conversation.id,
+          role: 'user',
+          content: 'Review this document',
+          status: 'complete',
+          createdAt: now
         },
         {
-          id: 'tool-trace-summary', conversationId: conversation.id, role: 'system',
-          content: JSON.stringify({ durationMs: 125_000 }), status: 'complete',
-          toolName: 'annotamd:run-summary', createdAt: now + 1
+          id: 'tool-trace-summary',
+          conversationId: conversation.id,
+          role: 'system',
+          content: JSON.stringify({ durationMs: 125_000 }),
+          status: 'complete',
+          toolName: 'annotamd:run-summary',
+          createdAt: now + 1
         },
         {
-          id: 'tool-trace-reasoning', conversationId: conversation.id, role: 'system',
-          content: 'Checking the document structure.', status: 'complete',
-          toolName: 'annotamd:reasoning', createdAt: now + 2
+          id: 'tool-trace-reasoning',
+          conversationId: conversation.id,
+          role: 'system',
+          content: 'Checking the document structure.',
+          status: 'complete',
+          toolName: 'annotamd:reasoning',
+          createdAt: now + 2
         },
         {
-          id: 'tool-trace-intro', conversationId: conversation.id, role: 'assistant',
-          content: 'I will inspect the document first.', status: 'complete', createdAt: now + 3
+          id: 'tool-trace-intro',
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: 'I will inspect the document first.',
+          status: 'complete',
+          createdAt: now + 3
         },
         ...Array.from({ length: 3 }, (_, index) => ({
           id: `tool-trace-${index + 1}`,
@@ -440,8 +461,11 @@ test('keeps one process disclosure with plain text and flat tool events', async(
           toolName: index === 0 ? 'commandExecution' : 'mcpToolCall'
         })),
         {
-          id: 'tool-trace-progress', conversationId: conversation.id, role: 'assistant',
-          content: 'I found three issues and will apply the fixes.', status: 'complete',
+          id: 'tool-trace-progress',
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: 'I found three issues and will apply the fixes.',
+          status: 'complete',
           createdAt: now + 7
         },
         ...Array.from({ length: 3 }, (_, index) => ({
@@ -455,8 +479,12 @@ test('keeps one process disclosure with plain text and flat tool events', async(
           toolName: 'mcpToolCall'
         })),
         {
-          id: 'tool-trace-final', conversationId: conversation.id, role: 'assistant',
-          content: 'The full review is complete.', status: 'complete', createdAt: now + 11
+          id: 'tool-trace-final',
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: 'The full review is complete.',
+          status: 'complete',
+          createdAt: now + 11
         }
       ]
       ipcMain.handle('annotamd::ai::snapshot', () => ({

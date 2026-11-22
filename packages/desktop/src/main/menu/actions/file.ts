@@ -1,3 +1,4 @@
+import { assertFileAccess, grantFileAccess } from '../../security/fileAccess'
 import { rename as fsRename } from 'fs-extra'
 import path from 'path'
 import {
@@ -104,6 +105,7 @@ const handleResponseForExport = async(e: IpcMainEvent, payload: ExportPayload): 
   })
 
   if (filePath && !canceled) {
+    grantFileAccess(e.sender, path.dirname(filePath))
     try {
       if (type === 'pdf') {
         // Build a clickable bookmark/outline tree from the document's h1-h6
@@ -177,7 +179,7 @@ const handleResponseForSave = async(
   // on disk nevertheless but is already tracked by AnnotaMD.
   const alreadyExistOnDisk = !!pathname
 
-  let filePath = pathname
+  let filePath = pathname ? assertFileAccess(e.sender, pathname, true) : pathname
 
   if (!filePath) {
     const { filePath: dialogPath, canceled } = await dialog.showSaveDialog(win, {
@@ -186,6 +188,7 @@ const handleResponseForSave = async(
 
     if (dialogPath && !canceled) {
       filePath = dialogPath
+      grantFileAccess(e.sender, path.dirname(filePath))
     }
   }
 
@@ -367,6 +370,7 @@ ipcMain.on(
     })
 
     if (filePath && !canceled) {
+      grantFileAccess(e.sender, path.dirname(filePath))
       filePath = path.resolve(filePath)
       writeMarkdownFile(filePath, markdown, options as Parameters<typeof writeMarkdownFile>[2])
         .then(() => {
@@ -470,6 +474,7 @@ ipcMain.on('annotamd::window::drop', async(e, fileList: string[]) => {
     return
   }
   for (const file of fileList) {
+    assertFileAccess(e.sender, file)
     if (isMarkdownFile(file)) {
       openFileOrFolder(win, file)
       continue
@@ -501,6 +506,8 @@ ipcMain.on('annotamd::rename', async(e, { id, pathname, newPathname }: RenamePay
     return
   }
 
+  pathname = assertFileAccess(e.sender, pathname, true)
+  newPathname = assertFileAccess(e.sender, newPathname, true)
   const doRename = (): void => {
     fsRename(pathname, newPathname, (err: NodeJS.ErrnoException | null) => {
       if (err) {
@@ -549,6 +556,8 @@ ipcMain.on(
     })
 
     if (filePath && !canceled) {
+      grantFileAccess(e.sender, path.dirname(filePath))
+      pathname = assertFileAccess(e.sender, pathname, true)
       fsRename(pathname, filePath, (err: NodeJS.ErrnoException | null) => {
         if (err) {
           log.error(`annotamd::rename: Cannot rename "${pathname}" to "${filePath}".\n${err.stack}`)

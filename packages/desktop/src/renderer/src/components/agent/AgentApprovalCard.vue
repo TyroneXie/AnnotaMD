@@ -1,5 +1,8 @@
 <template>
-  <article class="annotamd-agent-approval" data-testid="ai-approval-card">
+  <article
+    class="annotamd-agent-approval"
+    data-testid="ai-approval-card"
+  >
     <header>
       <span><el-icon><Lock /></el-icon></span>
       <div>
@@ -7,10 +10,17 @@
         <strong>{{ approval.title }}</strong>
       </div>
     </header>
-    <p v-if="approval.detail">{{ approval.detail }}</p>
+    <p v-if="approval.detail">
+      {{ approval.detail }}
+    </p>
     <pre v-if="approval.command"><code>{{ approval.command }}</code></pre>
     <ul v-if="approval.paths?.length">
-      <li v-for="path in approval.paths" :key="path"><code>{{ path }}</code></li>
+      <li
+        v-for="path in approval.paths"
+        :key="path"
+      >
+        <code>{{ path }}</code>
+      </li>
     </ul>
     <footer>
       <button

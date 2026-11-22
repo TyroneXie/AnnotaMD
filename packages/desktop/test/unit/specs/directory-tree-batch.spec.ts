@@ -11,7 +11,7 @@ describe('directory tree batch insertion', () => {
 
   it('adds a large unsorted batch and sorts each folder at the end', async() => {
     const { addFiles } = await import('@/store/treeCtrl')
-    const tree = {
+    const tree: Parameters<typeof addFiles>[0] = {
       pathname: '/workspace',
       name: 'workspace',
       isDirectory: true as const,

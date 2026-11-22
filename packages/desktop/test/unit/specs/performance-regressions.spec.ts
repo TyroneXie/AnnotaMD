@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -44,10 +44,10 @@ describe('performance regression guards', () => {
     const main = read('packages/desktop/src/main/index.ts')
     const commentIpc = read('packages/desktop/src/main/ipc/comments.ts')
 
-    expect(main).not.toMatch(/^import .*['"]\.\/comments(?:\/AgentBridgeServer)?['"]/m)
+    expect(main).not.toMatch(/^import (?!type )[^\n]*['"]\.\/comments(?:\/AgentBridgeServer)?['"]/m)
     expect(main).toContain("agentBridgeModule ??= import('./comments/AgentBridgeServer')")
     expect(main).toContain('if (!nextEnabled && !agentBridgeModule) return')
-    expect(commentIpc).not.toMatch(/^import .*['"]\.\.\/comments/m)
+    expect(commentIpc).not.toMatch(/^import (?!type )[^\n]*['"]\.\.\/comments/m)
     expect(commentIpc).toContain("await import('../comments')")
     expect(commentIpc).toContain("await import('../comments/AgentBridgeServer')")
   })

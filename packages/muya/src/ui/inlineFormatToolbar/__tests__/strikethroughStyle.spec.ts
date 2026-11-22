@@ -10,16 +10,16 @@ const inlineSyntaxCss = readFileSync(
 describe('strikethrough alignment', () => {
     it('keeps inline code at the surrounding text size with compact padding', () => {
         expect(inlineSyntaxCss).toMatch(
-            /code\.mu-inline-rule\s*\{[^}]*padding:\s*0\.1em 0\.35em;[^}]*font-size:\s*1em;/s,
+            /code\.mu-inline-rule\s*\{[^}]*padding:\s*0\.1em 0\.35em;[^}]*font-size:\s*1em;/,
         );
     });
 
     it('uses one painted rule across prose and compensates for inline code padding', () => {
         expect(inlineSyntaxCss).toMatch(
-            /del\.mu-inline-rule\s*\{[^}]*text-decoration:\s*none;[^}]*background-position:\s*0 48%;[^}]*background-size:\s*100% 1px;/s,
+            /del\.mu-inline-rule\s*\{[^}]*text-decoration:\s*none;[^}]*background-position:\s*0 48%;[^}]*background-size:\s*100% 1px;/,
         );
         expect(inlineSyntaxCss).toMatch(
-            /del\.mu-inline-rule code\.mu-inline-rule\s*\{[^}]*background-position:\s*0 46%;[^}]*background-size:\s*100% 1px;/s,
+            /del\.mu-inline-rule code\.mu-inline-rule\s*\{[^}]*background-position:\s*0 46%;[^}]*background-size:\s*100% 1px;/,
         );
     });
 
@@ -28,10 +28,10 @@ describe('strikethrough alignment', () => {
             /\.mu-geometric-strikethrough del\.mu-inline-rule,[\s\S]*?background-image:\s*none;/,
         );
         expect(inlineSyntaxCss).toMatch(
-            /\.mu-strikethrough-line-layer\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/s,
+            /\.mu-strikethrough-line-layer\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/,
         );
         expect(inlineSyntaxCss).toMatch(
-            /\.mu-strikethrough-line\s*\{[^}]*position:\s*absolute;[^}]*height:\s*1px;/s,
+            /\.mu-strikethrough-line\s*\{[^}]*position:\s*absolute;[^}]*height:\s*1px;/,
         );
     });
 });

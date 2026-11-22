@@ -1,5 +1,6 @@
+import type { MuyaElement } from './editor-elements'
 import { expect, test } from '@playwright/test'
-import { _electron, type ElectronApplication } from 'playwright'
+import { _electron, type ElectronApplication } from '@playwright/test'
 import fs from 'fs-extra'
 import { cp } from 'node:fs/promises'
 import { constants } from 'node:fs'
@@ -68,7 +69,7 @@ test('manual download, retry, restart and replacement preserve an unsaved docume
     } else if (request.url?.includes('.zip')) {
       downloads++
       const data = downloads === 1 ? Buffer.from('corrupt update') : await fs.readFile(archive)
-      response.writeHead(200, {'Content-Length': data.length})
+      response.writeHead(200, { 'Content-Length': data.length })
       let offset = 0
       const timer = setInterval(() => {
         const end = Math.min(offset + 1024 * 1024, data.length)
@@ -81,8 +82,8 @@ test('manual download, retry, restart and replacement preserve an unsaved docume
   })
   try {
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
-    const address = server.address() as {port: number}
-    await cp(template!, target, {recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE})
+    const address = server.address() as { port: number }
+    await cp(template!, target, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE })
     const resources = path.join(target, 'Contents/Resources')
     const appDir = path.join(resources, 'app')
     const require = createRequire(__filename)
@@ -97,7 +98,7 @@ test('manual download, retry, restart and replacement preserve an unsaved docume
     await fs.writeFile(main, prefix + await fs.readFile(main, 'utf8'))
     await fs.writeFile(path.join(resources, 'app-update.yml'), `provider: generic\nurl: http://127.0.0.1:${address.port}\nupdaterCacheDirName: ${cacheName}\n`)
     await run('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', '--preserve-metadata=entitlements,identifier,flags,runtime', target])
-    await cp(target, candidate, {recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE})
+    await cp(target, candidate, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE })
     const packageFile = path.join(candidate, 'Contents/Resources/app/package.json')
     const packageInfo = await fs.readJson(packageFile)
     packageInfo.version = updateVersion
@@ -111,62 +112,65 @@ test('manual download, retry, restart and replacement preserve an unsaved docume
     app = await _electron.launch({
       executablePath: path.join(target, 'Contents/MacOS/AnnotaMD'),
       args: ['--user-data-dir', userData, note],
-      env: {...process.env, PERF_TESTING: 'true', ANNOTAMD_ERROR_INTERACTION: '1'}, timeout: 30000
+      env: { ...process.env, PERF_TESTING: 'true', ANNOTAMD_ERROR_INTERACTION: '1' },
+      timeout: 30000
     })
     const page = await app.firstWindow()
     expect(await app.evaluate(({ app }) => app.getVersion())).toBe(currentVersion)
     await waitForEditor(page)
     // The ordinary startup check discovers the local fixture update.
     const button = page.locator('.app-update-sidebar')
-    await expect(button).toHaveClass(/is-available/, {timeout: 15000})
+    await expect(button).toHaveClass(/is-available/, { timeout: 15000 })
     expect(downloads).toBe(0)
     expect(await fs.pathExists(externalFile)).toBe(false)
     await button.click()
-    await expect(button).toHaveClass(/is-error/, {timeout: 15000})
+    await expect(button).toHaveClass(/is-error/, { timeout: 15000 })
     expect(downloads).toBe(1)
     await button.click()
     await expect(button).toHaveClass(/is-downloading/)
     await expect(button.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '100')
     await expect.poll(async() => Number(await button.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeGreaterThan(0)
-    await page.screenshot({path: '/tmp/annotamd-manual-update-progress.png'})
-    await expect(button).toHaveClass(/is-downloaded/, {timeout: 30000})
+    await page.screenshot({ path: '/tmp/annotamd-manual-update-progress.png' })
+    await expect(button).toHaveClass(/is-downloaded/, { timeout: 30000 })
     console.log('Update validated and downloaded; awaiting explicit restart')
     expect(downloads).toBe(2)
-    await page.screenshot({path: '/tmp/annotamd-manual-update-downloaded.png'})
+    await page.screenshot({ path: '/tmp/annotamd-manual-update-downloaded.png' })
     const prepared = (await fs.readdir(path.dirname(target))).find(name => name.startsWith('.annotamd-update-'))!
     expect(await fs.pathExists(path.join(path.dirname(target), prepared, 'install-approved'))).toBe(false)
 
-    await sendIpcToRenderer(app, 'annotamd::user-preference', {autoSave: false, startUpAction: 'restoreAll'})
-    await page.locator('.mu-paragraph-content').first().evaluate((element: any) => {
-      element.__MUYA_BLOCK__.muya.domNode.focus()
-      element.__MUYA_BLOCK__.setCursor(0, 0, true)
+    await sendIpcToRenderer(app, 'annotamd::user-preference', { autoSave: false, startUpAction: 'restoreAll' })
+    await page.locator('.mu-paragraph-content').first().evaluate((element) => {
+      const block = (element as MuyaElement).__MUYA_BLOCK__
+      block.muya.domNode.focus()
+      block.setCursor(0, 0, true)
     })
     await page.keyboard.insertText(marker)
     const oldPid = await app.evaluate(() => process.pid)
     await button.click()
     await expect.poll(() => {
       try { process.kill(oldPid, 0); return false } catch { return true }
-    }, {timeout: 30000}).toBe(true)
+    }, { timeout: 30000 }).toBe(true)
     console.log('Old application closed after buffering the unsaved document')
     app = undefined
     await expect.poll(async() => {
       try { return (await fs.readJson(readyFile)).version } catch { return '' }
-    }, {timeout: 30000}).toBe(updateVersion)
+    }, { timeout: 30000 }).toBe(updateVersion)
     const boot = await fs.readJson(readyFile)
-    console.log(JSON.stringify({restartedVersion: boot.version, restoredMarker: boot.text.includes(marker)}))
-    await expect.poll(async() => (await fs.readJson(readyFile)).text, {timeout: 10000}).toContain(marker)
+    console.log(JSON.stringify({ restartedVersion: boot.version, restoredMarker: boot.text.includes(marker) }))
+    await expect.poll(async() => (await fs.readJson(readyFile)).text, { timeout: 10000 }).toContain(marker)
     await expect.poll(() => fs.pathExists(path.join(path.dirname(target), prepared))).toBe(false)
     expect(await fs.readFile(note, 'utf8')).toBe(source)
     expect(await fs.pathExists(externalFile)).toBe(false)
     completed = true
-    console.log(JSON.stringify({downloadClicks: 2, installClicks: 1, checksumRetry: true, version: updateVersion, unsavedBufferRestored: true, windowMode: 'hidden'}))
+    console.log(JSON.stringify({ downloadClicks: 2, installClicks: 1, checksumRetry: true, version: updateVersion, unsavedBufferRestored: true, windowMode: 'hidden' }))
   } finally {
     if (app) await app.close().catch(() => {})
     const realRoot = await fs.realpath(root).catch(() => root)
     const ownedProcesses = async() => (await run('/bin/ps', ['-axo', 'pid=,args='])).stdout.split('\n').flatMap(line => {
       const match = line.trim().match(/^(\d+)\s+(.+)$/)
       return match && (match[2].includes(root) || match[2].includes(realRoot))
-        ? [{pid: Number(match[1]), command: match[2]}] : []
+        ? [{ pid: Number(match[1]), command: match[2] }]
+        : []
     })
     // Stop the installer first so cleanup cannot be mistaken for a failed
     // launch and trigger a rollback/relaunch while files are being removed.
@@ -179,7 +183,7 @@ test('manual download, retry, restart and replacement preserve an unsaved docume
       const children = await ownedProcesses()
       for (const child of children) { try { process.kill(child.pid, 'SIGTERM') } catch {} }
       return children.length
-    }, {timeout: 10000}).toBe(0)
+    }, { timeout: 10000 }).toBe(0)
     await new Promise<void>(resolve => server.close(() => resolve()))
     if (completed) await fs.remove(root)
     else console.log(`Preserved failed QA fixture: ${root}`)

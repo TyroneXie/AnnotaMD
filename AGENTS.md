@@ -19,10 +19,19 @@
 - 涉及特定边界时可以创建最小 QA Markdown，但验证后要重新打开上述真实文档。
 - 不要把“单元测试通过”描述成“界面已经修复”；必须说明实际运行界面的验证结果。
 
+## AnnotaMD 实时文档边界
+
+- 用户说“当前文档”“打开的文档”“最新评论”或要求处理 AnnotaMD 批注时，先取得 AnnotaMD 当前实时上下文；磁盘文件不是未保存编辑内容的权威来源。
+- 如果当前上下文返回 `document: null`，停止读取或修改磁盘副本，并请用户在 AnnotaMD 中打开目标文档。
+- 读取或修改前使用当前授权的文档 handle，并取得最新 revision/contentHash；每次写入后重新读取正文、评论和 revision，不能沿用旧状态连续覆盖。
+- 语言与 Markdown 审校只改用户授权的范围，不改变技术含义。用户要求精确回复时，只返回指定文本，不附加解释或格式。
+- AnnotaMD 评论任务遵循已安装的 `annotamd-comment-review` Skill；未经用户授权不得解决或删除评论。
+
 ## 全量验证与打包
 
 - 只有准备提交重要版本或发布 Release 时，才运行全量测试、完整构建和打包。
 - 用户未要求时不要打包。
+- 用户已确认“下次只打包必要的”：以后只构建、发布用户安装、当前应用内更新及下载校验必需的产物，不默认生成或上传未使用的辅助文件、调试文件和可选分发格式。macOS 每个受支持架构保留 `.dmg`（手动安装）和 `.zip`（应用内更新），保留必要的更新清单与 `SHA256SUMS.txt`；当前 Mac 完整 ZIP 更新路径不使用 `.dmg.blockmap`、`.zip.blockmap`，后续应停止生成和上传这些文件，也不发布 `builder-debug.yml`。其他平台按实际安装与更新依赖筛选；更新机制改变时重新核验，不能为精简而破坏更新链路。
 - 用户单独说“打包”时，默认执行本地体验安装，不等同于提交、推送或发布：先完成与改动范围相称的验证，再按当前 Mac 架构打包当前工作树；退出所有旧 AnnotaMD 主进程与 Helper，用新产物替换 `/Applications/AnnotaMD.app`，然后只启动该安装位置的一个实例并打开真实长文档供用户体验。替换前后不得清理用户数据目录；必须核对运行实例的 bundle path、版本与本次核心改动。只有用户明确说“发布”时才进入远程 Release 流程。
 - 新增功能若不属于现有 menu、table、comments 包，应添加最小回归测试并登记到 `scripts/verifyAnnotaMD.mjs`，供后续复用。
 - **不得把其他分支、其他 worktree 或未合入提交中的验证结果当作当前项目结果。** 汇报“已修复/已优化”前，必须确认改动存在于当前工作树和当前分支；发布前还必须确认改动已进入发布提交与实际构建产物。
@@ -282,3 +291,12 @@
 - 根因：本机验证覆盖不了其他平台，而旧流程把五平台构建放在 tag 创建之后；原有 `build.yml` 又只由 PR 触发，直接从 `main` 发布时没有远程预检。即使增加预检，runner 或构建步骤与 Release 不一致仍会留下盲区。
 - 推荐做法：`build.yml` 保留 `workflow_dispatch` 入口；发布候选提交先推送 `main`，对其精确 SHA 手动运行与 Release 同 runner、同工具链、同打包命令的五平台 Build，全部成功后再创建和推送 tag。
 - 验证方式：发布记录中必须保留 tag 前 Build run ID，确认其 `headSha` 等于 tag commit，并逐项核对两个 workflow 的 matrix runner 与关键构建步骤；缺少任一证据不得创建 tag。
+
+### IPC、类型检查与安装可复现性
+
+- Renderer IPC 处理器必须在 `main/security/ipc.ts` 安装统一来源检查之后注册；新增通道同步更新 `shared/types/ipc.ts` 并执行 `node scripts/generateIpcChannels.mjs`，`--check` 校验生成物。通用文件操作必须经过窗口路径授权，原生文件选择和另存为确认后由主进程授权；不能让页面自行扩大授权目录。
+- Desktop 源码和测试分别由 `tsconfig.json`、`tsconfig.tests.json` 检查，`npm --prefix packages/desktop run typecheck` 必须两者都通过；统一从已声明的 `@playwright/test` 导入。不能通过排除测试而省略测试类型检查。
+- Muya 保留自己的 4 空格、分号风格，desktop 保留 2 空格、无分号风格。官方 SVG 生成数据由生成器、类型和图标测试验证，不手改或重新排版；根 lint 不检查已生成的 MCP bundle、暂存 Pi runtime 和测试输出。
+- `postinstall` 只修补和重建锁定的原生源码，不执行 `pnpm add` 或嵌套安装。缺少 native-keymap 源码时明确失败；pnpm 的 `allowBuilds.native-keymap: false` 禁止先按 Node ABI 构建，再由 postinstall 应用 C++20 补丁并按 Electron ABI 重建。用 `build-contracts.spec.ts` 检查缺依赖提前失败、无依赖清单写入和命令边界。
+
+- 现象：模型菜单首次或缓存失效时比权限菜单迟缓。根因：打开时才请求 Pi 模型能力并使用渐入浮层，已有配置也要等待能力发现。推荐做法：与权限菜单一样直接控制浮层，Composer 就绪后后台预取并复用缓存；能力请求未完成时允许选择 readiness 已确认启用的模型，不把缺少思考档位当作没有可用模型。验证方式：`agent-model-menu-performance.spec.ts` 挂起能力请求、提供几十个候选、连续切换菜单，检查已配置模型立即可选、能力返回后档位正常、重复打开只发起一次发现，并与权限菜单比较渲染帧耗时。

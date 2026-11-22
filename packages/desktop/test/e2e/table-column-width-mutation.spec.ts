@@ -1,3 +1,4 @@
+import type { MuyaElement } from './editor-elements'
 import { test, expect, type Page } from '@playwright/test'
 import { launchWithMarkdown, sendIpcToRenderer, waitForEditor, expectNoRendererErrors } from './helpers'
 
@@ -11,7 +12,7 @@ async function geometry(page: Page) {
   }))
 }
 
-test('deleting a resized blank column reflows the surviving text and supports undo', async () => {
+test('deleting a resized blank column reflows the surviving text and supports undo', async() => {
   const { app, page } = await launchWithMarkdown(markdown, { suppressErrorDialog: true })
   try {
     if (process.env.ANNOTAMD_TEST_RENDERER_URL) {
@@ -22,8 +23,12 @@ test('deleting a resized blank column reflows the surviving text and supports un
       await page.goto(url.href)
       await page.waitForSelector('.editor-placeholder')
       await sendIpcToRenderer(app, 'annotamd::bootstrap-editor', {
-        addBlankTab: false, markdownList: [markdown], lineEnding: 'lf',
-        sideBarVisibility: true, tabBarVisibility: true, sourceCodeModeEnabled: false
+        addBlankTab: false,
+        markdownList: [markdown],
+        lineEnding: 'lf',
+        sideBarVisibility: true,
+        tabBarVisibility: true,
+        sourceCodeModeEnabled: false
       })
       await waitForEditor(page)
     }
@@ -34,7 +39,7 @@ test('deleting a resized blank column reflows the surviving text and supports un
     const handle = page.locator('.mu-table-column-resize-handle[data-visible="true"]')
     await expect(handle).toBeVisible()
     await page.mouse.down()
-    await page.mouse.move(box.x + box.width - 25, box.y + box.height / 2, {steps: 5})
+    await page.mouse.move(box.x + box.width - 25, box.y + box.height / 2, { steps: 5 })
     await page.mouse.up()
     expect((await geometry(page)).staleWidths).toBe(1)
     const resized = (await emptyHeader.boundingBox())!
@@ -51,8 +56,8 @@ test('deleting a resized blank column reflows the surviving text and supports un
     expect(after.height).toBeLessThan(400)
     await expect(table).toContainText('具体慢因未完全确认')
     await expect.poll(() => page.evaluate(() => {
-      const node = document.querySelector('.editor-component .mu-table-cell-content') as any
-      return node.__MUYA_BLOCK__.muya.editor.jsonState.getState().find((b: any) => b.name === 'table').children[0].children.length
+      const node = document.querySelector('.editor-component .mu-table-cell-content') as MuyaElement
+      return node.__MUYA_BLOCK__.muya.editor.jsonState.getState().find((b: { name: string }) => b.name === 'table').children[0].children.length
     })).toBe(2)
     await app.evaluate(({ Menu, BrowserWindow }) => {
       const accel = process.platform === 'darwin' ? 'Command+Z' : 'Ctrl+Z'
@@ -64,7 +69,7 @@ test('deleting a resized blank column reflows the surviving text and supports un
     await expect(table.locator('tr').first().locator('th,td')).toHaveCount(3)
     expect((await geometry(page)).height).toBeLessThan(400)
     await expectNoRendererErrors(app)
-    await page.screenshot({path: '/tmp/annotamd-table-column-width-undo.png'})
+    await page.screenshot({ path: '/tmp/annotamd-table-column-width-undo.png' })
     console.log('Geometry after deletion:', JSON.stringify(after))
   } finally { await app.close() }
 })

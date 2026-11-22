@@ -1,6 +1,12 @@
+export {
+    type IAnnotationPoint,
+    mapAnnotationPointBetweenDocumentsUtf16,
+    transformAnnotationPoint,
+    transformAnnotationPointUtf16,
+} from './annotations/transformAnchor';
 export type { ILocale } from './i18n/types';
-export { de, en, es, fr, ja, ko, pt, tr, zhCN, zhTW } from './locales';
 
+export { de, en, es, fr, ja, ko, pt, tr, zhCN, zhTW } from './locales';
 export { Muya } from './muya';
 export type { ITocItem } from './state/getTOC';
 export { MarkdownToHtml } from './state/markdownToHtml';
@@ -8,12 +14,6 @@ export { renderToStaticHTML } from './state/renderToStaticHTML';
 export type { IRenderToStaticHTMLOptions } from './state/renderToStaticHTML';
 export type { TState } from './state/types';
 export type { IMuyaOptions } from './types';
-export {
-    transformAnnotationPoint,
-    transformAnnotationPointUtf16,
-    mapAnnotationPointBetweenDocumentsUtf16,
-    type IAnnotationPoint,
-} from './annotations/transformAnchor';
 
 export { CodeBlockLanguageSelector } from './ui/codeBlockLanguageSelector';
 // Export ui tools.

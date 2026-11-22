@@ -1,8 +1,15 @@
 <template>
   <div class="annotamd-agent-message-stream">
-    <div v-if="messages.length === 0" class="annotamd-agent-empty" data-testid="ai-empty-state">
+    <div
+      v-if="messages.length === 0"
+      class="annotamd-agent-empty"
+      data-testid="ai-empty-state"
+    >
       <div class="annotamd-agent-empty-intro">
-        <span class="annotamd-agent-empty-mark" aria-hidden="true"><el-icon><Cpu /></el-icon></span>
+        <span
+          class="annotamd-agent-empty-mark"
+          aria-hidden="true"
+        ><el-icon><Cpu /></el-icon></span>
         <strong>{{ t('annotamd.agentWorkspace.emptyTitle') }}</strong>
         <p>{{ t('annotamd.agentWorkspace.emptyDescription') }}</p>
       </div>
@@ -19,12 +26,17 @@
           @click="emit('selectSuggestion', suggestion)"
         >
           <span>{{ suggestion }}</span>
-          <el-icon aria-hidden="true"><ArrowRight /></el-icon>
+          <el-icon aria-hidden="true">
+            <ArrowRight />
+          </el-icon>
         </button>
       </section>
     </div>
     <template v-else>
-      <template v-for="entry in timelineEntries" :key="entry.id">
+      <template
+        v-for="entry in timelineEntries"
+        :key="entry.id"
+      >
         <section
           v-if="entry.type === 'process-group'"
           class="annotamd-agent-process-group"
@@ -39,7 +51,10 @@
             data-testid="ai-process-group-toggle"
             @click="toggleProcessGroup(entry)"
           >
-            <el-icon class="annotamd-agent-tool-state" :class="`is-${runStatus(entry)}`">
+            <el-icon
+              class="annotamd-agent-tool-state"
+              :class="`is-${runStatus(entry)}`"
+            >
               <Loading v-if="runStatus(entry) === 'streaming'" />
               <CircleClose v-else-if="runStatus(entry) === 'failed'" />
               <VideoPause v-else-if="runStatus(entry) === 'cancelled'" />
@@ -67,7 +82,10 @@
             class="annotamd-agent-process-group-body"
             data-testid="ai-process-group-body"
           >
-            <template v-for="item in entry.items" :key="item.id">
+            <template
+              v-for="item in entry.items"
+              :key="item.id"
+            >
               <div
                 v-if="item.type === 'activity'"
                 class="annotamd-agent-tool-list"
@@ -80,7 +98,10 @@
                   data-testid="ai-tool-message"
                 >
                   <div class="annotamd-agent-tool-line">
-                    <el-icon class="annotamd-agent-tool-state" :class="`is-${activity.message.status}`">
+                    <el-icon
+                      class="annotamd-agent-tool-state"
+                      :class="`is-${activity.message.status}`"
+                    >
                       <Loading v-if="activity.message.status === 'streaming'" />
                       <CircleCheck v-else-if="activity.message.status === 'complete'" />
                       <CircleClose v-else-if="activity.message.status === 'failed'" />
@@ -117,10 +138,16 @@
               </article>
             </template>
           </div>
-          <p v-if="runError(entry.summary)" class="annotamd-agent-run-error">
+          <p
+            v-if="runError(entry.summary)"
+            class="annotamd-agent-run-error"
+          >
             {{ runError(entry.summary) }}
           </p>
-          <p v-if="entry.missingFinal" class="annotamd-agent-missing-final">
+          <p
+            v-if="entry.missingFinal"
+            class="annotamd-agent-missing-final"
+          >
             {{ t('annotamd.agentWorkspace.missingFinalAnswer') }}
           </p>
         </section>
@@ -132,7 +159,10 @@
         >
           <div class="annotamd-agent-message-bubble">
             <div class="annotamd-agent-message-content">
-              <template v-for="(part, partIndex) in entry.parts" :key="partIndex">
+              <template
+                v-for="(part, partIndex) in entry.parts"
+                :key="partIndex"
+              >
                 <div
                   v-if="part.type === 'html'"
                   class="annotamd-agent-markdown"
@@ -140,7 +170,11 @@
                   @click="openMarkdownLink"
                   v-html="part.html"
                 />
-                <div v-else class="annotamd-agent-code-block" data-testid="ai-code-block">
+                <div
+                  v-else
+                  class="annotamd-agent-code-block"
+                  data-testid="ai-code-block"
+                >
                   <div class="annotamd-agent-code-header">
                     <span>{{ part.language }}</span>
                     <button
@@ -161,7 +195,10 @@
                 </div>
               </template>
             </div>
-            <p v-if="entry.message.status === 'failed'" class="annotamd-agent-message-error">
+            <p
+              v-if="entry.message.status === 'failed'"
+              class="annotamd-agent-message-error"
+            >
               {{ t('annotamd.agentWorkspace.messageFailed') }}
               <button
                 type="button"
@@ -194,7 +231,11 @@
         </article>
       </template>
     </template>
-    <div v-if="running && !hasVisibleRunningState" class="annotamd-agent-thinking" role="status">
+    <div
+      v-if="running && !hasVisibleRunningState"
+      class="annotamd-agent-thinking"
+      role="status"
+    >
       <span /><span /><span />
     </div>
   </div>
@@ -327,13 +368,13 @@ const appendTurnEntries = (
   flushToolGroup()
   const failedAssistant = finalAnswerIndex < 0
     ? visibleTurn.find(({ message }) => (
-        message.role === 'assistant' && message.status === 'failed'
-      ))
+      message.role === 'assistant' && message.status === 'failed'
+    ))
     : undefined
-  const missingFinal = !running
-    && finalAnswerIndex < 0
-    && !failedAssistant
-    && Boolean(activityMessages.length || summary?.message.status === 'complete')
+  const missingFinal = !running &&
+    finalAnswerIndex < 0 &&
+    !failedAssistant &&
+    Boolean(activityMessages.length || summary?.message.status === 'complete')
   const hasProcessGroup = Boolean(processItems.length || summary || running)
   if (hasProcessGroup) {
     entries.push({
@@ -405,8 +446,8 @@ const openMarkdownLink = (event: MouseEvent): void => {
 }
 
 const processGroupExpanded = (entry: ProcessGroupEntry): boolean => (
-  processGroupExpansionOverrides.value.get(entry.id)
-    ?? (entry.running || runStatus(entry) === 'failed')
+  processGroupExpansionOverrides.value.get(entry.id) ??
+    (entry.running || runStatus(entry) === 'failed')
 )
 const toggleProcessGroup = (entry: ProcessGroupEntry): void => {
   const next = new Map(processGroupExpansionOverrides.value)
@@ -415,10 +456,10 @@ const toggleProcessGroup = (entry: ProcessGroupEntry): void => {
 }
 
 const runStatus = (entry: ProcessGroupEntry): AiMessageStatus => {
-  if (entry.summary?.message.status === 'failed'
-    || entry.messages.some(({ message }) => message.status === 'failed')) return 'failed'
-  if (entry.summary?.message.status === 'cancelled'
-    || entry.messages.some(({ message }) => message.status === 'cancelled')) return 'cancelled'
+  if (entry.summary?.message.status === 'failed' ||
+    entry.messages.some(({ message }) => message.status === 'failed')) return 'failed'
+  if (entry.summary?.message.status === 'cancelled' ||
+    entry.messages.some(({ message }) => message.status === 'cancelled')) return 'cancelled'
   if (entry.running || entry.summary?.message.status === 'streaming') return 'streaming'
   return 'complete'
 }

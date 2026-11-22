@@ -132,10 +132,12 @@ export class CommentService {
     `).get(commentId) as DocumentRow | undefined
     if (!row) return null
     const comment = this.toDocument(row).comments.find((item) => item.id === commentId)
-    return comment ? {
-      document: { documentId: row.id, filePath: row.path, revision: row.revision },
-      comment
-    } : null
+    return comment
+      ? {
+        document: { documentId: row.id, filePath: row.path, revision: row.revision },
+        comment
+      }
+      : null
   }
 
   getComments(commentIds: string[]): AnnotaMDCommentDetails {
@@ -456,9 +458,9 @@ export class CommentService {
     }
 
     if (row) {
-      if (row.path !== filePath
-        || row.device !== (identity?.device ?? null)
-        || row.inode !== (identity?.inode ?? null)) {
+      if (row.path !== filePath ||
+        row.device !== (identity?.device ?? null) ||
+        row.inode !== (identity?.inode ?? null)) {
         this.db.prepare(`
           UPDATE documents
           SET path = ?, device = ?, inode = ?, missing_since = NULL, updated_at = ?

@@ -64,7 +64,10 @@
     </div>
 
     <!-- Multi-root workspace tree view -->
-    <div v-if="projectTrees.length" class="project-trees">
+    <div
+      v-if="projectTrees.length"
+      class="project-trees"
+    >
       <div
         v-for="projectTree of projectTrees"
         :key="projectTree.pathname"
@@ -102,7 +105,10 @@
                 :title="t('preferences.general.sidebar.fileSortBy.title')"
                 @click.stop
               >
-                <span class="sort-glyph" aria-hidden="true">
+                <span
+                  class="sort-glyph"
+                  aria-hidden="true"
+                >
                   <span class="sort-glyph-lines">
                     <i />
                     <i />
@@ -124,7 +130,12 @@
                 @click="setFileSortBy(String(option.value))"
               >
                 <span>{{ option.label }}</span>
-                <el-icon v-if="fileSortBy === option.value" :size="15"><Check /></el-icon>
+                <el-icon
+                  v-if="fileSortBy === option.value"
+                  :size="15"
+                >
+                  <Check />
+                </el-icon>
               </button>
               <div class="sort-menu-divider" />
               <div class="sort-menu-label">
@@ -138,7 +149,12 @@
                 @click="setFileSortOrder(String(option.value))"
               >
                 <span>{{ option.label }}</span>
-                <el-icon v-if="fileSortOrder === option.value" :size="15"><Check /></el-icon>
+                <el-icon
+                  v-if="fileSortOrder === option.value"
+                  :size="15"
+                >
+                  <Check />
+                </el-icon>
               </button>
             </div>
           </el-popover>
@@ -147,7 +163,9 @@
             :title="t('sideBar.tree.removeFolderFromWorkspace')"
             @click.stop="removeRoot(projectTree.pathname)"
           >
-            <el-icon :size="13"><Close /></el-icon>
+            <el-icon :size="13">
+              <Close />
+            </el-icon>
           </button>
         </div>
         <div
@@ -196,8 +214,13 @@
           </div>
         </div>
       </div>
-      <button class="add-folder" @click="openFolder">
-        <el-icon :size="14"><Plus /></el-icon>
+      <button
+        class="add-folder"
+        @click="openFolder"
+      >
+        <el-icon :size="14">
+          <Plus />
+        </el-icon>
         <span>{{ t('sideBar.tree.addFolder') }}</span>
       </button>
     </div>
@@ -234,7 +257,7 @@ import type { TreeNode, TabDescriptor } from './types'
 
 const { t } = useI18n()
 
-const props = defineProps<{
+defineProps<{
   projectTrees: TreeNode[]
   openedFiles?: TabDescriptor[]
   tabs?: TabDescriptor[]
@@ -261,7 +284,6 @@ const preferencesStore = usePreferencesStore()
 
 // Computed properties
 const { createCache } = storeToRefs(projectStore)
-const { clipboard } = storeToRefs(projectStore)
 const { openedFilesInSidebar, fileSortBy, fileSortOrder } = storeToRefs(preferencesStore)
 const fileSortByOptions = computed(() => getFileSortByOptions())
 const fileSortOrderOptions = computed(() => getFileSortOrderOptions(String(fileSortBy.value)))

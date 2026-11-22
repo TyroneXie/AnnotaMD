@@ -4,10 +4,10 @@ import { expectNoRendererErrors, launchWithMarkdown } from './helpers'
 test('keeps the preceding table header while another table is folded and unfolded', async() => {
   const rows = Array.from({ length: 30 }, (_, index) => `| Row ${index + 1} | Table content |\n`).join('')
   const { app, page } = await launchWithMarkdown(
-    '# Previous section\n\n| Category | Strategy |\n| --- | --- |\n' + rows
-      + '\n# Current section\n\n## Fold this table\n\n'
-      + '| Hidden name | Hidden value |\n| --- | --- |\n| Example | Content |\n\n'
-      + '## Next section\n\nNext content.\n',
+    '# Previous section\n\n| Category | Strategy |\n| --- | --- |\n' + rows +
+      '\n# Current section\n\n## Fold this table\n\n' +
+      '| Hidden name | Hidden value |\n| --- | --- |\n| Example | Content |\n\n' +
+      '## Next section\n\nNext content.\n',
     { suppressErrorDialog: true }
   )
   try {

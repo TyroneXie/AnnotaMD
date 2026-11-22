@@ -125,8 +125,8 @@ const hasCurrentFile = computed<boolean>(() => {
   return currentFile.value?.markdown !== undefined
 })
 const commentPaneActive = computed<boolean>(() => {
-  return init.value && hasCurrentFile.value && commentPaneVisible.value
-    && rightPaneMode.value === 'comments'
+  return init.value && hasCurrentFile.value && commentPaneVisible.value &&
+    rightPaneMode.value === 'comments'
 })
 const activePaneWidth = computed(() => rightPaneWidth.value)
 const activePaneMinWidth = RIGHT_PANE_MIN_WIDTH
@@ -189,8 +189,8 @@ const agentWorkspacePath = computed<string>(() => {
 
   const projectRoot = projectTrees.value
     .filter(
-      (tree) => tree.pathname === filePath
-        || window.fileUtils.isChildOfDirectory(tree.pathname, filePath)
+      (tree) => tree.pathname === filePath ||
+        window.fileUtils.isChildOfDirectory(tree.pathname, filePath)
     )
     .sort((left, right) => right.pathname.length - left.pathname.length)[0]
 
@@ -213,8 +213,8 @@ const agentDocumentContext = computed<AiDocumentContext | null>(() => {
 const currentProject = computed(() => {
   if (!pathname.value) return projectTrees.value[0] ?? null
   return projectTrees.value.find(
-    (tree) => tree.pathname === pathname.value
-      || window.fileUtils.isChildOfDirectory(tree.pathname, pathname.value!)
+    (tree) => tree.pathname === pathname.value ||
+      window.fileUtils.isChildOfDirectory(tree.pathname, pathname.value!)
   ) ?? projectTrees.value[0] ?? null
 })
 const filename = computed(() => currentFile.value?.filename)

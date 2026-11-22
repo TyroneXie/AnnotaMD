@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
@@ -76,7 +76,7 @@ describe('AnnotaMD comment navigation', () => {
     expect(editor).toContain('findAnnotaMDCommentAtPosition')
     expect(editor).toContain('handleCommentHighlightHover')
     expect(editor).toContain("if (layoutStore.rightColumn !== 'agent')")
-    expect(editor).toContain("annotaMDCommentsStore.requestCommentFocus(comment.id)")
+    expect(editor).toContain('annotaMDCommentsStore.requestCommentFocus(comment.id)')
     expect(pane).toContain(':data-comment-id="comment.id"')
     expect(pane).toContain('commentFocusRequest')
     expect(pane).toContain('activeCommentId === comment.id')

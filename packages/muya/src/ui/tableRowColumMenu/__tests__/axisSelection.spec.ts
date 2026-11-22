@@ -41,7 +41,7 @@ function select(barType: 'right' | 'bottom' | 'rect', row: number, column: numbe
     });
 }
 
-describe('Feishu-style table axis selection', () => {
+describe('feishu-style table axis selection', () => {
     it('reuses the formatting toolbar for a rectangular cell selection', async () => {
         muya.editor.selection.table.selectTable(table());
         select('rect', 0, 0);

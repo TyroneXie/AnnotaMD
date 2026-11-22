@@ -1,5 +1,6 @@
+import type { MuyaElement } from './editor-elements'
 import { expect, test, type Page } from '@playwright/test'
-import type { ElectronApplication } from 'playwright'
+import type { ElectronApplication } from '@playwright/test'
 import { readFileSync, existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import {
@@ -19,20 +20,27 @@ async function openCurrentSource(page: Page, app: ElectronApplication, filePath:
   await page.goto(url.href)
   await page.waitForSelector('.editor-placeholder')
   await sendIpcToRenderer(app, 'annotamd::bootstrap-editor', {
-    addBlankTab: false, markdownList: [], lineEnding: 'lf',
-    sideBarVisibility: true, tabBarVisibility: true
+    addBlankTab: false,
+    markdownList: [],
+    lineEnding: 'lf',
+    sideBarVisibility: true,
+    tabBarVisibility: true
   })
   await sendIpcToRenderer(app, 'annotamd::open-new-tab', {
-    markdown: content, filename: 'note.md', pathname: filePath,
+    markdown: content,
+    filename: 'note.md',
+    pathname: filePath,
     encoding: { encoding: 'utf8', hasBOM: false },
-    lineEnding: 'lf', adjustLineEndingOnSave: false,
-    trimTrailingNewline: 1, isMixedLineEndings: false
+    lineEnding: 'lf',
+    adjustLineEndingOnSave: false,
+    trimTrailingNewline: 1,
+    isMixedLineEndings: false
   })
   await waitForEditor(page)
 }
 
-const cellText = (page: Page, index = 3) => page.locator('.mu-table-cell-content').nth(index).evaluate((element: any) =>
-  element.__MUYA_BLOCK__.text as string)
+const cellText = (page: Page, index = 3) => page.locator('.mu-table-cell-content').nth(index).evaluate((element) =>
+  (element as MuyaElement).__MUYA_BLOCK__.text as string)
 
 async function clickBelowImage(page: Page, double = true) {
   const image = page.locator('.editor-component table img').last()
@@ -51,8 +59,8 @@ test('Enter edits a new line in a wrapped cell and Backspace joins lines without
   try {
     await openCurrentSource(page, app, filePath, content)
     const cell = page.locator('.mu-table-cell-content').nth(5)
-    await cell.evaluate((element: any) => {
-      const block = element.__MUYA_BLOCK__
+    await cell.evaluate((element) => {
+      const block = (element as MuyaElement).__MUYA_BLOCK__
       block.muya.domNode.focus()
       block.setCursor(block.text.length, block.text.length, true)
     })
@@ -79,7 +87,7 @@ test('Enter edits a new line in a wrapped cell and Backspace joins lines without
       expect(caret.insideCell).toBe(true)
       expect(caret.focused).toBe(true)
       expect(caret.color).not.toMatch(/transparent|rgba\(0, 0, 0, 0\)/)
-      await page.screenshot({path: `/tmp/annotamd-caret-${key.replace('+', '-')}.png`, caret: 'initial'})
+      await page.screenshot({ path: `/tmp/annotamd-caret-${key.replace('+', '-')}.png`, caret: 'initial' })
       await page.keyboard.insertText('x')
       await expect.poll(() => cellText(page, 5)).toBe(`${description}<br/>x`)
       await page.keyboard.press('Backspace')
@@ -101,8 +109,8 @@ test('Enter edits a new line in a wrapped cell and Backspace joins lines without
     await expect.poll(() => cellText(page, 5)).toBe(`${description}<br/>新行继续编辑`)
 
     // Joining populated lines removes just the break, preserving both texts.
-    await cell.evaluate((element: any, offset) => {
-      element.__MUYA_BLOCK__.setCursor(offset, offset, true)
+    await cell.evaluate((element, offset) => {
+      (element as MuyaElement).__MUYA_BLOCK__.setCursor(offset, offset, true)
     }, description.length + '<br/>'.length)
     await page.keyboard.press('Backspace')
     await expect.poll(() => cellText(page, 5)).toBe(`${description}新行继续编辑`)
@@ -131,8 +139,10 @@ for (const action of ['folder', 'path']) {
     try {
       await openCurrentSource(page, app, filePath)
       await sendIpcToRenderer(app, 'annotamd::user-preference', {
-        imageInsertAction: action, imagePreferRelativeDirectory: true,
-        imageRelativeDirectoryBase: 'file', imageRelativeDirectoryName: 'assets',
+        imageInsertAction: action,
+        imagePreferRelativeDirectory: true,
+        imageRelativeDirectoryBase: 'file',
+        imageRelativeDirectoryName: 'assets',
         imageFolderPath: join(dirname(filePath), 'assets')
       })
       const original = await cellText(page)
@@ -201,23 +211,27 @@ for (const action of ['folder', 'path']) {
       await page.screenshot({ path: `/tmp/annotamd-table-second-image-${action}.png` })
       const longDocument = process.env.ANNOTAMD_TEST_LONG_DOCUMENT
       if (longDocument) {
-        const info = await app.evaluate(({ app }) => ({version: app.getVersion(), executable: process.execPath}))
+        const info = await app.evaluate(({ app }) => ({ version: app.getVersion(), executable: process.execPath }))
         expect(info.version).toBe(JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version)
         expect(info.executable).toBe(resolve(process.env.ANNOTAMD_TEST_EXECUTABLE!))
         const source = readFileSync(longDocument, 'utf8')
         await sendIpcToRenderer(app, 'annotamd::open-new-tab', {
-          markdown: source, filename: 'design.md', pathname: longDocument,
-          encoding: {encoding: 'utf8', hasBOM: false},
-          lineEnding: 'lf', adjustLineEndingOnSave: false,
-          trimTrailingNewline: 1, isMixedLineEndings: false
+          markdown: source,
+          filename: 'design.md',
+          pathname: longDocument,
+          encoding: { encoding: 'utf8', hasBOM: false },
+          lineEnding: 'lf',
+          adjustLineEndingOnSave: false,
+          trimTrailingNewline: 1,
+          isMixedLineEndings: false
         })
-        await expect(page.locator('.mu-content').filter({hasText: source.split('\n').find(line => line.startsWith('# '))!.slice(2)}).first()).toBeVisible()
-        const paragraph = page.locator('.mu-paragraph-content').filter({hasText: /\S/}).first()
+        await expect(page.locator('.mu-content').filter({ hasText: source.split('\n').find(line => line.startsWith('# '))!.slice(2) }).first()).toBeVisible()
+        const paragraph = page.locator('.mu-paragraph-content').filter({ hasText: /\S/ }).first()
         await paragraph.click()
         expect(await paragraph.evaluate(element => element.contains(window.getSelection()!.anchorNode))).toBe(true)
         await expectNoRendererErrors(app)
-        await page.screenshot({path: '/tmp/annotamd-v2.19-real-document.png', caret: 'initial'})
-        console.log(JSON.stringify({version: info.version, packagedSmoke: true, longDocumentCharacters: source.length}))
+        await page.screenshot({ path: '/tmp/annotamd-v2.19-real-document.png', caret: 'initial' })
+        console.log(JSON.stringify({ version: info.version, packagedSmoke: true, longDocumentCharacters: source.length }))
       }
     } finally {
       await app.close()

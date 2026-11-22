@@ -2,6 +2,7 @@ import fs from 'fs-extra'
 import { statSync, constants, type Stats } from 'fs'
 import { ipcMain } from 'electron'
 import { isFile as commonIsFile, isDirectory as commonIsDirectory } from 'common/filesystem'
+import { assertFileAccess, canonicalPath, grantFileAccess } from '../security/fileAccess'
 
 interface SerializedStat {
   size: number
@@ -38,33 +39,38 @@ const toBuffer = (data: unknown): unknown => {
 }
 
 export const registerFsHandlers = (): void => {
-  ipcMain.handle('annotamd::fs::is-file', (_e, p: string) => commonIsFile(p))
-  ipcMain.handle('annotamd::fs::is-directory', (_e, p: string) => commonIsDirectory(p))
-  ipcMain.handle('annotamd::fs::empty-dir', (_e, p: string) => fs.emptyDir(p))
-  ipcMain.handle('annotamd::fs::copy', (_e, src: string, dest: string) => fs.copy(src, dest))
-  ipcMain.handle('annotamd::fs::ensure-dir', (_e, p: string) => fs.ensureDir(p))
+  ipcMain.on('annotamd::native-file-drop', (event, rawPath: string) => {
+    const pathname = canonicalPath(rawPath)
+    grantFileAccess(event.sender, pathname, statSync(pathname).isDirectory())
+    event.returnValue = true
+  })
+  ipcMain.handle('annotamd::fs::is-file', (e, p: string) => commonIsFile(assertFileAccess(e.sender, p)))
+  ipcMain.handle('annotamd::fs::is-directory', (e, p: string) => commonIsDirectory(assertFileAccess(e.sender, p)))
+  ipcMain.handle('annotamd::fs::empty-dir', (e, p: string) => fs.emptyDir(assertFileAccess(e.sender, p, true)))
+  ipcMain.handle('annotamd::fs::copy', (e, src: string, dest: string) => fs.copy(assertFileAccess(e.sender, src), assertFileAccess(e.sender, dest, true)))
+  ipcMain.handle('annotamd::fs::ensure-dir', (e, p: string) => fs.ensureDir(assertFileAccess(e.sender, p, true)))
 
-  ipcMain.handle('annotamd::fs::output-file', (_e, p: string, data: unknown) =>
-    fs.outputFile(p, toBuffer(data) as string | NodeJS.ArrayBufferView)
+  ipcMain.handle('annotamd::fs::output-file', (e, p: string, data: unknown) =>
+    fs.outputFile(assertFileAccess(e.sender, p, true), toBuffer(data) as string | NodeJS.ArrayBufferView)
   )
-  ipcMain.handle('annotamd::fs::move', (_e, src: string, dest: string) =>
-    fs.move(src, dest, { overwrite: false })
+  ipcMain.handle('annotamd::fs::move', (e, src: string, dest: string) =>
+    fs.move(assertFileAccess(e.sender, src, true), assertFileAccess(e.sender, dest, true), { overwrite: false })
   )
-  ipcMain.handle('annotamd::fs::stat', async(_e, p: string) => serializeStat(await fs.stat(p)))
+  ipcMain.handle('annotamd::fs::stat', async(e, p: string) => serializeStat(await fs.stat(assertFileAccess(e.sender, p))))
 
-  ipcMain.handle('annotamd::fs::write-file', (_e, p: string, data: unknown) =>
-    fs.writeFile(p, toBuffer(data) as string | NodeJS.ArrayBufferView)
+  ipcMain.handle('annotamd::fs::write-file', (e, p: string, data: unknown) =>
+    fs.writeFile(assertFileAccess(e.sender, p, true), toBuffer(data) as string | NodeJS.ArrayBufferView)
   )
-  ipcMain.handle('annotamd::fs::read-file', async(_e, p: string, encoding?: BufferEncoding) => {
-    const buf = await fs.readFile(p, encoding)
+  ipcMain.handle('annotamd::fs::read-file', async(e, p: string, encoding?: BufferEncoding) => {
+    const buf = await fs.readFile(assertFileAccess(e.sender, p), encoding)
     return buf
   })
-  ipcMain.handle('annotamd::fs::path-exists', (_e, p: string) => fs.pathExists(p))
-  ipcMain.handle('annotamd::fs::unlink', (_e, p: string) => fs.unlink(p))
-  ipcMain.handle('annotamd::fs::readdir', (_e, p: string) => fs.readdir(p))
-  ipcMain.handle('annotamd::fs::is-executable', (_e, p: string) => {
+  ipcMain.handle('annotamd::fs::path-exists', (e, p: string) => fs.pathExists(assertFileAccess(e.sender, p)))
+  ipcMain.handle('annotamd::fs::unlink', (e, p: string) => fs.unlink(assertFileAccess(e.sender, p, true)))
+  ipcMain.handle('annotamd::fs::readdir', (e, p: string) => fs.readdir(assertFileAccess(e.sender, p)))
+  ipcMain.handle('annotamd::fs::is-executable', (e, p: string) => {
     try {
-      const stat = statSync(p)
+      const stat = statSync(assertFileAccess(e.sender, p))
       if (process.platform === 'win32') return stat.isFile()
       return (
         stat.isFile() &&

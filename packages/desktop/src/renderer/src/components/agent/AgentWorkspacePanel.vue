@@ -17,21 +17,41 @@
       @close="emit('close')"
     />
 
-    <section ref="timeline" class="annotamd-agent-timeline" aria-live="polite">
-      <div v-if="conversations.error" class="annotamd-agent-error" role="alert">
+    <section
+      ref="timeline"
+      class="annotamd-agent-timeline"
+      aria-live="polite"
+    >
+      <div
+        v-if="conversations.error"
+        class="annotamd-agent-error"
+        role="alert"
+      >
         <span>{{ conversations.error }}</span>
-        <button type="button" data-testid="ai-retry-snapshot" @click="refresh">
+        <button
+          type="button"
+          data-testid="ai-retry-snapshot"
+          @click="refresh"
+        >
           {{ t('annotamd.agentWorkspace.retryDetection') }}
         </button>
       </div>
 
-      <div v-if="setupRequired" class="annotamd-agent-setup" data-testid="ai-setup-required">
+      <div
+        v-if="setupRequired"
+        class="annotamd-agent-setup"
+        data-testid="ai-setup-required"
+      >
         <span aria-hidden="true"><el-icon><Setting /></el-icon></span>
         <div>
           <strong>{{ t('annotamd.agentWorkspace.setupTitle') }}</strong>
           <p>{{ t(`annotamd.agentWorkspace.setupDescription.${conversations.readiness.setupIssue ?? 'agent'}`) }}</p>
         </div>
-        <button type="button" data-testid="ai-open-settings" @click="openAgentSettings">
+        <button
+          type="button"
+          data-testid="ai-open-settings"
+          @click="openAgentSettings"
+        >
           {{ t('annotamd.agentWorkspace.openSettings') }}
         </button>
       </div>
@@ -130,9 +150,9 @@ const attachments = ref<AiAttachment[]>([])
 const timeline = ref<HTMLElement | null>(null)
 const suggestedPrompts = computed(() => props.documentContext?.filePath
   ? [
-    t('annotamd.agentWorkspace.suggestions.resolveComments'),
-    t('annotamd.agentWorkspace.suggestions.answerComments')
-  ]
+      t('annotamd.agentWorkspace.suggestions.resolveComments'),
+      t('annotamd.agentWorkspace.suggestions.answerComments')
+    ]
   : [])
 
 const selectedConfig = computed(() => settings.selectedConfig('agent'))
@@ -190,7 +210,9 @@ const reusableConversationId = computed(() => {
     provider: selectedConfig.value?.provider,
     modelId: selectedModel.value,
     workspacePath: props.workspacePath
-  }) ? conversation.id : undefined
+  })
+    ? conversation.id
+    : undefined
 })
 
 const documentFields = (): Partial<AiSendRequest> => {
@@ -208,7 +230,7 @@ const documentFields = (): Partial<AiSendRequest> => {
   }
 }
 
-const newConversation = async(): Promise<void> => {
+const newConversation = async (): Promise<void> => {
   const quote = props.quote
   await conversations.create({ ...selection.value, title: t('annotamd.agentWorkspace.newConversationTitle') })
   draft.value = ''
@@ -220,7 +242,7 @@ const applySuggestedPrompt = (prompt: string): void => {
   draft.value = prompt
 }
 
-const selectConversation = async(id: string): Promise<void> => {
+const selectConversation = async (id: string): Promise<void> => {
   await conversations.select(id)
   const conversation = conversations.activeConversation
   if (!conversation || conversation.mode !== 'agent') return
@@ -233,13 +255,13 @@ const selectConversation = async(id: string): Promise<void> => {
   if (conversation.effort) settings.selectEffort('agent', conversation.effort)
 }
 
-const deleteConversation = async(id: string): Promise<void> => conversations.delete(id)
-const stopConversation = async(id: string): Promise<void> => conversations.stopConversation(id)
-const deleteCurrentConversation = async(): Promise<void> => {
+const deleteConversation = async (id: string): Promise<void> => conversations.delete(id)
+const stopConversation = async (id: string): Promise<void> => conversations.stopConversation(id)
+const deleteCurrentConversation = async (): Promise<void> => {
   if (conversations.activeId) await conversations.delete(conversations.activeId)
 }
 
-const send = async(): Promise<void> => {
+const send = async (): Promise<void> => {
   const text = draft.value.trim()
   if (!text || !canSend.value) return
   const pendingAttachments = attachments.value
@@ -267,7 +289,7 @@ const openAgentSettings = (): void => {
   window.electron.ipcRenderer.send('annotamd::open-setting-window', 'agent')
 }
 
-const retryMessage = async(messageId: string): Promise<void> => {
+const retryMessage = async (messageId: string): Promise<void> => {
   if (!conversations.activeId || conversations.running) return
   const request: AiRetryRequest = {
     conversationId: conversations.activeId,
@@ -278,11 +300,11 @@ const retryMessage = async(messageId: string): Promise<void> => {
   await conversations.retry(request).catch(() => undefined)
 }
 
-const resolveChangeSet = async(id: string, action: 'keep' | 'rollback'): Promise<void> => {
+const resolveChangeSet = async (id: string, action: 'keep' | 'rollback'): Promise<void> => {
   await conversations.resolveChangeSet({ changeSetId: id, action })
 }
 
-const refresh = async(): Promise<void> => {
+const refresh = async (): Promise<void> => {
   await Promise.all([
     settings.initialize(true),
     conversations.initialize(true)
@@ -295,7 +317,7 @@ watch(
     () => conversations.messages.map(message => `${message.id}:${message.content.length}`).join('|'),
     () => conversations.changeSets.map(changeSet => `${changeSet.id}:${changeSet.status}`).join('|')
   ],
-  async([activeId], [previousActiveId]) => {
+  async ([activeId], [previousActiveId]) => {
     const shouldFollow = activeId !== previousActiveId || !timeline.value ||
       isAgentTimelineNearBottom(timeline.value)
     await nextTick()

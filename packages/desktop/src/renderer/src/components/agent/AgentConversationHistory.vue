@@ -1,5 +1,9 @@
 <template>
-  <el-tooltip :content="t('annotamd.agentWorkspace.history')" placement="bottom" :show-after="150">
+  <el-tooltip
+    :content="t('annotamd.agentWorkspace.history')"
+    placement="bottom"
+    :show-after="150"
+  >
     <span class="annotamd-agent-history-reference">
       <el-popover
         v-model:visible="visible"
@@ -22,7 +26,11 @@
         <div class="annotamd-agent-history">
           <header>
             <strong>{{ t('annotamd.agentWorkspace.history') }}</strong>
-            <button type="button" :disabled="newDisabled" @click="startNew">
+            <button
+              type="button"
+              :disabled="newDisabled"
+              @click="startNew"
+            >
               <el-icon><Plus /></el-icon>
             </button>
           </header>
@@ -33,11 +41,21 @@
             :prefix-icon="Search"
             :placeholder="t('annotamd.agentWorkspace.searchHistory')"
           />
-          <p v-if="filtered.length === 0" class="is-empty">
+          <p
+            v-if="filtered.length === 0"
+            class="is-empty"
+          >
             {{ t('annotamd.agentWorkspace.noHistory') }}
           </p>
-          <p v-if="conversations.error" class="is-error" role="alert">{{ conversations.error }}</p>
-          <div v-else class="annotamd-agent-history-list">
+          <p
+            v-if="conversations.error"
+            class="is-error"
+            role="alert"
+          >{{ conversations.error }}</p>
+          <div
+            v-else
+            class="annotamd-agent-history-list"
+          >
             <div
               v-for="conversation in filtered"
               :key="conversation.id"
@@ -163,7 +181,7 @@ const cancelRename = (): void => {
   editingTitle.value = ''
 }
 
-const commitRename = async(id: string): Promise<void> => {
+const commitRename = async (id: string): Promise<void> => {
   if (editingId.value !== id) return
   const title = editingTitle.value.trim()
   editingId.value = ''

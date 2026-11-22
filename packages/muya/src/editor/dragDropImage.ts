@@ -127,8 +127,9 @@ function resolveImageRowDrop(event: DragEvent, source: IDraggedImage): IRowDropT
     const content = findContentDOM(event.target as Node | null);
     const block = getBlock(content) as Format | undefined;
     if (!content?.classList.contains('mu-image-line') || !block?.parent
-        || block.parent.parent !== source.block.parent?.parent)
+        || block.parent.parent !== source.block.parent?.parent) {
         return null;
+    }
 
     const bounds = content.getBoundingClientRect();
     const edge = Math.min(GHOST_HEIGHT + 6, bounds.height / 4);

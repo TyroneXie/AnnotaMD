@@ -3,9 +3,9 @@ import type TableBodyCell from '../../block/gfm/table/cell';
 import type TableInner from '../../block/gfm/table/table';
 
 import type { Muya } from '../../index';
+import type { ActionIconName } from '../actionIcons';
 import type { ColorFormatType } from '../inlineFormatToolbar/config';
 import type { MenuItem, TableAxisFormat } from './config';
-import type { ActionIconName } from '../actionIcons';
 import Format from '../../block/base/format';
 import { h, patch } from '../../utils/snabbdom';
 import { formatActionIcon, renderActionIcon } from '../actionIcons';
@@ -43,6 +43,17 @@ function wrapOrUnwrap(text: string, open: string, close = open): string {
         : `${open}${text}${close}`;
 }
 
+function inlineCodeContent(text: string): string | null {
+    let start = 0;
+    let end = text.length;
+    while (text[start] === '`')
+        start++;
+    while (end > 0 && text[end - 1] === '`')
+        end--;
+    const markerLength = Math.min(start, text.length - end, Math.floor(text.length / 2));
+    return markerLength ? text.slice(markerLength, -markerLength) : null;
+}
+
 export function isWholeTableCellFormatted(text: string, type: TableAxisFormat): boolean {
     switch (type) {
         case 'strong':
@@ -54,7 +65,7 @@ export function isWholeTableCellFormatted(text: string, type: TableAxisFormat): 
         case 'u':
             return text.startsWith('<u>') && text.endsWith('</u>');
         case 'inline_code':
-            return /^(`+)[\s\S]*\1$/.test(text);
+            return inlineCodeContent(text) !== null;
     }
 }
 
@@ -91,9 +102,9 @@ export function formatWholeTableCell(
         case 'u':
             return wrapOrUnwrap(text, '<u>', '</u>');
         case 'inline_code': {
-            const match = text.match(/^(`+)([\s\S]*)\1$/);
-            if (match)
-                return match[2];
+            const content = inlineCodeContent(text);
+            if (content !== null)
+                return content;
             const marker = text.includes('`') ? '``' : '`';
             return `${marker}${text}${marker}`;
         }
@@ -416,6 +427,8 @@ export class TableRowColumMenu extends BaseFloat {
             return;
 
         const quote = contents
+            // The quote must exclude hidden Markdown markers.
+            // eslint-disable-next-line unicorn/prefer-dom-node-text-content
             .map(content => content.domNode?.innerText || content.domNode?.textContent || content.text)
             .join(' ')
             .replace(/\s+/g, ' ')
@@ -444,9 +457,9 @@ export class TableRowColumMenu extends BaseFloat {
                     `button.axis-color-swatch${value ? '' : '.default'}`,
                     {
                         attrs: {
-                            type: 'button',
+                            'type': 'button',
                             'aria-label': value || i18n.t('Default Color'),
-                            title: value || i18n.t('Default Color'),
+                            'title': value || i18n.t('Default Color'),
                         },
                         style: value ? { background: value } : {},
                         on: {

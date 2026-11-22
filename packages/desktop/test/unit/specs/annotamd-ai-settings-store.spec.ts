@@ -123,7 +123,7 @@ describe('AnnotaMD AI renderer settings', () => {
       __dirname,
       '../../../src/renderer/src/prefComponents/agent/index.vue'
     ), 'utf8')
-    expect(settingsSource).toContain("annotamd::pi::provider:save")
+    expect(settingsSource).toContain('annotamd::pi::provider:save')
     expect(settingsSource).not.toContain('AI_MAX_API_RETRIES_MIN')
     expect(settingsSource).not.toContain('saveMaxApiRetries')
     expect(settingsSource).not.toContain("settings.setDefaultMode('ask')")
@@ -150,6 +150,25 @@ describe('AnnotaMD AI renderer settings', () => {
     expect(store.cachedModels('cli-cache-test')).toEqual(models)
   })
 
+  it('exposes configured Pi models during pending discovery and then replaces them with capabilities', async() => {
+    let release!: (models: Array<{ id: string; name: string; effortLevels: string[] }>) => void
+    installIpc(vi.fn(() => new Promise(resolve => { release = resolve })))
+    const store = useAiSettingsStore()
+    store.configs = [cliConfig({ id: 'pi-cold-models', provider: 'pi' })]
+    store.agentReadiness = { status: 'ready', modelIds: ['deepseek/flash', 'custom/org/pro'] }
+    const request = store.listModels('pi-cold-models')
+    expect(store.cachedModels('pi-cold-models')).toEqual([
+      { id: 'deepseek/flash', name: 'flash' }, { id: 'custom/org/pro', name: 'org/pro' }
+    ])
+    const models = [{ id: 'deepseek/flash', name: 'Flash', effortLevels: ['off', 'high'] }]
+    release(models)
+    await request
+    expect(store.cachedModels('pi-cold-models')).toEqual(models)
+    expect(store.cachedModels('other-config')).toEqual([])
+    store.modelsByConfig['pi-cold-models'] = []
+    expect(store.cachedModels('pi-cold-models')).toEqual([])
+  })
+
   it('saves the main-owned API retry preference', async() => {
     const invoke = vi.fn().mockResolvedValue({ maxApiRetries: 4 })
     installIpc(invoke)
@@ -172,6 +191,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-1',
       title: 'Draft',
       mode: 'agent',
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'idle',
       createdAt: 1,
@@ -191,6 +211,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-rename',
       title: '新的名称',
       mode: 'agent' as const,
+      permissionMode: 'request' as const,
       configId: 'cli-1',
       templateIds: [],
       status: 'idle' as const,
@@ -216,6 +237,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-2',
       title: 'New conversation',
       mode: 'ask' as const,
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'idle' as const,
       createdAt: 2,
@@ -228,6 +250,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-1',
       title: 'Background run',
       mode: 'ask',
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'running',
       createdAt: 1,
@@ -237,7 +260,7 @@ describe('AnnotaMD AI renderer settings', () => {
     store.running = true
     store.activeTurnId = 'turn-1'
 
-    await store.create({ mode: 'ask' })
+    await store.create({ mode: 'ask', permissionMode: 'request' as const })
 
     expect(store.activeId).toBe('conversation-2')
     expect(store.running).toBe(false)
@@ -253,6 +276,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-1',
       title: 'Background run',
       mode: 'agent',
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'running',
       createdAt: 1,
@@ -276,6 +300,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-1',
       title: 'Running conversation',
       mode: 'agent',
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'running',
       createdAt: 1,
@@ -317,6 +342,7 @@ describe('AnnotaMD AI renderer settings', () => {
       id: 'conversation-1',
       title: 'Comment edit',
       mode: 'agent',
+      permissionMode: 'request' as const,
       templateIds: [],
       status: 'completed',
       createdAt: 1,

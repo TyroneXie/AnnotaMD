@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readSource as readFileSync } from '../readSource'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { formatCommentTimestamp } from '../../../src/renderer/src/util/annotamdCommentTime'
@@ -45,9 +45,9 @@ describe('Feishu-style comment messages', () => {
       expect(component).toContain("t('annotamd.comments.moreActions')")
       expect(component).toContain('<summary')
       expect(component).toContain('@click.stop')
-      expect(component).toContain('<circle cx="5" cy="12" r="1.6" />')
-      expect(component).toContain('<circle cx="12" cy="12" r="1.6" />')
-      expect(component).toContain('<circle cx="19" cy="12" r="1.6" />')
+      expect(component).toMatch(/<circle\s+cx="5"\s+cy="12"\s+r="1.6"\s*\/>/)
+      expect(component).toMatch(/<circle\s+cx="12"\s+cy="12"\s+r="1.6"\s*\/>/)
+      expect(component).toMatch(/<circle\s+cx="19"\s+cy="12"\s+r="1.6"\s*\/>/)
       expect(component).toContain("document.addEventListener('pointerdown'")
       expect(component).toContain("document.removeEventListener('pointerdown'")
       expect(component).toContain('closeMessageMenus()')
@@ -75,7 +75,7 @@ describe('Feishu-style comment messages', () => {
 
   it('permanently deletes a comment when the user marks it resolved', () => {
     for (const component of [commentPane, documentFooter]) {
-      expect(component).toContain("commentStore.deleteComment(filePath, comment.id)")
+      expect(component).toContain('commentStore.deleteComment(filePath, comment.id)')
       expect(component).not.toContain('commentStore.toggleResolved')
       expect(component).not.toContain("t('annotamd.comments.restore')")
     }
@@ -89,7 +89,7 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('class="annotamd-detached-tray"')
     expect(commentPane).toContain('class="annotamd-detached-tray-resolve"')
     expect(commentPane).toContain('@click="resolveModifiedComments"')
-    expect(commentPane).toContain("(comment) => !comment.temporaryDetached")
+    expect(commentPane).toContain('(comment) => !comment.temporaryDetached')
     expect(commentPane).toContain('commentStore.deleteComments(filePath.value, removedIds)')
     expect(chinese.annotamd.comments.resolveModifiedShort).toBe('全部解决')
     expect(chinese.annotamd.comments.detachedTrayTitle).toContain('原文已修改')
@@ -113,8 +113,8 @@ describe('Feishu-style comment messages', () => {
 
   it('automatically enlarges only clipped small comments up to two thirds of the pane', () => {
     expect(commentPane).not.toContain('class="annotamd-focus-reading-toggle"')
-    expect(commentPane).toContain('const enterFocusReading = async(commentId: string)')
-    expect(commentPane).toContain('const autoFitCommentForReading = async(commentId: string)')
+    expect(commentPane).toMatch(/const enterFocusReading = async\s*\(commentId: string\)/)
+    expect(commentPane).toMatch(/const autoFitCommentForReading = async\s*\(commentId: string\)/)
     expect(commentPane).toContain('const FOCUS_READING_MAX_HEIGHT_RATIO = 2 / 3')
     expect(commentPane).toContain('card.scrollHeight > card.clientHeight + 1')
     expect(commentPane).toContain('cardHeight >= maxHeight - 1')
@@ -176,7 +176,7 @@ describe('Feishu-style comment messages', () => {
   })
 
   it('compacts inactive threads and expands the selected thread without a nested scrollbar', () => {
-    expect(commentPane).toContain("compact: !isCommentExpanded(comment)")
+    expect(commentPane).toContain('compact: !isCommentExpanded(comment)')
     expect(commentPane).toContain('selectedCommentId.value === comment.id')
     expect(commentPane).toContain('class="annotamd-thread-toggle"')
     expect(commentPane).toContain(':aria-expanded="false"')
@@ -189,7 +189,7 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('class="annotamd-reply-submit"')
     expect(commentPane).toContain('@blur="stopReply(comment.id)"')
     expect(commentPane).toContain('@input="resizeReplyEditor(comment.id, $event)"')
-    expect(commentPane).toContain("Math.min(textarea.scrollHeight, 96)")
+    expect(commentPane).toContain('Math.min(textarea.scrollHeight, 96)')
     expect(commentPane).toContain("':scope > .annotamd-comment-action-row'")
     expect(commentPane).toContain('textarea.getBoundingClientRect().bottom')
     expect(commentPane).toContain('actionRow.getBoundingClientRect().top - 8')
@@ -197,7 +197,7 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toMatch(
       /resizeReplyEditor[\s\S]*?updateCommentBubbleLayout\(\)[\s\S]*?keepReplyEditorVisible\(commentId, textarea\)/
     )
-    expect(commentPane).toContain("replyingId.value = null")
+    expect(commentPane).toContain('replyingId.value = null')
     expect(commentPane).not.toMatch(/\.annotamd-comment-card\s*\{[^}]*overflow-y:\s*(auto|scroll)/s)
   })
 
@@ -233,7 +233,7 @@ describe('Feishu-style comment messages', () => {
     expect(commentPane).toContain('threads: selectionComments.value.map')
     expect(commentPane).toContain('thread.replyIds.length > previousReplyIds.length')
     expect(commentPane).toContain(
-      "thread.replyIds.at(-1) !== previousReplyIds.at(-1)"
+      'thread.replyIds.at(-1) !== previousReplyIds.at(-1)'
     )
     expect(commentPane).toContain('void scrollCommentToLatestMessage(thread.id)')
     expect(commentPane).toContain("{ flush: 'post' }")

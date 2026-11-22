@@ -1,7 +1,7 @@
-// @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+// @vitest-environment jsdom
+import { describe, expect, it } from 'vitest';
 import { ACTION_ICON_NAMES, createActionIconElement, formatActionIcon, renderActionIcon } from '../actionIcons';
 import { getAllThemeNames, getIconDefinition, getIconTheme, getIconThemeConfig, setIconTheme } from '../iconThemes';
 
@@ -73,9 +73,19 @@ describe('shared menu action icons', () => {
 
     it('keeps every visible block-menu action visually distinct within each theme', () => {
         const blockMenuIcons = [
-            'copy-plain-text', 'copy-markdown', 'copy', 'duplicate', 'cut',
-            'insert-above', 'insert-below', 'promote', 'demote',
-            'move-up', 'move-down', 'comment', 'delete',
+            'copy-plain-text',
+            'copy-markdown',
+            'copy',
+            'duplicate',
+            'cut',
+            'insert-above',
+            'insert-below',
+            'promote',
+            'demote',
+            'move-up',
+            'move-down',
+            'comment',
+            'delete',
         ] as const;
 
         for (const theme of getAllThemeNames()) {
@@ -142,10 +152,10 @@ describe('shared menu action icons', () => {
             'tableColumnToolbar/index.css',
         ].map(file => readFileSync(resolve(process.cwd(), 'src/ui', file), 'utf8'));
         for (const stylesheet of stylesheets)
-            expect(stylesheet).toMatch(/icon-wrapper[^}]*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+            expect(stylesheet).toMatch(/icon-wrapper[^{}]*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/);
 
         const sharedCss = readFileSync(resolve(process.cwd(), 'src/ui/actionIcons.css'), 'utf8');
-        expect(sharedCss).not.toMatch(/\.mu-action-icon svg\s*\{[^}]*(?:fill|stroke):/s);
+        expect(sharedCss).not.toMatch(/\.mu-action-icon svg\s*\{[^}]*(?:fill|stroke):/);
         expect(sharedCss).not.toContain('.mu-action-icon-delete svg');
     });
 });

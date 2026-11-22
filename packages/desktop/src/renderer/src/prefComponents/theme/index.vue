@@ -27,7 +27,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.general.misc.language.title') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.general.misc.language.title') }}
+        </h6>
       </template>
       <template #children>
         <cur-select
@@ -41,7 +43,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.editor.textEditor.title') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.editor.textEditor.title') }}
+        </h6>
       </template>
       <template #children>
         <range
@@ -79,7 +83,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.agent.provider.appearanceTitle') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.agent.provider.appearanceTitle') }}
+        </h6>
       </template>
       <template #children>
         <range
@@ -95,7 +101,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.editor.textEditor.iconTheme') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.editor.textEditor.iconTheme') }}
+        </h6>
       </template>
       <template #children>
         <cur-select
@@ -109,7 +117,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.markdown.codeBlock.title') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.markdown.codeBlock.title') }}
+        </h6>
       </template>
       <template #children>
         <font-text-box
@@ -138,7 +148,9 @@
 
     <compound>
       <template #head>
-        <h6 class="title">{{ t('preferences.theme.customCss') }}</h6>
+        <h6 class="title">
+          {{ t('preferences.theme.customCss') }}
+        </h6>
       </template>
       <template #children>
         <div class="custom-css">
@@ -155,7 +167,10 @@
       </template>
     </compound>
     <separator v-show="false" />
-    <section v-show="false" class="import-themes ag-underdevelop">
+    <section
+      v-show="false"
+      class="import-themes ag-underdevelop"
+    >
       <div>
         <span>{{ t('preferences.theme.openThemesFolder') }}</span>
         <el-button size="small">
@@ -176,7 +191,10 @@
         class="offcial-themes theme-hover-preview"
         :style="previewPosition"
       >
-        <div class="theme" :class="hoveredTheme.name">
+        <div
+          class="theme"
+          :class="hoveredTheme.name"
+        >
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-html="hoveredTheme.html" />
         </div>

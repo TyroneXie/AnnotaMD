@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import { launchWithMarkdown, focusEditor } from './helpers'
 
 // Validates that @muyajs/core renders a plantuml code block to a plantuml.com

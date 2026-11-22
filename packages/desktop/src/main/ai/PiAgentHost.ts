@@ -303,13 +303,13 @@ export class PiAgentHost implements PiHostAdapter {
     ))
     const readiness: AiReadiness = primary && defaultModel
       ? {
-          status: 'ready',
-          modelId: `${primary.id}/${defaultModel}`,
-          modelIds,
-          modelProviders: Object.fromEntries(providers.map(provider => [
-            provider.id, { name: provider.name, icon: piProviderIcon(provider) }
-          ]))
-        }
+        status: 'ready',
+        modelId: `${primary.id}/${defaultModel}`,
+        modelIds,
+        modelProviders: Object.fromEntries(providers.map(provider => [
+          provider.id, { name: provider.name, icon: piProviderIcon(provider) }
+        ]))
+      }
       : !enabled.length
         ? { status: 'missing', setupIssue: 'provider', modelIds }
         : !keyed.length
@@ -393,7 +393,7 @@ export class PiAgentHost implements PiHostAdapter {
       const prepared = await this.prepareRuntime(request.config, workspacePath, true, selectionRun)
       runtime = prepared.runtime
       request.signal?.throwIfAborted()
-      const completion = new Promise<void>((resolveCompletion, rejectCompletion) => {
+      const completion = new Promise<void>((resolve, reject) => {
         active = {
           runId: request.runId,
           runtime: runtime!,
@@ -405,8 +405,8 @@ export class PiAgentHost implements PiHostAdapter {
           approvedToolCalls: new Set(),
           stopped: false,
           settled: false,
-          resolve: resolveCompletion,
-          reject: rejectCompletion
+          resolve,
+          reject
         }
       })
       void completion.catch(() => {})
@@ -533,7 +533,9 @@ export class PiAgentHost implements PiHostAdapter {
     const modelId = modelRef.slice(separator + 1)
     const model = provider?.models.find(item => item.id === modelId)
     const deepSeekDefault = provider && isDeepSeekThinkingModel(provider, modelId) &&
-      (!model?.effortLevels || model.effortLevels.includes('high')) ? 'high' : undefined
+      (!model?.effortLevels || model.effortLevels.includes('high'))
+      ? 'high'
+      : undefined
     const thinkingLevel = applySelection ? reasoningLevel(config) ?? deepSeekDefault : undefined
     const agentDirectory = this.agentDirectory()
     await writePiAgentDirectory(agentDirectory, { providers })
@@ -699,11 +701,11 @@ export class PiAgentHost implements PiHostAdapter {
       : offset > 0 && envelope.revision !== revision
         ? { message: 'The comment revision changed or is missing. Read again from offset 0.' }
         : {
-            revision,
-            total: threads.length,
-            comments,
-            nextOffset: nextOffset < threads.length ? nextOffset : null
-          }
+          revision,
+          total: threads.length,
+          comments,
+          nextOffset: nextOffset < threads.length ? nextOffset : null
+        }
     active.runtime.respondToExtension(requestId, {
       value: encodePiBridgeEnvelope({ v: 1, kind: 'comments', result })
     })
@@ -726,15 +728,15 @@ export class PiAgentHost implements PiHostAdapter {
     )
     const response = handlesCurrentDocument
       ? {
-          v: 1,
-          kind: 'snapshot',
-          handled: true,
-          documentHandleId: snapshot.handleId,
-          documentId: snapshot.documentId,
-          filePath: snapshot.filePath,
-          content: snapshot.markdown,
-          contentHash: snapshot.contentHash
-        }
+        v: 1,
+        kind: 'snapshot',
+        handled: true,
+        documentHandleId: snapshot.handleId,
+        documentId: snapshot.documentId,
+        filePath: snapshot.filePath,
+        content: snapshot.markdown,
+        contentHash: snapshot.contentHash
+      }
       : { v: 1, kind: 'snapshot', handled: false }
     active.runtime.respondToExtension(requestId, { value: encodePiBridgeEnvelope(response) })
   }
@@ -796,17 +798,17 @@ export class PiAgentHost implements PiHostAdapter {
     try {
       const result = asMutationResult(toolName === 'edit'
         ? await this.documentScopes.editDocument(active.scopeToken, {
-            handleId: snapshot.handleId,
-            expectedRevision: snapshot.revision,
-            expectedHash: snapshot.contentHash,
-            edits: [{ oldText: originalContent, newText: proposedContent }]
-          })
+          handleId: snapshot.handleId,
+          expectedRevision: snapshot.revision,
+          expectedHash: snapshot.contentHash,
+          edits: [{ oldText: originalContent, newText: proposedContent }]
+        })
         : await this.documentScopes.replaceDocument(active.scopeToken, {
-            handleId: snapshot.handleId,
-            expectedRevision: snapshot.revision,
-            expectedHash: snapshot.contentHash,
-            markdown: proposedContent
-          }))
+          handleId: snapshot.handleId,
+          expectedRevision: snapshot.revision,
+          expectedHash: snapshot.contentHash,
+          markdown: proposedContent
+        }))
       if (result.contentHash !== proposedHash) {
         throw new PiRpcCompatibilityError('AnnotaMD applied content does not match the Pi proposal.')
       }
@@ -848,12 +850,12 @@ export class PiAgentHost implements PiHostAdapter {
     filePath: string
   ): Promise<boolean> {
     const approvalId = `${active.runId}:pi:${proposalId}`
-    return await new Promise<boolean>(resolveApproval => {
+    return await new Promise<boolean>(resolve => {
       const available = new Set<AiApprovalDecision>(['allow-once', 'deny'])
       this.approvals.set(approvalId, {
         runId: active.runId,
         available,
-        resolve: resolveApproval
+        resolve
       })
       active.emit({
         type: 'approval-requested',
@@ -908,12 +910,12 @@ export class PiAgentHost implements PiHostAdapter {
     path?: string
   ): Promise<boolean> {
     const approvalId = `${active.runId}:pi-tool:${toolCallId}`
-    return await new Promise<boolean>(resolveApproval => {
+    return await new Promise<boolean>(resolve => {
       const available = new Set<AiApprovalDecision>(['allow-once', 'deny'])
       this.approvals.set(approvalId, {
         runId: active.runId,
         available,
-        resolve: resolveApproval
+        resolve
       })
       active.emit({
         type: 'approval-requested',

@@ -1,9 +1,9 @@
 import type { Muya } from '../../../muya';
 import { CLASS_NAMES } from '../../../config';
 import { stableSlug } from '../../../state/getTOC';
+import { createActionIconElement } from '../../../ui/actionIcons';
 import { isKeyboardEvent } from '../../../utils';
 import logger from '../../../utils/logger';
-import { createActionIconElement } from '../../../ui/actionIcons';
 import TreeNode from '../../base/treeNode';
 import '../../../ui/actionIcons.css';
 import '../../../ui/tooltip/index.css';

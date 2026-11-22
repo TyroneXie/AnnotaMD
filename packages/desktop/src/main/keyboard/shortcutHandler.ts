@@ -163,7 +163,7 @@ class Keybindings {
       const globalDebug = (globalThis as typeof globalThis & { ANNOTAMD_DEBUG?: boolean })
         .ANNOTAMD_DEBUG
       if (globalDebug && process.env.ANNOTAMD_DEBUG_KEYBOARD) {
-        console.log('[DEBUG] Keyboard layout changed:\n', layout)
+        log.debug('Keyboard layout changed:', layout)
       }
       electronLocalshortcut.setKeyboardLayout(layout, keymap)
     })
@@ -221,7 +221,6 @@ class Keybindings {
       for (const [keyB, valueB] of userAccelerators) {
         if (valueA !== '' && keyA !== keyB && isEqualAccelerator(valueA, valueB)) {
           const err = `Invalid keybindings.json configuration: Duplicate value for "${keyA}" and "${keyB}"!`
-          console.log(err)
           log.error(err)
           return
         }

@@ -40,10 +40,10 @@ export const useAutoHideScrollbar = () => {
     const target = event.currentTarget
     if (!(target instanceof HTMLElement)) return
     const rect = target.getBoundingClientRect()
-    const onVerticalScrollbar = target.scrollHeight > target.clientHeight
-      && event.clientX >= rect.right - SCROLLBAR_HIT_AREA_PX
-    const onHorizontalScrollbar = target.scrollWidth > target.clientWidth
-      && event.clientY >= rect.bottom - SCROLLBAR_HIT_AREA_PX
+    const onVerticalScrollbar = target.scrollHeight > target.clientHeight &&
+      event.clientX >= rect.right - SCROLLBAR_HIT_AREA_PX
+    const onHorizontalScrollbar = target.scrollWidth > target.clientWidth &&
+      event.clientY >= rect.bottom - SCROLLBAR_HIT_AREA_PX
     if (!onVerticalScrollbar && !onHorizontalScrollbar) return
 
     draggingScrollbar = true

@@ -17,7 +17,7 @@
 // paragraphs) into the new list item. Added a defensive `index === -1`
 // early-return inside chopBlockByCursor.
 import { expect, test } from '@playwright/test'
-import type { ElectronApplication, Page } from 'playwright'
+import type { ElectronApplication, Page } from '@playwright/test'
 import {
   clearRendererErrors,
   expectNoRendererErrors,
