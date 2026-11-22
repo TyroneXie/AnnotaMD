@@ -164,6 +164,8 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.tar.gz
+            !dist/annotamd-mac-*.blockmap
+            !dist/builder-debug.yml
 
   release:
     name: Publish GitHub Release
@@ -209,6 +211,8 @@ jobs:
           IS_PRERELEASE: ${{ contains(env.RELEASE_TAG, '-') }}
         run: |
           {
+            cat "docs/releases/release-notes-${RELEASE_TAG}.md"
+            echo ""
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               echo "## ❗ This is a pre-release"
               echo "- May contain bugs and unfinished features."
@@ -236,7 +240,7 @@ jobs:
         with:
           draft: true
           prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          generate_release_notes: true
+          generate_release_notes: false
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_TAG }}
           body_path: release_body.md

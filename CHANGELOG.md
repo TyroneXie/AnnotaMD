@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.21.0 - 2026-11-22
+
+### Added
+
+- Added the bundled Pi Agent with provider and model settings, document and comment context, tool approvals, and reviewable document changes.
+- Added Ask AI beside selected text for independent questions and editing requests, plus explicit quoting into the Agent draft.
+- Added image rows with two or more images, coordinated resizing, drag reordering, and enlarged image previews.
+- Added a shortcut at the bottom of the comment pane to jump to the first comment and new-chat suggestions for addressing all document comments.
+
+### Changed
+
+- Redesigned Agent conversations, provider settings, and comment threads for clearer, more compact layouts.
+- Model discovery now lets users choose which models to add; the Agent model menu opens immediately and loads model capabilities in the background.
+- Simplified block and section copy actions and removed the settings search box.
+
+### Fixed
+
+- Fixed provider logos, code-language icons, model selection, and model-specific reasoning controls.
+- Kept image resizing active through a continuous drag and prevented image rows from changing size on selection.
+- Kept table headers visible when folding and unfolding nearby sections.
+- Restricted document resource access and desktop actions to authorized application windows and file locations.
+
 ## 2.20.0 - 2026-11-12
 
 ### Added

@@ -169,8 +169,8 @@ mac:
   notarize: false
   target:
     - dmg
-    - zip
 dmg:
+  writeUpdateInfo: false
   artifactName: 'annotamd-mac-${arch}-${version}.${ext}'
   contents:
     - x: 410

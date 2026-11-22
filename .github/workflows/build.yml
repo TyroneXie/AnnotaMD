@@ -131,6 +131,8 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.tar.gz
+            !dist/annotamd-mac-*.blockmap
+            !dist/builder-debug.yml
           if-no-files-found: error
 
   comment-on-pr:

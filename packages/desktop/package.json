@@ -1,6 +1,6 @@
 {
   "name": "annotamd",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "description": "AnnotaMD",
   "main": "./out/main/index.js",
   "author": {
@@ -41,9 +41,9 @@
     "build:win": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --x64 --publish never",
     "build:win:x64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --x64 --publish never",
     "build:win:arm64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --win --arm64 --publish never",
-    "build:mac": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --publish never",
-    "build:mac:x64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --x64 --publish never",
-    "build:mac:arm64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --arm64 --publish never",
+    "build:mac": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --publish never && node ../../scripts/createMacUpdateZip.mjs",
+    "build:mac:x64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --x64 --publish never && node ../../scripts/createMacUpdateZip.mjs x64",
+    "build:mac:arm64": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --mac --arm64 --publish never && node ../../scripts/createMacUpdateZip.mjs arm64",
     "build:linux": "node ../../scripts/stagePiRuntime.mjs && tsx ../../scripts/minify-locales.ts && electron-rebuild && electron-vite build && electron-builder --linux AppImage deb rpm tar.gz --publish never && electron-builder --linux snap --publish never",
     "perf:inspect": "cross-env PERF_TESTING=true electron-vite preview -- --inspect=5858",
     "perf:inspect-brk": "cross-env PERF_TESTING=true electron-vite preview -- --inspect-brk=5858",
