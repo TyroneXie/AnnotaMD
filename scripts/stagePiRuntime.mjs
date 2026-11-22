@@ -59,7 +59,13 @@ writeFileSync(join(target, 'package.json'), JSON.stringify({
   dependencies: { [PACKAGE_NAME]: pinnedVersion }
 }, null, 2))
 
-execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', [
+// Node cannot execFile a Windows .cmd shim. Invoke npm through Node itself,
+// keeping paths with spaces as arguments instead of enabling a shell.
+const npmCommand = process.platform === 'win32' ? process.execPath : 'npm'
+const npmPrefix = process.platform === 'win32'
+  ? [join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')]
+  : []
+execFileSync(npmCommand, [...npmPrefix,
   'install',
   '--omit=dev',
   '--omit=optional',

@@ -1,4 +1,5 @@
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, readdirSync, rmSync } from 'node:fs'
+import ts from 'typescript'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
@@ -81,5 +82,45 @@ describe('reproducible build contracts', () => {
       const archiveCheck = spawnSync('/usr/bin/unzip', ['-tq', resolve(directory, `${base}.zip`)], { encoding: 'utf8' })
       expect(archiveCheck.status).toBe(0)
     } finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  it.each(['win32', 'linux'] as const)('stages Pi using an executable npm entry on %s without a shell', platform => {
+    const windows = platform === 'win32'
+    const paths = windows ? path.win32 : path.posix
+    const executable = windows ? 'C:\\Program Files\\nodejs\\node.exe' : '/usr/bin/node'
+    const scriptPath = windows ? 'C:\\repo\\scripts\\stagePiRuntime.mjs' : '/repo/scripts/stagePiRuntime.mjs'
+    const source = readFileSync(resolve(root, 'scripts/stagePiRuntime.mjs'), 'utf8').replace('import.meta.url', JSON.stringify('file:///staging-script.mjs'))
+    const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+    const stopped = new Error('stopped after command capture')
+    const execute = vi.fn<(...args: unknown[]) => never>(() => { throw stopped })
+    expect(() => runInNewContext(compiled, {
+      exports: {},
+      process: { platform, execPath: executable },
+      console: { log: vi.fn() },
+      require: (name: string) => {
+        if (name === 'node:child_process') return { execFileSync: execute }
+        if (name === 'node:path') return paths
+        if (name === 'node:url') return { fileURLToPath: () => scriptPath }
+        if (name === 'node:fs') {
+          return {
+            existsSync: () => false,
+            readFileSync: () => JSON.stringify({ devDependencies: { '@earendil-works/pi-coding-agent': '1.5.2' } }),
+            rmSync: vi.fn(),
+            mkdirSync: vi.fn(),
+            writeFileSync: vi.fn()
+          }
+        }
+        throw Error(`Unexpected module: ${name}`)
+      }
+    })).toThrow(stopped)
+    expect(execute).toHaveBeenCalledWith(
+      windows ? executable : 'npm',
+      [
+        ...(windows ? [paths.join(paths.dirname(executable), 'node_modules/npm/bin/npm-cli.js')] : []),
+        'install', '--omit=dev', '--omit=optional', '--no-audit', '--no-fund', '--ignore-scripts', '--loglevel=error'
+      ],
+      expect.objectContaining({ stdio: 'inherit' })
+    )
+    expect(execute.mock.calls[0]?.[2]).not.toHaveProperty('shell')
   })
 })
