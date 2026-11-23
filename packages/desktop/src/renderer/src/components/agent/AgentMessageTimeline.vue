@@ -445,9 +445,11 @@ const openMarkdownLink = (event: MouseEvent): void => {
   if (/^(?:https?:|mailto:)/i.test(href)) void window.electron.shell.openExternal(href)
 }
 
+// Only a running group opens by itself. A failed run keeps the header signal
+// (icon + status label) but stays collapsed, so its long reasoning cannot flood
+// the timeline; the user expands it on demand.
 const processGroupExpanded = (entry: ProcessGroupEntry): boolean => (
-  processGroupExpansionOverrides.value.get(entry.id) ??
-    (entry.running || runStatus(entry) === 'failed')
+  processGroupExpansionOverrides.value.get(entry.id) ?? entry.running
 )
 const toggleProcessGroup = (entry: ProcessGroupEntry): void => {
   const next = new Map(processGroupExpansionOverrides.value)
@@ -455,11 +457,13 @@ const toggleProcessGroup = (entry: ProcessGroupEntry): void => {
   processGroupExpansionOverrides.value = next
 }
 
+// A tool call failing mid-run is routine; only the run's own outcome counts.
+// The group is "failed" when the run summary failed or the run ended without a
+// final answer, and each failed tool row still shows its own error locally.
 const runStatus = (entry: ProcessGroupEntry): AiMessageStatus => {
-  if (entry.summary?.message.status === 'failed' ||
-    entry.messages.some(({ message }) => message.status === 'failed')) return 'failed'
-  if (entry.summary?.message.status === 'cancelled' ||
-    entry.messages.some(({ message }) => message.status === 'cancelled')) return 'cancelled'
+  if (entry.summary?.message.status === 'failed') return 'failed'
+  if (entry.summary?.message.status === 'cancelled') return 'cancelled'
+  if (!entry.running && entry.missingFinal) return 'failed'
   if (entry.running || entry.summary?.message.status === 'streaming') return 'streaming'
   return 'complete'
 }
@@ -564,29 +568,29 @@ onBeforeUnmount(() => {
 .annotamd-agent-message.is-user { max-width: 86%; align-self: flex-end; justify-items: end; }
 .annotamd-agent-message.is-assistant { width: 100%; max-width: 100%; }
 .annotamd-agent-message-bubble { min-width: 0; width: 100%; box-sizing: border-box; padding: 3px 0; }
-.annotamd-agent-message.is-user .annotamd-agent-message-bubble { padding: 9px 11px; border-radius: 10px; background: color-mix(in srgb, var(--annotamd-agent-accent) 9%, var(--annotamd-surface)); }
-.annotamd-agent-message-meta { display: flex; min-height: 20px; width: 100%; align-items: center; justify-content: flex-end; gap: 2px; color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
+.annotamd-agent-message.is-user .annotamd-agent-message-bubble { padding: 9px 11px; border-radius: var(--ui-radius); background: var(--ui-control); }
+.annotamd-agent-message-meta { display: flex; min-height: 20px; width: 100%; align-items: center; justify-content: flex-end; gap: 2px; color: var(--annotamd-muted); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
 .annotamd-agent-message-meta time { padding: 0 2px; line-height: 1.4; white-space: nowrap; }
 .annotamd-agent-process-group { width: 100%; min-width: 0; border-radius: 7px; background: var(--annotamd-surface); }
-.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 29px; align-items: center; gap: 7px; padding: 3px 8px; color: var(--annotamd-muted); border: 0; border-radius: 7px; background: transparent; cursor: pointer; font: inherit; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.4; text-align: left; }
+.annotamd-agent-process-group-toggle { display: flex; width: 100%; min-height: 29px; align-items: center; gap: 7px; padding: 3px 8px; color: var(--annotamd-muted); border: 0; border-radius: 7px; background: transparent; cursor: pointer; font: inherit; font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.4; text-align: left; }
 .annotamd-agent-process-group-toggle:hover { background: var(--annotamd-fill-soft); }
 .annotamd-agent-process-group-toggle > .annotamd-agent-tool-state { align-self: baseline; }
-.annotamd-agent-process-group-toggle strong { color: var(--annotamd-text); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 650; }
+.annotamd-agent-process-group-toggle strong { color: var(--annotamd-text); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 650; }
 .annotamd-agent-process-group-chevron { flex: none; margin-left: auto; transition: transform .15s ease; }
 .annotamd-agent-process-group-chevron.is-expanded { transform: rotate(90deg); }
 .annotamd-agent-process-group-chevron :deep(svg) { width: 13px; height: 13px; }
 .annotamd-agent-process-group-body { display: grid; min-width: 0; gap: 7px; margin: 3px 4px 6px 24px; }
 .annotamd-agent-process-note { padding: 1px 0; color: var(--annotamd-muted); border: 0; background: transparent; }
-.annotamd-agent-process-note-content { min-width: 0; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); line-height: 1.55; word-break: break-word; }
+.annotamd-agent-process-note-content { min-width: 0; box-sizing: border-box; max-height: 220px; padding: 6px 9px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--annotamd-border-soft); border-radius: 6px; background: var(--annotamd-surface); color: var(--annotamd-text); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); line-height: 1.55; word-break: break-word; }
 .annotamd-agent-process-note-content pre { margin: 5px 0 0; overflow: auto; white-space: pre-wrap; }
-.annotamd-agent-run-error { margin: -2px 4px 4px 24px; color: #ef4444; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; word-break: break-word; }
-.annotamd-agent-missing-final { margin: -2px 4px 4px 24px; color: var(--annotamd-muted); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; }
+.annotamd-agent-run-error { margin: -2px 4px 4px 24px; color: #ef4444; font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; word-break: break-word; }
+.annotamd-agent-missing-final { margin: -2px 4px 4px 24px; color: var(--annotamd-muted); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.45; }
 .annotamd-agent-tool-list { display: grid; min-width: 0; gap: 2px; }
 .annotamd-agent-tool-row { min-width: 0; }
 .annotamd-agent-tool-line { display: flex; min-width: 0; min-height: 24px; align-items: center; gap: 7px; padding: 1px 0; color: var(--annotamd-muted); }
-.annotamd-agent-tool-line strong { overflow: hidden; color: var(--annotamd-text); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.annotamd-agent-tool-line > span { overflow: hidden; flex: 1; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); text-overflow: ellipsis; white-space: nowrap; }
-.annotamd-agent-tool-error { margin: 0 0 5px 20px; color: #ef4444; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.annotamd-agent-tool-line strong { overflow: hidden; color: var(--annotamd-text); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-tool-line > span { overflow: hidden; flex: 1; font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); text-overflow: ellipsis; white-space: nowrap; }
+.annotamd-agent-tool-error { margin: 0 0 5px 20px; color: #ef4444; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 .annotamd-agent-tool-state { flex: none; color: var(--annotamd-muted); }
 .annotamd-agent-tool-state.is-streaming { color: var(--annotamd-blue); animation: ai-tool-spin 1s linear infinite; }
 .annotamd-agent-tool-state.is-complete { color: #22a06b; }
@@ -618,10 +622,10 @@ onBeforeUnmount(() => {
 .annotamd-agent-markdown :deep(th),
 .annotamd-agent-markdown :deep(td) { padding: 4px 6px; border: 1px solid var(--annotamd-border); text-align: left; }
 .annotamd-agent-code-block { overflow: hidden; margin: 7px 0; border: 1px solid var(--annotamd-border-soft); border-radius: 7px; background: color-mix(in srgb, var(--annotamd-surface-soft) 75%, var(--annotamd-surface)); }
-.annotamd-agent-code-header { display: flex; min-height: 28px; align-items: center; justify-content: space-between; padding: 2px 5px 2px 9px; color: var(--annotamd-muted); border-bottom: 1px solid var(--annotamd-border-soft); font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
+.annotamd-agent-code-header { display: flex; min-height: 28px; align-items: center; justify-content: space-between; padding: 2px 5px 2px 9px; color: var(--annotamd-muted); border-bottom: 1px solid var(--annotamd-border-soft); font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 3px), 15px); }
 .annotamd-agent-code-block pre { max-width: 100%; margin: 0; padding: 9px; overflow: auto; white-space: pre; }
 .annotamd-agent-code-block code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: clamp(10px, calc(var(--annotamd-agent-font-size, 12px) - 1px), 17px); line-height: 1.55; }
-.annotamd-agent-message-error { display: flex; align-items: center; gap: 6px; margin: 0; color: #ef4444; font-size: clamp(9px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); }
+.annotamd-agent-message-error { display: flex; align-items: center; gap: 6px; margin: 0; color: #ef4444; font-size: clamp(11px, calc(var(--annotamd-agent-font-size, 12px) - 2px), 16px); }
 .annotamd-agent-message-error button { padding: 0; color: inherit; border: 0; background: transparent; cursor: pointer; text-decoration: underline; }
 .annotamd-agent-thinking { display: inline-flex; gap: 4px; padding: 8px 11px; }
 .annotamd-agent-thinking span { width: 5px; height: 5px; border-radius: 50%; background: var(--annotamd-muted); animation: ai-thinking 1s infinite alternate; }

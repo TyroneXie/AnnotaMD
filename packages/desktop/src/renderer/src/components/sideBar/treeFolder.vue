@@ -157,15 +157,15 @@ onBeforeUnmount(() => {
     user-select: none;
     display: flex;
     align-items: center;
-    height: 22px;
-    margin: 0;
+    height: 26px;
+    margin: 0 2px 1px;
     padding-right: 8px;
     border-radius: 7px;
-    color: #646a73;
-    font-size: 12px;
+    color: var(--ui-text);
+    font-size: 12.5px;
     & > .icon-arrow {
       flex-shrink: 0;
-      color: #8f959e;
+      color: var(--ui-muted);
       margin-right: 5px;
       transition: transform 0.25s ease-out;
       transform: rotate(90deg);
@@ -174,8 +174,8 @@ onBeforeUnmount(() => {
       transform: rotate(0);
     }
     &:hover {
-      background: #eef3ff;
-      color: #3370ff;
+      background: var(--ui-hover);
+      color: var(--ui-ink);
     }
   }
 }
@@ -185,7 +185,7 @@ input.rename {
   height: 22px;
   margin: 0;
   padding: 0 8px;
-  color: #1f2329;
+  color: var(--ui-ink);
   border: 1px solid #c9d8ff;
   background: #ffffff;
   width: 70%;

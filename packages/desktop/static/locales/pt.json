@@ -620,7 +620,11 @@
       "importCustomThemes": "Importar temas personalizados",
       "importTheme": "Importar Tema",
       "openFolder": "Abrir Pasta",
-      "openThemesFolder": "Abrir pasta de temas"
+      "openThemesFolder": "Abrir pasta de temas",
+      "workspaceLayout": "Layout",
+      "layoutCapsule": "Cápsula",
+      "layoutClassic": "Clássico",
+      "layoutStyle": "Estilo"
     },
     "keybindings": {
       "title": "Atalhos de Teclado",

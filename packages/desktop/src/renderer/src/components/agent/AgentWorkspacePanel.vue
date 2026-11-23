@@ -1,6 +1,8 @@
 <template>
   <aside
+    ref="root"
     class="annotamd-agent-workspace"
+    :class="{ 'is-narrow': isNarrow }"
     :aria-label="t('annotamd.agentWorkspace.title')"
     :style="agentWorkspaceStyle"
   >
@@ -334,13 +336,33 @@ const refreshAfterSettings = (): void => {
   ])
 }
 
+// The sidebar can be dragged narrow; below this width cards, chips and the
+// composer need the compact layout instead of squeezed text.
+const NARROW_WIDTH = 400
+const root = ref<HTMLElement | null>(null)
+const isNarrow = ref(false)
+let narrowObserver: ResizeObserver | undefined
+
+const syncNarrow = (width: number): void => {
+  isNarrow.value = width < NARROW_WIDTH
+}
+
 onMounted(() => {
   window.addEventListener('focus', refreshAfterSettings)
   void refresh()
+  if (root.value) {
+    syncNarrow(root.value.getBoundingClientRect().width)
+    narrowObserver = new ResizeObserver(entries => {
+      const entry = entries[0]
+      if (entry) syncNarrow(entry.contentRect.width)
+    })
+    narrowObserver.observe(root.value)
+  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('focus', refreshAfterSettings)
+  narrowObserver?.disconnect()
 })
 </script>
 
@@ -349,14 +371,14 @@ onBeforeUnmount(() => {
 :global(.annotamd-agent-permission-menu),
 :global(.annotamd-agent-model-popover),
 :global(.annotamd-agent-history-popover) {
-  --annotamd-surface: var(--editorBgColor);
-  --annotamd-text: var(--editorColor);
-  --annotamd-ink: var(--editorColor);
-  --annotamd-muted: color-mix(in srgb, var(--editorColor) 78%, var(--editorBgColor));
-  --annotamd-surface-soft: color-mix(in srgb, var(--editorColor) 3%, var(--editorBgColor));
-  --annotamd-fill-soft: color-mix(in srgb, var(--editorColor) 7%, var(--editorBgColor));
-  --annotamd-border: color-mix(in srgb, var(--editorColor) 19%, var(--editorBgColor));
-  --annotamd-border-soft: color-mix(in srgb, var(--editorColor) 12%, var(--editorBgColor));
+  --annotamd-surface: var(--ui-paper);
+  --annotamd-text: var(--ui-text);
+  --annotamd-ink: var(--ui-ink);
+  --annotamd-muted: var(--ui-muted);
+  --annotamd-surface-soft: var(--ui-panel);
+  --annotamd-fill-soft: var(--ui-control);
+  --annotamd-border: var(--ui-border);
+  --annotamd-border-soft: var(--ui-divider);
   --annotamd-agent-accent: var(--highlightThemeColor);
 }
 
@@ -403,6 +425,21 @@ onBeforeUnmount(() => {
 .annotamd-agent-error { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 8px 9px; color: #b42318; border: 1px solid color-mix(in srgb, #ef4444 25%, var(--annotamd-border)); border-radius: 7px; background: color-mix(in srgb, #ef4444 7%, var(--annotamd-surface)); font-size: 10px; line-height: 1.45; }
 .annotamd-agent-error button { flex: none; padding: 2px 5px; color: inherit; border: 0; background: transparent; cursor: pointer; text-decoration: underline; }
 .annotamd-agent-setup { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 8px 10px; padding: 11px; border: 1px solid var(--annotamd-border); border-radius: 9px; background: var(--annotamd-surface); }
+
+/* Narrow sidebar: stack the setup card so its copy and button keep full width,
+   and drop the permission chip's label so the model chip keeps room. */
+.annotamd-agent-workspace.is-narrow .annotamd-agent-setup { grid-template-columns: minmax(0, 1fr); }
+.annotamd-agent-workspace.is-narrow .annotamd-agent-setup > span { grid-row: auto; }
+.annotamd-agent-workspace.is-narrow .annotamd-agent-setup button { grid-column: 1; }
+
+.annotamd-agent-workspace.is-narrow :deep(.annotamd-agent-permission-trigger > span),
+.annotamd-agent-workspace.is-narrow :deep(.annotamd-agent-permission-trigger .is-chevron) {
+  display: none;
+}
+
+.annotamd-agent-workspace.is-narrow :deep(.annotamd-agent-compose-toolbar) {
+  gap: 4px;
+}
 .annotamd-agent-setup > span { display: grid; width: 34px; height: 34px; grid-row: 1 / span 2; place-items: center; color: var(--annotamd-text); border-radius: 8px; background: var(--annotamd-fill-soft); }
 .annotamd-agent-setup > span :deep(svg) { width: 17px; height: 17px; }
 .annotamd-agent-setup > div { min-width: 0; }

@@ -893,7 +893,11 @@
       "importCustomThemes": "导入自定义主题",
       "importTheme": "导入主题",
       "openFolder": "打开文件夹",
-      "openThemesFolder": "打开主题文件夹"
+      "openThemesFolder": "打开主题文件夹",
+      "workspaceLayout": "界面布局",
+      "layoutCapsule": "胶囊",
+      "layoutClassic": "经典",
+      "layoutStyle": "样式"
     },
     "keybindings": {
       "title": "快捷键",
@@ -1182,7 +1186,8 @@
       "reply": "回复",
       "remove": "建议删除选中文字。",
       "applied": "已替换选区，可撤销",
-      "stale": "文档已变化，本次改写未应用。"
+      "stale": "文档已变化，本次改写未应用。",
+      "dragHint": "拖动引文可移动面板"
     },
     "agentWorkspace": {
       "title": "AI 助手",

@@ -5,7 +5,7 @@ import { AgentDocumentRendererBridge } from '../agentDocumentBridge/AgentDocumen
 import { AgentDocumentScopeService } from '../agentDocumentBridge/AgentDocumentScopeService'
 import { getCommentService } from '../comments'
 import { AiStore } from './AiStore'
-import { KeytarAiSecretStore } from './AiSecretStore'
+import { createAiSecretStore } from './createAiSecretStore'
 import { ApiAskHost } from './ApiAskHost'
 import { PiAgentHost } from './PiAgentHost'
 import { AiWorkspaceService } from './AiWorkspaceService'
@@ -54,7 +54,7 @@ export const getAiWorkspaceService = (): AiWorkspaceService => {
     candidate => rendererBridge!.applyCandidate(candidate),
     candidate => rendererBridge!.readSnapshot(candidate)
   )
-  const secrets = new KeytarAiSecretStore()
+  const secrets = createAiSecretStore()
   service = new AiWorkspaceService({
     store: new AiStore({
       databasePath,

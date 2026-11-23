@@ -422,8 +422,8 @@ onBeforeUnmount(() => {
   overflow-x: hidden;
   margin: 34px 0 0;
   padding: 18px 0 72px;
-  border-top: 1px solid #eceff3;
-  color: #2f3437;
+  border-top: 1px solid var(--ui-divider);
+  color: var(--ui-text);
   font-size: 14px;
   line-height: 1.55;
   user-select: text;
@@ -433,16 +433,16 @@ onBeforeUnmount(() => {
 .annotamd-document-composer {
   max-width: 100%;
   box-sizing: border-box;
-  border: 1px solid #dee0e3;
+  border: 1px solid var(--ui-border);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--ui-paper);
 }
 
 .annotamd-document-comment {
   margin-bottom: 12px;
   padding: 12px 14px;
-  background: #fbfcfd;
-  border-color: #eceff3;
+  background: var(--ui-panel);
+  border-color: var(--ui-divider);
 }
 
 .annotamd-document-comment-top {
@@ -453,7 +453,7 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-document-comment-top span {
-  color: #3370ff;
+  color: var(--annotamd-blue);
   font-size: 12px;
   font-weight: 700;
 }
@@ -461,17 +461,16 @@ onBeforeUnmount(() => {
 .annotamd-document-comment p {
   margin: 0;
   padding: 0 0 8px;
-  color: #2f3437;
+  color: var(--ui-text);
   font-size: 14px;
   line-height: 1.55;
 }
 
 .annotamd-document-thread-message {
   box-sizing: border-box;
-  padding: 9px 10px;
-  border: 1px solid #dee0e3;
-  border-radius: 7px;
-  background: #fff;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
 }
 
 .annotamd-document-root-message {
@@ -517,7 +516,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 26px;
   padding: 0;
-  color: #8f959e;
+  color: var(--ui-muted);
   cursor: pointer;
   list-style: none;
 }
@@ -542,9 +541,9 @@ onBeforeUnmount(() => {
   padding: 4px;
   flex-direction: column;
   gap: 1px;
-  border: 1px solid #dee0e3;
+  border: 1px solid var(--ui-border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--ui-paper);
   box-shadow: 0 6px 18px rgb(31 35 41 / 16%);
 }
 
@@ -553,13 +552,13 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 30px;
   padding: 0 10px;
-  color: #2f3437;
+  color: var(--ui-text);
   text-align: left;
 }
 
 .annotamd-document-message-actions .annotamd-document-message-menu button:hover:not(:disabled) {
-  background: #e8f1ff;
-  color: #3370ff;
+  background: var(--annotamd-surface-blue);
+  color: var(--annotamd-blue);
 }
 
 .annotamd-document-message-actions .annotamd-document-message-menu button:disabled {
@@ -568,10 +567,7 @@ onBeforeUnmount(() => {
 
 .annotamd-document-message-author {
   display: inline-flex;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: #eaf2ff;
-  color: #3370ff;
+  color: var(--ui-ink);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.5;
@@ -579,7 +575,7 @@ onBeforeUnmount(() => {
 
 .annotamd-document-message-time {
   margin-left: 5px;
-  color: #8f959e;
+  color: var(--ui-muted);
   font-size: 11px;
   line-height: 1.5;
   white-space: nowrap;
@@ -597,7 +593,7 @@ onBeforeUnmount(() => {
 }
 
 .annotamd-document-reply-message.author-agent {
-  background: #f7f9ff;
+  background: transparent;
 }
 
 .annotamd-document-actions {
@@ -617,7 +613,7 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #3370ff;
+  color: var(--annotamd-blue);
   font-size: 12px;
 }
 
@@ -655,7 +651,7 @@ onBeforeUnmount(() => {
 .annotamd-document-comment-top button:hover,
 .annotamd-document-actions button:hover,
 .annotamd-document-message-actions button:hover {
-  background: #e8f1ff;
+  background: var(--annotamd-surface-blue);
 }
 
 .annotamd-document-editor,
@@ -666,11 +662,11 @@ onBeforeUnmount(() => {
   margin: 10px 12px;
   padding: 9px 10px;
   resize: vertical;
-  border: 1px solid #dee0e3;
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
   outline: none;
-  background: #ffffff;
-  color: #2f3437;
+  background: var(--ui-paper);
+  color: var(--ui-text);
   font: inherit;
   font-size: 14px;
   line-height: 1.55;
@@ -679,7 +675,7 @@ onBeforeUnmount(() => {
 .annotamd-document-editor:focus,
 .annotamd-document-reply-editor textarea:focus,
 .annotamd-document-composer textarea:focus {
-  border-color: #3370ff;
+  border-color: var(--annotamd-blue);
   box-shadow: 0 0 0 2px rgba(51, 112, 255, 0.12);
 }
 
@@ -700,7 +696,7 @@ onBeforeUnmount(() => {
 
 .annotamd-document-reply-editor button:disabled,
 .annotamd-document-composer button:disabled {
-  background: #edf1f7;
+  background: var(--ui-control);
   color: #a0a6b0;
 }
 
@@ -708,8 +704,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   padding-top: 2px;
-  border-color: #dee0e3;
-  background: #fbfcfd;
+  border-color: var(--ui-border);
+  background: var(--ui-panel);
   box-shadow: none;
 }
 

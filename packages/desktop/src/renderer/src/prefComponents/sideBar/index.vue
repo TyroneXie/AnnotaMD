@@ -63,23 +63,24 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   flex: none;
-  background: var(--editorBgColor);
+  background: var(--ui-sidebar);
   width: var(--prefSideBarWidth);
   height: 100vh;
   padding: 22px 14px 24px;
-  border-right: 1px solid var(--editorColor10);
+  border-right: 1px solid var(--ui-border);
   box-sizing: border-box;
   & h3 {
     display: flex;
-    min-height: 28px;
+    min-height: 30px;
     align-items: center;
     gap: 9px;
     margin: 0;
     padding: 0 10px;
     font-size: 17px;
     font-weight: 700;
+    letter-spacing: -0.01em;
     text-align: left;
-    color: var(--editorColor);
+    color: var(--ui-ink);
   }
   & h3 .el-icon {
     width: 17px;
@@ -93,10 +94,10 @@ onUnmounted(() => {
   margin-top: 20px;
   & .item {
     width: 100%;
-    min-height: 36px;
+    min-height: 34px;
     margin-bottom: 3px;
     padding: 0 11px;
-    color: var(--editorColor60);
+    color: var(--ui-muted);
     border-radius: 7px;
     font-size: 13px;
     font-weight: 500;
@@ -107,20 +108,23 @@ onUnmounted(() => {
     cursor: pointer;
     position: relative;
     user-select: none;
+    gap: 9px;
     & > svg {
-      display: none;
+      width: 16px;
+      height: 16px;
+      flex: none;
     }
     &:hover {
       color: var(--editorColor);
-      background: var(--editorColor06);
+      background: var(--ui-hover);
     }
     &.active {
-      color: #fff;
-      background: var(--highlightThemeColor);
+      color: var(--ui-ink);
+      background: var(--ui-selected);
       font-weight: 650;
     }
     &.active:hover {
-      background: color-mix(in srgb, var(--highlightThemeColor) 88%, #000);
+      background: var(--ui-selected);
     }
   }
 }

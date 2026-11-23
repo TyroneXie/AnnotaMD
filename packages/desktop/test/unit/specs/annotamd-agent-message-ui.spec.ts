@@ -39,7 +39,7 @@ describe('Agent message presentation', () => {
       /\.annotamd-agent-message-content\s*\{[^}]*font-size:\s*var\(--annotamd-agent-font-size,\s*12px\);/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(9px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);/s
+      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(11px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);/s
     )
   })
 
@@ -100,7 +100,7 @@ describe('Agent message presentation', () => {
       /\.annotamd-agent-message\.is-assistant\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-message\.is-user \.annotamd-agent-message-bubble\s*\{[^}]*border-radius:\s*10px;[^}]*background:\s*color-mix\(in srgb, var\(--annotamd-agent-accent\) 9%, var\(--annotamd-surface\)\);/s
+      /\.annotamd-agent-message\.is-user \.annotamd-agent-message-bubble\s*\{[^}]*border-radius:\s*var\(--ui-radius\);[^}]*background:\s*var\(--ui-control\);/s
     )
     expect(timeline).toMatch(/\.annotamd-agent-message-meta\s*\{[^}]*justify-content:\s*flex-end;/s)
   })
@@ -132,7 +132,13 @@ describe('Agent message presentation', () => {
     expect(timeline).toContain('flushToolGroup()')
     expect(timeline).toContain('processItems.push')
     expect(timeline).toContain('processGroupExpansionOverrides.value.get(entry.id)')
-    expect(timeline).toContain("entry.running || runStatus(entry) === 'failed'")
+    // A failed run stays collapsed; only a running group opens by itself.
+    expect(timeline).toContain('processGroupExpansionOverrides.value.get(entry.id) ?? entry.running')
+    expect(timeline).not.toContain("entry.running || runStatus(entry) === 'failed'")
+    // A failed tool call is normal; the group's status follows the run outcome.
+    expect(timeline).not.toContain("entry.messages.some(({ message }) => message.status === 'failed')")
+    expect(timeline).toContain("if (entry.summary?.message.status === 'failed') return 'failed'")
+    expect(timeline).toContain("if (!entry.running && entry.missingFinal) return 'failed'")
     expect(timeline).toContain('@click="toggleProcessGroup(entry)"')
     expect(timeline).toContain('v-if="processGroupExpanded(entry) && entry.items.length"')
     expect(timeline).toContain("t('annotamd.agentWorkspace.toolActivityComplete')")
@@ -147,12 +153,16 @@ describe('Agent message presentation', () => {
     expect(timeline).toMatch(
       /\.annotamd-agent-process-group-body\s*\{[^}]*gap:\s*7px;[^}]*margin:\s*3px 4px 6px 24px;/s
     )
+    // Long reasoning scrolls inside a fixed-height box instead of growing the timeline.
+    expect(timeline).toMatch(
+      /\.annotamd-agent-process-note-content\s*\{[^}]*max-height:\s*220px;[^}]*overflow:\s*auto;/s
+    )
     expect(timeline).not.toMatch(/\.annotamd-agent-process-group-body\s*\{[^}]*border-left:/s)
     expect(timeline).toMatch(
       /\.annotamd-agent-process-note\s*\{[^}]*padding:\s*1px 0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s
     )
     expect(timeline).toMatch(
-      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(9px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);[^}]*line-height:\s*1\.55;/s
+      /\.annotamd-agent-process-note-content\s*\{[^}]*font-size:\s*clamp\(11px,\s*calc\(var\(--annotamd-agent-font-size,\s*12px\)\s*-\s*2px\),\s*16px\);[^}]*line-height:\s*1\.55;/s
     )
     expect(timeline).toMatch(
       /\.annotamd-agent-tool-line\s*\{[^}]*min-height:\s*24px;[^}]*align-items:\s*center;/s

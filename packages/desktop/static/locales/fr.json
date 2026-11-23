@@ -620,7 +620,11 @@
       "importCustomThemes": "Importer des thèmes personnalisés",
       "importTheme": "Importer un thème",
       "openFolder": "Ouvrir le dossier",
-      "openThemesFolder": "Ouvrir le dossier des thèmes"
+      "openThemesFolder": "Ouvrir le dossier des thèmes",
+      "workspaceLayout": "Disposition",
+      "layoutCapsule": "Capsule",
+      "layoutClassic": "Classique",
+      "layoutStyle": "Style"
     },
     "keybindings": {
       "title": "Raccourcis clavier",

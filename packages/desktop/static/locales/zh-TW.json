@@ -620,7 +620,11 @@
       "importCustomThemes": "匯入自訂主題",
       "importTheme": "匯入主題",
       "openFolder": "開啟資料夾",
-      "openThemesFolder": "開啟主題資料夾"
+      "openThemesFolder": "開啟主題資料夾",
+      "workspaceLayout": "介面佈局",
+      "layoutCapsule": "膠囊",
+      "layoutClassic": "經典",
+      "layoutStyle": "樣式"
     },
     "keybindings": {
       "title": "按鍵綁定",

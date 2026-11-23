@@ -69,15 +69,15 @@ const handleContextMenu = (event: MouseEvent): void => {
 .opened-file {
   display: flex;
   user-select: none;
-  height: 22px;
-  line-height: 22px;
-  margin: 0;
+  height: 26px;
+  line-height: 26px;
+  margin: 0 2px 1px;
   padding-left: 32px;
   padding-right: 8px;
   position: relative;
-  color: #646a73;
+  color: var(--ui-text);
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 12.5px;
   & > .close-icon {
     display: none;
     position: absolute;
@@ -89,8 +89,8 @@ const handleContextMenu = (event: MouseEvent): void => {
     display: inline-flex;
   }
   &:hover {
-    background: #eef3ff;
-    color: #3370ff;
+    background: var(--ui-hover);
+    color: var(--ui-ink);
   }
   & > span {
     overflow: hidden;
@@ -99,8 +99,9 @@ const handleContextMenu = (event: MouseEvent): void => {
   }
 }
 .opened-file.active {
-  background: #e8f1ff;
-  color: #3370ff;
+  background: var(--ui-paper);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-ink);
   font-weight: 600;
 }
 .unsaved.opened-file::before {
@@ -108,7 +109,7 @@ const handleContextMenu = (event: MouseEvent): void => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #3370ff;
+  background: var(--annotamd-blue);
   position: absolute;
   top: 8px;
   left: 12px;

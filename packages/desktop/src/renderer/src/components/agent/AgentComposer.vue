@@ -272,7 +272,7 @@ const onKeydown = (event: KeyboardEvent): void => {
 
 <style scoped>
 .annotamd-agent-composer { flex: none; padding: 4px 12px 12px; }
-.annotamd-agent-compose-box { display: grid; min-width: 0; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); }
+.annotamd-agent-compose-box { display: grid; min-width: 0; border: 1px solid var(--annotamd-border); border-radius: var(--ui-radius); background: var(--annotamd-surface); box-shadow: var(--ui-control-shadow); }
 .annotamd-agent-compose-box:focus-within { border-color: var(--annotamd-agent-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--annotamd-agent-accent) 22%, transparent); }
 .annotamd-agent-selection { display: grid; grid-template-columns: auto minmax(0, 1fr) 22px; align-items: center; gap: 6px; margin: 8px 8px 0; padding: 5px 6px 5px 8px; color: var(--annotamd-blue); border-left: 3px solid var(--annotamd-blue); border-radius: 4px; background: color-mix(in srgb, var(--annotamd-blue) 8%, var(--annotamd-surface)); font-size: 10px; }
 .annotamd-agent-selection strong { overflow: hidden; color: var(--annotamd-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
@@ -294,8 +294,8 @@ const onKeydown = (event: KeyboardEvent): void => {
 .annotamd-agent-attach-action svg { width: 16px; height: 16px; }
 .annotamd-agent-compose-toolbar :deep(.annotamd-agent-model-trigger) { width: 100%; justify-content: flex-start; }
 .annotamd-agent-compose-toolbar :deep(.annotamd-agent-model-label) { flex: 1; text-align: left; }
-.annotamd-agent-primary-action { display: grid; width: 30px; height: 30px; padding: 0; place-items: center; color: #fff; border: 0; border-radius: 8px; background: color-mix(in srgb, var(--annotamd-agent-accent) 74%, #000); cursor: pointer; }
-.annotamd-agent-primary-action.is-stop { background: #ef4444; }
+.annotamd-agent-primary-action { display: grid; width: 30px; height: 30px; padding: 0; place-items: center; color: var(--ui-primary-text); border: 0; border-radius: var(--ui-control-radius); background: var(--ui-primary); cursor: pointer; }
+.annotamd-agent-primary-action.is-stop { color: #fff; background: #ef4444; }
 .annotamd-agent-primary-action:disabled { color: var(--annotamd-muted); background: var(--annotamd-fill-soft); cursor: not-allowed; }
 .annotamd-agent-primary-action:focus-visible, .annotamd-agent-attach-action:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 .annotamd-agent-primary-action :deep(svg) { width: 14px; height: 14px; }

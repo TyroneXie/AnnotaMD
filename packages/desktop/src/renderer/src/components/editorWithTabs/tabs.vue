@@ -44,42 +44,19 @@
         <Plus />
       </el-icon>
     </div>
-    <button
-      type="button"
-      class="tab-comment-toggle"
-      :class="{ 'is-active': commentPaneActive }"
-      :title="t('annotamd.comments.title')"
-      :aria-label="t('annotamd.comments.title')"
-      :aria-pressed="commentPaneActive"
-      @click.stop="openCommentPane"
-    >
-      <el-icon
-        class="tab-comment-icon"
-        aria-hidden="true"
-      >
-        <ChatLineRound />
-      </el-icon>
-      <span
-        v-if="selectionCommentCount"
-        class="tab-comment-count"
-      >
-        {{ selectionCommentCount }}
-      </span>
-    </button>
+    <CommentPaneToggle class="tabs-comment-toggle" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useEditorStore } from '@/store/editor'
-import { DUAL_SIDE_PANE_MIN_WIDTH, useLayoutStore } from '@/store/layout'
-import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
-import { useRightPaneStore } from '@/store/rightPane'
+import { useLayoutStore } from '@/store/layout'
+import CommentPaneToggle from '@/components/titleBar/CommentPaneToggle.vue'
 import { storeToRefs } from 'pinia'
 import autoScroll from 'dom-autoscroller'
 import dragula from 'dragula'
-import { ChatLineRound, Plus, Close } from '@element-plus/icons-vue'
-import { useI18n } from 'vue-i18n'
+import { Plus, Close } from '@element-plus/icons-vue'
 import { showContextMenu } from '../../contextMenu/tabs'
 import { copyFileName, copyFilePath } from '../../util/copyFileInfo'
 import bus from '../../bus'
@@ -89,36 +66,8 @@ defineProps<{ showTabs: boolean }>()
 
 const editorStore = useEditorStore()
 const layoutStore = useLayoutStore()
-const commentsStore = useAnnotaMDCommentsStore()
-const rightPaneStore = useRightPaneStore()
-const { t } = useI18n()
 
 const { currentFile, tabs } = storeToRefs(editorStore)
-const { paneVisible: commentPaneVisible } = storeToRefs(commentsStore)
-const { mode: rightPaneMode } = storeToRefs(rightPaneStore)
-
-const commentPaneActive = computed(() => (
-  commentPaneVisible.value && rightPaneMode.value === 'comments'
-))
-const selectionCommentCount = computed(() => {
-  const pathname = currentFile.value?.pathname
-  if (!pathname) return 0
-  return commentsStore
-    .commentsForFile(pathname)
-    .filter(comment => comment.scope === 'selection' && !comment.resolved).length
-})
-
-const openCommentPane = (): void => {
-  if (commentPaneActive.value) {
-    commentsStore.setPaneVisible(false)
-    return
-  }
-  if (window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH && layoutStore.rightColumn === 'agent') {
-    layoutStore.SET_LAYOUT({ rightColumn: '' })
-  }
-  rightPaneStore.openComments()
-  commentsStore.setPaneVisible(true)
-}
 
 interface AutoScroller {
   readonly down: boolean
@@ -345,9 +294,15 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: row;
-  height: 28px;
+  align-items: stretch;
+  gap: 0;
+  height: 40px;
+  padding: 0 8px;
   user-select: none;
-  box-shadow: 0px 0px 9px 2px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--ui-divider);
+  background: var(--ui-panel);
+  box-shadow: none;
   overflow: hidden;
   &:hover > .new-file {
     opacity: 1 !important;
@@ -355,7 +310,7 @@ onBeforeUnmount(() => {
 }
 .scrollable-tabs {
   flex: 0 1 auto;
-  height: 28px;
+  height: 100%;
   overflow: hidden;
 }
 .tabs-container {
@@ -363,7 +318,9 @@ onBeforeUnmount(() => {
   list-style: none;
   margin: 0;
   padding: 0;
-  height: 28px;
+  gap: 0;
+  height: 100%;
+  align-items: stretch;
   position: relative;
   display: flex;
   flex-direction: row;
@@ -375,11 +332,12 @@ onBeforeUnmount(() => {
   & > li {
     transition: all 0.15s ease-in-out;
     position: relative;
-    padding: 0 8px;
-    color: var(--editorColor50);
-    font-size: 12px;
-    line-height: 28px;
-    height: 28px;
+    padding: 0 12px;
+    color: var(--ui-muted);
+    font-size: 12.5px;
+    line-height: 40px;
+    height: 40px;
+    border-radius: 0;
     max-width: 280px;
     display: flex;
     align-items: center;
@@ -393,7 +351,7 @@ onBeforeUnmount(() => {
       outline: none;
     }
     &:hover {
-      background: var(--floatBgColor) !important;
+      background: color-mix(in srgb, var(--ui-paper) 60%, var(--ui-canvas)) !important;
     }
     &:hover > .close-icon {
       opacity: 1;
@@ -436,16 +394,14 @@ onBeforeUnmount(() => {
     text-decoration-thickness: 1px;
   }
   & > li.active {
-    background: var(--itemBgColor);
+    background: var(--ui-paper);
+    color: var(--ui-ink);
+    font-weight: 600;
+    border: 0;
+    box-shadow: inset 0 2px 0 var(--themeColor);
     z-index: 3;
     &:after {
-      content: '';
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      height: 2px;
-      background: var(--themeColor);
+      display: none;
     }
     & > .close-icon {
       opacity: 1;
@@ -456,16 +412,18 @@ onBeforeUnmount(() => {
   }
 }
 .editor-tabs > .new-file {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 30px;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   border-right: none;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: space-around;
   cursor: pointer;
-  color: var(--editorColor50);
+  color: var(--ui-muted);
   opacity: 0;
   &.always-visible {
     opacity: 1;
@@ -479,64 +437,9 @@ onBeforeUnmount(() => {
   }
 }
 
-.tab-comment-toggle {
-  position: relative;
-  display: inline-grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 28px;
+.editor-tabs > .tabs-comment-toggle {
+  align-self: center;
   margin-left: auto;
-  padding: 0;
-  place-items: center;
-  color: #646a73;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-}
-
-.tab-comment-toggle:hover {
-  color: #1f2329;
-  background: #f3f5f7;
-}
-
-.tab-comment-toggle.is-active {
-  color: var(--annotamd-green, #159f67);
-  background: color-mix(in srgb, var(--annotamd-green, #159f67) 12%, #fff);
-}
-
-.tab-comment-toggle:active {
-  transform: scale(0.96);
-}
-
-.tab-comment-toggle:focus-visible {
-  outline: 2px solid var(--annotamd-green, #159f67);
-  outline-offset: -2px;
-}
-
-.tab-comment-icon,
-.tab-comment-icon svg {
-  width: 17px;
-  height: 17px;
-}
-
-.tab-comment-count {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  box-sizing: border-box;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 4px;
-  color: #fff;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  background: #3370ff;
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 11px;
-  text-align: center;
 }
 
 /* dragula effects */

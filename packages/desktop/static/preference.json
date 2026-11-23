@@ -66,6 +66,7 @@
   "plantumlServer": "https://www.plantuml.com/plantuml",
 
   "theme": "light",
+  "workspaceLayout": "capsule",
   "followSystemTheme": true,
   "lightModeTheme": "light",
   "darkModeTheme": "dark",

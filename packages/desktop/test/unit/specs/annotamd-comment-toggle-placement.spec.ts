@@ -37,40 +37,49 @@ describe('AnnotaMD comment toggle placement', () => {
       'packages/desktop/src/renderer/src/components/sideBar/help.ts'
     )
 
-    expect(titleBar).not.toContain('tab-comment-toggle')
+    const toggleState = read(
+      'packages/desktop/src/renderer/src/composables/useCommentPane.ts'
+    )
+    const toggleButton = read(
+      'packages/desktop/src/renderer/src/components/titleBar/CommentPaneToggle.vue'
+    )
+
+    expect(toggleButton).toContain('class="comment-pane-toggle"')
+    expect(toggleButton).toContain(':aria-pressed="commentPaneActive"')
+    expect(toggleButton).toContain('@click.stop="toggleCommentPane"')
+    expect(titleBar).not.toContain('CommentPaneToggle')
     expect(titleBar).not.toContain('tab-agent-toggle')
+    expect(tabs).toContain('<CommentPaneToggle')
+    expect(tabs).not.toContain('tab-comment-toggle')
+    expect(toggleState).toMatch(
+      /if \(commentPaneActive\.value\) \{\s*commentsStore\.setPaneVisible\(false\)\s*return\s*\}/s
+    )
+    expect(toggleState).toContain("layoutStore.rightColumn === 'agent'")
+    expect(toggleState).toContain("layoutStore.SET_LAYOUT({ rightColumn: '' })")
     // eslint-disable-next-line no-template-curly-in-string
     expect(sideBar).toContain('`sidebar-${c.id}-toggle`')
     expect(sideBar).toContain('v-else-if="rightColumn === \'agent\'"')
     expect(sideBarHelp).toContain("id: 'agent'")
-    expect(tabs).toContain('class="tab-comment-toggle"')
-    expect(tabs).toContain(':aria-pressed="commentPaneActive"')
-    expect(tabs).toContain('@click.stop="openCommentPane"')
-    expect(tabs).toMatch(
-      /if \(commentPaneActive\.value\) \{\s*commentsStore\.setPaneVisible\(false\)\s*return\s*\}/s
-    )
-    expect(tabs).toContain("layoutStore.rightColumn === 'agent'")
-    expect(tabs).toContain("layoutStore.SET_LAYOUT({ rightColumn: '' })")
     expect(tabs).not.toContain('class="tab-agent-toggle"')
     expect(editorWithTabs).toContain('<tabs :show-tabs="showTabBar" />')
     expect(editorWithTabs).not.toContain('<tabs v-show="showTabBar" />')
     expect(tabs).toContain('defineProps<{ showTabs: boolean }>()')
     expect(tabs).toContain('v-show="showTabs"')
-    expect(tabs).toMatch(
-      /\.tab-comment-toggle\s*\{[^}]*width:\s*32px;[^}]*height:\s*28px;[^}]*margin-left:\s*auto;[^}]*border-radius:\s*8px;/s
+    expect(toggleButton).toMatch(
+      /\.comment-pane-toggle\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*border-radius:\s*7px;/s
     )
-    expect(tabs).toMatch(/\.tab-comment-toggle\.is-active\s*\{[^}]*var\(--annotamd-green/s)
+    expect(toggleButton).toMatch(/\.comment-pane-toggle\.is-active\s*\{[^}]*var\(--annotamd-green/s)
     expect(commentPane).toContain(':content="t(\'annotamd.comments.closePane\')"')
     expect(commentPane).toContain('<el-icon><Close /></el-icon>')
     expect(commentPane).not.toContain('m5 5 7 7-7 7')
     expect(commentPane).toMatch(
-      /\.annotamd-comment-pane\s*\{[^}]*top:\s*var\(--titleBarHeight\);[^}]*bottom:\s*0;/s
+      /\.annotamd-comment-pane\s*\{[^}]*top:\s*calc\(var\(--titleBarHeight\) \+ 8px\);[^}]*bottom:\s*8px;/s
     )
     expect(commentPane).toMatch(
-      /\.annotamd-comment-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;/s
+      /\.annotamd-comment-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 40px\);[^}]*padding:\s*0 12px;/s
     )
     expect(agentHeader).toMatch(
-      /\.annotamd-agent-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 28px\);[^}]*padding:\s*0 12px;[^}]*background:\s*var\(--annotamd-surface-soft\);/s
+      /\.annotamd-agent-header\s*\{[^}]*height:\s*var\(--annotamd-editor-tab-height, 40px\);[^}]*padding:\s*0 12px;[^}]*background:\s*var\(--annotamd-surface-soft\);/s
     )
     expect(agentHeader).toMatch(
       /\.annotamd-agent-title strong\s*\{[^}]*font-size:\s*13px;[^}]*font-weight:\s*650;[^}]*line-height:\s*20px;/s

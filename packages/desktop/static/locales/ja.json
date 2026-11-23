@@ -620,7 +620,11 @@
       "importCustomThemes": "カスタムテーマをインポート",
       "importTheme": "テーマをインポート",
       "openFolder": "フォルダを開く",
-      "openThemesFolder": "テーマフォルダを開く"
+      "openThemesFolder": "テーマフォルダを開く",
+      "workspaceLayout": "レイアウト",
+      "layoutCapsule": "カプセル",
+      "layoutClassic": "クラシック",
+      "layoutStyle": "スタイル"
     },
     "keybindings": {
       "title": "キーバインド",

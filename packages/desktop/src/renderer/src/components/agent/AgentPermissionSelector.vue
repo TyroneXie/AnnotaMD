@@ -138,14 +138,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .annotamd-agent-permission-control { min-width: 0; }
-.annotamd-agent-permission-trigger { display: inline-flex; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); cursor: pointer; font: inherit; font-size: 11px; font-weight: 550; }
+.annotamd-agent-permission-trigger { display: inline-flex; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid var(--annotamd-border); border-radius: var(--ui-control-radius); background: var(--annotamd-fill-soft); cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; box-shadow: var(--ui-control-shadow); }
 .annotamd-agent-permission-trigger:hover, .annotamd-agent-permission-trigger[aria-expanded="true"] { border-color: var(--annotamd-border); }
 .annotamd-agent-permission-trigger.is-unsupported { color: #b54708; border-color: color-mix(in srgb, #f79009 32%, var(--annotamd-border)); }
 .annotamd-agent-permission-trigger > span { white-space: nowrap; }
 .annotamd-agent-permission-trigger:focus-visible { outline: 2px solid var(--annotamd-agent-accent); outline-offset: 1px; }
 .annotamd-agent-permission-trigger svg { width: 14px; height: 14px; }
 .annotamd-agent-permission-trigger .is-chevron { margin-left: auto; }
-.annotamd-agent-permission-menu { position: fixed; z-index: 3000; box-sizing: border-box; display: grid; gap: 6px; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); box-shadow: 0 10px 30px color-mix(in srgb, #000 13%, transparent); }
+.annotamd-agent-permission-menu { position: fixed; z-index: 3000; box-sizing: border-box; display: grid; gap: 6px; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: var(--ui-radius); background: var(--annotamd-surface); box-shadow: var(--ui-menu-shadow); }
 .annotamd-agent-permission-menu > header { display: grid; gap: 2px; padding: 1px 2px 8px; }
 .annotamd-agent-permission-menu > header strong { color: var(--annotamd-text); font-size: 13px; line-height: 1.35; }
 .annotamd-agent-permission-menu > header small { color: var(--annotamd-muted); font-size: 10px; line-height: 1.45; }

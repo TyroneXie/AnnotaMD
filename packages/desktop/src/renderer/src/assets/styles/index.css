@@ -1,27 +1,27 @@
 /* Common CSS use by both light and dark themes */
 :root {
-  --titleBarHeight: 32px;
+  --titleBarHeight: 28px;
   --editorAreaWidth: 750px;
 
   /*editor*/
   /*Theme color cluster*/
-  --themeColor: rgba(33, 181, 111, 1);
-  --themeColor90: rgba(33, 181, 111, 0.9);
-  --themeColor80: rgba(33, 181, 111, 0.8);
-  --themeColor70: rgba(33, 181, 111, 0.7);
-  --themeColor60: rgba(33, 181, 111, 0.6);
-  --themeColor50: rgba(33, 181, 111, 0.5);
-  --themeColor40: rgba(33, 181, 111, 0.4);
-  --themeColor30: rgba(33, 181, 111, 0.3);
-  --themeColor20: rgba(33, 181, 111, 0.2);
-  --themeColor10: rgba(33, 181, 111, 0.1);
+  --themeColor: rgba(21, 151, 84, 1);
+  --themeColor90: rgba(21, 151, 84, 0.9);
+  --themeColor80: rgba(21, 151, 84, 0.8);
+  --themeColor70: rgba(21, 151, 84, 0.7);
+  --themeColor60: rgba(21, 151, 84, 0.6);
+  --themeColor50: rgba(21, 151, 84, 0.5);
+  --themeColor40: rgba(21, 151, 84, 0.4);
+  --themeColor30: rgba(21, 151, 84, 0.3);
+  --themeColor20: rgba(21, 151, 84, 0.2);
+  --themeColor10: rgba(21, 151, 84, 0.1);
   --highlightThemeColor: var(--themeColor);
 
-  --highlightColor: rgba(33, 181, 111, 0.4);
+  --highlightColor: rgba(21, 151, 84, 0.4);
   --selectionColor: rgba(0, 0, 0, 0.1);
-  --editorColor: #4d4d4d;
-  --editorColor80: #333333;
-  --editorColor60: #666666;
+  --editorColor: #303137;
+  --editorColor80: #25262b;
+  --editorColor60: #64646d;
   --editorColor50: #808080;
   --editorColor40: #999999;
   --editorColor30: #b3b3b3;
@@ -29,7 +29,7 @@
   --editorColor04: #f7f7f7;
   --editorBgColor: rgba(255, 255, 255, 1);
   --deleteColor: #ff6969;
-  --iconColor: #6b737b;
+  --iconColor: #64646d;
   --codeBgColor: #d8d8d869;
   --codeBlockBgColor: rgba(0, 0, 0, 0.03);
   --footnoteBgColor: rgba(0, 0, 0, 0.03);
@@ -60,7 +60,7 @@
   --buttonPrimaryBorderActive: var(--buttonPrimaryBorder);
   --buttonPrimaryFocusBorder: none;
   --buttonPrimaryFocusShadow: inset 0 0 0 1px rgba(13, 91, 55, 0.5), 0 0 0 1px var(--themeColor);
-  --tableBorderColor: #e5e5e5;
+  --tableBorderColor: #dfe3e8;
 
   /* Markdown element colors */
   --headingColor: var(--editorColor80);
@@ -79,11 +79,11 @@
   --listMarkerColor: var(--editorColor50);
 
   /*annotamd*/
-  --sideBarColor: rgba(0, 0, 0, 0.6);
+  --sideBarColor: #3a3f48;
   --sideBarIconColor: var(--iconColor);
-  --sideBarTitleColor: rgba(0, 0, 0, 1);
-  --sideBarTextColor: rgba(0, 0, 0, 0.4);
-  --sideBarBgColor: rgba(242, 242, 242, 0.9);
+  --sideBarTitleColor: #16181d;
+  --sideBarTextColor: #5f646e;
+  --sideBarBgColor: #e2e5ea;
   --sideBarItemHoverBgColor: rgba(0, 0, 0, 0.03);
   --itemBgColor: rgba(255, 255, 255, 0.6);
 

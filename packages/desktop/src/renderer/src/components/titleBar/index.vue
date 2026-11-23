@@ -266,7 +266,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .title-bar-editor-bg {
   height: var(--titleBarHeight);
-  background: #ffffff;
+  background: var(--ui-canvas);
   position: relative;
   left: 0;
   top: 0;
@@ -275,23 +275,22 @@ onBeforeUnmount(() => {
 .title-bar {
   -webkit-app-region: drag;
   user-select: none;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--ui-canvas);
   height: var(--titleBarHeight);
   box-sizing: border-box;
-  color: #8f959e;
+  color: var(--ui-muted);
   position: fixed;
   left: 0;
   top: 0;
   right: 0;
   z-index: 2;
-  border-bottom: 1px solid #eceff3;
-  box-shadow: 0 1px 0 rgba(31, 35, 41, 0.02);
-  backdrop-filter: blur(18px) saturate(1.2);
+  border-bottom: 0;
+  box-shadow: none;
   transition: color 0.2s ease-in-out;
   cursor: default;
 }
 .active {
-  color: #646a73;
+  color: var(--ui-muted);
 }
 img {
   height: 90%;
@@ -301,8 +300,11 @@ img {
 .title {
   padding: 0 142px;
   height: 100%;
-  line-height: var(--titleBarHeight);
-  font-size: 13px;
+  /* The cards start one gap below the bar, so center the path in that whole
+     top band; this also lines it up with the macOS traffic lights. */
+  line-height: calc(var(--titleBarHeight) + var(--workspace-gap, 0px));
+  font-size: 12px;
+  letter-spacing: 0.01em;
   text-align: center;
   transition: all 0.25s ease-in-out;
   & .filename {
@@ -333,12 +335,13 @@ div.title > span {
 
 .title-bar .path-arrow {
   margin: 0 3px;
-  color: #c0c4cc;
+  color: var(--ui-muted);
+  opacity: 0.7;
   vertical-align: -2px;
 }
 
 .title-bar .filename {
-  color: #1f2329;
+  color: var(--ui-ink);
   font-weight: 600;
 }
 
@@ -356,7 +359,7 @@ div.title > span {
   visibility: visible;
 }
 .title:hover {
-  color: #1f2329;
+  color: var(--ui-ink);
 }
 
 .left-toolbar {
@@ -404,7 +407,7 @@ div.title > span {
   transform: translateX(-50%) translateY(-50%);
 }
 .frameless-titlebar-menu {
-  color: #646a73;
+  color: var(--ui-muted);
 }
 .frameless-titlebar-close:hover {
   background-color: rgb(228, 79, 79);
@@ -417,7 +420,7 @@ div.title > span {
   fill: #000000;
 }
 .frameless-titlebar-close:hover svg {
-  fill: #ffffff;
+  fill: var(--ui-paper);
 }
 
 .text-center-vertical {
@@ -425,4 +428,5 @@ div.title > span {
   vertical-align: middle;
   line-height: normal;
 }
+
 </style>

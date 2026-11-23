@@ -43,12 +43,12 @@ describe('AnnotaMD preference styling', () => {
     expect(css).toContain('--prefFontFamily: -apple-system')
     expect(css).toContain('--el-font-family: var(--prefFontFamily);')
     expect(css).toContain('font-family: var(--prefFontFamily);')
-    expect(css).toMatch(/& h4\s*\{[^}]*font-size:\s*17px;/s)
+    expect(css).toMatch(/& h4\s*\{[^}]*font-size:\s*22px;/s)
     expect(css).toMatch(
-      /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 18px\) 36px 36px;/s
+      /& \.pref-setting\s*\{[^}]*padding:\s*calc\(var\(--titleBarHeight\) \+ 18px\) 40px 32px;/s
     )
     expect(sidebar).not.toContain('<el-autocomplete')
-    expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--highlightThemeColor\);/s)
+    expect(sidebar).toMatch(/&\.active\s*\{[^}]*background:\s*var\(--ui-selected\);/s)
   })
 
   it('uses compact shared control spacing', () => {
@@ -221,9 +221,9 @@ describe('AnnotaMD preference styling', () => {
     expect(editor).toMatch(
       /\.editor-component \.mu-container p,\s*\.editor-component \.mu-container li\s*\{[^}]*font-size:\s*inherit;[^}]*line-height:\s*inherit;/s
     )
-    expect(editor).toMatch(/\.editor-component \.mu-container h1\s*\{[^}]*font-size:\s*1\.875em;/s)
-    expect(editor).toMatch(/\.editor-component \.mu-container h2\s*\{[^}]*font-size:\s*1\.5em;/s)
-    expect(editor).toMatch(/\.editor-component \.mu-container h3\s*\{[^}]*font-size:\s*1\.25em;/s)
+    expect(editor).toMatch(/\.editor-component \.mu-container h1\s*\{[^}]*font-size:\s*2em;/s)
+    expect(editor).toMatch(/\.editor-component \.mu-container h2\s*\{[^}]*font-size:\s*1\.45em;/s)
+    expect(editor).toMatch(/\.editor-component \.mu-container h3\s*\{[^}]*font-size:\s*1\.2em;/s)
     expect(editor).toMatch(
       /\.editor-component \.mu-container table th,\s*\.editor-component \.mu-container table td\s*\{[^}]*font-size:\s*inherit;[^}]*line-height:\s*var\(--mu-line-height, 1\.5\);/s
     )

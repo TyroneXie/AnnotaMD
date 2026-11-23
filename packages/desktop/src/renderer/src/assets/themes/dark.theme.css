@@ -13,8 +13,8 @@
 
   --highlightColor: rgba(102, 177, 255, 0.6);
   --selectionColor: rgba(102, 177, 255, 0.3);
-  --editorColor: rgba(255, 255, 255, 0.7);
-  --editorColor80: rgba(255, 255, 255, 0.8);
+  --editorColor: #e6e6eb;
+  --editorColor80: #f0f0f4;
   --editorColor60: rgba(255, 255, 255, 0.6);
   --editorColor50: rgba(255, 255, 255, 0.5);
   --editorColor40: rgba(255, 255, 255, 0.4);

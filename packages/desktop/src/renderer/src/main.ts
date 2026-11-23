@@ -70,6 +70,8 @@ import routes from './router'
 import Main from './Main.vue'
 
 import './assets/styles/index.css'
+import './assets/styles/desktop.css'
+import './assets/styles/workspace-layouts.css'
 import './assets/styles/printService.css'
 
 // -----------------------------------------------

@@ -107,6 +107,7 @@ const testPacks = {
       'test/unit/specs/annotamd-agent-workspace.spec.ts',
       'test/unit/specs/annotamd-ai-shared-contract.spec.ts',
       'test/unit/specs/annotamd-ai-store.spec.ts',
+      'test/unit/specs/annotamd-ai-secret-store.spec.ts',
       'test/unit/specs/annotamd-ai-settings-store.spec.ts',
       'test/unit/specs/annotamd-ai-workspace-service.spec.ts',
       'test/unit/specs/annotamd-agent-document-mcp.spec.ts',

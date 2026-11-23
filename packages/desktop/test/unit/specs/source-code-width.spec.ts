@@ -12,8 +12,12 @@ describe('sourceCode width', () => {
     const wysiwyg = readFileSync(resolve(componentDir, 'editor.vue'), 'utf8')
     const sharedWidth = 'width: min(100%, var(--annotamd-editor-area-width, 980px));'
 
+    const sharedCap = 'max-width: min(100%, 940px);'
+
     expect(sourceCode).toContain(sharedWidth)
     expect(wysiwyg).toContain(sharedWidth)
+    expect(sourceCode).toContain(sharedCap)
+    expect(wysiwyg).toContain(sharedCap)
     expect(sourceCode).not.toContain('max-width: var(--editorAreaWidth)')
   })
 })

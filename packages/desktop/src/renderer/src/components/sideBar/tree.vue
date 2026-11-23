@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
 }
 .tree-view {
   font-size: 14px;
-  color: #646a73;
+  color: var(--ui-text);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -443,15 +443,15 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #8f959e;
+  color: var(--ui-muted);
   background: transparent;
   cursor: pointer;
 }
 
 .sort-trigger:hover,
 .sort-trigger:focus-visible {
-  color: #3370ff;
-  background: #eef3ff;
+  color: var(--annotamd-blue);
+  background: color-mix(in srgb, var(--annotamd-blue) 10%, var(--ui-paper));
   outline: none;
 }
 
@@ -529,7 +529,7 @@ onBeforeUnmount(() => {
 
 .sort-menu-label {
   padding: 5px 10px 4px;
-  color: #8f959e;
+  color: var(--ui-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -543,7 +543,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #1f2329;
+  color: var(--ui-ink);
   background: transparent;
   font-size: 13px;
   cursor: pointer;
@@ -554,8 +554,8 @@ onBeforeUnmount(() => {
 }
 
 .sort-menu-item.active {
-  color: #3370ff;
-  background: #eef3ff;
+  color: var(--annotamd-blue);
+  background: color-mix(in srgb, var(--annotamd-blue) 10%, var(--ui-paper));
 }
 
 .sort-menu-divider {
@@ -568,7 +568,7 @@ onBeforeUnmount(() => {
   margin-right: 5px;
   transition: transform 0.25s ease-out;
   transform: rotate(90deg);
-  color: #8f959e;
+  color: var(--ui-muted);
   cursor: pointer;
 }
 
@@ -580,7 +580,7 @@ onBeforeUnmount(() => {
 .project-tree > .title {
   height: 24px;
   line-height: 24px;
-  color: #1f2329;
+  color: var(--ui-ink);
   font-size: 13px;
   font-weight: 700;
 }
@@ -603,7 +603,7 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
   text-decoration: none;
-  color: #8f959e;
+  color: var(--ui-muted);
   margin-left: 8px;
   transition: opacity 0.12s ease;
 }
@@ -616,7 +616,7 @@ onBeforeUnmount(() => {
 
 .opened-files div.title:hover > a:hover,
 .opened-files div.title > a:hover:hover {
-  color: #3370ff;
+  color: var(--annotamd-blue);
 }
 .opened-files {
   display: flex;
@@ -677,7 +677,7 @@ onBeforeUnmount(() => {
   pointer-events: auto;
   cursor: pointer;
   margin-left: 8px;
-  color: #8f959e;
+  color: var(--ui-muted);
   opacity: 0;
   border: 0;
   background: transparent;
@@ -688,11 +688,11 @@ onBeforeUnmount(() => {
 
 .project-tree > .title > a:hover,
 .project-tree > .title > .root-remove:hover {
-  color: #3370ff;
+  color: var(--annotamd-blue);
 }
 
 .project-tree > .title > a.active {
-  color: #3370ff;
+  color: var(--annotamd-blue);
 }
 
 .project-tree > .tree-wrapper {
@@ -718,14 +718,14 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #646a73;
+  color: var(--ui-text);
   font-size: 12px;
   cursor: pointer;
 }
 
 .add-folder:hover {
-  background: #eef3ff;
-  color: #3370ff;
+  background: color-mix(in srgb, var(--annotamd-blue) 10%, var(--ui-paper));
+  color: var(--annotamd-blue);
 }
 .open-project {
   flex: 1;
@@ -754,7 +754,7 @@ onBeforeUnmount(() => {
   height: 28px;
   margin: 3px 0;
   padding: 0 8px;
-  color: #1f2329;
+  color: var(--ui-ink);
   border: 1px solid #c9d8ff;
   background: #ffffff;
   width: calc(100% - 45px);
@@ -769,14 +769,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
   padding-top: 40px;
   align-items: center;
-  color: #8f959e;
+  color: var(--ui-muted);
   & button {
     margin-top: 10px;
   }
 }
 
 .empty-project > a {
-  color: #3370ff;
+  color: var(--annotamd-blue);
   text-align: center;
   margin-top: 15px;
   text-decoration: none;

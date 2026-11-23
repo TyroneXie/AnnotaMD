@@ -80,7 +80,7 @@ const { t } = useI18n()
 </script>
 
 <style scoped>
-.annotamd-agent-header { position: relative; z-index: 1; display: flex; flex: 0 0 var(--annotamd-editor-tab-height, 28px); align-items: center; justify-content: space-between; gap: 8px; box-sizing: border-box; height: var(--annotamd-editor-tab-height, 28px); min-height: var(--annotamd-editor-tab-height, 28px); padding: 0 12px; border-bottom: 1px solid var(--annotamd-border-soft); background: var(--annotamd-surface-soft); }
+.annotamd-agent-header { position: relative; z-index: 1; display: flex; flex: 0 0 var(--annotamd-editor-tab-height, 40px); align-items: center; justify-content: space-between; gap: 8px; box-sizing: border-box; height: var(--annotamd-editor-tab-height, 40px); min-height: var(--annotamd-editor-tab-height, 40px); padding: 0 12px; border-bottom: 1px solid var(--ui-border); background: var(--annotamd-surface-soft); }
 .annotamd-agent-title, .annotamd-agent-actions { display: inline-flex; min-width: 0; align-items: center; }
 .annotamd-agent-title { flex: 1; gap: 6px; }
 .annotamd-agent-title-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #94a3b8; }

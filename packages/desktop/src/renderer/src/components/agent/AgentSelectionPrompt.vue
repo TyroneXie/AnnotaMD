@@ -3,11 +3,16 @@
     <section
       ref="panel"
       class="agent-selection-prompt"
+      :class="{ 'is-dragging': dragging }"
       :style="position"
       role="dialog"
       :aria-label="t('title')"
     >
-      <div class="selection-context">
+      <div
+        class="selection-context"
+        :title="t('dragHint')"
+        @pointerdown="startDrag"
+      >
         <blockquote :title="context.selectedText">
           {{ context.selectedText }}
         </blockquote>
@@ -71,7 +76,22 @@
       >
         <span>{{ t('reply') }}</span>
         <div class="result-text">
-          {{ result.text }}
+          <template
+            v-for="(part, index) in replyParts"
+            :key="index"
+          >
+            <div
+              v-if="part.type === 'html'"
+              class="result-markdown"
+            >
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <div v-html="part.html" />
+            </div>
+            <pre
+              v-else
+              class="result-code"
+            ><code>{{ part.code }}</code></pre>
+          </template>
         </div>
         <span
           v-if="applied"
@@ -92,8 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, type CSSProperties } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch, type CSSProperties } from 'vue'
 import { ArrowUp, Check, Close } from '@element-plus/icons-vue'
+import { renderAgentMarkdown } from './agentMarkdown'
 import { useI18n } from 'vue-i18n'
 import { useAiSettingsStore } from '@/store/aiSettings'
 import type { AiSelectionContext, AiSelectionResult } from '@shared/types/aiSelection'
@@ -121,14 +142,67 @@ const applied = ref(false)
 const error = ref('')
 const result = shallowRef<AiSelectionResult>()
 const position = shallowRef<CSSProperties>({ visibility: 'hidden' })
+const dragging = ref(false)
+const userPositioned = ref(false)
+const dragOrigin = { left: 0, top: 0, x: 0, y: 0 }
+const dragPosition = { left: 0, top: 0 }
+const replyParts = computed(() => {
+  const text = result.value?.text
+  return text ? renderAgentMarkdown(text) : []
+})
 const highlightName = 'annotamd-agent-selection'
 const anchorElement = props.range.startContainer.parentElement?.closest('.mu-content')
 let editedAnchor: Range | undefined
 let requestId: string | undefined
 let resizeObserver: ResizeObserver | undefined
 
+const clampToViewport = (left: number, top: number): { left: number; top: number } => {
+  const margin = 12
+  const width = panel.value?.offsetWidth ?? 0
+  const height = panel.value?.offsetHeight ?? 0
+  return {
+    left: Math.max(margin, Math.min(left, window.innerWidth - width - margin)),
+    top: Math.max(margin, Math.min(top, window.innerHeight - height - margin))
+  }
+}
+
+const startDrag = (event: PointerEvent): void => {
+  if (!panel.value || (event.target as HTMLElement | null)?.closest('button')) return
+  const rect = panel.value.getBoundingClientRect()
+  dragOrigin.left = rect.left
+  dragOrigin.top = rect.top
+  dragOrigin.x = event.clientX
+  dragOrigin.y = event.clientY
+  dragging.value = true
+  event.preventDefault()
+}
+
+const moveDrag = (event: PointerEvent): void => {
+  if (!dragging.value) return
+  const next = clampToViewport(
+    dragOrigin.left + event.clientX - dragOrigin.x,
+    dragOrigin.top + event.clientY - dragOrigin.y
+  )
+  dragPosition.left = next.left
+  dragPosition.top = next.top
+  userPositioned.value = true
+  position.value = { left: `${next.left}px`, top: `${next.top}px` }
+}
+
+const endDrag = (): void => {
+  dragging.value = false
+}
+
 const place = (): void => {
   if (!panel.value) return
+  if (userPositioned.value) {
+    // Keep the user's chosen spot instead of snapping back to the selection.
+    const next = clampToViewport(dragPosition.left, dragPosition.top)
+    dragPosition.left = next.left
+    dragPosition.top = next.top
+    position.value = { left: `${next.left}px`, top: `${next.top}px` }
+    return
+  }
   const editor = anchorElement?.closest('.editor-component')
   const anchorRect = (editedAnchor ?? props.range).getBoundingClientRect()
   const range = applied.value && !anchorRect.height && anchorElement
@@ -229,9 +303,14 @@ const closeOutside = (event: PointerEvent): void => {
 onMounted(() => {
   CSS.highlights?.set(highlightName, new Highlight(props.range))
   place()
+  // Re-measure once the browser has laid the card out, so a card near the
+  // window edge cannot end up taller than the space the first pass measured.
+  requestAnimationFrame(place)
   void nextTick(() => input.value?.focus({ preventScroll: true }))
   window.addEventListener('scroll', place, true)
   window.addEventListener('resize', place)
+  window.addEventListener('pointermove', moveDrag)
+  window.addEventListener('pointerup', endDrag)
   document.addEventListener('pointerdown', closeOutside, true)
   document.addEventListener('keydown', onEscape, true)
   if (panel.value) {
@@ -240,12 +319,20 @@ onMounted(() => {
   }
 })
 
+watch(() => props.context.selectedText, () => {
+  userPositioned.value = false
+  dragging.value = false
+  place()
+})
+
 onBeforeUnmount(() => {
   stop()
   CSS.highlights?.delete(highlightName)
   resizeObserver?.disconnect()
   window.removeEventListener('scroll', place, true)
   window.removeEventListener('resize', place)
+  window.removeEventListener('pointermove', moveDrag)
+  window.removeEventListener('pointerup', endDrag)
   document.removeEventListener('pointerdown', closeOutside, true)
   document.removeEventListener('keydown', onEscape, true)
 })
@@ -259,18 +346,20 @@ onBeforeUnmount(() => {
 .agent-selection-prompt {
   position: fixed;
   z-index: 1000;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   box-sizing: border-box;
   width: min(390px, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 11px;
   border: 1px solid var(--floatBorderColor);
-  border-radius: 12px;
+  border-radius: var(--ui-radius);
   background: var(--floatBgColor, var(--editorBgColor));
-  box-shadow: 0 8px 30px rgb(0 0 0 / 16%);
-  color: var(--editorColor);
+  box-shadow: var(--ui-menu-shadow);
+  color: var(--ui-text);
   font-size: 13px;
   line-height: 1.45;
   text-align: start;
@@ -280,6 +369,17 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.selection-context {
+  flex: none;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.agent-selection-prompt.is-dragging .selection-context {
+  cursor: grabbing;
 }
 
 blockquote {
@@ -297,10 +397,14 @@ blockquote {
 form {
   display: grid;
   gap: 3px;
+  flex: none;
   padding: 6px;
   border: 1px solid var(--floatBorderColor);
   border-radius: 8px;
-  background: var(--editorBgColor);
+  /* Keep the input and send button visible when the reply scrolls. */
+  position: sticky;
+  bottom: 0;
+  background: var(--floatBgColor, var(--editorBgColor));
 }
 
 form:focus-within {
@@ -355,6 +459,7 @@ button:disabled { opacity: .4; cursor: default; }
 .prompt-result {
   display: grid;
   gap: 6px;
+  min-height: 0;
   padding: 8px 3px 0;
   border-top: 1px solid var(--floatBorderColor);
 }
@@ -374,7 +479,62 @@ button:disabled { opacity: .4; cursor: default; }
 .result-text {
   max-height: min(32vh, 240px);
   overflow: auto;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.result-markdown > :first-child {
+  margin-top: 0;
+}
+
+.result-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.result-markdown :deep(p) {
+  margin: 0 0 6px;
+}
+
+.result-markdown :deep(ul),
+.result-markdown :deep(ol) {
+  margin: 4px 0;
+  padding-inline-start: 18px;
+}
+
+.result-markdown :deep(code) {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.result-markdown :deep(blockquote) {
+  margin: 6px 0;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--highlightThemeColor, #4688d7);
+  color: color-mix(in srgb, currentColor 78%, transparent);
+}
+
+.result-markdown :deep(table) {
+  border-collapse: collapse;
+}
+
+.result-markdown :deep(th),
+.result-markdown :deep(td) {
+  padding: 2px 6px;
+  border: 1px solid var(--floatBorderColor);
+}
+
+.result-code {
+  margin: 6px 0 0;
+  padding: 8px;
+  overflow: auto;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.result-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
 }
 </style>

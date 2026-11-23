@@ -254,8 +254,8 @@ const openSettings = (): void => {
 
 <style scoped>
 .annotamd-agent-model-control { min-width: 0; }
-.annotamd-agent-model-popover { position: fixed; z-index: 3000; box-sizing: border-box; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: 10px; background: var(--annotamd-surface); box-shadow: 0 10px 30px color-mix(in srgb, #000 13%, transparent); }
-.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; max-width: 100%; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid transparent; border-radius: 7px; background: var(--annotamd-fill-soft); font-size: 11px; font-weight: 550; cursor: pointer; }
+.annotamd-agent-model-popover { position: fixed; z-index: 3000; box-sizing: border-box; padding: 12px; border: 1px solid var(--annotamd-border); border-radius: var(--ui-radius); background: var(--annotamd-surface); box-shadow: var(--ui-menu-shadow); }
+.annotamd-agent-model-trigger { display: inline-flex; min-width: 0; max-width: 100%; height: 28px; align-items: center; gap: 5px; padding: 0 7px; color: var(--annotamd-text); border: 1px solid var(--ui-border); border-radius: var(--ui-control-radius); background: var(--annotamd-fill-soft); box-shadow: var(--ui-control-shadow); font-size: 11px; font-weight: 600; cursor: pointer; }
 .annotamd-agent-model-trigger:hover, .annotamd-agent-model-trigger[aria-expanded="true"] { border-color: var(--annotamd-border); }
 .annotamd-agent-model-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .annotamd-agent-model-trigger > .el-icon { flex: none; }

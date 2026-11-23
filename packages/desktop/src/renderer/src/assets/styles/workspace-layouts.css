@@ -1,0 +1,139 @@
+/* Window layout variants. Component styles describe the capsule (floating card)
+   workspace; this file restores the classic edge-to-edge layout when the user
+   picks it in Preferences > Appearance > Layout. Add a new layout by adding one
+   block here and one option in prefComponents/theme/index.vue. */
+
+body.layout-classic {
+  --titleBarHeight: 28px;
+  --annotamd-editor-tab-height: 34px;
+}
+
+body.layout-classic .editor-container {
+  padding: 0;
+  padding-right: var(--annotamd-comment-pane-width);
+  gap: 0;
+  background: var(--ui-paper);
+}
+
+body.layout-classic .editor-middle {
+  max-width: calc(100vw - var(--annotamd-comment-pane-width));
+  min-height: 100vh;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--ui-paper);
+  box-shadow: none;
+}
+
+body.layout-classic .editor-middle .title-bar-editor-bg {
+  display: block;
+}
+
+body.layout-classic .side-bar {
+  height: 100vh;
+  border: 0;
+  border-right: 1px solid var(--ui-border);
+  border-radius: 0;
+  background: var(--ui-canvas);
+  box-shadow: none;
+}
+
+body.layout-classic .side-bar .left-column {
+  padding-top: 34px;
+}
+
+body.layout-classic .annotamd-comment-pane {
+  top: var(--titleBarHeight);
+  right: 0;
+  bottom: 0;
+  border: 0;
+  border-left: 1px solid var(--ui-border);
+  border-radius: 0;
+  background: var(--ui-panel);
+  box-shadow: none;
+}
+
+body.layout-classic .annotamd-comment-pane-resizer {
+  top: var(--titleBarHeight);
+  right: calc(var(--annotamd-comment-pane-width) - 4px);
+  bottom: 0;
+}
+
+body.layout-classic .editor-tabs {
+  align-items: center;
+  gap: 0;
+  height: var(--annotamd-editor-tab-height);
+  padding: 0;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-canvas);
+}
+
+body.layout-classic .editor-tabs .scrollable-tabs,
+body.layout-classic .editor-tabs .tabs-container {
+  height: var(--annotamd-editor-tab-height);
+  gap: 0;
+}
+
+body.layout-classic .editor-tabs .tabs-container > li {
+  height: var(--annotamd-editor-tab-height);
+  line-height: var(--annotamd-editor-tab-height);
+  border-radius: 0;
+  font-size: 12px;
+}
+
+body.layout-classic .editor-tabs .tabs-container > li.active {
+  margin-bottom: 0;
+  border: 0;
+  border-right: 1px solid var(--ui-border);
+  border-left: 1px solid var(--ui-border);
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+}
+
+body.layout-classic .editor-tabs > .new-file,
+body.layout-classic .editor-tabs > .tabs-comment-toggle {
+  margin-bottom: 0;
+}
+
+body.layout-classic .editor-tabs .tabs-container > li.active::after {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--themeColor);
+  content: '';
+}
+
+body.layout-classic .editor-tabs > .new-file {
+  flex: 0 0 var(--annotamd-editor-tab-height);
+  width: var(--annotamd-editor-tab-height);
+  height: var(--annotamd-editor-tab-height);
+  border-radius: 0;
+}
+
+body.layout-classic .side-bar-file,
+body.layout-classic .opened-file,
+body.layout-classic .folder-name {
+  height: 22px;
+  margin: 0;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 22px;
+}
+
+body.layout-classic .side-bar-file.current,
+body.layout-classic .opened-file.active {
+  border: 0;
+  background: #e8f1ff;
+  color: var(--annotamd-blue);
+  font-weight: 600;
+}
+
+body.layout-classic .side-bar-file:hover,
+body.layout-classic .opened-file:hover,
+body.layout-classic .folder-name:hover {
+  background: color-mix(in srgb, var(--annotamd-blue) 10%, var(--ui-paper));
+  color: var(--annotamd-blue);
+}

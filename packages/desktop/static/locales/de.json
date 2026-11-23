@@ -620,7 +620,11 @@
       "importCustomThemes": "Benutzerdefinierte Designs importieren",
       "importTheme": "Design importieren",
       "openFolder": "Ordner öffnen",
-      "openThemesFolder": "Design-Ordner öffnen"
+      "openThemesFolder": "Design-Ordner öffnen",
+      "workspaceLayout": "Layout",
+      "layoutCapsule": "Kapsel",
+      "layoutClassic": "Klassisch",
+      "layoutStyle": "Stil"
     },
     "keybindings": {
       "title": "Tastenkürzel",

@@ -36,7 +36,7 @@ describe('AnnotaMD diagram controls', () => {
 
   it('keeps the rounded surface while allowing toolbar menus to escape its bounds', () => {
     expect(editorSource).toMatch(
-      /figure\.mu-diagram-block\s*\{[^}]*border:\s*1px solid #dee0e3;[^}]*border-radius:\s*8px;[^}]*overflow:\s*visible !important;/s
+      /figure\.mu-diagram-block\s*\{[^}]*border:\s*1px solid var\(--ui-border\);[^}]*border-radius:\s*8px;[^}]*overflow:\s*visible !important;/s
     )
   })
 

@@ -5,13 +5,15 @@ import { usePreferencesStore } from './preferences'
 import { debouncedSendBufferedState } from './bufferedState'
 
 export const DUAL_SIDE_PANE_MIN_WIDTH = 1360
+// The Agent panel cannot render its cards, prompt list and composer below this
+// width, and every right-column panel now shares one width.
+export const SIDEBAR_MIN_WIDTH = 320
 
 interface LayoutPartial {
   rightColumn?: string
   showSideBar?: boolean
   showTabBar?: boolean
   sideBarWidth?: number | string
-  agentSideBarWidth?: number | string
 }
 
 interface SetLayoutOptions {
@@ -20,15 +22,7 @@ interface SetLayoutOptions {
 
 const normalizeSideBarWidth = (width: unknown): number => {
   const numericWidth = Number(width)
-  return Number.isFinite(numericWidth) ? Math.max(numericWidth, 220) : 280
-}
-
-const normalizeAgentSideBarWidth = (width: unknown): number => {
-  if (width == null || width === '') return 428
-  const numericWidth = Number(width)
-  return Number.isFinite(numericWidth)
-    ? Math.min(Math.max(numericWidth, 380), 680)
-    : 428
+  return Number.isFinite(numericWidth) ? Math.max(numericWidth, SIDEBAR_MIN_WIDTH) : SIDEBAR_MIN_WIDTH
 }
 
 interface BufferedLayout {
@@ -36,7 +30,6 @@ interface BufferedLayout {
   showSideBar: boolean
   showTabBar: boolean
   sideBarWidth: number
-  agentSideBarWidth: number
 }
 
 const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
@@ -50,31 +43,26 @@ const createBufferedLayoutState = (state: unknown): BufferedLayout | null => {
     rightColumn: s.rightColumn,
     showSideBar: !!s.showSideBar,
     showTabBar: !!s.showTabBar,
-    sideBarWidth: normalizeSideBarWidth(s.sideBarWidth),
-    agentSideBarWidth: normalizeAgentSideBarWidth(s.agentSideBarWidth)
+    sideBarWidth: normalizeSideBarWidth(s.sideBarWidth)
   }
 }
 
 const initialWidth = localStorage.getItem('side-bar-width')
 const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
-const initialAgentWidth = localStorage.getItem('agent-side-bar-width')
-const initialAgentSideBarWidth = normalizeAgentSideBarWidth(initialAgentWidth)
 
 export const useLayoutStore = defineStore('layout', () => {
   const rightColumn = ref<string>('files')
   const showSideBar = ref(true)
   const showTabBar = ref(false)
   const sideBarWidth = ref<number>(initialSideBarWidth)
-  const agentSideBarWidth = ref<number>(initialAgentSideBarWidth)
 
   // Actual rendered sidebar width. `sideBarWidth` is the right-column width
-  // (clamped to ≥220 by `normalizeSideBarWidth`); when `rightColumn` is empty
+  // (clamped to SIDEBAR_MIN_WIDTH by `normalizeSideBarWidth`); when `rightColumn` is empty
     // the sidebar collapses to its 48px icon strip. Consumers that need to
   // subtract the sidebar from viewport space must use this, not the raw ref.
   const effectiveSideBarWidth = computed<number>(() => {
     if (!showSideBar.value) return 0
     if (!rightColumn.value) return 48
-    if (rightColumn.value === 'agent') return Number(agentSideBarWidth.value)
     return Number(sideBarWidth.value)
   })
 
@@ -102,9 +90,6 @@ export const useLayoutStore = defineStore('layout', () => {
     if (layout.showSideBar !== undefined) showSideBar.value = !!layout.showSideBar
     if (layout.showTabBar !== undefined) showTabBar.value = !!layout.showTabBar
     if (layout.sideBarWidth !== undefined) sideBarWidth.value = layout.sideBarWidth as number
-    if (layout.agentSideBarWidth !== undefined) {
-      agentSideBarWidth.value = layout.agentSideBarWidth as number
-    }
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
     }
@@ -115,8 +100,7 @@ export const useLayoutStore = defineStore('layout', () => {
       rightColumn: rightColumn.value,
       showSideBar: showSideBar.value,
       showTabBar: showTabBar.value,
-      sideBarWidth: sideBarWidth.value,
-      agentSideBarWidth: agentSideBarWidth.value
+      sideBarWidth: sideBarWidth.value
     })
   }
 
@@ -125,13 +109,11 @@ export const useLayoutStore = defineStore('layout', () => {
     if (!layout) return
 
     SET_SIDE_BAR_WIDTH(layout.sideBarWidth, { scheduleBufferUpdate: false })
-    SET_AGENT_SIDE_BAR_WIDTH(layout.agentSideBarWidth, { scheduleBufferUpdate: false })
     SET_LAYOUT(
       {
         rightColumn: layout.rightColumn,
         showSideBar: layout.showSideBar,
-        showTabBar: layout.showTabBar,
-        agentSideBarWidth: layout.agentSideBarWidth
+        showTabBar: layout.showTabBar
       },
       { scheduleBufferUpdate: false }
     )
@@ -159,18 +141,6 @@ export const useLayoutStore = defineStore('layout', () => {
     const normalizedWidth = normalizeSideBarWidth(width)
     localStorage.setItem('side-bar-width', String(normalizedWidth))
     sideBarWidth.value = normalizedWidth
-    if (scheduleBufferUpdate) {
-      debouncedSendBufferedState()
-    }
-  }
-
-  function SET_AGENT_SIDE_BAR_WIDTH(
-    width: number | string,
-    { scheduleBufferUpdate = true }: SetLayoutOptions = {}
-  ): void {
-    const normalizedWidth = normalizeAgentSideBarWidth(width)
-    localStorage.setItem('agent-side-bar-width', String(normalizedWidth))
-    agentSideBarWidth.value = normalizedWidth
     if (scheduleBufferUpdate) {
       debouncedSendBufferedState()
     }
@@ -218,26 +188,19 @@ export const useLayoutStore = defineStore('layout', () => {
     SET_SIDE_BAR_WIDTH(width)
   }
 
-  function CHANGE_AGENT_SIDE_BAR_WIDTH(width: number | string): void {
-    SET_AGENT_SIDE_BAR_WIDTH(width)
-  }
-
   return {
     rightColumn,
     showSideBar,
     showTabBar,
     sideBarWidth,
-    agentSideBarWidth,
     effectiveSideBarWidth,
     SET_LAYOUT,
     CREATE_BUFFERED_STATE,
     RESTORE_BUFFERED_STATE,
     TOGGLE_LAYOUT_ENTRY,
     SET_SIDE_BAR_WIDTH,
-    SET_AGENT_SIDE_BAR_WIDTH,
     LISTEN_FOR_LAYOUT,
     DISPATCH_LAYOUT_MENU_ITEMS,
-    CHANGE_SIDE_BAR_WIDTH,
-    CHANGE_AGENT_SIDE_BAR_WIDTH
+    CHANGE_SIDE_BAR_WIDTH
   }
 })

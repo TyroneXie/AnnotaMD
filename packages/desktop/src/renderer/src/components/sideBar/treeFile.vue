@@ -102,16 +102,16 @@ onMounted(() => {
   align-items: center;
   cursor: default;
   user-select: none;
-  height: 22px;
+  height: 26px;
   box-sizing: border-box;
-  margin: 0;
+  margin: 0 2px 1px;
   padding-right: 8px;
   border-radius: 7px;
-  color: #646a73;
-  font-size: 12px;
+  color: var(--ui-text);
+  font-size: 12.5px;
   &:hover {
-    background: #eef3ff;
-    color: #3370ff;
+    background: var(--ui-hover);
+    color: var(--ui-ink);
   }
   & > span {
     overflow: hidden;
@@ -123,7 +123,7 @@ onMounted(() => {
     position: absolute;
     display: block;
     left: 0;
-    background: #3370ff;
+    background: var(--annotamd-blue);
     width: 3px;
     height: 0;
     top: 50%;
@@ -132,24 +132,28 @@ onMounted(() => {
   }
 }
 .side-bar-file.current::before {
-  height: 14px;
+  height: 16px;
+  width: 2.5px;
 }
 .side-bar-file.current {
-  background: #e8f1ff;
+  background: var(--ui-paper);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-ink);
+  font-weight: 600;
 }
 .side-bar-file.current > span {
-  color: #3370ff;
+  color: var(--ui-ink);
   font-weight: 600;
 }
 .side-bar-file.active > span {
-  color: #1f2329;
+  color: var(--ui-ink);
 }
 input.rename {
   height: 22px;
   outline: none;
   margin: 0;
   padding: 0 8px;
-  color: #1f2329;
+  color: var(--ui-ink);
   border: 1px solid #c9d8ff;
   background: #ffffff;
   width: 100%;

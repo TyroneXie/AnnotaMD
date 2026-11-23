@@ -1,0 +1,151 @@
+/* Desktop chrome follows the selected editor theme; document typography stays
+   under the existing editor preferences. The palette keeps three surfaces apart
+   (canvas / panel / paper) so window structure stays readable at a glance. */
+:root,
+body {
+  --ui-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --ui-text: var(--editorColor);
+  --ui-ink: var(--headingColor);
+  --ui-muted: #5f646e;
+  --ui-paper: #ffffff;
+  --ui-panel: #f2f4f7;
+  --ui-canvas: #e3e6eb;
+  --ui-sidebar: #dce0e6;
+  --ui-control: #eceef2;
+  --ui-hover: #e1e5eb;
+  --ui-selected: #d4d9e1;
+  --ui-border: #c3c9d2;
+  --ui-divider: #dde1e7;
+  --ui-primary: #16181d;
+  --ui-primary-text: #ffffff;
+  --ui-control-shadow: none;
+  --ui-menu-shadow: 0 6px 20px rgb(17 20 26 / 14%);
+  --ui-radius: 8px;
+  --ui-control-radius: 6px;
+
+  --annotamd-editor-tab-height: 40px;
+
+  --el-font-family: var(--ui-font-family);
+  --el-text-color-primary: var(--ui-ink);
+  --el-text-color-regular: var(--ui-text);
+  --el-text-color-secondary: var(--ui-muted);
+  --el-text-color-placeholder: var(--ui-muted);
+  --el-bg-color: var(--ui-paper);
+  --el-bg-color-overlay: var(--ui-paper);
+  --el-fill-color-blank: var(--ui-paper);
+  --el-fill-color-light: var(--ui-control);
+  --el-border-color: var(--ui-border);
+  --el-border-color-light: var(--ui-divider);
+  --el-border-radius-base: var(--ui-control-radius);
+
+  --annotamd-bg: var(--ui-canvas);
+  --annotamd-surface: var(--ui-paper);
+  --annotamd-surface-soft: var(--ui-panel);
+  --annotamd-surface-blue: color-mix(in srgb, var(--annotamd-blue) 9%, var(--ui-paper));
+  --annotamd-fill-soft: var(--ui-control);
+  --annotamd-border: var(--ui-border);
+  --annotamd-border-soft: var(--ui-divider);
+  --annotamd-text: var(--ui-text);
+  --annotamd-ink: var(--ui-ink);
+  --annotamd-muted: var(--ui-muted);
+  --annotamd-blue: #3370ff;
+  --annotamd-green: #159754;
+
+  --buttonFontColor: var(--ui-text);
+  --buttonBgColor: var(--ui-paper);
+  --buttonBorder: 1px solid var(--ui-border);
+  --buttonShadow: none;
+  --buttonBgColorHover: var(--ui-control);
+  --buttonBgColorActive: var(--ui-selected);
+  --buttonPrimaryFontColor: var(--ui-primary-text);
+  --buttonPrimaryBgColor: var(--ui-primary);
+  --buttonPrimaryBorder: 1px solid var(--ui-primary);
+  --buttonPrimaryShadow: none;
+  --buttonPrimaryBgColorHover: #24272e;
+  --buttonPrimaryBgColorActive: #0d0f13;
+
+  --floatFontColor: var(--ui-text);
+  --floatBgColor: var(--ui-paper);
+  --floatHoverColor: var(--ui-control);
+  --floatBorderColor: var(--ui-border);
+  --floatShadow: var(--ui-menu-shadow);
+}
+
+body.dark {
+  --ui-paper: #1b1e22;
+  --ui-panel: #1f2227;
+  --ui-canvas: #101215;
+  --ui-sidebar: #17191d;
+  --ui-control: #24272d;
+  --ui-hover: #2a2e35;
+  --ui-selected: #313641;
+  --ui-border: #3a3f48;
+  --ui-divider: #2b2f36;
+  --ui-muted: #8b9099;
+  --ui-primary: #f2f3f5;
+  --ui-primary-text: #101215;
+  --ui-menu-shadow: 0 6px 22px rgb(0 0 0 / 45%);
+  --annotamd-blue: #7ba2ff;
+  --buttonPrimaryBgColorHover: #ffffff;
+  --buttonPrimaryBgColorActive: #d9dce2;
+  --sideBarTextColor: rgba(255, 255, 255, 0.68);
+  --sideBarColor: rgba(255, 255, 255, 0.8);
+  --sideBarTitleColor: #f2f3f5;
+}
+
+.el-button {
+  border-radius: var(--ui-control-radius);
+  font-weight: 600;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  background: var(--ui-paper);
+  border-radius: var(--ui-control-radius);
+  box-shadow: 0 0 0 1px var(--ui-border) inset;
+}
+
+.el-dropdown-menu,
+.el-popper.is-light {
+  color: var(--ui-text);
+  background: var(--ui-paper);
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius);
+}
+
+/* Muya menus are portaled outside the document container. */
+.mu-float-wrapper {
+  --float-bg-color: var(--ui-paper);
+  --float-font-color: var(--ui-text);
+  --float-hover-color: var(--ui-control);
+  --float-border-color: var(--ui-border);
+  --float-shadow: var(--ui-menu-shadow);
+  color: var(--ui-text);
+  border-radius: var(--ui-radius);
+}
+
+.pref-container input.el-input__inner {
+  border: 0;
+  background: transparent;
+}
+
+.mu-float-wrapper .mu-front-menu,
+.mu-float-wrapper .mu-format-picker,
+.mu-float-wrapper .mu-list-picker,
+.mu-float-wrapper .mu-link-tools {
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-paper);
+  box-shadow: var(--ui-menu-shadow);
+}
+
+.mu-float-wrapper .mu-front-menu {
+  font-weight: 500;
+}
+
+.mu-float-wrapper .mu-link-create-input {
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+  background: var(--ui-paper);
+}

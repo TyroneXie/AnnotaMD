@@ -755,7 +755,7 @@ const addDiscoveredModels = async (): Promise<void> => {
 
 onMounted(async () => {
   await run(async () => {
-    applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::settings:get'))
+    applyState(await window.electron.ipcRenderer.invoke('annotamd::pi::settings:get', true))
   })
 })
 </script>
@@ -764,22 +764,22 @@ onMounted(async () => {
 .pref-ai,
 :global(.pref-pi-provider-dialog),
 :global(.pref-pi-menu) {
-  --pi-text: var(--editorColor);
-  --pi-muted: color-mix(in srgb, var(--pi-text) 78%, var(--editorBgColor));
-  --pi-border: color-mix(in srgb, var(--pi-text) 17%, var(--editorBgColor));
-  --pi-divider: color-mix(in srgb, var(--pi-text) 12%, var(--editorBgColor));
-  --pi-surface: color-mix(in srgb, var(--pi-text) 3%, var(--editorBgColor));
-  --pi-control: color-mix(in srgb, var(--pi-text) 5%, var(--editorBgColor));
-  --pi-hover: color-mix(in srgb, var(--pi-text) 9%, var(--editorBgColor));
+  --pi-text: var(--ui-text);
+  --pi-muted: var(--ui-muted);
+  --pi-border: var(--ui-border);
+  --pi-divider: var(--ui-divider);
+  --pi-surface: var(--ui-panel);
+  --pi-control: var(--ui-control);
+  --pi-hover: var(--ui-hover);
   --pi-accent: var(--highlightThemeColor);
-  --pi-primary: color-mix(in srgb, var(--pi-accent) 72%, #000);
-  --pi-primary-label: #fff;
+  --pi-primary: var(--ui-primary);
+  --pi-primary-label: var(--ui-primary-text);
 }
 
 :global(body.dark .pref-ai),
 :global(body.dark .pref-pi-provider-dialog) {
-  --pi-primary: var(--pi-accent);
-  --pi-primary-label: var(--editorBgColor);
+  --pi-primary: var(--ui-primary);
+  --pi-primary-label: var(--ui-primary-text);
 }
 
 .pref-ai {
@@ -839,7 +839,7 @@ onMounted(async () => {
 
 .pref-ai-providers, .pref-ai-models, .pref-ai-section > .pref-ai-empty {
   border: 1px solid var(--pi-border);
-  border-radius: 10px;
+  border-radius: var(--ui-radius);
   background: var(--pi-surface);
 }
 

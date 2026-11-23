@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { DUAL_SIDE_PANE_MIN_WIDTH, useLayoutStore } from '@/store/layout'
+import { DUAL_SIDE_PANE_MIN_WIDTH, SIDEBAR_MIN_WIDTH, useLayoutStore } from '@/store/layout'
 import { useProjectStore } from '@/store/project'
 import { useEditorStore } from '@/store/editor'
 import { useAnnotaMDCommentsStore } from '@/store/annotamdComments'
@@ -101,21 +101,18 @@ const agentWorkspace = ref<InstanceType<typeof AgentWorkspacePanel> | null>(null
 const agentQuote = shallowRef<AiDraftQuote>()
 
 const openedFiles = ref<TabDescriptor[]>([])
-const sideBarViewWidth = ref(280)
-const agentSideBarViewWidth = ref(428)
+const sideBarViewWidth = ref(SIDEBAR_MIN_WIDTH)
 
-const { rightColumn, showSideBar, sideBarWidth, agentSideBarWidth } = storeToRefs(layoutStore)
+const { rightColumn, showSideBar, sideBarWidth } = storeToRefs(layoutStore)
 
 const { projectTrees } = storeToRefs(projectStore)
 const { tabs } = storeToRefs(editorStore)
 
+// Every right-column panel shares one width so switching icons never resizes the sidebar.
 const finalSideBarWidth = computed<number>(() => {
   if (!showSideBar.value) return 0
   if (rightColumn.value === '') return 48
-  if (rightColumn.value === 'agent') {
-    return Math.min(Math.max(agentSideBarViewWidth.value, 380), 680)
-  }
-  return sideBarViewWidth.value < 220 ? 220 : sideBarViewWidth.value
+  return sideBarViewWidth.value < SIDEBAR_MIN_WIDTH ? SIDEBAR_MIN_WIDTH : sideBarViewWidth.value
 })
 
 onMounted(() => {
@@ -124,38 +121,25 @@ onMounted(() => {
     if (!dragBarEl) return
     let startX = 0
     let currentSideBarWidth = +sideBarWidth.value
-    let currentAgentSideBarWidth = +agentSideBarWidth.value
     let startWidth = currentSideBarWidth
 
     sideBarViewWidth.value = currentSideBarWidth
-    agentSideBarViewWidth.value = currentAgentSideBarWidth
 
     const mouseUpHandler = (): void => {
       document.removeEventListener('mousemove', mouseMoveHandler, false)
       document.removeEventListener('mouseup', mouseUpHandler, false)
-      if (rightColumn.value === 'agent') {
-        layoutStore.CHANGE_AGENT_SIDE_BAR_WIDTH(currentAgentSideBarWidth)
-      } else {
-        layoutStore.CHANGE_SIDE_BAR_WIDTH(currentSideBarWidth < 220 ? 220 : currentSideBarWidth)
-      }
+      layoutStore.CHANGE_SIDE_BAR_WIDTH(currentSideBarWidth < SIDEBAR_MIN_WIDTH ? SIDEBAR_MIN_WIDTH : currentSideBarWidth)
     }
 
     const mouseMoveHandler = (event: MouseEvent): void => {
       const offset = event.clientX - startX
-      if (rightColumn.value === 'agent') {
-        currentAgentSideBarWidth = Math.min(Math.max(startWidth + offset, 380), 680)
-        agentSideBarViewWidth.value = currentAgentSideBarWidth
-      } else {
-        currentSideBarWidth = startWidth + offset
-        sideBarViewWidth.value = currentSideBarWidth
-      }
+      currentSideBarWidth = startWidth + offset
+      sideBarViewWidth.value = currentSideBarWidth
     }
 
     const mouseDownHandler = (event: MouseEvent): void => {
       startX = event.clientX
-      startWidth = rightColumn.value === 'agent'
-        ? +agentSideBarWidth.value
-        : +sideBarWidth.value
+      startWidth = +sideBarWidth.value
       document.addEventListener('mousemove', mouseMoveHandler, false)
       document.addEventListener('mouseup', mouseUpHandler, false)
     }
@@ -168,11 +152,10 @@ const handleLeftIconClick = (name: string): void => {
   if (rightColumn.value === name) {
     // Capture the expanded width BEFORE collapsing: once rightColumn is '',
     // finalSideBarWidth evaluates to the 45px icon strip and would overwrite
-    // the user's real width with the clamped 220px minimum (#2421).
+    // the user's real width with the clamped minimum (#2421).
     const widthToPersist = finalSideBarWidth.value
     layoutStore.SET_LAYOUT({ rightColumn: '' })
-    if (name === 'agent') layoutStore.CHANGE_AGENT_SIDE_BAR_WIDTH(widthToPersist)
-    else layoutStore.CHANGE_SIDE_BAR_WIDTH(widthToPersist)
+    layoutStore.CHANGE_SIDE_BAR_WIDTH(widthToPersist)
   } else {
     if (name === 'agent' && window.innerWidth < DUAL_SIDE_PANE_MIN_WIDTH) {
       commentsStore.setPaneVisible(false)
@@ -180,8 +163,7 @@ const handleLeftIconClick = (name: string): void => {
     }
     const needDispatch = rightColumn.value === ''
     layoutStore.SET_LAYOUT({ rightColumn: name })
-    if (name === 'agent') agentSideBarViewWidth.value = +agentSideBarWidth.value
-    else sideBarViewWidth.value = +sideBarWidth.value
+    sideBarViewWidth.value = +sideBarWidth.value
     if (needDispatch) {
       layoutStore.CHANGE_SIDE_BAR_WIDTH(finalSideBarWidth.value)
     }
@@ -222,14 +204,18 @@ const handleLeftBottomClick = (name: string): void => {
   display: flex;
   flex-shrink: 0;
   flex-grow: 0;
-  width: 280px;
-  height: 100vh;
-  min-width: 220px;
+  width: 320px;
+  height: 100%;
+  min-width: 320px;
   position: relative;
-  color: #646a73;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: var(--ui-muted);
   user-select: none;
-  background: #f7f8fa;
-  border-right: 1px solid #eceff3;
+  background: var(--ui-sidebar);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(16 18 22 / 4%);
 }
 
 .side-bar .left-column svg {
@@ -242,10 +228,10 @@ const handleLeftBottomClick = (name: string): void => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 38px 6px 10px;
+  padding: 10px 6px 10px;
   box-sizing: border-box;
-  background: #fbfcfd;
-  border-right: 1px solid #eceff3;
+  background: var(--ui-sidebar);
+  border-right: 1px solid var(--ui-divider);
 }
 
 .left-column > ul {
@@ -275,14 +261,14 @@ const handleLeftBottomClick = (name: string): void => {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  border-radius: 9px;
-  color: #646a73;
+  border-radius: 8px;
+  color: var(--ui-muted);
   transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
 .left-column ul > li:hover {
-  background: #eef3ff;
-  color: #3370ff;
+  background: var(--ui-hover);
+  color: var(--ui-ink);
 }
 
 .left-column ul > li:focus-visible {
@@ -298,9 +284,9 @@ const handleLeftBottomClick = (name: string): void => {
 }
 
 .left-column ul > li.active {
-  background: #e8f1ff;
-  color: #3370ff;
-  box-shadow: inset 0 0 0 1px rgba(51, 112, 255, 0.1);
+  background: var(--ui-selected);
+  color: var(--ui-ink);
+  box-shadow: inset 0 0 0 1px var(--ui-border);
 }
 
 .side-bar:hover .left-column ul li svg {
@@ -311,8 +297,8 @@ const handleLeftBottomClick = (name: string): void => {
   flex: 1;
   width: calc(100% - 48px);
   overflow: hidden;
-  background: #fbfcfd;
-  box-shadow: inset -1px 0 0 #eceff3;
+  background: var(--ui-canvas);
+  box-shadow: none;
 }
 
 .drag-bar {
@@ -321,11 +307,13 @@ const handleLeftBottomClick = (name: string): void => {
   right: 0;
   bottom: 0;
   height: 100%;
-  width: 3px;
+  width: 6px;
   cursor: col-resize;
 }
 
-.drag-bar:hover {
-  border-right: 2px solid #3370ff;
+/* The visible indicator lives in the gap between cards (app.vue); this bar is
+   only the drag hit area, so it must not paint on the card edge. */
+body.layout-classic .drag-bar {
+  width: 6px;
 }
 </style>

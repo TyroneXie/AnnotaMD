@@ -26,12 +26,13 @@
     </compound>
 
     <compound>
-      <template #head>
-        <h6 class="title">
-          {{ t('preferences.general.misc.language.title') }}
-        </h6>
-      </template>
       <template #children>
+        <cur-select
+          :description="t('preferences.theme.layoutStyle')"
+          :value="workspaceLayout"
+          :options="workspaceLayoutOptions"
+          :on-change="(value) => onSelectChange('workspaceLayout', value)"
+        />
         <cur-select
           :description="t('preferences.general.misc.language.title')"
           :value="language"
@@ -238,6 +239,7 @@ const preferenceStore = usePreferencesStore()
 const {
   followSystemTheme,
   theme,
+  workspaceLayout,
   customCss,
   language,
   fontSize,
@@ -255,6 +257,11 @@ const {
 const hoveredTheme = computed(() =>
   themes.value.find((themeItem) => themeItem.name === hoveredThemeName.value)
 )
+
+const workspaceLayoutOptions = computed<PrefSelectOption<string>[]>(() => [
+  { label: t('preferences.theme.layoutCapsule'), value: 'capsule' },
+  { label: t('preferences.theme.layoutClassic'), value: 'classic' }
+])
 
 // Generate dropdown options from configThemes
 const themeOptions: PrefSelectOption<string>[] = configThemes.map((theme) => ({

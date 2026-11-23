@@ -110,7 +110,7 @@ export interface IpcInvokeChannels {
   'annotamd::ai::configs:delete': { args: [configId: string]; ret: boolean }
   'annotamd::ai::configs:test': { args: [configId: string]; ret: AiConnectionTestResult }
   'annotamd::ai::configs:models': { args: [configId: string]; ret: AiModelInfo[] }
-  'annotamd::pi::settings:get': { args: []; ret: PiSettingsState }
+  'annotamd::pi::settings:get': { args: [retryFailedReads?: boolean]; ret: PiSettingsState }
   'annotamd::pi::provider:save': {
     args: [request: PiProviderSaveRequest]
     ret: PiSettingsState

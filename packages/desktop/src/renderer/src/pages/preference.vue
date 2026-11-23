@@ -72,7 +72,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   display: flex;
-  background: var(--editorBgColor);
+  background: var(--ui-canvas);
   font-family: var(--prefFontFamily);
   -webkit-font-smoothing: antialiased;
 
@@ -88,23 +88,26 @@ onMounted(() => {
   }
 
   & h4 {
-    margin: 0;
-    font-size: 17px;
+    margin: 0 0 12px;
+    font-size: 22px;
     font-weight: 700;
+    letter-spacing: -0.01em;
   }
 
   & h5,
   & h6 {
+    color: var(--ui-ink);
     font-size: 14px;
     font-weight: 650;
+    letter-spacing: 0.01em;
   }
 
   & .notes {
     display: block;
     margin: 4px 0 0;
-    font-style: italic;
+    font-style: normal;
     font-size: 11px;
-    color: var(--editorColor80);
+    color: var(--ui-muted);
   }
 
   & .pref-content {
@@ -114,7 +117,7 @@ onMounted(() => {
     flex-direction: column;
     max-width: calc(100vw - var(--prefSideBarWidth));
     min-width: 0;
-    background: var(--editorBgColor);
+    background: var(--ui-canvas);
     & .title-bar {
       width: 100%;
       height: var(--titleBarHeight);
@@ -127,7 +130,7 @@ onMounted(() => {
       box-sizing: border-box;
       width: 100%;
       min-width: 0;
-      padding: calc(var(--titleBarHeight) + 18px) 36px 36px;
+      padding: calc(var(--titleBarHeight) + 18px) 40px 32px;
       flex: 1;
       height: 100vh;
       overflow: auto;

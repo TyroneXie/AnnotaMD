@@ -8,7 +8,8 @@ import type {
   PiSettingsState
 } from '@shared/types/piProvider'
 import { getAiWorkspaceService } from '../ai'
-import { KeytarAiSecretStore } from '../ai/AiSecretStore'
+import { createAiSecretStore } from '../ai/createAiSecretStore'
+import type { AiSecretStore } from '../ai/AiSecretStore'
 import {
   defaultModelFor,
   defaultProviderFor,
@@ -25,11 +26,12 @@ import {
 } from '../ai/PiProviderSettings'
 
 const settingsPath = (): string => join(app.getPath('userData'), 'pi-provider.json')
-const secrets = new KeytarAiSecretStore()
+let secretsInstance: AiSecretStore | null = null
+const secrets = (): AiSecretStore => (secretsInstance ??= createAiSecretStore())
 
 const snapshot = async(): Promise<PiSettingsState> => {
   const settings = await readPiSettings(settingsPath())
-  return { ...settings, keyedProviderIds: [...(await readPiProviderKeys(settings, secrets)).keys()] }
+  return { ...settings, keyedProviderIds: [...(await readPiProviderKeys(settings, secrets())).keys()] }
 }
 
 let pendingMutation: Promise<unknown> = Promise.resolve()
@@ -74,7 +76,11 @@ const buildProvider = (
 }
 
 export const registerPiProviderHandlers = (): void => {
-  ipcMain.handle('annotamd::pi::settings:get', async() => await snapshot())
+  ipcMain.handle('annotamd::pi::settings:get', async(_event, retryFailedReads?: boolean) => {
+    // Only an explicit visit to Agent settings retries a denied keychain read.
+    if (retryFailedReads === true) secrets().retryFailedReads?.()
+    return await snapshot()
+  })
 
   ipcMain.handle(
     'annotamd::pi::provider:save',
@@ -95,8 +101,8 @@ export const registerPiProviderHandlers = (): void => {
 
       if (typeof request.apiKey === 'string') {
         const apiKey = request.apiKey.trim()
-        if (apiKey) await secrets.set(secretKeyFor(id), apiKey)
-        else await secrets.delete(secretKeyFor(id))
+        if (apiKey) await secrets().set(secretKeyFor(id), apiKey)
+        else await secrets().delete(secretKeyFor(id))
       }
 
       const legacyKeyProviderId = settings.legacyKeyProviderId === id && typeof request.apiKey === 'string'
@@ -110,7 +116,7 @@ export const registerPiProviderHandlers = (): void => {
     const settings = await readPiSettings(settingsPath())
     const providers = settings.providers.filter(provider => provider.id !== providerId)
     const defaultProviderId = defaultProviderFor(providers, settings.defaultProviderId)?.id
-    await secrets.delete(secretKeyFor(providerId))
+    await secrets().delete(secretKeyFor(providerId))
     const legacyKeyProviderId = settings.legacyKeyProviderId === providerId
       ? undefined
       : settings.legacyKeyProviderId
@@ -130,7 +136,7 @@ export const registerPiProviderHandlers = (): void => {
         : stored
       if (!provider) throw new Error('Choose a provider first.')
       const apiKey = request.apiKey?.trim() ||
-        (stored ? await readPiProviderKey(settings, secrets, stored.id) : '') ||
+        (stored ? await readPiProviderKey(settings, secrets(), stored.id) : '') ||
         ''
       return await fetchPiModels(provider, apiKey)
     }

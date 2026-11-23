@@ -893,7 +893,11 @@
       "importCustomThemes": "Import custom themes",
       "importTheme": "Import Theme",
       "openFolder": "Open Folder",
-      "openThemesFolder": "Open themes folder"
+      "openThemesFolder": "Open themes folder",
+      "workspaceLayout": "Layout",
+      "layoutCapsule": "Capsule",
+      "layoutClassic": "Classic",
+      "layoutStyle": "Style"
     },
     "keybindings": {
       "title": "Keybindings",
@@ -1182,7 +1186,8 @@
       "reply": "Reply",
       "remove": "The suggested edit removes the selection.",
       "applied": "Selection replaced. You can undo this change.",
-      "stale": "The document changed before this edit could be applied."
+      "stale": "The document changed before this edit could be applied.",
+      "dragHint": "Drag the quote to move this panel"
     },
     "agentWorkspace": {
       "title": "AI Assistant",

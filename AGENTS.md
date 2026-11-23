@@ -270,6 +270,12 @@
 - 推荐做法：Windows 使用 `process.execPath` 执行同一 Node 安装目录内的 `node_modules/npm/bin/npm-cli.js`，将安装参数作为独立参数传入，不启用 shell；其他平台保留 npm 可执行入口。
 - 验证方式：`build-contracts.spec.ts` 覆盖带空格的 Windows 路径及非 Windows 分支，并确认 Windows x64、arm64 的完整打包与产物上传均通过。
 
+### AI 钥匙串授权重复弹窗
+
+- 现象：Agent 和服务商设置反复触发同名钥匙串授权。根因：不同入口各自读取同一凭据，未合并并发查询，也未保留已允许或已拒绝的结果；临时签名在换包后还可能使系统重新要求授权。
+- 推荐做法：按 service/account 在主进程内共享读取 Promise，成功、缺失与失败均保留到进程结束；只有显式重新打开 Agent 设置才清除失败记录并重试，不清除进行中或成功的读取。成功保存或删除密钥时更新共享缓存，失败则保留旧状态；密钥不得新增落盘或日志输出。不要通过放宽钥匙串 ACL 解决临时签名的升级授权。
+- 验证方式：`annotamd-ai-secret-store.spec.ts` 覆盖并发、拒绝、手动恢复和写删竞态；`agent-keychain-reads.spec.ts` 在独立 Electron 配置中仅替换原生凭据边界，验证真实 IPC 与设置页恢复流程，不读取用户密钥。跨版本免重复授权还需要稳定签名身份，不能用应用缓存的测试替代该结论。
+
 ### Electron 大版本与 Linux 原生模块工具链
 
 - 现象：Electron 大版本升级后，macOS 和 Windows 能完成原生模块重建，但 Linux 在 `native-keymap` 包含 V8 头文件时出现 `V8_EXPORT`/`expected identifier` 编译错误。
@@ -307,3 +313,5 @@
 - `postinstall` 只修补和重建锁定的原生源码，不执行 `pnpm add` 或嵌套安装。缺少 native-keymap 源码时明确失败；pnpm 的 `allowBuilds.native-keymap: false` 禁止先按 Node ABI 构建，再由 postinstall 应用 C++20 补丁并按 Electron ABI 重建。用 `build-contracts.spec.ts` 检查缺依赖提前失败、无依赖清单写入和命令边界。
 
 - 现象：模型菜单首次或缓存失效时比权限菜单迟缓。根因：打开时才请求 Pi 模型能力并使用渐入浮层，已有配置也要等待能力发现。推荐做法：与权限菜单一样直接控制浮层，Composer 就绪后后台预取并复用缓存；能力请求未完成时允许选择 readiness 已确认启用的模型，不把缺少思考档位当作没有可用模型。验证方式：`agent-model-menu-performance.spec.ts` 挂起能力请求、提供几十个候选、连续切换菜单，检查已配置模型立即可选、能力返回后档位正常、重复打开只发起一次发现，并与权限菜单比较渲染帧耗时。
+
+- 桌面外壳、Agent、评论和设置共用 `assets/styles/desktop.css` 的 `--ui-*` 配色，正文的字号和行高继续由编辑偏好控制。评论的选中背景、悬浮菜单等状态也必须使用主题变量，固定浅色背景会在深色模式中造成白字白底。修改后运行 `desktop-visual-style.spec.ts`，用真实长文档检查两种主题的文字对比度、评论输入、模型菜单和设置窗口；透明背景的对比度计算需要叠加祖先背景。

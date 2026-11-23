@@ -64,10 +64,10 @@ describe('multi-root sidebar integration', () => {
       /\.opened-files > \.title,[^{]*\.project-tree > \.title\s*\{[^}]*height:\s*24px;[^}]*line-height:\s*24px;/s
     )
     expect(tree).toMatch(/\.opened-files \.opened-files-list\s*\{[^}]*max-height:\s*88px;/s)
-    expect(folder).toMatch(/& > \.folder-name\s*\{[^}]*height:\s*22px;[^}]*margin:\s*0;/s)
-    expect(file).toMatch(/\.side-bar-file\s*\{[^}]*height:\s*22px;[^}]*margin:\s*0;/s)
+    expect(folder).toMatch(/& > \.folder-name\s*\{[^}]*height:\s*26px;[^}]*margin:\s*0 2px 1px;/s)
+    expect(file).toMatch(/\.side-bar-file\s*\{[^}]*height:\s*26px;[^}]*margin:\s*0 2px 1px;/s)
     expect(openedTab).toMatch(
-      /\.opened-file\s*\{[^}]*height:\s*22px;[^}]*line-height:\s*22px;[^}]*margin:\s*0;/s
+      /\.opened-file\s*\{[^}]*height:\s*26px;[^}]*line-height:\s*26px;[^}]*margin:\s*0 2px 1px;/s
     )
   })
 

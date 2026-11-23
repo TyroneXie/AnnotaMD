@@ -921,7 +921,7 @@ test('provides unified AI conversations and keeps Agent available without a docu
 
     const agentPane = page.locator('.annotamd-agent-workspace')
     const commentPane = page.locator('.annotamd-comment-pane')
-    const commentToggle = page.locator('.editor-tabs .tab-comment-toggle')
+    const commentToggle = page.locator('.editor-tabs .comment-pane-toggle')
     const agentToggle = page.locator('.sidebar-agent-toggle')
     await expect(commentToggle).toBeVisible()
     await expect(agentToggle).toBeVisible()

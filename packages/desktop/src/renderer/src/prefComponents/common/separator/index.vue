@@ -4,8 +4,8 @@
 
 <style>
 .pref-separator {
-  margin: 10px 0;
+  margin: 14px 0;
   height: 1px;
-  background: var(--editorColor04);
+  background: var(--ui-divider);
 }
 </style>

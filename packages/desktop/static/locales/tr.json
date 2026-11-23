@@ -620,7 +620,11 @@
       "importCustomThemes": "Özel temaları içe aktar",
       "importTheme": "Temayı İçe Aktar",
       "openFolder": "Klasör Aç",
-      "openThemesFolder": "Temalar klasörünü aç"
+      "openThemesFolder": "Temalar klasörünü aç",
+      "workspaceLayout": "Düzen",
+      "layoutCapsule": "Kapsül",
+      "layoutClassic": "Klasik",
+      "layoutStyle": "Stil"
     },
     "keybindings": {
       "title": "Kısayol Tuşları",

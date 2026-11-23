@@ -45,6 +45,17 @@
       <import-modal />
     </div>
     <div
+      v-if="layoutStore.showSideBar"
+      class="annotamd-side-bar-resize-hint"
+      role="separator"
+      aria-orientation="vertical"
+      tabindex="0"
+      :aria-valuenow="layoutStore.effectiveSideBarWidth"
+      :aria-valuemin="SIDEBAR_MIN_WIDTH"
+      title="Resize sidebar"
+      @mousedown.prevent="startSideBarResize"
+    />
+    <div
       v-if="commentPaneActive"
       class="annotamd-comment-pane-resizer"
       role="separator"
@@ -80,7 +91,7 @@ import AnnotaMDCommentPane from '@/components/annotamd/CommentPane.vue'
 import { subscribeAgentDocumentTransactionIpc } from '@/components/agent/agentDocumentTransactionIpc'
 import bus from '@/bus'
 import { DEFAULT_STYLE } from '@/config'
-import { useLayoutStore } from '@/store/layout'
+import { SIDEBAR_MIN_WIDTH, useLayoutStore } from '@/store/layout'
 import { useListenForMainStore } from '@/store/listenForMain'
 import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
@@ -115,7 +126,7 @@ const rightPaneWidth = ref(readRightPaneWidth(window.localStorage, window.innerW
 
 const { windowActive, platform, init } = storeToRefs(mainStore)
 const { showTabBar } = storeToRefs(layoutStore)
-const { sourceCode, theme, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
+const { sourceCode, theme, workspaceLayout, customCss, textDirection, zoom } = storeToRefs(preferencesStore)
 const { projectTrees } = storeToRefs(projectStore)
 const { currentFile } = storeToRefs(editorStore)
 const { paneVisible: commentPaneVisible } = storeToRefs(annotaMDCommentsStore)
@@ -137,12 +148,26 @@ const commentPaneStyle = computed<Record<string, string>>(() => {
     '--annotamd-comment-pane-width': commentPaneActive.value
       ? `${activePaneWidth.value}px`
       : '0px',
-    '--annotamd-editor-tab-height': '28px'
+    '--side-bar-width': `${layoutStore.effectiveSideBarWidth}px`
   }
 })
 
 let stopCommentPaneResize: (() => void) | null = null
 let stopAgentDocumentTransactionIpc: (() => void) | null = null
+
+// The visible handle sits in the card gap, so forward its press to the sidebar's
+// own drag listener; the pointer never enters the editor and triggers its hover
+// menus while the user grabs the line.
+const startSideBarResize = (event: MouseEvent): void => {
+  const bar = document.querySelector<HTMLElement>('.drag-bar')
+  bar?.dispatchEvent(new MouseEvent('mousedown', {
+    bubbles: true,
+    cancelable: true,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    button: 0
+  }))
+}
 
 const resizeCommentPaneBy = (delta: number): void => {
   rightPaneWidth.value = clampRightPaneWidth(rightPaneWidth.value + delta, window.innerWidth)
@@ -251,6 +276,15 @@ watch([init, hasCurrentFile], ([isInitialized, hasFile]) => {
     }
   }
 })
+
+// The window layout is a body class so component styles stay layout-agnostic:
+// "capsule" renders the floating card workspace, "classic" the edge-to-edge one.
+const applyWorkspaceLayout = (layout: string): void => {
+  document.body.classList.toggle('layout-capsule', layout !== 'classic')
+  document.body.classList.toggle('layout-classic', layout === 'classic')
+}
+
+watch(workspaceLayout, applyWorkspaceLayout, { immediate: true })
 
 // Watchers
 watch(theme, (value, oldValue) => {
@@ -380,20 +414,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-:global(:root) {
-  --annotamd-bg: #f5f6f8;
-  --annotamd-surface: #ffffff;
-  --annotamd-surface-soft: #f7f8fa;
-  --annotamd-surface-blue: #e8f1ff;
-  --annotamd-fill-soft: #f2f3f5;
-  --annotamd-border: #dee0e3;
-  --annotamd-border-soft: #eceff3;
-  --annotamd-text: #2f3437;
-  --annotamd-ink: #1f2329;
-  --annotamd-muted: #6b7280;
-  --annotamd-blue: #3370ff;
-  --annotamd-green: #20a162;
-}
 
 :global(html),
 :global(body),
@@ -469,20 +489,63 @@ onBeforeUnmount(() => {
 }
 .editor-container {
   --annotamd-comment-pane-width: 0px;
+  --workspace-gap: 8px;
+  --workspace-card-radius: 12px;
   box-sizing: border-box;
-  padding-right: var(--annotamd-comment-pane-width);
+  padding: calc(var(--titleBarHeight) + var(--workspace-gap)) var(--workspace-gap) var(--workspace-gap) var(--workspace-gap);
+  gap: var(--workspace-gap);
   overflow: hidden;
-  background: var(--annotamd-surface);
+  background: var(--ui-canvas);
 }
 .editor-container.comment-pane-open {
   --annotamd-comment-pane-width: 310px;
+  padding-right: calc(var(--annotamd-comment-pane-width) + var(--workspace-gap) * 2);
 }
+.annotamd-side-bar-resize-hint {
+  position: fixed;
+  z-index: 30;
+  top: calc(var(--titleBarHeight) + var(--workspace-gap, 8px));
+  bottom: var(--workspace-gap, 8px);
+  left: calc(var(--workspace-gap, 8px) + var(--side-bar-width, 320px) + var(--workspace-gap, 8px) / 2 - 5px);
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* The line only appears on hover, but the strip itself is the drag handle so
+   the pointer never has to enter the editor and trigger its hover menus. */
+.annotamd-side-bar-resize-hint::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+  transition: background-color 120ms ease;
+}
+
+.annotamd-side-bar-resize-hint:hover::after,
+.annotamd-side-bar-resize-hint:focus-visible::after,
+.editor-container:has(.drag-bar:hover) .annotamd-side-bar-resize-hint::after,
+.editor-container:has(.drag-bar:active) .annotamd-side-bar-resize-hint::after {
+  background: var(--annotamd-blue);
+}
+
+body.layout-classic .annotamd-side-bar-resize-hint {
+  top: var(--titleBarHeight);
+  bottom: 0;
+  left: calc(var(--side-bar-width, 320px) - 5px);
+}
+
 .annotamd-comment-pane-resizer {
   position: fixed;
   z-index: 31;
-  top: var(--titleBarHeight);
-  right: calc(var(--annotamd-comment-pane-width) - 4px);
-  bottom: 0;
+  top: calc(var(--titleBarHeight) + var(--workspace-gap, 8px));
+  /* Sit centered in the gap between the editor card and the comment card. */
+  right: calc(var(--annotamd-comment-pane-width) + var(--workspace-gap, 8px));
+  bottom: var(--workspace-gap, 8px);
   width: 8px;
   cursor: col-resize;
   touch-action: none;
@@ -493,6 +556,7 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 3px;
   width: 2px;
+  border-radius: 2px;
   background: transparent;
   content: '';
   transition: background-color 80ms ease;
@@ -500,6 +564,9 @@ onBeforeUnmount(() => {
 .annotamd-comment-pane-resizer:hover::after,
 .annotamd-comment-pane-resizer:focus-visible::after {
   background: var(--annotamd-blue);
+}
+.editor-middle :deep(.title-bar-editor-bg) {
+  display: none;
 }
 .editor-container .hide {
   z-index: -1;
@@ -514,11 +581,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   flex: 1;
-  max-width: calc(100vw - var(--annotamd-comment-pane-width));
+  max-width: calc(100vw - var(--annotamd-comment-pane-width) - var(--workspace-gap) * 2);
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
   position: relative;
-  background: var(--annotamd-surface);
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--workspace-card-radius);
+  background: var(--ui-paper);
+  box-shadow: 0 1px 2px rgb(16 18 22 / 4%);
   & > .editor {
     flex: 1;
   }
