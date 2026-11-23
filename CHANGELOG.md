@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.22.0 - 2026-11-23
+
+### Added
+
+- Added a workspace layout option under Settings → Appearance → Style: Capsule keeps the floating cards, Classic restores the edge-to-edge layout, and the choice is independent of the color theme.
+- The selection popover can now be dragged by its quote header, and Agent replies inside it render as Markdown.
+
+### Changed
+
+- Refreshed the desktop chrome: a slimmer title bar with the file path centered across the whole top band, flat file tabs, and the comment toggle moved into the tab row on every platform.
+- Restyled Settings pages with grouped rows, hairline dividers, and no duplicated section titles.
+- The Agent, search, outline and comment panels now share one sidebar width with a 320px floor, so switching panels no longer resizes the sidebar; narrow Agent panels stack their cards and collapse the permission label.
+- Long Agent reasoning scrolls inside a fixed-height box instead of stretching the conversation.
+
+### Fixed
+
+- A failed tool call no longer marks the whole Agent turn as failed: only a run that ends without a result reads as failed, and failed groups stay collapsed.
+- The sidebar and comment pane resize handles now sit centered in the gap between cards and can be dragged directly without opening the paragraph hover menu.
+- Removed the near-white separator line on Settings pages and fixed vertical alignment of the title bar path.
+- Provider keys can still be saved when the system keychain is unavailable (development builds, or packaged builds started with the ANNOTAMD_LOCAL_SECRETS environment variable).
+
 ## 2.21.0 - 2026-11-22
 
 ### Added
