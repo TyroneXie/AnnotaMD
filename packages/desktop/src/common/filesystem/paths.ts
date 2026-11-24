@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { isFile, isFile2, isSymbolicLink } from './index'
+import { isDirectory2, isFile, isFile2, isSymbolicLink } from './index'
 import { minimatch } from 'minimatch'
 
 const isOsx = process.platform === 'darwin'
@@ -106,6 +106,32 @@ export const isDangerousExecutableFile = (filepath: string): boolean => {
 export const hasMarkdownExtension = (filename: string): boolean => {
   if (!filename || typeof filename !== 'string') return false
   return MARKDOWN_EXTENSIONS.some((ext) => filename.toLowerCase().endsWith(`.${ext}`))
+}
+
+/**
+ * Strip a trailing `:line` (or `:line:column`) reference from a link target.
+ *
+ * Documents that cite source locations link them as `report.md:12` or
+ * `run_agent.py:11395`. That string is not a filename, so opening it verbatim
+ * fails. A target that exists as written always wins: POSIX allows `:` in file
+ * names, and a real file must never be truncated to its prefix.
+ */
+export const stripLineSuffix = (filepath: string): string => {
+  if (!filepath || typeof filepath !== 'string') return filepath
+  if (isFile2(filepath) || isDirectory2(filepath)) return filepath
+
+  // Peel `:line`, then `:column`, until a real path shows up. Stripping one
+  // suffix at a time keeps `file.py:12:4`, a name that merely ends in `:2024`
+  // and a Windows drive letter (`C:\x\y.py:12`) from being misread.
+  let candidate = filepath
+
+  while (true) {
+    const stripped = candidate.replace(/:\d+$/, '')
+    if (stripped === candidate) return filepath
+
+    candidate = stripped
+    if (isFile2(candidate) || isDirectory2(candidate)) return candidate
+  }
 }
 
 /**

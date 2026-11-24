@@ -220,7 +220,13 @@ class ParagraphContent extends Format {
         const { start, end } = this.getCursor()!;
         const { eventCenter } = this.muya;
 
-        if (start.offset !== 0 || end.offset !== 0) {
+        // A caret parked on a trailing inline image also reports offset 0 — the
+        // image's own source length is not a text offset — but it is not a
+        // block-start caret. Defer to Format so the first Backspace selects the
+        // image instead of converting the paragraph.
+        const caretOnInlineImage = this.caretOffsetOnInlineImage() != null;
+
+        if (start.offset !== 0 || end.offset !== 0 || caretOnInlineImage) {
             super.backspaceHandler(event);
             eventCenter.emit('content-change', { block: this });
             return;

@@ -12,7 +12,12 @@ import {
 } from 'electron'
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
-import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
+import {
+  MARKDOWN_EXTENSIONS,
+  isDangerousExecutableFile,
+  isMarkdownFile,
+  stripLineSuffix
+} from 'common/filesystem/paths'
 import { checkUpdates, userSetting } from './annotamd'
 import { showTabBar } from './view'
 import { COMMANDS } from '../../commands'
@@ -635,6 +640,22 @@ ipcMain.on('annotamd::format-link-click', async(e, { data, dirname }: FormatLink
   if (pathname) {
     // decodeURIComponent() CommonMark #503: allow percent-encoded path names to open files.
     pathname = path.normalize(decodeURIComponent(pathname))
+    // `path:11395` cites a source location, not a file with that name: open the
+    // file it points into. Without this the OS was handed a nonexistent path and
+    // the click did nothing at all.
+    pathname = stripLineSuffix(pathname)
+
+    if (!(await exists(pathname))) {
+      // shell.openPath() reports a failure by returning a message and never
+      // throws, so a missing target looked like a dead link.
+      win.webContents.send('annotamd::show-notification', {
+        title: 'Cannot open link',
+        type: 'error',
+        message: `The link target does not exist: ${pathname}`
+      })
+      return
+    }
+
     if (isMarkdownFile(pathname)) {
       const innerWin = BrowserWindow.fromWebContents(e.sender)
       if (innerWin) {
@@ -658,7 +679,15 @@ ipcMain.on('annotamd::format-link-click', async(e, { data, dirname }: FormatLink
           return
         }
       }
-      shell.openPath(pathname)
+
+      const openError = await shell.openPath(pathname)
+      if (openError) {
+        win.webContents.send('annotamd::show-notification', {
+          title: 'Cannot open link',
+          type: 'error',
+          message: openError
+        })
+      }
     }
   }
 })

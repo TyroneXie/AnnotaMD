@@ -8,6 +8,7 @@ import type { Nullable } from '../types';
 import type Clipboard from './index';
 import StateToMarkdown from '../state/stateToMarkdown';
 import { getClipBoardHtml, getSanitizeClipboardHtml } from '../utils/marked';
+import { sliceInlineMarkdown } from './inlineSlice';
 import { CopyType } from './types';
 
 export interface IClipboardPayload {
@@ -108,10 +109,12 @@ function truncateLeafState(
     offset: number,
     position: 'start' | 'end',
 ): TState {
-    const text
-        = position === 'start'
-            ? leaf.text.substring(offset)
-            : leaf.text.substring(0, offset);
+    const text = sliceInlineMarkdown(
+        leaf.text,
+        leaf.muya.options,
+        position === 'start' ? offset : 0,
+        position === 'start' ? leaf.text.length : offset,
+    );
 
     return { ...leafState, text } as TState;
 }
@@ -245,10 +248,12 @@ function appendPartialState(
         return;
     }
 
-    const truncated
-        = position === 'start'
-            ? block.text.substring(offset)
-            : block.text.substring(0, offset);
+    const truncated = sliceInlineMarkdown(
+        block.text,
+        block.muya.options,
+        position === 'start' ? offset : 0,
+        position === 'start' ? block.text.length : offset,
+    );
 
     // Blocks whose marker lives in meta, not in the text: setext heading (its
     // `===`/`---` underline) and the code-family (code-block, html-block,
@@ -359,10 +364,12 @@ export function getClipboardData(clipboard: Clipboard): IClipboardPayload {
 
     // Handler copy/cut in one block.
     if (isSelectionInSameBlock) {
-        const begin = Math.min(anchor.offset, focus.offset);
-        const end = Math.max(anchor.offset, focus.offset);
-
-        const text = anchorBlock.text.substring(begin, end);
+        const text = sliceInlineMarkdown(
+            anchorBlock.text,
+            clipboard.muya.options,
+            Math.min(anchor.offset, focus.offset),
+            Math.max(anchor.offset, focus.offset),
+        );
 
         return { html: getClipBoardHtml(text, options), text };
     }

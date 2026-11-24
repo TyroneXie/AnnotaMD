@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.22.1 - 2026-11-24
+
+### Fixed
+
+- Copying bold, italic, strikethrough, inline code or inline math text keeps the Markdown markers balanced, so a pasted run no longer starts with a stray `**` and loses its closing marker.
+- Links that cite a source location (`path/to/file.py:11395`) open the referenced file instead of doing nothing.
+- A link whose target is missing or cannot be opened now reports it instead of failing silently.
+
 ## 2.22.0 - 2026-11-23
 
 ### Added

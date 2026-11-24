@@ -1461,7 +1461,7 @@ class Format extends Content {
         // The caret offset is unreliable when it is parked on a
         // `contenteditable=false` inline image; resolve the real offset from the
         // DOM so the scan can match the image token like any other caret.
-        const offset = this._caretOffsetOnInlineImage() ?? start.offset;
+        const offset = this.caretOffsetOnInlineImage() ?? start.offset;
         const { needRender, imageToken, referenceImageToken }
             = this._scanBackspaceTokens(tokens, offset);
 
@@ -1551,7 +1551,7 @@ class Format extends Content {
     // scan treats it like any other caret-after-image. When other content
     // follows the image the caret lands in that content (a reliable offset), so
     // this returns null and the raw caret offset is used.
-    private _caretOffsetOnInlineImage(): number | null {
+    protected caretOffsetOnInlineImage(): number | null {
         const selection = document.getSelection();
         if (!selection || selection.rangeCount === 0 || !selection.isCollapsed)
             return null;

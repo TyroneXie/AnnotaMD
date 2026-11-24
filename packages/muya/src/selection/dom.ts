@@ -91,10 +91,36 @@ export function getTextContent(node: Node, blackList: string[] = []) {
     return text;
 }
 
+// Rendered previews whose DOM glyphs have no counterpart in the source text.
+const RENDER_BLACKLIST = [CLASS_NAMES.MU_MATH_RENDER, CLASS_NAMES.MU_RUBY_RENDER];
+
+function getChildrenTextPrefix(node: Node, count: number): number {
+    const { childNodes } = node;
+    let total = 0;
+
+    for (let i = 0; i < count && i < childNodes.length; i++)
+        total += getTextContent(childNodes[i], RENDER_BLACKLIST).length;
+
+    return total;
+}
+
 export function getOffsetOfParagraph(node: Node, paragraph: HTMLElement, nodeOffset = 0): number {
-    let offset = nodeOffset;
-    if (node.nodeType === Node.TEXT_NODE && isTableCellLineEnd(node))
-        offset = node.textContent!.slice(0, nodeOffset).replace(/\u200B/g, '').length;
+    let offset: number;
+
+    if (node.nodeType === Node.TEXT_NODE) {
+        offset = isTableCellLineEnd(node)
+            ? node.textContent!.slice(0, nodeOffset).replace(/\u200B/g, '').length
+            : nodeOffset;
+    }
+    else {
+        // A non-text endpoint carries a CHILD INDEX, not a character count:
+        // `(span.mu-content, 2)` sits before that element's third child.
+        // Reading the index as an offset made a whole-block selection collapse
+        // to its first few characters — copying `**Hermes 怎么修、怎么验收**`
+        // yielded `**H`. Count the text of the children before it instead.
+        offset = getChildrenTextPrefix(node, nodeOffset);
+    }
+
     let preSibling: Node | null = node;
 
     if (node === paragraph)
@@ -102,12 +128,8 @@ export function getOffsetOfParagraph(node: Node, paragraph: HTMLElement, nodeOff
 
     do {
         preSibling = preSibling.previousSibling;
-        if (preSibling) {
-            offset += getTextContent(preSibling, [
-                CLASS_NAMES.MU_MATH_RENDER,
-                CLASS_NAMES.MU_RUBY_RENDER,
-            ]).length;
-        }
+        if (preSibling)
+            offset += getTextContent(preSibling, RENDER_BLACKLIST).length;
     } while (preSibling);
 
     return node === paragraph || node.parentNode === paragraph
